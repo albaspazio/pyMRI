@@ -21,6 +21,8 @@ if __name__ == "__main__":
     SESS_ID = 1
     subject = Subject("001", 1, project)
     subject.create_file_system()
+
+    # subject.reslice_image("sag->axial")
     subject.anatomical_processing(do_cleanup=False)
     # subject.post_anatomical_processing()
     # subject.do_first("L_Amyg,R_Amyg", odn="")

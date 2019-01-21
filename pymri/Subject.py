@@ -1,6 +1,6 @@
 import os
 
-from pymri.utility.fslfun import imtest, immv, runpipe, run, runreturn, quick_smooth, run_notexisting_img, run_move_notexisting_img, remove_ext, mass_images_move
+from pymri.utility.fslfun import imtest, immv, imcp, runpipe, run, runreturn, quick_smooth, run_notexisting_img, run_move_notexisting_img, remove_ext, mass_images_move
 
 # from fsl.utils import run
 # from fsl.scripts import immv
@@ -160,7 +160,7 @@ class Subject:
                         odn="anat", imgtype=1, smooth=10,
                         strongbias=True, do_biasrestore=True,
                         do_reorient=True, do_crop=True,
-                        do_bet=True, betfparam=0.1,
+                        do_bet=True, betfparam=0.5,
                         do_reg=True, do_nonlinreg=True,
                         do_seg=True, do_subcortseg=True,
                         do_skipflirtsearch=False,
@@ -258,8 +258,8 @@ class Subject:
             # required input: " + T1 + "
             # output: " + T1 + "
 
-            minval =  float(runreturn("fslstats", [T1, "-p", str(0)], log)[0])
-            maxval =  float(runreturn("fslstats", [T1, "-p", str(100)], log)[0])
+            minval =  float(runreturn("fslstats", [T1, "-p", str(0)])[0])
+            maxval =  float(runreturn("fslstats", [T1, "-p", str(100)])[0])
 
             if minval < 0:
                 if maxval > 0:
@@ -415,7 +415,7 @@ class Subject:
                     if do_bet is True:
                         print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         print(self.label + " :Performing brain extraction (using BET)")
-                        run("bet " + T1 + "_biascorr " + T1 + "_biascorr_brain -m " + betopts, log)  ## results sensitive to the f parameter
+                        run("bet -R " + T1 + "_biascorr " + T1 + "_biascorr_brain -m " + betopts, log)  ## results sensitive to the f parameter
                     else:
                         run("fslmaths " + T1 + "_biascorr " + T1 + "_biascorr_brain", log)
                         run("fslmaths " + T1 + "_biascorr_brain -bin " + T1 + "_biascorr_brain_mask", log)
@@ -656,6 +656,17 @@ class Subject:
             log.close()
             print(e)
 
+    def reslice_image(self, dir):
+
+        if dir == "sag->axial":
+            bckfilename = self.t1_image_label + "_sag"
+            conversion_str = " -z -x y "
+        else:
+            print("invalid conversion")
+            return
+
+        imcp(self.t1_data, os.path.join(self.t1_dir, bckfilename))          # create backup copy
+        run("fslswapdim " + self.t1_data + conversion_str + self.t1_data)   # run reslicing
     # ==================================================================================================================================================
     # DIFFUSION
     # ==================================================================================================================================================
