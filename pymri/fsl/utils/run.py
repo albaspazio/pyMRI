@@ -2,8 +2,19 @@
 #
 # run.py - Functions for running shell commands
 #
-# Author: Paul McCarthy <pauldmccarthy@gmail.com>
+# Original Author: Paul McCarthy <pauldmccarthy@gmail.com>
 #
+# Modified to serve pymri pipeline (January 2019)
+#
+# Author: Alberto Inuggi
+#
+# changes:
+# 1) run function renamed to "rrun" and include a new kwargs  "logFile" containing the descriptor of the file to log to
+# 2) in case of error, rrun raise also the full stderr message (and log it to "logFile").
+#
+# rrun dosn't work with the following commands:
+# avscale " + T1 + "2std_skullcon.mat | grep Determinant | awk '{ print $3 }'
+# "fslreorient2std " + T1 + " > " + T1 + "_orig2std.mat"
 """This module provides some functions for running shell commands.
 
 .. note:: The functions in this module are only known to work in Unix-like
@@ -31,8 +42,8 @@ import os
 import               six
 
 # from   fsl.utils.platform import platform as fslplatform
-import fsl.utils.fslsub                   as fslsub
-import fsl.utils.tempdir                  as tempdir
+import pymri.fsl.utils.fslsub                   as fslsub
+import pymri.fsl.utils.tempdir                  as tempdir
 
 
 log = logging.getLogger(__name__)
@@ -121,7 +132,7 @@ def _forwardStream(in_, *outs):
     return t
 
 
-def run(*args, **kwargs):
+def rrun(*args, **kwargs):
     """Call a command and return its output. You can pass the command and
     arguments as a single string, or as a regular or unpacked sequence.
 
@@ -152,6 +163,11 @@ def run(*args, **kwargs):
                    If ``True``, the command is submitted as a cluster job via
                    the :func:`.fslsub.submit` function.  May also be a
                    dictionary containing arguments to that function.
+
+    :arg logFile:  Must be passed as a keyword argument. Defaults to None.
+                    otherwise log the cmd and its params to given file descriptor
+                    and is used to write
+
 
     :arg log:      Must be passed as a keyword argument.  An optional ``dict``
                    which may be used to redirect the command's standard output
@@ -195,6 +211,10 @@ def run(*args, **kwargs):
     logStdout      = log   .get('stdout',   None)
     logStderr      = log   .get('stderr',   None)
     logCmd         = log   .get('cmd',      False)
+
+    # added to write cmd string, returns and error to the given file descriptor
+    logFile        = kwargs.get('logFile',  None)
+
     args           = _prepareArgs(args)
 
     if not bool(submit):
@@ -225,13 +245,22 @@ def run(*args, **kwargs):
         tee, logStdout, logStderr, logCmd, *args)
 
     if not returnExitcode and (exitcode != 0):
-        raise RuntimeError('{} returned non-zero exit code: {}'.format(
-            args[0], exitcode))
+
+        str = '{} returned non-zero exit code: {}\nmessage: {}\nfull command: {}'.format(args[0], exitcode, stderr, " ".join(args))
+        if logFile is not None:
+            print(str, file=logFile)
+
+        raise RuntimeError(str)
 
     results = []
     if returnStdout:   results.append(stdout)
     if returnStderr:   results.append(stderr)
     if returnExitcode: results.append(exitcode)
+
+    str = '{} returned {}'.format(" ".join(args), stdout)
+
+    if logFile is not None:
+        print(str, file=logFile)
 
     if len(results) == 1: return results[0]
     else:                 return tuple(results)
@@ -360,7 +389,7 @@ def runfsl(*args, **kwargs):
     args    = _prepareArgs(args)
     args[0] = op.join(prefix, args[0])
 
-    return run(*args, **kwargs)
+    return rrun(*args, **kwargs)
 
 
 def wait(job_ids):

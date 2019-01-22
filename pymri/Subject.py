@@ -1,7 +1,8 @@
 import os
 
-from pymri.utility.fslfun import imtest, immv, imcp, runpipe, run, runreturn, quick_smooth, run_notexisting_img, run_move_notexisting_img, remove_ext, mass_images_move
+from pymri.utility.fslfun import imtest, immv, imcp, quick_smooth, run, runpipe, run_notexisting_img, run_move_notexisting_img, remove_ext, mass_images_move
 
+from pymri.fsl.utils.run import rrun
 # from fsl.utils import run
 # from fsl.scripts import immv
 import datetime
@@ -241,12 +242,12 @@ class Subject:
 
             # copy original image to anat dir
             if imtest(os.path.join(anatdir, T1)) is False:
-                run("fslmaths " + inputimage + " " + os.path.join(anatdir, T1), log)
+                rrun("fslmaths " + inputimage + " " + os.path.join(anatdir, T1), logFile=log)
 
             # cp lesionmask to anat dir
             if use_lesionmask is True:
                 # I previously verified that it exists
-                run("fslmaths", [lesionmask, os.path.join(anatdir, "lesionmask")])
+                rrun("fslmaths", [lesionmask, os.path.join(anatdir, "lesionmask")])
                 with open(logfile, "a") as text_file:
                     text_file.write("copied lesion mask " + lesionmask)
 
@@ -258,16 +259,16 @@ class Subject:
             # required input: " + T1 + "
             # output: " + T1 + "
 
-            minval =  float(runreturn("fslstats", [T1, "-p", str(0)])[0])
-            maxval =  float(runreturn("fslstats", [T1, "-p", str(100)])[0])
+            minval =  float(rrun("fslstats " + T1 + " -p " + str(0), logFile=log))
+            maxval =  float(rrun("fslstats " + T1 + " -p " + str(100), logFile=log))
 
             if minval < 0:
                 if maxval > 0:
                     # if there are just some negative values among the positive ones then reset zero to the min value
-                    run("fslmaths " + T1 + " -sub " + str(minval) + T1 + " -odt float", log)
+                    rrun("fslmaths " + T1 + " -sub " + str(minval) + T1 + " -odt float", logFile=log)
                 else:
-                    run("fslmaths " + T1 + " -bin -binv zeromask", log)
-                    run("fslmaths " + T1 + " -sub " + str(minval) + " -mas zeromask " + T1 + " -odt float", log)
+                    rrun("fslmaths " + T1 + " -bin -binv zeromask", logFile=log)
+                    rrun("fslmaths " + T1 + " -sub " + str(minval) + " -mas zeromask " + T1 + " -odt float", logFile=log)
 
             #### REORIENTATION 2 STANDARD
             # required input: " + T1 + "
@@ -275,10 +276,10 @@ class Subject:
             if not os.path.isfile(T1 + "_orig2std.mat") or do_overwrite is True:
                 if do_reorient is True:
                     print(self.label + " :Reorienting to standard orientation")
-                    run("fslmaths " + T1 + " " + T1 + "_orig", log)
-                    run("fslreorient2std " + T1 + " > " + T1 + "_orig2std.mat", log)
-                    run("convert_xfm -omat " + T1 + "_std2orig.mat -inverse " + T1 + "_orig2std.mat", log)
-                    run("fslmaths " + T1 + " " + T1 + "_orig", log)
+                    rrun("fslmaths " + T1 + " " + T1 + "_orig", logFile=log)
+                    run("fslreorient2std " + T1 + " > " + T1 + "_orig2std.mat", logFile=log)
+                    rrun("convert_xfm -omat " + T1 + "_std2orig.mat -inverse " + T1 + "_orig2std.mat", logFile=log)
+                    rrun("fslmaths " + T1 + " " + T1 + "_orig", logFile=log)
 
             #### AUTOMATIC CROPPING
             # required input: " + T1 + "
@@ -288,12 +289,12 @@ class Subject:
                 if do_crop is True:
                     print(self.label + " :Automatically cropping the image")
                     immv(T1, T1 + "_fullfov")
-                    runpipe(os.path.join(os.path.join(os.getenv('FSLDIR'), "bin"), "robustfov -i " + T1 + "_fullfov -r " + T1 + " -m " + T1 + "_roi2nonroi.mat | grep[0 -9] | tail -1 > " + T1 + "_roi.log"), log)
+                    run(os.path.join(os.path.join(os.getenv('FSLDIR'), "bin"), "robustfov -i " + T1 + "_fullfov -r " + T1 + " -m " + T1 + "_roi2nonroi.mat | grep [0-9] | tail -1 > " + T1 + "_roi.log"), logFile=log)
                     # combine this mat file and the one above (if generated)
                     if do_reorient is True:
-                        run("convert_xfm -omat " + T1 + "_nonroi2roi.mat -inverse " + T1 + "_roi2nonroi.mat", log)
-                        run("convert_xfm -omat " + T1 + "_orig2roi.mat -concat " + T1 + "_nonroi2roi.mat " + T1 + "_orig2std.mat", log)
-                        run("convert_xfm -omat " + T1 + "_roi2orig.mat -inverse " + T1 + "_orig2roi.mat", log)
+                        rrun("convert_xfm -omat " + T1 + "_nonroi2roi.mat -inverse " + T1 + "_roi2nonroi.mat", logFile=log)
+                        rrun("convert_xfm -omat " + T1 + "_orig2roi.mat -concat " + T1 + "_nonroi2roi.mat " + T1 + "_orig2std.mat", logFile=log)
+                        rrun("convert_xfm -omat " + T1 + "_roi2orig.mat -inverse " + T1 + "_orig2roi.mat", logFile=log)
 
             ### LESION MASK
             # if I set use_lesionmask: I already verified that the external lesionmask exist and I copied to anat folder and renamed as "lesionmask"
@@ -306,15 +307,15 @@ class Subject:
                     if not os.path.isfile(T1 + "_orig2roi.mat"):
                         transform = T1 + "_orig2roi.mat"
                     if transform is not "":
-                        run("fslmaths lesionmask lesionmask_orig", log)
-                        run("flirt -in lesionmask_orig -ref " + T1 + " -applyxfm -interp nearestneighbour -init " + transform + " -out lesionmask", log)
+                        rrun("fslmaths lesionmask lesionmask_orig", logFile=log)
+                        rrun("flirt -in lesionmask_orig -ref " + T1 + " -applyxfm -interp nearestneighbour -init " + transform + " -out lesionmask", logFile=log)
                 else:
-                    run("fslmaths " +  T1 + " -mul 0 lesionmask", log)
+                    rrun("fslmaths " +  T1 + " -mul 0 lesionmask", logFile=log)
 
-                run("fslmaths lesionmask -bin lesionmask", log)
-                run("fslmaths lesionmask -binv lesionmaskinv", log)
+                rrun("fslmaths lesionmask -bin lesionmask", logFile=log)
+                rrun("fslmaths lesionmask -binv lesionmaskinv", logFile=log)
 
-            #### BIAS FIELD CORRECTION (main work, although also refined later on if segmentation run)
+            #### BIAS FIELD CORRECTION (main work, although also refined later on if segmentation rrun)
             # required input: " + T1 + "
             # output: " + T1 + "_biascorr  [ other intermediates to be cleaned up ]
             if imtest(T1 + "_biascorr") is False or do_overwrite is True:
@@ -324,61 +325,61 @@ class Subject:
                         print(self.label + " :Estimating and removing field (stage 1 -large-scale fields)")
                         # for the first step (very gross bias field) don't worry about the lesionmask
                         # the following is a replacement for : run $FSLDIR/bin/fslmaths " + T1 + " -s 20 " + T1 + "_s20
-                        quick_smooth(T1, T1 + "_s20", log)
-                        run("fslmaths " + T1 + " -div " + T1 + "_s20 " + T1 + "_hpf", log)
+                        quick_smooth(T1, T1 + "_s20", logFile=log)
+                        rrun("fslmaths " + T1 + " -div " + T1 + "_s20 " + T1 + "_hpf", logFile=log)
                         
                         if do_bet is True:
                             # get a rough brain mask - it can be *VERY* rough (i.e. missing huge portions of the brain or including non-brain, but non-background) - use -f 0.1 to err on being over inclusive
-                            run("bet " + T1 + "_hpf " + T1 + "_hpf_brain -m -f 0.1", log)
+                            rrun("bet " + T1 + "_hpf " + T1 + "_hpf_brain -m -f 0.1", logFile=log)
                         else:
-                            run("fslmaths " + T1 + "_hpf " + T1 + "_hpf_brain", log)
-                            run("fslmaths " + T1 + "_hpf_brain -bin " + T1 + "_hpf_brain_mask", log)
+                            rrun("fslmaths " + T1 + "_hpf " + T1 + "_hpf_brain", logFile=log)
+                            rrun("fslmaths " + T1 + "_hpf_brain -bin " + T1 + "_hpf_brain_mask", logFile=log)
 
-                        run("fslmaths " + T1 + "_hpf_brain_mask -mas lesionmaskinv " + T1 + "_hpf_brain_mask", log)
+                        rrun("fslmaths " + T1 + "_hpf_brain_mask -mas lesionmaskinv " + T1 + "_hpf_brain_mask", logFile=log)
                         # get a smoothed version without the edge effects
-                        run("fslmaths " + T1 + " -mas " + T1 + "_hpf_brain_mask " + T1 + "_hpf_s20", log)
-                        quick_smooth(T1 + "_hpf_s20", T1 + "_hpf_s20", log)
-                        quick_smooth(T1 + "_hpf_brain_mask", T1 + "_initmask_s20", log)
-                        run("fslmaths " + T1 + "_hpf_s20 -div " + T1 + "_initmask_s20 -mas " + T1 + "_hpf_brain_mask " + T1 + "_hpf2_s20", log)
-                        run("fslmaths " + T1 + " -mas " + T1 + "_hpf_brain_mask -div " + T1 + "_hpf2_s20 " + T1 + "_hpf2_brain", log)
+                        rrun("fslmaths " + T1 + " -mas " + T1 + "_hpf_brain_mask " + T1 + "_hpf_s20", logFile=log)
+                        quick_smooth(T1 + "_hpf_s20", T1 + "_hpf_s20", logFile=log)
+                        quick_smooth(T1 + "_hpf_brain_mask", T1 + "_initmask_s20", logFile=log)
+                        rrun("fslmaths " + T1 + "_hpf_s20 -div " + T1 + "_initmask_s20 -mas " + T1 + "_hpf_brain_mask " + T1 + "_hpf2_s20", logFile=log)
+                        rrun("fslmaths " + T1 + " -mas " + T1 + "_hpf_brain_mask -div " + T1 + "_hpf2_s20 " + T1 + "_hpf2_brain", logFile=log)
                         # make sure the overall scaling doesn't change (equate medians)
-                        med0 = runreturn("fslstats", [T1, "-k", T1 + "_hpf_brain_mask", "-P", "50"], log)[0]
-                        med1 = runreturn("fslstats", [T1, "-k", T1 + "_hpf2_brain", "-k", T1 + "_hpf_brain_mask", "-P", "50"], log)[0]
-                        run("fslmaths " + T1 + "_hpf2_brain -div " + str(med1) + " -mul " + med0 + " " + T1 + "_hpf2_brain", log)
+                        med0 = rrun("fslstats " + T1 + " -k " + T1 + "_hpf_brain_mask -P 50", logFile=log)
+                        med1 = rrun("fslstats " + T1 + " -k " + T1 + "_hpf2_brain -k " + T1 + "_hpf_brain_mask -P 50", logFile=log)
+                        rrun("fslmaths " + T1 + "_hpf2_brain -div " + str(med1) + " -mul " + med0 + " " + T1 + "_hpf2_brain", logFile=log)
                         
                         print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         print( self.label + " :Estimating and removing bias field (stage 2 - detailed fields)")
-                        run("fslmaths " + T1 + "_hpf2_brain -mas lesionmaskinv " + T1 + "_hpf2_maskedbrain", log)
-                        run("fast -o " + T1 + "_initfast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_hpf2_maskedbrain", log)
-                        run("fslmaths " + T1 + "_initfast_restore -mas lesionmaskinv " + T1 + "_initfast_maskedrestore", log)
-                        run("fast -o " + T1 + "_initfast2 -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_initfast_maskedrestore", log)
-                        run("fslmaths " + T1 + "_hpf_brain_mask " + T1 + "_initfast2_brain_mask", log)
+                        rrun("fslmaths " + T1 + "_hpf2_brain -mas lesionmaskinv " + T1 + "_hpf2_maskedbrain", logFile=log)
+                        rrun("fast -o " + T1 + "_initfast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_hpf2_maskedbrain", logFile=log)
+                        rrun("fslmaths " + T1 + "_initfast_restore -mas lesionmaskinv " + T1 + "_initfast_maskedrestore", logFile=log)
+                        rrun("fast -o " + T1 + "_initfast2 -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_initfast_maskedrestore", logFile=log)
+                        rrun("fslmaths " + T1 + "_hpf_brain_mask " + T1 + "_initfast2_brain_mask", logFile=log)
                     else:
                         if do_bet is True:
                             # get a rough brain mask - it can be *VERY* rough (i.e. missing huge portions of the brain or including non-brain, but non-background) - use -f 0.1 to err on being over inclusive
-                            run("bet " + T1 + " " + T1 + "_initfast2_brain -m -f 0.1", log)
+                            rrun("bet " + T1 + " " + T1 + "_initfast2_brain -m -f 0.1", logFile=log)
                         else:
-                            run("fslmaths " + T1 + " " + T1 + "_initfast2_brain", log)
-                            run("fslmaths " + T1 + "_initfast2_brain -bin " + T1 + "_initfast2_brain_mask", log)
+                            rrun("fslmaths " + T1 + " " + T1 + "_initfast2_brain", logFile=log)
+                            rrun("fslmaths " + T1 + "_initfast2_brain -bin " + T1 + "_initfast2_brain_mask", logFile=log)
 
-                        run("fslmaths " + T1 + "_initfast2_brain " + T1 + "_initfast2_restore", log)
+                        rrun("fslmaths " + T1 + "_initfast2_brain " + T1 + "_initfast2_restore", logFile=log)
 
                     # redo fast again to try and improve bias field
-                    run("fslmaths " + T1 + "_initfast2_restore -mas lesionmaskinv " + T1 + "_initfast2_maskedrestore", log)
-                    run("fast -o " + T1 + "_fast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_initfast2_maskedrestore", log)
+                    rrun("fslmaths " + T1 + "_initfast2_restore -mas lesionmaskinv " + T1 + "_initfast2_maskedrestore", logFile=log)
+                    rrun("fast -o " + T1 + "_fast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_initfast2_maskedrestore", logFile=log)
                     print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                     print(self.label + " :Extrapolating bias field from central region")
                     # use the latest fast output
-                    run("fslmaths " + T1 + " -div " + T1 + "_fast_restore -mas " + T1 + "_initfast2_brain_mask " + T1 + "_fast_totbias", log)
-                    run("fslmaths " + T1 + "_initfast2_brain_mask -ero -ero -ero -ero -mas lesionmaskinv " + T1 + "_initfast2_brain_mask2", log)
-                    run("fslmaths " + T1 + "_fast_totbias -sub 1 " + T1 + "_fast_totbias", log)
-                    run("fslsmoothfill -i " + T1 + "_fast_totbias -m " + T1 + "_initfast2_brain_mask2 -o " + T1 + "_fast_bias", log)
-                    run("fslmaths " + T1 + "_fast_bias -add 1 " + T1 + "_fast_bias", log)
-                    run("fslmaths " + T1 + "_fast_totbias -add 1 " + T1 + "_fast_totbias", log)
+                    rrun("fslmaths " + T1 + " -div " + T1 + "_fast_restore -mas " + T1 + "_initfast2_brain_mask " + T1 + "_fast_totbias", logFile=log)
+                    rrun("fslmaths " + T1 + "_initfast2_brain_mask -ero -ero -ero -ero -mas lesionmaskinv " + T1 + "_initfast2_brain_mask2", logFile=log)
+                    rrun("fslmaths " + T1 + "_fast_totbias -sub 1 " + T1 + "_fast_totbias", logFile=log)
+                    rrun("fslsmoothfill -i " + T1 + "_fast_totbias -m " + T1 + "_initfast2_brain_mask2 -o " + T1 + "_fast_bias", logFile=log)
+                    rrun("fslmaths " + T1 + "_fast_bias -add 1 " + T1 + "_fast_bias", logFile=log)
+                    rrun("fslmaths " + T1 + "_fast_totbias -add 1 " + T1 + "_fast_totbias", logFile=log)
                     # run $FSLDIR/bin/fslmaths " + T1 + "_fast_totbias -sub 1 -mas " + T1 + "_initfast2_brain_mask -dilall -add 1 " + T1 + "_fast_bias  # alternative to fslsmoothfill
-                    run("fslmaths " + T1 + " -div " + T1 + "_fast_bias " + T1 + "_biascorr", log)
+                    rrun("fslmaths " + T1 + " -div " + T1 + "_fast_bias " + T1 + "_biascorr", logFile=log)
                 else:
-                    run("fslmaths " + T1 + " " + T1 + "_biascorr", log)
+                    rrun("fslmaths " + T1 + " " + T1 + "_biascorr", logFile=log)
 
             #### REGISTRATION AND BRAIN EXTRACTION
             # required input: " + T1 + "_biascorr
@@ -394,31 +395,31 @@ class Subject:
                         if use_lesionmask is True:
                             flirtargs = flirtargs + " -inweight lesionmaskinv"
 
-                        run("flirt -interp spline -dof 12 -in " + T1 + "_biascorr -ref " + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm") + " -dof 12 -omat " + T1 + "_to_MNI_lin.mat -out " + T1 + "_to_MNI_lin " + flirtargs, log)
+                        rrun("flirt -interp spline -dof 12 -in " + T1 + "_biascorr -ref " + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm") + " -dof 12 -omat " + T1 + "_to_MNI_lin.mat -out " + T1 + "_to_MNI_lin " + flirtargs, logFile=log)
 
                         if do_nonlinreg is True:
                             print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                             print( "Registering to standard space (non-linear)")
                             refmask = "MNI152_" + T1 + "_2mm_brain_mask_dil1"
 
-                            run("fslmaths " + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm_brain_mask") + " -fillh -dilF " + refmask, log)
-                            run("fnirt --in=" + T1 + "_biascorr --ref=" + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm") + " --fout=" + T1 + "_to_MNI_nonlin_field --jout=" + T1 + "_to_MNI_nonlin_jac --iout=" + T1 + "_to_MNI_nonlin --logout=" + T1 + "_to_MNI_nonlin.txt --cout=" + T1 + "_to_MNI_nonlin_coeff --config=" + os.path.join(self.fsl_dir, "etc", "flirtsch", T1 + "_2_MNI152_2mm.cnf") + " --aff=" + T1 + "_to_MNI_lin.mat --refmask=" + refmask + " " + fnirtargs, log)
+                            rrun("fslmaths " + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm_brain_mask") + " -fillh -dilF " + refmask, logFile=log)
+                            rrun("fnirt --in=" + T1 + "_biascorr --ref=" + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm") + " --fout=" + T1 + "_to_MNI_nonlin_field --jout=" + T1 + "_to_MNI_nonlin_jac --iout=" + T1 + "_to_MNI_nonlin --logout=" + T1 + "_to_MNI_nonlin.txt --cout=" + T1 + "_to_MNI_nonlin_coeff --config=" + os.path.join(self.fsl_dir, "etc", "flirtsch", T1 + "_2_MNI152_2mm.cnf") + " --aff=" + T1 + "_to_MNI_lin.mat --refmask=" + refmask + " " + fnirtargs, logFile=log)
 
                             print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                             print(self.label + " :Performing brain extraction (using FNIRT)")
-                            run("invwarp --ref=" + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_coeff -o MNI_to_" + T1 + "_nonlin_field", log)
-                            run("applywarp --interp=nn --in=" + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm_brain_mask") + " --ref=" + T1 + "_biascorr -w MNI_to_" + T1 + "_nonlin_field -o " + T1 + "_biascorr_brain_mask", log)
-                            run("fslmaths " + T1 + "_biascorr_brain_mask -fillh " + T1 + "_biascorr_brain_mask", log)
-                            run("fslmaths " + T1 + "_biascorr -mas " + T1 + "_biascorr_brain_mask " + T1 + "_biascorr_brain", log)
+                            rrun("invwarp --ref=" + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_coeff -o MNI_to_" + T1 + "_nonlin_field", logFile=log)
+                            rrun("applywarp --interp=nn --in=" + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm_brain_mask") + " --ref=" + T1 + "_biascorr -w MNI_to_" + T1 + "_nonlin_field -o " + T1 + "_biascorr_brain_mask", logFile=log)
+                            rrun("fslmaths " + T1 + "_biascorr_brain_mask -fillh " + T1 + "_biascorr_brain_mask", logFile=log)
+                            rrun("fslmaths " + T1 + "_biascorr -mas " + T1 + "_biascorr_brain_mask " + T1 + "_biascorr_brain", logFile=log)
                         ## In the future, could check the initial ROI extraction here
                 else:
                     if do_bet is True:
                         print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         print(self.label + " :Performing brain extraction (using BET)")
-                        run("bet -R " + T1 + "_biascorr " + T1 + "_biascorr_brain -m " + betopts, log)  ## results sensitive to the f parameter
+                        rrun("bet -R " + T1 + "_biascorr " + T1 + "_biascorr_brain -m " + betopts, logFile=log)  ## results sensitive to the f parameter
                     else:
-                        run("fslmaths " + T1 + "_biascorr " + T1 + "_biascorr_brain", log)
-                        run("fslmaths " + T1 + "_biascorr_brain -bin " + T1 + "_biascorr_brain_mask", log)
+                        rrun("fslmaths " + T1 + "_biascorr " + T1 + "_biascorr_brain", logFile=log)
+                        rrun("fslmaths " + T1 + "_biascorr_brain -bin " + T1 + "_biascorr_brain_mask", logFile=log)
 
             #### TISSUE-TYPE SEGMENTATION
             # required input: " + T1 + "_biascorr " + T1 + "_biascorr_brain " + T1 + "_biascorr_brain_mask
@@ -427,23 +428,23 @@ class Subject:
                 if do_seg is True:
                     print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                     print(self.label + " :Performing tissue-imgtype segmentation")
-                    run("fslmaths " + T1 + "_biascorr_brain -mas lesionmaskinv " + T1 + "_biascorr_maskedbrain", log)
-                    run("fast -o " + T1 + "_fast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " " + T1 + "_biascorr_maskedbrain", log)
-                    immv(T1 + "_biascorr", T1 + "_biascorr_init", log)
-                    run("fslmaths " + T1 + "_fast_restore " + T1 + "_biascorr_brain", log)
+                    rrun("fslmaths " + T1 + "_biascorr_brain -mas lesionmaskinv " + T1 + "_biascorr_maskedbrain", logFile=log)
+                    rrun("fast -o " + T1 + "_fast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " " + T1 + "_biascorr_maskedbrain", logFile=log)
+                    immv(T1 + "_biascorr", T1 + "_biascorr_init", logFile=log)
+                    rrun("fslmaths " + T1 + "_fast_restore " + T1 + "_biascorr_brain", logFile=log)
                     # extrapolate bias field and apply to the whole head image
-                    run("fslmaths " + T1 + "_biascorr_brain_mask -mas lesionmaskinv " + T1 + "_biascorr_brain_mask2", log)
-                    run("fslmaths " + T1 + "_biascorr_init -div " + T1 + "_fast_restore -mas " + T1 + "_biascorr_brain_mask2 " + T1 + "_fast_totbias", log)
-                    run("fslmaths " + T1 + "_fast_totbias -sub 1 " + T1 + "_fast_totbias", log)
-                    run("fslsmoothfill -i " + T1 + "_fast_totbias -m " + T1 + "_biascorr_brain_mask2 -o " + T1 + "_fast_bias", log)
-                    run("fslmaths " + T1 + "_fast_bias -add 1 " + T1 + "_fast_bias", log)
-                    run("fslmaths " + T1 + "_fast_totbias -add 1 " + T1 + "_fast_totbias", log)
-                    # run $FSLDIR/bin/fslmaths " + T1 + "_fast_totbias -sub 1 -mas " + T1 + "_biascorr_brain_mask2 -dilall -add 1 " + T1 + "_fast_bias # alternative to fslsmoothfill", log)
-                    run("fslmaths " + T1 + "_biascorr_init -div " + T1 + "_fast_bias " + T1 + "_biascorr", log)
+                    rrun("fslmaths " + T1 + "_biascorr_brain_mask -mas lesionmaskinv " + T1 + "_biascorr_brain_mask2", logFile=log)
+                    rrun("fslmaths " + T1 + "_biascorr_init -div " + T1 + "_fast_restore -mas " + T1 + "_biascorr_brain_mask2 " + T1 + "_fast_totbias", logFile=log)
+                    rrun("fslmaths " + T1 + "_fast_totbias -sub 1 " + T1 + "_fast_totbias", logFile=log)
+                    rrun("fslsmoothfill -i " + T1 + "_fast_totbias -m " + T1 + "_biascorr_brain_mask2 -o " + T1 + "_fast_bias", logFile=log)
+                    rrun("fslmaths " + T1 + "_fast_bias -add 1 " + T1 + "_fast_bias", logFile=log)
+                    rrun("fslmaths " + T1 + "_fast_totbias -add 1 " + T1 + "_fast_totbias", logFile=log)
+                    # run $FSLDIR/bin/fslmaths " + T1 + "_fast_totbias -sub 1 -mas " + T1 + "_biascorr_brain_mask2 -dilall -add 1 " + T1 + "_fast_bias # alternative to fslsmoothfill", logFile=log)
+                    rrun("fslmaths " + T1 + "_biascorr_init -div " + T1 + "_fast_bias " + T1 + "_biascorr", logFile=log)
 
                     if do_nonlinreg is True:
                         # regenerate the standard space version with the new bias field correction applied
-                        run("applywarp -i " + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_field -r " + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm") + " -o " + T1 + "_to_MNI_nonlin --interp=spline", log)
+                        rrun("applywarp -i " + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_field -r " + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm") + " -o " + T1 + "_to_MNI_nonlin --interp=spline", logFile=log)
 
             #### SKULL-CONSTRAINED BRAIN VOLUME ESTIMATION (only done if registration turned on, and segmentation done, and it is a T1 image)
             # required inputs: " + T1 + "_biascorr
@@ -453,16 +454,16 @@ class Subject:
                 if do_reg is True and do_seg is True and T1 == "T1":
                     print(self.label + " :Skull-constrained registration (linear)")
 
-                    run("bet " + T1 + "_biascorr " + T1 + "_biascorr_bet -s -m " + betopts, log)
-                    run("pairreg " + os.path.join(self.fsl_data_standard, "MNI152_T1_2mm_brain") + " " + T1 + "_biascorr_bet " + os.path.join(self.fsl_data_standard, "MNI152_T1_2mm_skull") + " " + T1 + "_biascorr_bet_skull " + T1 + "2std_skullcon.mat", log)
+                    rrun("bet " + T1 + "_biascorr " + T1 + "_biascorr_bet -s -m " + betopts, logFile=log)
+                    rrun("pairreg " + os.path.join(self.fsl_data_standard, "MNI152_T1_2mm_brain") + " " + T1 + "_biascorr_bet " + os.path.join(self.fsl_data_standard, "MNI152_T1_2mm_skull") + " " + T1 + "_biascorr_bet_skull " + T1 + "2std_skullcon.mat", logFile=log)
 
                     if use_lesionmask is True:
-                        run("fslmathslesionmask -max " + T1 + "_fast_pve_2 " + T1 + "_fast_pve_2_plusmask -odt float", log)
+                        rrun("fslmathslesionmask -max " + T1 + "_fast_pve_2 " + T1 + "_fast_pve_2_plusmask -odt float", logFile=log)
                         # ${FSLDIR}/bin/fslmaths lesionmask -bin -mul 3 -max " + T1 + "_fast_seg " + T1 + "_fast_seg_plusmask -odt int
 
-                    vscale = float(runpipe("avscale " + T1 + "2std_skullcon.mat | grep Determinant | awk '{ print $3 }'", log)[0].decode("ascii").split("\n")[0])
-                    ugrey  = float(runpipe("fslstats " + T1 + "_fast_pve_1 -m -v | awk '{ print $1 * $3 }'", log)[0].decode("ascii").split("\n")[0])
-                    uwhite = float(runpipe("fslstats " + T1 + "_fast_pve_2 -m -v | awk '{ print $1 * $3 }'", log)[0].decode("ascii").split("\n")[0])
+                    vscale = float(runpipe("avscale " + T1 + "2std_skullcon.mat | grep Determinant | awk '{ print $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
+                    ugrey  = float(runpipe("fslstats " + T1 + "_fast_pve_1 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
+                    uwhite = float(runpipe("fslstats " + T1 + "_fast_pve_2 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
 
                     ngrey  = ugrey * vscale
                     nwhite = uwhite * vscale
@@ -499,12 +500,12 @@ class Subject:
             #### CLEANUP
             if do_cleanup is True:
                 #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning up intermediate files"
-                run("imrm " + T1 + "_biascorr_bet_mask " + T1 + "_biascorr_bet " + T1 + "_biascorr_brain_mask2 " + T1 + "_biascorr_init " + T1 + "_biascorr_maskedbrain " + T1 + "_biascorr_to_std_sub " + T1 + "_fast_bias_idxmask " + T1 + "_fast_bias_init " + T1 + "_fast_bias_vol2 " + T1 + "_fast_bias_vol32 " + T1 + "_fast_totbias " + T1 + "_hpf* " + T1 + "_initfast* " + T1 + "_s20 " + T1 + "_initmask_s20", log)
+                rrun("imrm " + T1 + "_biascorr_bet_mask " + T1 + "_biascorr_bet " + T1 + "_biascorr_brain_mask2 " + T1 + "_biascorr_init " + T1 + "_biascorr_maskedbrain " + T1 + "_biascorr_to_std_sub " + T1 + "_fast_bias_idxmask " + T1 + "_fast_bias_init " + T1 + "_fast_bias_vol2 " + T1 + "_fast_bias_vol32 " + T1 + "_fast_totbias " + T1 + "_hpf* " + T1 + "_initfast* " + T1 + "_s20 " + T1 + "_initmask_s20", logFile=log)
 
             #### STRONG CLEANUP
             if do_strongcleanup is True:
                 #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning all unnecessary files "
-                run("imrm " + T1 + " " + T1 + "_orig " + T1 + "_fullfov", log)
+                rrun("imrm " + T1 + " " + T1 + "_orig " + T1 + "_fullfov", logFile=log)
 
             os.chdir(curdir)
 
@@ -543,30 +544,30 @@ class Subject:
 
             os.chdir(anatdir)
     
-            run_notexisting_img(self.t1_data + "_orig", "immv " + self.t1_data + " " + self.t1_data + "_orig", log)
-            run_notexisting_img(self.t1_data, "imcp " + T1 + "_biascorr " + self.t1_data, log)
-            run_notexisting_img(self.t1_brain_data, "imcp " + T1 + "_biascorr_brain " + self.t1_brain_data, log)
-            run_notexisting_img(self.t1_brain_data + "_mask", "imcp " + T1 + "_biascorr_brain_mask " + self.t1_brain_data + "_mask", log)
+            run_notexisting_img(self.t1_data + "_orig", "immv " + self.t1_data + " " + self.t1_data + "_orig", logFile=log)
+            run_notexisting_img(self.t1_data, "imcp " + T1 + "_biascorr " + self.t1_data, logFile=log)
+            run_notexisting_img(self.t1_brain_data, "imcp " + T1 + "_biascorr_brain " + self.t1_brain_data, logFile=log)
+            run_notexisting_img(self.t1_brain_data + "_mask", "imcp " + T1 + "_biascorr_brain_mask " + self.t1_brain_data + "_mask", logFile=log)
     
             os.makedirs(self.fast_dir, exist_ok=True)
 
-            mass_images_move("*fast*", self.fast_dir, log)
+            mass_images_move("*fast*", self.fast_dir, logFile=log)
 
-            run_notexisting_img(T1 + "_fast_pve_1", "imcp " + os.path.join(self.fast_dir, T1 + "_fast_pve_1 ./"), log) # this file is tested by subject_t1_processing to skip the fast step. so by copying it back, I allow such skip.
+            run_notexisting_img(T1 + "_fast_pve_1", "imcp " + os.path.join(self.fast_dir, T1 + "_fast_pve_1 ./"), logFile=log) # this file is tested by subject_t1_processing to skip the fast step. so by copying it back, I allow such skip.
     
-            run_notexisting_img(self.t1_segment_csf_path, "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_seg") + " -thr 1 -uthr 1 " + self.t1_segment_csf_path, log)
-            run_notexisting_img(self.t1_segment_gm_path , "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_seg") + " -thr 2 -uthr 2 " + self.t1_segment_gm_path, log)
-            run_notexisting_img(self.t1_segment_wm_path , "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_seg") + " -thr 3 " + self.t1_segment_wm_path, log)
+            run_notexisting_img(self.t1_segment_csf_path, "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_seg") + " -thr 1 -uthr 1 " + self.t1_segment_csf_path, logFile=log)
+            run_notexisting_img(self.t1_segment_gm_path , "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_seg") + " -thr 2 -uthr 2 " + self.t1_segment_gm_path, logFile=log)
+            run_notexisting_img(self.t1_segment_wm_path , "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_seg") + " -thr 3 " + self.t1_segment_wm_path, logFile=log)
 
-            run_notexisting_img(self.t1_segment_csf_ero_path, "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_pve_0 -thr 1 -uthr 1 " + self.t1_segment_csf_ero_path), log)
-            run_notexisting_img(self.t1_segment_wm_bbr_path , "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_pve_2 -thr 0.5 -bin " + self.t1_segment_wm_bbr_path), log)
-            run_notexisting_img(self.t1_segment_wm_ero_path , "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_pve_2 -ero " + self.t1_segment_wm_ero_path), log)
+            run_notexisting_img(self.t1_segment_csf_ero_path, "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_pve_0 -thr 1 -uthr 1 " + self.t1_segment_csf_ero_path), logFile=log)
+            run_notexisting_img(self.t1_segment_wm_bbr_path , "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_pve_2 -thr 0.5 -bin " + self.t1_segment_wm_bbr_path), logFile=log)
+            run_notexisting_img(self.t1_segment_wm_ero_path , "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_pve_2 -ero " + self.t1_segment_wm_ero_path), logFile=log)
 
-            mass_images_move("*_to_MNI*", os.path.join(self.roi_dir, "reg_standard"), log)
-            mass_images_move("*_to_T1*", os.path.join(self.roi_dir, "reg_t1"), log)
+            mass_images_move("*_to_MNI*", os.path.join(self.roi_dir, "reg_standard"), logFile=log)
+            mass_images_move("*_to_T1*", os.path.join(self.roi_dir, "reg_t1"), logFile=log)
 
-            run_move_notexisting_img(os.path.join(self.roi_dir, "reg_t1", "standard2highres_warp"), "immv " + os.path.join(self.roi_dir, "reg_t1", "MNI_to_T1_nonlin_field") + " " +  os.path.join(self.roi_dir, "reg_t1", "standard2highres_warp"), log)
-            run_move_notexisting_img(os.path.join(self.roi_dir, "reg_standard", "highres2standard_warp"), "immv " + os.path.join(self.roi_dir, "reg_standard", "T1_to_MNI_nonlin_field") + " " +  os.path.join(self.roi_dir, "reg_standard", "highres2standard_warp"), log)
+            run_move_notexisting_img(os.path.join(self.roi_dir, "reg_t1", "standard2highres_warp"), "immv " + os.path.join(self.roi_dir, "reg_t1", "MNI_to_T1_nonlin_field") + " " +  os.path.join(self.roi_dir, "reg_t1", "standard2highres_warp"), logFile=log)
+            run_move_notexisting_img(os.path.join(self.roi_dir, "reg_standard", "highres2standard_warp"), "immv " + os.path.join(self.roi_dir, "reg_standard", "T1_to_MNI_nonlin_field") + " " +  os.path.join(self.roi_dir, "reg_standard", "highres2standard_warp"), logFile=log)
 
             # first has been removed from the standard t1_processing pipeline
             # mkdir -p $FIRST_DIR
@@ -597,30 +598,36 @@ class Subject:
             list_structs = []
             structs = ""
 
-        output_roi_dir = os.path.join(self.roi_dir, "reg_t1", odn)
+        output_roi_dir  = os.path.join(self.roi_dir, "reg_t1", odn)
+        temp_dir        = os.path.join(self.first_dir, "temp")
 
-        filename, _ = remove_ext(t1_image)
+        filename = remove_ext(t1_image)
         t1_image_label = os.path.basename(filename)
 
         try:
+            os.makedirs(self.first_dir, exist_ok=True)
+            os.makedirs(output_roi_dir, exist_ok=True)
+            os.makedirs(temp_dir, exist_ok=True)
+
+            os.chdir(temp_dir)
+
             log = open(logfile, "a")
 
             print("******************************************************************", file=log)
             print("starting FIRST processing", file=log)
             print("******************************************************************", file=log)
 
-            os.makedirs(self.first_dir, exist_ok=True)
-            os.makedirs(output_roi_dir, exist_ok=True)
-
             print(self.label + ": FIRST (of " + t1_image_label + " " +  structs + " " + odn + ")")
 
             image_label_path = os.path.join(self.first_dir, t1_image_label)
 
-            run("first_flirt " + t1_image + " " + image_label_path + "_to_std_sub", log)
-            run("run_first_all -i " + t1_image + " - o " + image_label_path + " -d -a " + image_label_path + "_to_std_sub.mat -b " + structs, log)
+            rrun("first_flirt " + t1_image + " " + image_label_path + "_to_std_sub", logFile=log)
+            rrun("run_first_all -i " + t1_image + " - o " + image_label_path + " -d -a " + image_label_path + "_to_std_sub.mat -b " + structs, logFile=log)
 
             for struct in list_structs:
-                immv(image_label_path + "-" + struct + "_first.nii.gz", os.path.join(output_roi_dir, "mask_" + struct + "_highres.nii.gz"), log)
+                immv(image_label_path + "-" + struct + "_first.nii.gz", os.path.join(output_roi_dir, "mask_" + struct + "_highres.nii.gz"), logFile=log)
+
+            os.chdir(curdir)
 
         except Exception as e:
             traceback.print_exc()
@@ -638,13 +645,13 @@ class Subject:
 
             curdir = os.getcwd()
             
-            run("mri_convert " + self.t1_data + ".nii.gz " + self.t1_data + ".mgz")
+            rrun("mri_convert " + self.t1_data + ".nii.gz " + self.t1_data + ".mgz")
             os.system("OLD_SUBJECTS_DIR=$SUBJECTS_DIR")
             os.system("SUBJECTS_DIR=" + self.t1_dir)
     
-            run("recon-all -subject freesurfer" + self.label + " -i " + self.dti_data + ".mgz -all")
-            run("mri_convert " + os.path.join(self.t1_dir, "freesurfer" + self.label, "mri", "aparc+aseg.mgz") + " " + os.path.join(self.t1_dir, "freesurfer" +  self.label, "aparc+aseg.nii.gz"))
-            run("mri_convert " + os.path.join(self.t1_dir, "freesurfer" + self.label, "mri", "aseg.mgz") + " " + os.path.join(self.t1_dir, "freesurfer" +  self.label, "aseg.nii.gz"))
+            rrun("recon-all -subject freesurfer" + self.label + " -i " + self.dti_data + ".mgz -all")
+            rrun("mri_convert " + os.path.join(self.t1_dir, "freesurfer" + self.label, "mri", "aparc+aseg.mgz") + " " + os.path.join(self.t1_dir, "freesurfer" +  self.label, "aparc+aseg.nii.gz"))
+            rrun("mri_convert " + os.path.join(self.t1_dir, "freesurfer" + self.label, "mri", "aseg.mgz") + " " + os.path.join(self.t1_dir, "freesurfer" +  self.label, "aseg.nii.gz"))
     
             os.system("SUBJECTS_DIR=$OLD_SUBJECTS_DIR")
             os.system("rm " + self.dti_data + ".mgz")
@@ -666,7 +673,7 @@ class Subject:
             return
 
         imcp(self.t1_data, os.path.join(self.t1_dir, bckfilename))          # create backup copy
-        run("fslswapdim " + self.t1_data + conversion_str + self.t1_data)   # run reslicing
+        rrun("fslswapdim " + self.t1_data + conversion_str + self.t1_data)   # run reslicing
     # ==================================================================================================================================================
     # DIFFUSION
     # ==================================================================================================================================================
@@ -724,8 +731,8 @@ class Subject:
             print("file STD_IMAGE_MASK: " + STD_IMAGE_MASK + ".nii.gz is not present...skipping reg_nonlin_epi_t1_standard.sh")
             return
 
-        if imtest(self.t1_brain_data_) is False:
-            print("file T1_BRAIN_DATA: " + T1_BRAIN_DATA + ".nii.gz is not present...skipping reg_nonlin_epi_t1_standard.sh")
+        if imtest(self.t1_brain_data) is False:
+            print("file T1_BRAIN_DATA: " + self.t1_brain_data + ".nii.gz is not present...skipping reg_nonlin_epi_t1_standard.sh")
             return
 
         print( self.label + " :STARTED : nonlin t1-standard coregistration")

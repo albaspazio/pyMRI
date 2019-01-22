@@ -29,9 +29,9 @@ class Project:
             self.subjects_lists = json.load(json_file)
 
     def get_list_by_label(self, label):
-        for l in self.subjects_lists:
-            if l.label == label:
-                return l
+        for subj in self.subjects_lists["subjects"]:
+            if subj["label"] == label:
+                return subj["list"]
 
     def load_subjects(self, list_label, sess_id=1):
         subjects = self.get_list_by_label(list_label)
@@ -39,14 +39,14 @@ class Project:
         self.subjects = []
 
         for subj in subjects:
-            self.subjects.append(Subject(subj.label, sess_id, self))
+            self.subjects.append(Subject(subj, sess_id, self))
 
         return self.subjects
 
     def check_subjects_original_images(self):
 
         incomplete_subjects = []
-        for subj in self.subjects:
+        for subj in self.subjects["subjects"]:
             missing = subj.check_images(self.hasT1, self.hasRS, self.hasDTI, self.hasT2)
             if len(missing) > 0:
                 incomplete_subjects.append({"label":subj.label, "images":missing})

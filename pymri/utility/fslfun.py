@@ -1,38 +1,43 @@
 import os
-from shutil import copyfile, move
-import subprocess
 import sys
+from shutil import copyfile, move
 import glob
+import subprocess
 
+from pymri.fsl.utils.run import rrun
 
 IMAGE_FORMATS = [".nii", ".nii.gz", ".mnc", ".mnc.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
 
+#===============================================================================================================================
+# manage images
+#===============================================================================================================================
 # return False if no image exists or True if the image exists
 def imtest(image_path):
 
     if image_path == "":
         return False
 
-    filename, file_extension = remove_ext(image_path)
+    fileparts = mysplittext(image_path)
 
-    if os.path.isfile(filename + ".nii") or os.path.isfile(filename + ".nii.gz"):
+    if os.path.isfile(fileparts[0] + ".nii") or os.path.isfile(fileparts[0] + ".nii.gz"):
         return True
 
-    if os.path.isfile(filename + ".mnc") or os.path.isfile(filename + ".mnc.gz"):
+    if os.path.isfile(fileparts[0] + ".mnc") or os.path.isfile(fileparts[0] + ".mnc.gz"):
         return True
 
-    if not os.path.isfile(filename + ".hdr") and not os.path.isfile(filename + ".hdr.gz"):
+    if not os.path.isfile(fileparts[0] + ".hdr") and not os.path.isfile(fileparts[0] + ".hdr.gz"):
         # return 0 here as no header exists and no single image means no image!
         return False
 
-    if not os.path.isfile(filename + ".img") and not os.path.isfile(filename + ".img.gz"):
+    if not os.path.isfile(fileparts[0] + ".img") and not os.path.isfile(fileparts[0] + ".img.gz"):
         # return 0 here as no img file exists and no single image means no image!
         return False
 
     # only gets to here if there was a hdr and an img file
     return True
 
-def imcp(src, dest, log=None):
+
+def imcp(src, dest, logFile=None):
 
     filename_src, file_extension_src = os.path.splitext(src)
     filename_dst, file_extension_dst = os.path.splitext(dest)
@@ -44,10 +49,11 @@ def imcp(src, dest, log=None):
 
     copyfile(filename_src + ext, filename_dst + ext)
 
-    if log is not None:
-        print("cp " + filename_src + ext + " " + filename_dst + ext, file=log)
+    if logFile is not None:
+        print("cp " + filename_src + ext + " " + filename_dst + ext, file=logFile)
 
-def immv(src, dest, log=None):
+
+def immv(src, dest, logFile=None):
 
     filename_src, file_extension_src = os.path.splitext(src)
     filename_dst, file_extension_dst = os.path.splitext(dest)
@@ -63,12 +69,13 @@ def immv(src, dest, log=None):
 
     move(filename_src + ext, filename_dst + ext)
 
-    if log is not None:
-        print("mv " + filename_src + ext + " " + filename_dst + ext, file=log)
+    if logFile is not None:
+        print("mv " + filename_src + ext + " " + filename_dst + ext, file=logFile)
 
     return True
 
-def imrm(filelist, log=None):
+
+def imrm(filelist, logFile=None):
 
     for file in filelist:
         filename_src, file_extension_src = os.path.splitext(file)
@@ -80,96 +87,19 @@ def imrm(filelist, log=None):
 
         os.remove(filename_src + ext)
 
-        if log is not None:
-            print("rm " + filename_src + ext, file=log)
+        if logFile is not None:
+            print("rm " + filename_src + ext, file=logFile)
 
-def run(cmd, log=None):
 
-    fsl_bin = os.path.join(os.getenv('FSLDIR'), "bin")
-    cmdstr = os.path.join(fsl_bin, cmd)
+# return basename of given image (useful to return "image" from "image.nii.gz")
+def remove_ext(img):
+    return mysplittext(img)[0]
 
-    try:
-        retcode = subprocess.check_call(cmdstr, shell=True)
-        if retcode < 0:
-            print("Child was terminated by signal", -retcode, file=sys.stderr)
-
-        if log is not None:
-            print(cmdstr, file=log)
-
-    except subprocess.CalledProcessError as e:
-
-        if e.output is not None:
-            errors = e.output.decode('ascii').split('\n')
-            errstring = "ERROR in run with cmd: " + cmdstr + ", errors: " + "\n" + "\n".join(errors)
-        else:
-            errstring = "ERROR in run with cmd: " + cmdstr
-
-        if log is not None:
-            print(errstring, file=log)
-        raise Exception(errstring)
-
-# used for mv command that returns error if no valid files exist
-def runsystem(cmd, log=None):
-    os.system(cmd)
-    if log is not None:
-        print(cmd, file=log)
-
-# run command whether the given file is not present
-def run_move_notexisting_img(img, cmd, log=None):
-    if not imtest(img):
-        runsystem(cmd, log)
-
-# run command whether the given file is not present
-def run_notexisting_img(img, cmd, log=None):
-    if not imtest(img):
-        run(cmd, log)
-
-# run a pipe command
-def runpipe(cmd, log=None):
-    try:
-        p = subprocess.Popen(cmd, shell=True,
-                             stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        if log is not None:
-            print(cmd, file=log)
-
-        return p.stdout.readlines(-1)
-
-    except subprocess.CalledProcessError as e:
-        errors = e.output.decode('ascii').split('\n')
-        errstring = "ERROR in runpipe with cmd: " + cmd + ", errors: " + "\n" + "\n".join(errors)
-        if log is not None:
-            print(errstring, file=log)
-        raise Exception(errstring)
-
-# return cmd values (typically fslstats)
-def runreturn(cmd, params, log=None):
-
-    fsl_bin = os.path.join(os.getenv('FSLDIR'), "bin")
-    cmdstr = os.path.join(fsl_bin, cmd)
-
-    inputlist = [cmdstr]
-    for i in params:
-        inputlist.append(str(i))
-    fullcmdstr = " ".join(inputlist)
-
-    try:
-        bytesret = subprocess.check_output(inputlist, stderr=subprocess.STDOUT)
-        if log is not None:
-            print(fullcmdstr, file=log)
-        strret = bytesret.decode('ascii')
-        return strret.split(" ")
-
-    except subprocess.CalledProcessError as e:
-        errors = e.output.decode('ascii').split('\n')
-        errstring = "ERROR in runreturn with cmd: " + fullcmdstr + ", errors: " + "\n" + "\n".join(errors)
-        if log is not None:
-            print(errstring, file=log)
-        raise Exception(errstring)
-
+#===============================================================================================================================
+# utilities
+#===============================================================================================================================
 # move a series of images defined by wildcard string ( e.g.   *fast*
-def mass_images_move(wildcardsource, destdir, log=None):
+def mass_images_move(wildcardsource, destdir, logFile=None):
 
     files = glob.glob(wildcardsource)
 
@@ -181,13 +111,13 @@ def mass_images_move(wildcardsource, destdir, log=None):
     for img in images:
         dest_file = os.path.join(destdir, os.path.basename(img))
         move(img, dest_file)
-        if log is not None:
-            print("mv " + img + " " + dest_file, file=log)
+        if logFile is not None:
+            print("mv " + img + " " + dest_file, file=logFile)
 
 
 def is_image(file):
 
-    _, file_extension = remove_ext(file)
+    file_extension = mysplittext(file)[1]
 
     if file_extension in IMAGE_FORMATS:
         return True
@@ -195,14 +125,15 @@ def is_image(file):
         return False
 
 
-def quick_smooth(inimg, outimg, log):
+def quick_smooth(inimg, outimg, logFile=None):
 
-  run("fslmaths " + inimg + " -subsamp2 -subsamp2 -subsamp2 -subsamp2 vol16", log)
-  run("flirt -in vol16 -ref " + inimg + " -out " + outimg + " -noresampblur -applyxfm -paddingsize 16", log)
+  rrun("fslmaths " + inimg + " -subsamp2 -subsamp2 -subsamp2 -subsamp2 vol16", logFile=logFile)
+  rrun("flirt -in vol16 -ref " + inimg + " -out " + outimg + " -noresampblur -applyxfm -paddingsize 16", logFile=logFile)
   # possibly do a tiny extra smooth to $out here?
   imrm(["vol16"])
 
-def remove_ext(img):
+
+def mysplittext(img):
 
     filename, fext = os.path.splitext(img)
     fullext = fext
@@ -210,4 +141,114 @@ def remove_ext(img):
         filename, fext = os.path.splitext(filename)
         fullext = fext + fullext
 
-    return filename, fullext
+    return [filename, fullext]
+
+#===============================================================================================================================
+# some run functions
+#===============================================================================================================================
+# run plain os.system command
+def runsystem(cmd, logFile=None):
+    os.system(cmd)
+    if logFile is not None:
+        print(cmd, file=logFile)
+
+
+# run plain os.system command whether the given image is not present
+def run_move_notexisting_img(img, cmd, logFile=None, is_fsl=True):
+    if not imtest(img):
+        runsystem(cmd, logFile)
+
+
+# run command whether the given image is not present
+def run_notexisting_img(img, cmd, logFile=None):
+    if not imtest(img):
+        rrun(cmd, logFile=logFile)
+
+
+#===============================================================================================================================
+# DEPRECATED run bash commands, i use the rrun function (modified version of the fsl's run function
+#===============================================================================================================================
+# run fsl (default) or generic command and return exception
+def run(cmd, logFile=None, is_fsl=True):
+
+    if is_fsl is True:
+        fsl_bin = os.path.join(os.getenv('FSLDIR'), "bin")
+        cmdstr = os.path.join(fsl_bin, cmd)
+    else:
+        cmdstr = cmd
+
+    try:
+        retcode = subprocess.check_call(cmdstr, shell=True)
+        if retcode < 0:
+            print("Child was terminated by signal", -retcode, file=sys.stderr)
+
+        if logFile is not None:
+            print(cmdstr, file=logFile)
+
+    except subprocess.CalledProcessError as e:
+
+        if e.output is not None:
+            errors = e.output.decode('ascii').split('\n')
+            errstring = "ERROR in run with cmd: " + cmdstr + ", errors: " + "\n" + "\n".join(errors)
+        else:
+            errstring = "ERROR in run with cmd: " + cmdstr
+
+        if logFile is not None:
+            print(errstring, file=logFile)
+        raise Exception(errstring)
+#
+# run a fsl (default) or generic pipe command
+def runpipe(cmd, logFile=None, is_fsl=True):
+    try:
+
+        if is_fsl is True:
+            fsl_bin = os.path.join(os.getenv('FSLDIR'), "bin")
+            cmdstr = os.path.join(fsl_bin, cmd)
+        else:
+            cmdstr = cmd
+
+        p = subprocess.Popen(cmdstr, shell=True,
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        if logFile is not None:
+            print(cmd, file=logFile)
+
+        return p.stdout.readlines(-1)
+
+    except subprocess.CalledProcessError as e:
+        errors = e.output.decode('ascii').split('\n')
+        errstring = "ERROR in runpipe with cmd: " + cmdstr + ", errors: " + "\n" + "\n".join(errors)
+        if logFile is not None:
+            print(errstring, file=logFile)
+        raise Exception(errstring)
+
+
+# run fsl (default) or generic command and return cmd values (typically fslstats)
+# def runreturn(cmd, params, logFile=None, is_fsl=True):
+#
+#     if is_fsl is True:
+#         fsl_bin = os.path.join(os.getenv('FSLDIR'), "bin")
+#         cmdstr = os.path.join(fsl_bin, cmd)
+#     else:
+#         cmdstr = cmd
+#
+#     inputlist = [cmdstr]
+#     for i in params:
+#         inputlist.append(str(i))
+#     fullcmdstr = " ".join(inputlist)
+#
+#     try:
+#         bytesret = subprocess.check_output(inputlist, stderr=subprocess.STDOUT)
+#         if logFile is not None:
+#             print(fullcmdstr, file=logFile)
+#         strret = bytesret.decode('ascii')
+#         return strret.split(" ")
+#
+#     except subprocess.CalledProcessError as e:
+#         errors = e.output.decode('ascii').split('\n')
+#         errstring = "ERROR in runreturn with cmd: " + fullcmdstr + ", errors: " + "\n" + "\n".join(errors)
+#         if logFile is not None:
+#             print(errstring, file=logFile)
+#         raise Exception(errstring)
+#
