@@ -43,6 +43,12 @@ class Project:
 
         return self.subjects
 
+    def get_subjects_labels(self):
+        subjs = []
+        for subj in self.subjects:
+            subjs.append(subj.label)
+        return subjs
+
     def check_subjects_original_images(self):
 
         incomplete_subjects = []

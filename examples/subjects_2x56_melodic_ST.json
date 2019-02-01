@@ -2,7 +2,7 @@
   "template_name"         :"subjects_2x56_melodic_ST",
   "TEMPLATE_MELODIC_IC"   :"/media/alba/dados/MRI/projects/temperamento_murcia/group_analysis/melodic/group_templates/subjects_2x56_melodic_ST/melodic_IC.nii.gz",
   "TEMPLATE_MASK_IMAGE"   :"/media/alba/dados/MRI/projects/temperamento_murcia/group_analysis/melodic/group_templates/subjects_2x56_melodic_ST/mask.nii.gz",
-  "TEMPLATE_BG_IMAGE"     :"media/alba/dados/MRI/projects/temperamento_murcia/group_analysis/melodic/group_templates/subjects_2x56_melodic_ST/bg_image.nii.gz",
+  "TEMPLATE_BG_IMAGE"     :"/media/alba/dados/MRI/projects/temperamento_murcia/group_analysis/melodic/group_templates/subjects_2x56_melodic_ST/bg_image.nii.gz",
   "TEMPLATE_STATS_FOLDER" :"/media/alba/dados/MRI/projects/temperamento_murcia/group_analysis/melodic/group_templates/subjects_2x56_melodic_ST/stats",
   "TEMPLATE_MASK_FOLDER"  :"/media/alba/dados/MRI/projects/temperamento_murcia/group_analysis/melodic/group_templates/subjects_2x56_melodic_ST/stats",
   "str_pruning_ic_id"     :"0,1,2,3,4,5,6,7,8,9,10,11,12,13,15,21,24,27,28,29,30,33",
