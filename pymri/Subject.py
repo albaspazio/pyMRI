@@ -1,10 +1,8 @@
 import os
 
-from pymri.utility.fslfun import imtest, immv, imcp, quick_smooth, run, runpipe, run_notexisting_img, run_move_notexisting_img, remove_ext, mass_images_move
-
+from pymri.utility.fslfun import imtest, immv, imcp, quick_smooth, run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img, remove_ext, mass_images_move
 from pymri.fsl.utils.run import rrun
-# from fsl.utils import run
-# from fsl.scripts import immv
+
 import datetime
 import traceback
 
@@ -12,42 +10,58 @@ import traceback
 
 class Subject:
 
+    BIAS_TYPE_NO        = 0
+    BIAS_TYPE_WEAK      = 1
+    BIAS_TYPE_STRONG    = 2
+
     def __init__(self, label, sessid, project):
 
-        self.label              = label
-        self.sessid             = sessid
+        self.label                  = label
+        self.sessid                 = sessid
 
-        self.fsl_dir            = project.globaldata.fsl_dir
-        self.fsl_bin            = project.globaldata.fsl_bin
-        self.fsl_data_standard  = project.globaldata.fsl_data_standard
+        self.project                = project
+        self.fsl_dir                = project.globaldata.fsl_dir
+        self.fsl_bin                = project.globaldata.fsl_bin
+        self.fsl_data_standard_dir  = project.globaldata.fsl_data_standard_dir
 
-        self.project_subjects_dir = project.subjects_dir
+        self.project_subjects_dir   = project.subjects_dir
 
-        self.dir                = os.path.join(project.subjects_dir, self.label, "s" + str(self.sessid))
-        self.roi_dir            = os.path.join(self.dir, "roi")
+        self.dir                    = os.path.join(project.subjects_dir, self.label, "s" + str(self.sessid))
+        self.roi_dir                = os.path.join(self.dir, "roi")
 
-        self.t1_image_label     = self.label + "-t1"
-        self.t1_dir             = os.path.join(self.dir, "mpr")
-        self.t1_data            = os.path.join(self.t1_dir, self.t1_image_label)
-        self.t1_brain_data      = os.path.join(self.t1_dir, self.t1_image_label + "_brain")
-        self.t1_brain_data_mask = os.path.join(self.t1_dir, self.t1_image_label + "_brain_mask")
+        self.roi_t1_dir             = os.path.join(self.roi_dir, "reg_t1")
+        self.roi_epi_dir            = os.path.join(self.roi_dir, "reg_epi")
+        self.roi_dti_dir            = os.path.join(self.roi_dir, "reg_dti")
+        self.roi_t2_dir             = os.path.join(self.roi_dir, "reg_t2")
+        self.roi_standard_dir       = os.path.join(self.roi_dir, "reg_standard")
+        self.roi_standard4_dir      = os.path.join(self.roi_dir, "reg_standard4")
+
+        self.t1_image_label         = self.label + "-t1"
+        self.t1_dir                 = os.path.join(self.dir, "mpr")
+        self.t1_data                = os.path.join(self.t1_dir, self.t1_image_label)
+        self.t1_brain_data          = os.path.join(self.t1_dir, self.t1_image_label + "_brain")
+        self.t1_brain_data_mask     = os.path.join(self.t1_dir, self.t1_image_label + "_brain_mask")
         
-        self.fast_dir           = os.path.join(self.t1_dir, "fast")
-        self.first_dir          = os.path.join(self.t1_dir, "first")
-        self.sienax_dir         = os.path.join(self.t1_dir, "sienax")
+        self.fast_dir               = os.path.join(self.t1_dir, "fast")
+        self.first_dir              = os.path.join(self.t1_dir, "first")
+        self.sienax_dir             = os.path.join(self.t1_dir, "sienax")
+
+
+        self.first_all_none_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_none_origsegs")
+        self.first_all_fast_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_fast_origsegs")
 
         #if [ ! -d $SUBJECT_DIR]; then print( "ERROR: subject dir ($SUBJECT_DIR) not present !!!.....exiting"; exit; fi
         
-        self.t1_segment_gm_path         = os.path.join(self.roi_dir, "reg_t1", "mask_t1_gm")
-        self.t1_segment_wm_path         = os.path.join(self.roi_dir, "reg_t1", "mask_t1_wm")
-        self.t1_segment_csf_path        = os.path.join(self.roi_dir, "reg_t1", "mask_t1_csf")
-        self.t1_segment_wm_bbr_path     = os.path.join(self.roi_dir, "reg_t1", "wmseg4bbr")
-        self.t1_segment_wm_ero_path     = os.path.join(self.roi_dir, "reg_t1", "mask_t1_wmseg4Nuisance")
-        self.t1_segment_csf_ero_path    = os.path.join(self.roi_dir, "reg_t1", "mask_t1_csfseg4Nuisance")
+        self.t1_segment_gm_path         = os.path.join(self.roi_t1_dir, "mask_t1_gm")
+        self.t1_segment_wm_path         = os.path.join(self.roi_t1_dir, "mask_t1_wm")
+        self.t1_segment_csf_path        = os.path.join(self.roi_t1_dir, "mask_t1_csf")
+        self.t1_segment_wm_bbr_path     = os.path.join(self.roi_t1_dir, "wmseg4bbr")
+        self.t1_segment_wm_ero_path     = os.path.join(self.roi_t1_dir, "mask_t1_wmseg4Nuisance")
+        self.t1_segment_csf_ero_path    = os.path.join(self.roi_t1_dir, "mask_t1_csfseg4Nuisance")
 
         self.dti_image_label            = self.label + "- dti"
         self.dti_EC_image_label         = self.label + "-dti_ec"
-        self.dti_ROTATED_bvec           = self.label + "-dti_rotated.bvec"
+        self.dti_rotated_bvec           = self.label + "-dti_rotated.bvec"
         
         self.dti_bvec                   = self.label + "-dti.bvec"
         self.dti_bval                   = self.label + "-dti.bval"
@@ -66,7 +80,7 @@ class Subject:
         self.rs_data                    = os.path.join(self.rs_dir, self.rs_image_label)
         self.sbfc_dir                   = os.path.join(self.rs_dir, "sbfc")
         self.rs_series_dir              = os.path.join(self.sbfc_dir, "series")
-        self.rs_examplefunc             = os.path.join(self.roi_dir, "reg_epi", "example_func")
+        self.rs_examplefunc             = os.path.join(self.roi_epi_dir, "example_func")
 
         self.rs_series_csf              = os.path.join(self.rs_series_dir, "csf_ts")
         self.rs_series_wm               = os.path.join(self.rs_series_dir, "wm_ts")
@@ -81,34 +95,34 @@ class Subject:
         self.rs_post_nuisance_standard_image_label          = self.rs_image_label + "_preproc_aroma_nuisance_standard"
         self.rs_post_nuisance_melodic_standard_image_label  = self.rs_image_label + "_preproc_aroma_nuisance_melodic_resting"
 
-        self.rs_regstd_dir = os.path.join(self.rs_dir, "resting.ica", "reg_standard")
-        self.rs_regstd_image = os.path.join(self.rs_regstd_dir, "filtered_func_data")
-        self.rs_regstd_denoise_dir = os.path.join(self.rs_dir, "resting.ica", "reg_standard_denoised")
-        self.rs_regstd_denoise_image = os.path.join(self.rs_regstd_denoise_dir, "filtered_func_data")
+        self.rs_regstd_dir              = os.path.join(self.rs_dir, "resting.ica", "reg_standard")
+        self.rs_regstd_image            = os.path.join(self.rs_regstd_dir, "filtered_func_data")
+        self.rs_regstd_denoise_dir      = os.path.join(self.rs_dir, "resting.ica", "reg_standard_denoised")
+        self.rs_regstd_denoise_image    = os.path.join(self.rs_regstd_denoise_dir, "filtered_func_data")
 
-        self.rs_aroma_dir = os.path.join(self.rs_dir, "ica_aroma")
-        self.rs_aroma_image = os.path.join(self.rs_aroma_dir, "denoised_func_data_nonaggr")
-        self.rs_regstd_aroma_dir = os.path.join(self.rs_aroma_dir, "reg_standard")
-        self.rs_regstd_aroma_image = os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data")
+        self.rs_aroma_dir           = os.path.join(self.rs_dir, "ica_aroma")
+        self.rs_aroma_image         = os.path.join(self.rs_aroma_dir, "denoised_func_data_nonaggr")
+        self.rs_regstd_aroma_dir    = os.path.join(self.rs_aroma_dir, "reg_standard")
+        self.rs_regstd_aroma_image  = os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data")
 
-        self.mc_params_dir = os.path.join(self.rs_dir, self.rs_image_label + ".ica", "mc")
-        self.mc_abs_displ = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_abs_mean.rms")
-        self.mc_rel_displ = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_rel_mean.rms")
+        self.mc_params_dir  = os.path.join(self.rs_dir, self.rs_image_label + ".ica", "mc")
+        self.mc_abs_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_abs_mean.rms")
+        self.mc_rel_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_rel_mean.rms")
 
-        self.de_dir = os.path.join(self.dir, "t2")
+        self.de_dir         = os.path.join(self.dir, "t2")
         self.de_image_label = "de"
-        self.de_data = os.path.join(self.de_dir, self.de_image_label)
-        self.de_brain_data = os.path.join(self.de_dir, self.de_image_label + "_brain")
+        self.de_data        = os.path.join(self.de_dir, self.de_image_label)
+        self.de_brain_data  = os.path.join(self.de_dir, self.de_image_label + "_brain")
 
-        self.t2_dir = self.de_dir
+        self.t2_dir         = self.de_dir
         self.t2_image_label = "t2"
-        self.t2_data = os.path.join(self.t2_dir, self.t2_image_label)
-        self.t2_brain_data = os.path.join(self.t2_dir, self.t2_image_label + "_brain")
+        self.t2_data        = os.path.join(self.t2_dir, self.t2_image_label)
+        self.t2_brain_data  = os.path.join(self.t2_dir, self.t2_image_label + "_brain")
 
-        self.wb_dir = os.path.join(self.dir, "wb")
+        self.wb_dir         = os.path.join(self.dir, "wb")
         self.wb_image_label = self.label + "-wb_epi"
-        self.wb_data = os.path.join(self.wb_dir, self.wb_image_label)
-        self.wb_brain_data = os.path.join(self.wb_dir, self.wb_image_label + "_brain")
+        self.wb_data        = os.path.join(self.wb_dir, self.wb_image_label)
+        self.wb_brain_data  = os.path.join(self.wb_dir, self.wb_image_label + "_brain")
 
 
     def create_file_system(self):
@@ -118,11 +132,11 @@ class Subject:
         os.makedirs(os.path.join(self.dir, "dti"), exist_ok = True)
         os.makedirs(os.path.join(self.dir, "t2"), exist_ok = True)
 
-        os.makedirs(os.path.join(self.dir, "roi", "reg_t1"), exist_ok = True)
-        os.makedirs(os.path.join(self.dir, "roi", "reg_standard"), exist_ok = True)
-        os.makedirs(os.path.join(self.dir, "roi", "reg_dti"), exist_ok = True)
-        os.makedirs(os.path.join(self.dir, "roi", "reg_epi"), exist_ok = True)
-        os.makedirs(os.path.join(self.dir, "roi", "reg_t2"), exist_ok = True)
+        os.makedirs(self.roi_t1_dir, exist_ok = True)
+        os.makedirs(self.roi_standard_dir, exist_ok = True)
+        os.makedirs(self.roi_dti_dir, exist_ok = True)
+        os.makedirs(self.roi_epi_dir, exist_ok = True)
+        os.makedirs(self.roi_t2_dir, exist_ok = True)
 
     def check_images(self, t1=False, rs=False, dti=False, t2=False):
 
@@ -151,345 +165,217 @@ class Subject:
     # ==================================================================================================================================================
 
     def wellcome(self,  do_anat=True, odn = "anat", imgtype = 1, smooth = 10,
-                        strongbias = True, do_biasrestore = True,
-                        do_reorient = True, do_crop = True,
-                        do_bet = True, betfparam = 0.5,
-                        do_reg = True, do_nonlinreg = True,
-                        do_seg = True, do_subcortseg = True,
-                        do_skipflirtsearch = False,
-                        do_cleanup = True, do_strongcleanup = False, do_overwrite = False,
-                        use_lesionmask = False, lesionmask = "",
-                        do_fs=False,
+                        biascorr_type=BIAS_TYPE_STRONG,
+                        do_reorient=True, do_crop=True,
+                        do_bet=True, betfparam=0.5,
+                        do_sienax=True, bet_sienax_param_string="-SNB -f 0.2",
+                        do_reg=True, do_nonlinreg=True,
+                        do_seg=True, do_subcortseg=True,
+                        do_skipflirtsearch=False,
+                        do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
+                        use_lesionmask=False, lesionmask="",
+                        do_freesurfer=False,
                         do_first=False, first_struct="", first_odn="",
                         do_epirm2vol=0, do_aroma=True, do_nuisance=True, hpfsec=100, feat_preproc_odn="resting",
                         feat_preproc_model="singlesubj_feat_preproc", do_featinitreg=False,
-                        do_melodic=True, mel_odn="resting",mel_preproc_model="singlesubj_melodic" , do_melinitreg=False,
-                        do_dtifit=True, do_bedx=True, do_bedx_cuda=False, do_autoptx_tract=False):
+                        do_melodic=True, mel_odn="resting",mel_preproc_model="singlesubj_melodic", do_melinitreg=False,
+                        do_dtifit=True, do_bedx=True, do_bedx_cuda=False, bedpost_odn="bedpostx",
+                        do_autoptx_tract=False,
+                        do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0,
+                        std_image=""):
 
+        has_T2              = 0
+        BET_F_VALUE_T2      = "0.5"
+        feat_preproc_model  = os.path.join(self.project.script_dir, "glm", "templates", feat_preproc_model)
+        melodic_model       = os.path.join(self.project.script_dir, "glm", "templates", mel_preproc_model)
 
-        #feat_preproc_model=$PROJ_SCRIPT_DIR / glm / templates / singlesubj_feat_preproc):
+        #==============================================================================================================================================================
+        #  T1 data
+        #==============================================================================================================================================================
+        if os.path.exists(self.t1_dir):
 
-        # Usage()
-        # {
-        # echo "usage: $0 SUBJ_LABEL PROJ_DIR -sienax \"-B -f 0.3\" -firststructs L_Thal,R_Thal -mel resting -dtifit -bedx bedpostx"
-        # echo "-----t1 processing				"
-        # echo "  	-noanat)							"
-        # echo "  	-nobias)							"
-        # echo "  	-weakbias)						"
-        # echo "  	-sienax)							"
-        # echo "  	-firststructs) 				"
-        # echo "  	-firstodn) 						"
-        # echo "  	-firstlreg2odn) 			"
-        # echo "  	-firstnlreg2odn) 			"
-        # echo "-----epi preprocessing		"
-        # echo "-----melodic processing	  "
-        # echo "-----dti processing 			"
-        # }
+            os.makedirs(self.roi_t1_dir, exist_ok=True)
+            os.makedirs(self.roi_standard_dir, exist_ok=True)
+            os.makedirs(self.fast_dir, exist_ok=True)
 
+            if do_anat is True:
+                self.anatomical_processing(odn=odn, imgtype=imgtype, smooth=smooth,
+                        biascorr_type=biascorr_type,
+                        do_reorient=do_reorient, do_crop=do_crop,
+                        do_bet=do_bet, betfparam=betfparam,
+                        do_reg=do_reg, do_nonlinreg=do_nonlinreg,
+                        do_seg=do_seg, do_subcortseg=do_subcortseg,
+                        do_skipflirtsearch=do_skipflirtsearch,
+                        do_cleanup=do_cleanup, do_strongcleanup=do_strongcleanup, do_overwrite=do_overwrite,
+                        use_lesionmask=use_lesionmask, lesionmask=lesionmask)
 
-        HAS_T2=0
-        # ==================================================================================
-        # PROCESSING
-        # ==================================================================================
-        BET_PARAM_STRING="-SNB -f 0.2"
-        BET_F_VALUE_T2="0.5"
-        MELODIC_MODEL="$PROJ_SCRIPT_DIR/glm/templates/singlesubj_melodic"
-        MELODIC_OUTPUT_DIR="resting"
-        MELODIC_DO_INIT_REG=0
-        FEAT_PREPROC_MODEL="$PROJ_SCRIPT_DIR/glm/templates/singlesubj_feat_preproc"
-        FEAT_PREPROC_OUTPUT_DIR_NAME="resting"
-        BEDPOST_OUTDIR_NAME="bedpostx"
-        STRUCT_CONN_ATLAS_PATH="freesurfer"	  		# default value, otherwise specify path to image
-        STRUCT_CONN_ATLAS_NROI=0
-        # standard steps
-        DO_ANAT_PROC=1
-        DO_FEAT_PREPROC=1
-        DO_ICA_AROMA=1
-        DO_NUISANCE=1
+                self.post_anatomical_processing(odn=odn)
 
-        # to be chosen
-        DO_SIENAX=0
-        DO_FIRST=0
-        DO_MELODIC=0
-        DO_DTIFIT=0
-        DO_AUTOPTX_TRACT=0
-        DO_BEDPOST=0
-        DO_BEDPOST_CUDA=0
-        DO_FREESURFER_RECON=0
-        DO_STRUCT_CONN=0
+            if do_sienax is True:
+                print(self.label + " : sienax with " + bet_sienax_param_string)
+                rrun("sienax " +  self.t1_data + " -B " + bet_sienax_param_string + " -r")
 
-        # more params
-        DO_FEAT_PREPROC_INIT_REG=0 # valid also for melodic
-        DO_BIAS_TYPE=2	# 0: no bias, 1: weak bias, 2:full bias
-        HPF_SEC=100
-        STANDARD_IMAGE="$FSL_DATA_STANDARD/MNI152_T1_2mm_brain"
+            self.transforms_mpr()
+            if do_first is True:
+              if imtest(self.first_all_fast_origsegs) is False and imtest(self.first_all_none_origsegs) is False:
+                  self.do_first(first_struct, odn=first_odn)
 
-        # declare -i DO_RMVOL_TO_NUM=0  # indicate how many volumes must have the final EPI image
-        #
-        #
-        # while [ ! -z "$1" ]
-        # do
-        #   case "$1" in
-        #
-        #     # t1 preprocessing
-        #         -skipanat)				DO_ANAT_PROC=0;;
-        #         -nobias)				DO_BIAS_TYPE=0;;		# see subject_t1_processing.sh
-        #         -weakbias)				DO_BIAS_TYPE=1;;
-        #         -sienax)				DO_SIENAX=1
-        #                                 BET_PARAM_STRING="-B -f 0.20"; shift;;
-        #         -first) 				DO_FIRST=1;;
-        #         -firststructs)			DO_FIRST=1
-        #                                 FIRST_STRUCTURES="-structs $2"; shift;;
-        #         -firstodn) 				DO_FIRST=1
-        #                                 FIRST_OUTPUT_DIR_NAME="-odn $2"; shift;;
-        #         -freesurfer)			DO_FREESURFER_RECON=1; shift;;
-        #         -stdimg) 				STANDARD_IMAGE=$2; shift;;
-        #
-        #         # epi preprocessing
-        #         -epirm2vol)				DO_RMVOL_TO_NUM=$2;	shift;;
-        #         -skiparoma) 			DO_ICA_AROMA=0;;
-        #         -skipnuisance)			DO_NUISANCE=0;;
-        #         -skippreproc)			DO_FEAT_PREPROC=0;;
-        #         -hpfsec)				HPF_SEC=$2; shift;;
-        #         -featpreprocodn)		DO_FEAT_PREPROC=1;
-        #                                 FEAT_PREPROC_OUTPUT_DIR_NAME=$2; shift;;
-        #         -featpreprocmodel)		DO_FEAT_PREPROC=1
-        #                                 FEAT_PREPROC_MODEL=$2; shift;;
-        #         -featinitreg) 			DO_FEAT_PREPROC_INIT_REG=1;;  # valid also for melodic
-        #
-        #         # melodic
-        #         -mel)					DO_MELODIC=1;;
-        #         -melodn)				DO_MELODIC=1
-        #                                 MELODIC_OUTPUT_DIR=$2; shift;;
-        #         -melmodel)				DO_MELODIC=1
-        #                                 MELODIC_MODEL=$2; shift;;
-        #         # dti
-        #         -bedx)					DO_BEDPOST=1; shift;;
-        #         -bedxodn)				DO_BEDPOST=1
-        #                                 BEDPOST_OUTDIR_NAME=$2; shift;;
-        #         -bedxcuda)				DO_BEDPOST_CUDA=1; shift;;
-        #         -bedxcudaodn)			DO_BEDPOST_CUDA=1
-        #                                 BEDPOST_OUTDIR_NAME=$2; shift;;
-        #         -dtifit)				DO_DTIFIT=1;;
-        #         -autoptx_tract)			DO_AUTOPTX_TRACT=1;;
-        #         -structconn)			DO_STRUCT_CONN=1;
-        #                                 STRUCT_CONN_ATLAS_PATH=$2; shift;;
-        #
-        #         -structconn_nroi)		STRUCT_CONN_ATLAS_NROI=$2; shift;;
-        #
-        #         *)  					echo "ERROR: unrecognized input parameter($1)";
-        #                                 exit;;
-        #     esac
-        #     shift
-        # done
-        #
-        # fsl_anat_elem=""
-        # if [ $DO_FIRST -eq 0 ]; then		fsl_anat_elem=`echo "$fsl_anat_elem --nosubcortseg"`;fi
-        #
-        # if [ $DO_BIAS_TYPE -eq 0 ]; then fsl_anat_elem=`echo "$fsl_anat_elem --nobias"`;
-        # elif [ $DO_BIAS_TYPE -eq 1 ]; then fsl_anat_elem=`echo "$fsl_anat_elem --weakbias"`;
-        # fi
-        # #==============================================================================================================================================================
-        # #  T1 data
-        # #==============================================================================================================================================================
-        # if [ -d "$T1_DIR" ]; then
-        #     mkdir -p $ROI_DIR/reg_t1
-        #     mkdir -p $ROI_DIR/reg_standard
-        #     mkdir -p $FAST_DIR
-        #
-        #     if [ $DO_ANAT_PROC -eq 1 ]; then
-        #         . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_t1_processing.sh $SUBJ_NAME $PROJ_DIR $fsl_anat_elem
-        #         . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_t1_post_processing.sh $SUBJ_NAME $PROJ_DIR
-        #     fi
-        #
-        #     if [ $DO_SIENAX -eq 1 ]; then
-        #       echo "===========>>>> $SUBJ_NAME: sienax with $BET_PARAM_STRING"
-        #         $FSLDIR/bin/sienax $T1_DATA -B "$BET_PARAM_STRING" -r
-        #         rm $SIENAX_DIR/I.nii*
-        #     fi
-        #
-        #     . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_transforms_calculate_t1.sh $SUBJ_NAME $PROJ_DIR
-        #
-        #   if [ $DO_FIRST -eq 1 ]; then
-        #     if [ ! -f $FIRST_DIR/$T1_IMAGE_LABEL"_"all_none_origsegs.nii.gz -a ! -f $FIRST_DIR/$T1_IMAGE_LABEL"_"all_fast_origsegs.nii.gz ];	then
-        #         . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_t1_first.sh $SUBJ_NAME $PROJ_DIR $FIRST_STRUCTURES $FIRST_OUTPUT_DIR_NAME $FIRST_OUTPUT_REG_DIR_NAME
-        #         fi
-        #     fi
-        #
-        #     if [ $DO_FREESURFER_RECON -eq 1 ]; then
-        #         . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_t1_freesurfer_reconall.sh $SUBJ_NAME $PROJ_DIR
-        #     fi
-        # fi
-        #
-        # #==============================================================================================================================================================
-        # # WB data
-        # #==============================================================================================================================================================
-        # if [ -d "$WB_DIR" ]; then
-        #   if [ `$FSLDIR/bin/imtest $WB_DATA` = 1 ]; then
-        #     if [ `$FSLDIR/bin/imtest $WB_BRAIN_DATA` = 0 ]; then
-        #         echo "===========>>>> $SUBJ_NAME: bet on WB"
-        #         $FSLDIR/bin/bet $WB_DATA $WB_BRAIN_DATA -f $BET_F_VALUE_T2 -g 0 -m
-        #     fi
-        #   fi
-        # fi
-        #
-        # #==============================================================================================================================================================
-        # # RS data
-        # #==============================================================================================================================================================
-        # if [ -d "$RS_DIR" ]; then
-        #
-        #     mkdir -p $ROI_DIR/reg_epi
-        #   if [ 1 = 0 ];  then
-        #         echo "===========>>>> rs image $RS_DATA.nii.gz is missing...continuing"
-        #     else
-        #         LOGFILE=$RS_DIR/log_epi_processing.txt
-        #
-        #         run mkdir -p $PROJ_GROUP_ANALYSIS_DIR/melodic/dr
-        #         run mkdir -p $PROJ_GROUP_ANALYSIS_DIR/melodic/group_templates
-        #         run mkdir -p $RS_DIR/reg_standard
-        #
-        #         if [ $DO_RMVOL_TO_NUM -gt 0 ]; then
-        #             # check if I have to remove the first (TOT_VOL-DO_RMVOL_TO_NUM) volumes
-        #             declare -i TOT_VOL_NUM=`fslnvols $RS_DATA`
-        #             declare -i vol2remove=$TOT_VOL_NUM-$DO_RMVOL_TO_NUM
-        #             if [ $vol2remove -gt 0 ]; then
-        #                 run mv $RS_DATA.nii.gz $RS_DATA"_fullvol".nii.gz
-        #                 run $FSLDIR/bin/fslroi $RS_DATA"_fullvol" $RS_DATA $vol2remove $TOT_VOL_NUM
-        #             fi
-        #         fi
-        #
-        #         # FEAT PRE PROCESSING
-        #         if [ `$FSLDIR/bin/imtest $RS_DIR/$RS_POST_PREPROCESS_IMAGE_LABEL` = 0 ]; then
-        #             if [ ! -f $FEAT_PREPROC_MODEL.fsf ]; then
-        #                 echo "===========>>>> FEAT_PREPROC template file ($SUBJ_NAME $PROJ_DIR $FEAT_PREPROC_MODEL.fsf) is missing...skipping feat preprocessing"
-        #             else
-        #                 if [ ! -d $RS_DIR/$FEAT_PREPROC_OUTPUT_DIR_NAME.feat ]; then
-        #                     run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $FEAT_PREPROC_MODEL -odn $FEAT_PREPROC_OUTPUT_DIR_NAME.feat -stdimg $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG
-        #                     run $FSLDIR/bin/imcp $RS_DIR/$FEAT_PREPROC_OUTPUT_DIR_NAME.feat/filtered_func_data $RS_DIR/$RS_POST_PREPROCESS_IMAGE_LABEL
-        #                 fi
-        #             fi
-        #         fi
-        #
-        #         # do AROMA processing
-        #         if [ $DO_ICA_AROMA -eq 1 -a `$FSLDIR/bin/imtest $RS_DIR/$RS_POST_AROMA_IMAGE_LABEL` = 0 ]; then
-        #             run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_aroma.sh $SUBJ_NAME $PROJ_DIR -idn $FEAT_PREPROC_OUTPUT_DIR_NAME.feat  # do not register to standard
-        #             run $FSLDIR/bin/imcp $RS_AROMA_IMAGE $RS_DIR/$RS_POST_AROMA_IMAGE_LABEL
-        #         fi
-        #
-        #         # do nuisance removal (WM, CSF & highpass temporal filtering)....create the following file: $RS_IMAGE_LABEL"_preproc_aroma_nuisance"
-        #         if [ $DO_NUISANCE -eq 1 -a `$FSLDIR/bin/imtest $RS_DIR/$RS_POST_NUISANCE_IMAGE_LABEL` = 0 ]; then
-        #             run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_resting_nuisance.sh $SUBJ_NAME $PROJ_DIR -hpfsec $HPF_SEC -ifn $RS_POST_AROMA_IMAGE_LABEL
-        #             run . $GLOBAL_SCRIPT_DIR/process_subject/subject_transforms_roi.sh $SUBJ_NAME $PROJ_DIR -thresh 0 -regtype epi2std4 -pathtype abs $RS_DIR/$RS_POST_NUISANCE_IMAGE_LABEL
-        #             $FSLDIR/bin/immv $ROI_DIR/reg_standard4/$RS_POST_NUISANCE_STANDARD_IMAGE_LABEL $RS_FINAL_REGSTD_IMAGE
-        #         fi
-        #
-        #         run $FSLDIR/bin/imcp $RS_DIR/$FEAT_PREPROC_OUTPUT_DIR_NAME.feat/reg_standard/bg_image $RS_FINAL_REGSTD_DIR/bg_image
-        #         run $FSLDIR/bin/imcp $RS_DIR/$FEAT_PREPROC_OUTPUT_DIR_NAME.feat/reg_standard/mask $RS_FINAL_REGSTD_DIR/mask
-        #
-        #
-        #         # NOW reg_standard contains a denoised file with its mask and background image. nevertheless, we also do a melodic to check the output,
-        #         # doing another MC and HPF results seems to improve...although they should not...something that should be investigated....
-        #
-        #
-        #         # MELODIC
-        #         if [ ! -d $RS_DIR/$MELODIC_OUTPUT_DIR.ica -a $DO_MELODIC -eq 1 ]; then
-        #             if [ ! -f $MELODIC_MODEL.fsf ];
-        #             then
-        #                 echo "===========>>>> melodic template file ($SUBJ_NAME $PROJ_DIR $MELODIC_MODEL.fsf) is missing...skipping 1st level melodic"
-        #             else
-        #                 if [ ! -d $RS_DIR/$MELODIC_OUTPUT_DIR.ica ]; then
-        #                     run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -stdimg $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
-        #                     if [ `$FSLDIR/bin/imtest $RS_DIR/$MELODIC_OUTPUT_DIR.ica/reg_standard/filtered_func_data` = 1 ]; then
-        #                         run $FSLDIR/bin/imcp $RS_DIR/$MELODIC_OUTPUT_DIR.ica/reg_standard/filtered_func_data $RS_FINAL_REGSTD_DIR/${RS_POST_NUISANCE_MELODIC_IMAGE_LABEL}_$MELODIC_OUTPUT_DIR
-        #                     fi
-        #                 fi
-        #             fi
-        #         fi
-        #
-        #
-        #         # calculate the remaining transformations   .....3/4/2017 si blocca qui...devo commentarlo per andare avanti !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #         run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_transforms_calculate_epi.sh $SUBJ_NAME $PROJ_DIR
-        #
-        #         # coregister fast-highres to epi
-        #         echo "$SUBJ_NAME: coregister fast-highres to epi"
-        #         [ ! -f $ROI_DIR/reg_epi/t1_wm_epi.nii.gz ] && $FSLDIR/bin/flirt -in $ROI_DIR/reg_t1/mask_t1_wm.nii.gz -ref $ROI_DIR/reg_epi/example_func -applyxfm -init $ROI_DIR/reg_epi/highres2epi.mat -out $ROI_DIR/reg_epi/t1_wm_epi.nii.gz
-        #         [ ! -f $ROI_DIR/reg_epi/t1_csf_epi.nii.gz ] && $FSLDIR/bin/flirt -in $ROI_DIR/reg_t1/mask_t1_csf.nii.gz -ref $ROI_DIR/reg_epi/example_func -applyxfm -init $ROI_DIR/reg_epi/highres2epi.mat -out $ROI_DIR/reg_epi/t1_csf_epi.nii.gz
-        #         [ ! -f $ROI_DIR/reg_epi/t1_gm_epi.nii.gz ] && $FSLDIR/bin/flirt -in $ROI_DIR/reg_t1/mask_t1_gm.nii.gz -ref $ROI_DIR/reg_epi/example_func -applyxfm -init $ROI_DIR/reg_epi/highres2epi.mat -out $ROI_DIR/reg_epi/t1_gm_epi.nii.gz
-        #         [ ! -f $ROI_DIR/reg_epi/t1_brain_epi.nii.gz ] && $FSLDIR/bin/flirt -in $T1_BRAIN_DATA.nii.gz -ref $ROI_DIR/reg_epi/example_func -applyxfm -init $ROI_DIR/reg_epi/highres2epi.mat -out $ROI_DIR/reg_epi/t1_brain_epi.nii.gz
-        #
-        #         # mask & binarize
-        #         $FSLDIR/bin/fslmaths $ROI_DIR/reg_epi/t1_gm_epi.nii.gz -thr 0.2 -bin $ROI_DIR/reg_epi/mask_t1_gm_epi.nii.gz
-        #         $FSLDIR/bin/fslmaths $ROI_DIR/reg_epi/t1_wm_epi.nii.gz -thr 0.2 -bin $ROI_DIR/reg_epi/mask_t1_wm_epi.nii.gz
-        #         $FSLDIR/bin/fslmaths $ROI_DIR/reg_epi/t1_csf_epi.nii.gz -thr 0.2 -bin $ROI_DIR/reg_epi/mask_t1_csf_epi.nii.gz
-        #         $FSLDIR/bin/fslmaths $ROI_DIR/reg_epi/t1_brain_epi.nii.gz -thr 0.2 -bin $ROI_DIR/reg_epi/mask_t1_brain_epi.nii.gz
-        #
-        #   fi
-        # fi
-        #
-        # #==============================================================================================================================================================
-        # # T2 data
-        # #==============================================================================================================================================================
-        # if [ -d "$DE_DIR" ]; then
-        #   if [ `$FSLDIR/bin/imtest $T2_DATA` = 1 ]; then
-        #     HAS_T2=1
-        #         mkdir -p $ROI_DIR/reg_t2
-        #     if [ `$FSLDIR/bin/imtest $T2_BRAIN_DATA` = 0 ]; then
-        #         echo "$SUBJ_NAME: bet on t2"
-        #         $FSLDIR/bin/bet $T2_DATA $T2_BRAIN_DATA -f $BET_F_VALUE_T2 -g 0.2 -m
-        #     fi
-        #   fi
-        # fi
-        #
-        # #==============================================================================================================================================================
-        # # DTI data
-        # #==============================================================================================================================================================
-        # if [ -d "$DTI_DIR" ]; then
-        #   if [ "$(ls -A $DTI_DIR)" ]; then
-        #     if [ `$FSLDIR/bin/imtest $DTI_DIR/$DTI_FIT_LABEL"_FA"` = 0 -a $DO_DTIFIT -eq 1 ]; then
-        #             echo "===========>>>> $SUBJ_NAME: dtifit"
-        #             LOGFILE=$DTI_DIR/log_dti_processing.txt
-        #
-        #             run .	$GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_ec_fit.sh $SUBJ_NAME $PROJ_DIR
-        #         run $FSLDIR/bin/fslmaths $DTI_DIR/$DTI_FIT_LABEL"_L2" -add $DTI_DIR/$DTI_FIT_LABEL"_L3" -div 2 $DTI_DIR/$DTI_FIT_LABEL"_L23"
-        #             run .	$GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_autoPtx_preproc.sh $SUBJ_NAME $PROJ_DIR
-        #     fi
-        #     run mkdir -p $ROI_DIR/reg_dti
-        #
-        #     if [ $HAS_T2 -eq 1 ]; then 	run .	$GLOBAL_SUBJECT_SCRIPT_DIR/subject_transforms_calculate_dti_t2.sh $SUBJ_NAME $PROJ_DIR;
-        #     else
-        #         run .	$GLOBAL_SUBJECT_SCRIPT_DIR/subject_transforms_calculate_dti.sh $SUBJ_NAME $PROJ_DIR;
-        #     fi
-        #
-        #     if [ ! -f $DTI_DIR/$BEDPOST_OUTDIR_NAME/mean_S0samples.nii.gz ]; then
-        #             [ -f $DTI_DIR/$DTI_ROTATED_BVEC.gz ] && gunzip $DTI_DIR/$DTI_ROTATED_BVEC.gz
-        #       [ -f $DTI_DIR/$DTI_BVAL.gz ] && gunzip $DTI_DIR/$DTI_BVAL.gz
-        #
-        #       if [ $DO_BEDPOST -eq 1 ]; then
-        #             run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_bedpostx.sh $SUBJ_NAME $PROJ_DIR $BEDPOST_OUTDIR_NAME
-        #           fi
-        #
-        #       if [ $DO_BEDPOST_CUDA -eq 1 ]; then
-        #             run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_bedpostx_CUDA.sh $SUBJ_NAME $PROJ_DIR $BEDPOST_OUTDIR_NAME
-        #           fi
-        #         fi
-        #
-        #         if [ $DO_AUTOPTX_TRACT -eq 1 ]; then
-        #             if [ ! -f $DTI_DIR/$BEDPOST_OUTDIR_NAME/mean_S0samples.nii.gz ]; then
-        #                 echo "subj $SUBJ_NAME ,you requested the autoPtx tractorgraphy, but bedpostx was not performed.....skipping"
-        #             else
-        #                 . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_autoPtx_tractography.sh $SUBJ_NAME $PROJ_DIR
-        #             fi
-        #         fi
-        #
-        #         if [ $DO_STRUCT_CONN -eq 1 -a ! -f $TV_MATRICES_DIR/fa_AM.mat ]; then
-        #             . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_conn_matrix.sh $SUBJ_NAME $PROJ_DIR
-        #         fi
-        #
-        #
-        #   fi
-        # fi
+            if do_freesurfer is True:
+                self.fs_reconall()
 
-        pass
+        #==============================================================================================================================================================
+        # WB data
+        #==============================================================================================================================================================
+        if os.path.exists(self.wb_dir):
+            if imtest(self.wb_data) is True:
+                if imtest(self.wb_brain_data) is False:
+                    print(self.label + " : bet on WB")
+                    rrun("bet " + self.wb_data + " " + self.wb_brain_data + " -f " + BET_F_VALUE_T2  + " -g 0 -m")
+
+        #==============================================================================================================================================================
+        # RS data
+        #==============================================================================================================================================================
+        if os.path.exists(self.rs_dir):
+            os.makedirs(self.roi_epi_dir, exist_ok=True)
+
+            if imtest(self.rs_data) is False:
+                print("rs image (" + self.rs_data + ") is missing...continuing")
+            else:
+                log_file = os.path.join(self.rs_dir, "log_epi_processing.txt")
+                log = open(log_file, "a")
+
+                os.makedirs(os.path.join(self.project.group_analysis_dir, "melodic", "dr"), exist_ok=True)
+                os.makedirs(os.path.join(self.project.group_analysis_dir, "melodic", "group_templates"), exist_ok=True)
+                os.makedirs(self.rs_standard_dir, exist_ok=True)
+
+                if do_epirm2vol > 0:
+                    # check if I have to remove the first (TOT_VOL-DO_RMVOL_TO_NUM) volumes
+                    tot_vol_num = rrun("fslnvols " + self.rs_data, logFile=log)
+                    vol2remove  = tot_vol_num - do_epirm2vol
+
+                    if vol2remove > 0:
+                        immv(self.rs_data, self.rs_data + "_fullvol", logFile=log)
+                        rrun("fslroi " + self.rs_data + "_fullvol " + self.rs_data + " " + str(vol2remove) + " " + str(tot_vol_num), logFile=log)
+
+                # FEAT PRE PROCESSING
+                if imtest(os.path.join(self.rs_dir, self.rs_post_preprocess_image_label)) is False:
+                    if os.path.isfile(feat_preproc_model) is False:
+                        print("===========>>>> FEAT_PREPROC template file (" + self.label + " " + feat_preproc_model + ".fsf) is missing...skipping feat preprocessing")
+                    else:
+                        if os.path.isdir(os.path.join(self.rs_dir, feat_preproc_odn)) is False:
+
+                            self.epi_feat(do_initreg=do_featinitreg, std_image=std_image)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $FEAT_PREPROC_MODEL -odn $FEAT_PREPROC_OUTPUT_DIR_NAME.feat -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG
+                            imcp(os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "filtered_func_data"), os.path.join(self.rs_dir, self.rs_post_preprocess_image_label), logFile=log)
+
+                # do AROMA processing
+                if do_aroma is True and imtest(os.path.join(self.rs_dir, self.rs_post_aroma_image_label)) is False:
+                    self.epi_aroma()   #             run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_aroma.sh $SUBJ_NAME $PROJ_DIR -idn $FEAT_PREPROC_OUTPUT_DIR_NAME.feat  # do not register to standard
+                    imcp(self.rs_aroma_image, os.path.join(self.rs_dir, self.rs_post_aroma_image_label))
+
+                # do nuisance removal (WM, CSF & highpass temporal filtering)....create the following file: $RS_IMAGE_LABEL"_preproc_aroma_nuisance"
+                if do_nuisance is True and imtest(os.path.join(self.rs_dir, self.rs_post_nuisance_image_label)) is False:
+                    self.epi_resting_nuisance(hpfsec=hpfsec)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_resting_nuisance.sh $SUBJ_NAME $PROJ_DIR -hpfsec $HPF_SEC -ifn $RS_POST_AROMA_IMAGE_LABEL
+                    self.transform_roi()     #             run . $GLOBAL_SCRIPT_DIR/process_subject/subject_transforms_roi.sh $SUBJ_NAME $PROJ_DIR -thresh 0 -regtype epi2std4 -pathtype abs $RS_DIR/$RS_POST_NUISANCE_IMAGE_LABEL
+                    immv(os.path.join(self.roi_standard4_dir, self.rs_post_nuisance_standard_image_label), self.rs_final_regstd_image, logFile=log)
+
+                imcp(os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "reg_standard", "bg_image"), os.path.join(self.rs_final_regstd_dir, "bg_image"), logFile=log)
+                imcp(os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "reg_standard", "mask"), os.path.join(self.rs_final_regstd_dir, "mask"), logFile=log)
+
+                # NOW reg_standard contains a denoised file with its mask and background image. nevertheless, we also do a melodic to check the output,
+                # doing another MC and HPF results seems to improve...although they should not...something that should be investigated....
+
+                # MELODIC
+
+                if os.path.isdir(os.path.join(self.rs_dir, mel_odn + ".ica") is False and do_melodic is True):
+                    if os.path.isfile(melodic_model + ".fsf"):
+                        print("===========>>>> melodic template file (" + self.label + " " + melodic_model + ".fsf) is missing...skipping 1st level melodic")
+                    else:
+                        if os.path.isdir(os.path.join(self.rs_dir, mel_odn + ".ica")) is False:
+                            self.epi_feat(do_initreg=do_melinitreg, std_image=std_image)     # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
+
+                            if imtest(os.path.join(self.rs_dir, mel_odn + ".ica", "reg_standard", "filtered_func_data")) is True:
+                                imcp(os.path.join(self.rs_dir, melodic_model + ".ica", "reg_standard", "filtered_func_data"), os.path.join(self.rs_final_regstd_dir, self.rs_post_nuisance_melodic_image_label + "_" + mel_odn), logFile=log)
+
+                # calculate the remaining transformations   .....3/4/2017 si blocca qui...devo commentarlo per andare avanti !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+                self.transform_epi() # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_transforms_calculate_epi.sh $SUBJ_NAME $PROJ_DIR
+
+                # coregister fast-highres to epi
+                print(self.label + ": coregister fast-highres to epi")
+
+                if imtest(os.path.join(self.roi_epi_dir, "t1_wm_epi")) is False:
+                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, "mask_t1_wm")      + " -ref " + os.path.join(self.roi_epi_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_epi_dir, "highres2epi.mat") + " -out " + os.path.join(self.roi_epi_dir, "t1_wm_epi"))
+
+                if imtest(os.path.join(self.roi_epi_dir, "t1_csf_epi")) is False:
+                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, "mask_t1_csf")     + " -ref " + os.path.join(self.roi_epi_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_epi_dir, "highres2epi.mat") + " -out " + os.path.join(self.roi_epi_dir, "t1_csf_epi"))
+
+                if imtest(os.path.join(self.roi_epi_dir, "t1_gm_epi")) is False:
+                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, "mask_t1_gm")      + " -ref " + os.path.join(self.roi_epi_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_epi_dir, "highres2epi.mat") + " -out " + os.path.join(self.roi_epi_dir, "t1_gm_epi"))
+
+                if imtest(os.path.join(self.roi_epi_dir, "t1_brain_epi")) is False:
+                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, self.t1_brain_data)+ " -ref " + os.path.join(self.roi_epi_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_epi_dir, "highres2epi.mat") + " -out " + os.path.join(self.roi_epi_dir, "t1_brain_epi"))
+
+                # mask & binarize
+                rrun("fslmaths " + os.path.join(self.roi_epi_dir, "t1_gm_epi.nii.gz")    + " -thr 0.2 -bin " + os.path.join(self.roi_epi_dir, "mask_t1_gm_epi.nii.gz"), logFile=log)
+                rrun("fslmaths " + os.path.join(self.roi_epi_dir, "t1_wm_epi.nii.gz")    + " -thr 0.2 -bin " + os.path.join(self.roi_epi_dir, "mask_t1_wm_epi.nii.gz"), logFile=log)
+                rrun("fslmaths " + os.path.join(self.roi_epi_dir, "t1_csf_epi.nii.gz")   + " -thr 0.2 -bin " + os.path.join(self.roi_epi_dir, "mask_t1_csf_epi.nii.gz"), logFile=log)
+                rrun("fslmaths " + os.path.join(self.roi_epi_dir, "t1_brain_epi.nii.gz") + " -thr 0.2 -bin " + os.path.join(self.roi_epi_dir, "mask_t1_brain_epi.nii.gz"), logFile=log)
+
+                log.close()
+        #==============================================================================================================================================================
+        # T2 data
+        #==============================================================================================================================================================
+        if os.path.isdir(self.de_dir) is False:
+            if imtest(self.t2_data) is True:
+                has_T2 = True
+                os.makedirs(os.path.join(self.roi_dir, "reg_t2"), exist_ok=True)
+
+            if imtest(self.t2_brain_data) is False:
+                print(self.label + " : bet on t2")
+                rrun("bet " + self.t2_data + " " + self.t2_brain_data + " -f " + BET_F_VALUE_T2 + " -g 0.2 -m")
+
+        #==============================================================================================================================================================
+        # DTI data
+        #==============================================================================================================================================================
+
+        if os.path.isdir(self.dti_dir) is True:
+            log_file = os.path.join(self.dti_dir, "log_dti_processing.txt")
+            log = open(log_file, "a")
+
+            if do_dtifit is True and imtest(os.path.join(self.dti_dir, self.dti_fit_label + "_FA")) is False:
+                print("===========>>>> " + self.label + " : dtifit")
+                self.dti_ec_fit()   # run .	$GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_ec_fit.sh $SUBJ_NAME $PROJ_DIR
+                rrun("fslmaths " + os.path.join(self.dti_dir, self.dti_fit_label) + "_L2 -add " + os.path.join(self.dti_dir, self.dti_fit_label + "_L3") + " -div 2 " + os.path.join(self.dti_dir, self.dti_fit_label + "_L23"), logFile=log)
+
+                self.dti_autoptx_tractography()
+
+            os.makedirs(self.roi_dti_dir, exist_ok=True)
+
+            if has_T2 is True:
+                self.transform_dti_t2()
+            else:
+                self.transform_dti()
+
+            if imtest(os.path.join(self.dti_dir, bedpost_odn, "mean_S0samples")) is False:
+                if os.path.isfile(os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz")) is True:
+                    runsystem("gunzip " + os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz"), logFile=log)
+
+            if do_bedx is True:
+                self.dti_bedpostx() #.sh $SUBJ_NAME $PROJ_DIR $BEDPOST_OUTDIR_NAME
+
+            if do_bedx_cuda is True:
+                self.dti_bedpostx_gpu() #run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_bedpostx_CUDA.sh $SUBJ_NAME $PROJ_DIR $BEDPOST_OUTDIR_NAME
+
+            if do_autoptx_tract is True:
+                if imtest(os.path.join(self.dti_dir, bedpost_odn, "mean_S0samples")) is False:
+                    print("subj " + self.label + " ,you requested the autoPtx tractorgraphy, but bedpostx was not performed.....skipping")
+                else:
+                    self.dti_autoptx_tractography() # . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_autoptx_tractography.sh $SUBJ_NAME $PROJ_DIR
+
+            if do_struct_conn is True and os.path.isfile(os.path.join(self.tv_matrices_dir, "fa_AM.mat")) is False:
+                self.dti_conn_matrix(struct_conn_atlas_path, struct_conn_atlas_nroi)  #. $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_conn_matrix.sh $SUBJ_NAME $PROJ_DIR
+
+            log.close()
 
     # ==================================================================================================================================================
     # ANATOMICAL
@@ -497,7 +383,7 @@ class Subject:
     # pre-processing:
     def anatomical_processing(self,
                         odn="anat", imgtype=1, smooth=10,
-                        strongbias=True, do_biasrestore=True,
+                        biascorr_type=BIAS_TYPE_STRONG,
                         do_reorient=True, do_crop=True,
                         do_bet=True, betfparam=0.5,
                         do_reg=True, do_nonlinreg=True,
@@ -657,8 +543,8 @@ class Subject:
             # required input: " + T1 + "
             # output: " + T1 + "_biascorr  [ other intermediates to be cleaned up ]
             if imtest(T1 + "_biascorr") is False or do_overwrite is True:
-                if do_biasrestore is True:
-                    if strongbias is True:
+                if biascorr_type > self.BIAS_TYPE_NO:
+                    if biascorr_type == self.BIAS_TYPE_STRONG:
                         print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         print(self.label + " :Estimating and removing field (stage 1 -large-scale fields)")
                         # for the first step (very gross bias field) don't worry about the lesionmask
@@ -693,6 +579,7 @@ class Subject:
                         rrun("fast -o " + T1 + "_initfast2 -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_initfast_maskedrestore", logFile=log)
                         rrun("fslmaths " + T1 + "_hpf_brain_mask " + T1 + "_initfast2_brain_mask", logFile=log)
                     else:
+                        # weak bias
                         if do_bet is True:
                             # get a rough brain mask - it can be *VERY* rough (i.e. missing huge portions of the brain or including non-brain, but non-background) - use -f 0.1 to err on being over inclusive
                             rrun("bet " + T1 + " " + T1 + "_initfast2_brain -m -f 0.1", logFile=log)
@@ -733,20 +620,20 @@ class Subject:
                         if use_lesionmask is True:
                             flirtargs = flirtargs + " -inweight lesionmaskinv"
 
-                        rrun("flirt -interp spline -dof 12 -in " + T1 + "_biascorr -ref " + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm") + " -dof 12 -omat " + T1 + "_to_MNI_lin.mat -out " + T1 + "_to_MNI_lin " + flirtargs, logFile=log)
+                        rrun("flirt -interp spline -dof 12 -in " + T1 + "_biascorr -ref " + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1 + "_2mm") + " -dof 12 -omat " + T1 + "_to_MNI_lin.mat -out " + T1 + "_to_MNI_lin " + flirtargs, logFile=log)
 
                         if do_nonlinreg is True:
                             print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                             print( "Registering to standard space (non-linear)")
                             refmask = "MNI152_" + T1 + "_2mm_brain_mask_dil1"
 
-                            rrun("fslmaths " + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm_brain_mask") + " -fillh -dilF " + refmask, logFile=log)
-                            rrun("fnirt --in=" + T1 + "_biascorr --ref=" + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm") + " --fout=" + T1 + "_to_MNI_nonlin_field --jout=" + T1 + "_to_MNI_nonlin_jac --iout=" + T1 + "_to_MNI_nonlin --logout=" + T1 + "_to_MNI_nonlin.txt --cout=" + T1 + "_to_MNI_nonlin_coeff --config=" + os.path.join(self.fsl_dir, "etc", "flirtsch", T1 + "_2_MNI152_2mm.cnf") + " --aff=" + T1 + "_to_MNI_lin.mat --refmask=" + refmask + " " + fnirtargs, logFile=log)
+                            rrun("fslmaths " + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1 + "_2mm_brain_mask") + " -fillh -dilF " + refmask, logFile=log)
+                            rrun("fnirt --in=" + T1 + "_biascorr --ref=" + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1 + "_2mm") + " --fout=" + T1 + "_to_MNI_nonlin_field --jout=" + T1 + "_to_MNI_nonlin_jac --iout=" + T1 + "_to_MNI_nonlin --logout=" + T1 + "_to_MNI_nonlin.txt --cout=" + T1 + "_to_MNI_nonlin_coeff --config=" + os.path.join(self.fsl_dir, "etc", "flirtsch", T1 + "_2_MNI152_2mm.cnf") + " --aff=" + T1 + "_to_MNI_lin.mat --refmask=" + refmask + " " + fnirtargs, logFile=log)
 
                             print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                             print(self.label + " :Performing brain extraction (using FNIRT)")
                             rrun("invwarp --ref=" + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_coeff -o MNI_to_" + T1 + "_nonlin_field", logFile=log)
-                            rrun("applywarp --interp=nn --in=" + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm_brain_mask") + " --ref=" + T1 + "_biascorr -w MNI_to_" + T1 + "_nonlin_field -o " + T1 + "_biascorr_brain_mask", logFile=log)
+                            rrun("applywarp --interp=nn --in=" + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1 + "_2mm_brain_mask") + " --ref=" + T1 + "_biascorr -w MNI_to_" + T1 + "_nonlin_field -o " + T1 + "_biascorr_brain_mask", logFile=log)
                             rrun("fslmaths " + T1 + "_biascorr_brain_mask -fillh " + T1 + "_biascorr_brain_mask", logFile=log)
                             rrun("fslmaths " + T1 + "_biascorr -mas " + T1 + "_biascorr_brain_mask " + T1 + "_biascorr_brain", logFile=log)
                         ## In the future, could check the initial ROI extraction here
@@ -782,7 +669,7 @@ class Subject:
 
                     if do_nonlinreg is True:
                         # regenerate the standard space version with the new bias field correction applied
-                        rrun("applywarp -i " + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_field -r " + os.path.join(self.fsl_data_standard, "MNI152_" + T1 + "_2mm") + " -o " + T1 + "_to_MNI_nonlin --interp=spline", logFile=log)
+                        rrun("applywarp -i " + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_field -r " + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1 + "_2mm") + " -o " + T1 + "_to_MNI_nonlin --interp=spline", logFile=log)
 
             #### SKULL-CONSTRAINED BRAIN VOLUME ESTIMATION (only done if registration turned on, and segmentation done, and it is a T1 image)
             # required inputs: " + T1 + "_biascorr
@@ -793,7 +680,7 @@ class Subject:
                     print(self.label + " :Skull-constrained registration (linear)")
 
                     rrun("bet " + T1 + "_biascorr " + T1 + "_biascorr_bet -s -m " + betopts, logFile=log)
-                    rrun("pairreg " + os.path.join(self.fsl_data_standard, "MNI152_T1_2mm_brain") + " " + T1 + "_biascorr_bet " + os.path.join(self.fsl_data_standard, "MNI152_T1_2mm_skull") + " " + T1 + "_biascorr_bet_skull " + T1 + "2std_skullcon.mat", logFile=log)
+                    rrun("pairreg " + os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain") + " " + T1 + "_biascorr_bet " + os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_skull") + " " + T1 + "_biascorr_bet_skull " + T1 + "2std_skullcon.mat", logFile=log)
 
                     if use_lesionmask is True:
                         rrun("fslmathslesionmask -max " + T1 + "_fast_pve_2 " + T1 + "_fast_pve_2_plusmask -odt float", logFile=log)
@@ -860,11 +747,9 @@ class Subject:
 
         # define placeholder variables for input dir and image name
         if imgtype == 1:
-            inputimage  = self.t1_data
             anatdir     = os.path.join(self.t1_dir, odn)
             T1          = "T1";
         elif imgtype == 2:
-            inputimage  = self.t2_data
             anatdir     = os.path.join(self.t2_dir, odn)
             T1          = "T2";
         else:
@@ -901,11 +786,11 @@ class Subject:
             run_notexisting_img(self.t1_segment_wm_bbr_path , "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_pve_2 -thr 0.5 -bin " + self.t1_segment_wm_bbr_path), logFile=log)
             run_notexisting_img(self.t1_segment_wm_ero_path , "fslmaths " + os.path.join(self.fast_dir, T1 + "_fast_pve_2 -ero " + self.t1_segment_wm_ero_path), logFile=log)
 
-            mass_images_move("*_to_MNI*", os.path.join(self.roi_dir, "reg_standard"), logFile=log)
-            mass_images_move("*_to_T1*", os.path.join(self.roi_dir, "reg_t1"), logFile=log)
+            mass_images_move("*_to_MNI*", self.roi_standard_dir, logFile=log)
+            mass_images_move("*_to_T1*", self.roi_t1_dir, logFile=log)
 
-            run_move_notexisting_img(os.path.join(self.roi_dir, "reg_t1", "standard2highres_warp"), "immv " + os.path.join(self.roi_dir, "reg_t1", "MNI_to_T1_nonlin_field") + " " +  os.path.join(self.roi_dir, "reg_t1", "standard2highres_warp"), logFile=log)
-            run_move_notexisting_img(os.path.join(self.roi_dir, "reg_standard", "highres2standard_warp"), "immv " + os.path.join(self.roi_dir, "reg_standard", "T1_to_MNI_nonlin_field") + " " +  os.path.join(self.roi_dir, "reg_standard", "highres2standard_warp"), logFile=log)
+            run_move_notexisting_img(os.path.join(self.roi_t1_dir, "standard2highres_warp"), "immv " + os.path.join(self.roi_t1_dir, "MNI_to_T1_nonlin_field") + " " +  os.path.join(self.roi_t1_dir, "standard2highres_warp"), logFile=log)
+            run_move_notexisting_img(os.path.join(self.roi_standard_dir, "highres2standard_warp"), "immv " + os.path.join(self.roi_standard_dir, "T1_to_MNI_nonlin_field") + " " +  os.path.join(self.roi_standard_dir, "highres2standard_warp"), logFile=log)
 
             # first has been removed from the standard t1_processing pipeline
             # mkdir -p $FIRST_DIR
@@ -936,7 +821,7 @@ class Subject:
             list_structs = []
             structs = ""
 
-        output_roi_dir  = os.path.join(self.roi_dir, "reg_t1", odn)
+        output_roi_dir  = os.path.join(self.roi_t1_dir, odn)
         temp_dir        = os.path.join(self.first_dir, "temp")
 
         filename = remove_ext(t1_image)
@@ -1012,6 +897,7 @@ class Subject:
 
         imcp(self.t1_data, os.path.join(self.t1_dir, bckfilename))          # create backup copy
         rrun("fslswapdim " + self.t1_data + conversion_str + self.t1_data)   # run reslicing
+
     # ==================================================================================================================================================
     # DIFFUSION
     # ==================================================================================================================================================
@@ -1028,17 +914,23 @@ class Subject:
     def dti_bedpostx_gpu(self):
         pass
 
-    def dti_conn_matrix(self):
+    def dti_conn_matrix(self, atlas_path="freesurfer", nroi=0):
+        pass
+
+    def dti_autoptx_tractography(self):
         pass
 
     # ==================================================================================================================================================
     # FUNCTIONAL
     # ==================================================================================================================================================
 
-    def epi_resting_nuisance(self):
+    def epi_resting_nuisance(self, hpfsec=100):
         pass
 
-    def epi_feat(self):
+    def epi_feat(self, do_initreg=False, std_image=""):
+
+        if std_image == "":
+            std_image = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
         pass
 
     def epi_aroma(self):
@@ -1053,20 +945,646 @@ class Subject:
     # ==================================================================================================================================================
     # TRANSFORMS
     # ==================================================================================================================================================
+    # path_type =   "standard"      : a roi name, located in the default folder (subjectXX/s1/roi/reg_YYY/INPUTPATH),
+    #	            "rel"			: a path relative to SUBJECT_DIR (subjectXX/s1/INPUTPATH)
+    #               "abs"			: a full path (INPUTPATH)
 
-    def transforms_mpr(self, stdimg="", stdimgmask="", stdimglabel=""):
-        pass
+    def transform_roi(self, regtype, pathtype="standard", mask="", orf="", thresh=0.2, islin=True, std_img="", rois=[]):
 
-        STD_IMAGE_LABEL = "standard"
-        STD_IMAGE       = os.path.join(self.fsl_data_standard, "MNI152_T1_2mm_brain")
-        STD_IMAGE_MASK  = os.path.join(self.fsl_data_standard, "MNI152_T1_2mm_brain_mask_dil")
+        if std_img != "":
+            if imtest(std_img) is False:
+                print( "ERROR: given standard image file (" + std_img + ") does not exist......exiting")
+                return
+        else:
+            std_img = self.project.globaldata.fsl_standard_mni_2mm
 
-        if imtest(STD_IMAGE) is False:
-            print("file STD_IMAGE: " + STD_IMAGE + ".nii.gz is not present...skipping reg_nonlin_epi_t1_standard.sh")
+        if mask != "":
+            if imtest(mask) is False:
+                print( "ERROR: mask image file (" + mask + ") do not exist......exiting")
+                return
+
+        if len(rois) == 0:
+            print("Input ROI list is empty......exiting")
             return
 
-        if imtest(STD_IMAGE_MASK) is False:
-            print("file STD_IMAGE_MASK: " + STD_IMAGE_MASK + ".nii.gz is not present...skipping reg_nonlin_epi_t1_standard.sh")
+        #==============================================================================================================
+        print("registration_type " + regtype + ", do_linear = " + str(islin))
+
+        has_T2=0
+        if imtest(self.t2_data) is True:
+            has_T2 = True
+
+
+        linear_registration_type = {
+                             "std2hr"     : self.l_std2hr,
+                             "std42hr"    : self.l_std42hr,
+                             "epi2hr"     : self.l_epi2hr,
+                             "dti2hr"     : self.l_dti2hr,
+                             "std2epi"    : self.l_std2epi,
+                             "std42epi"   : self.l_std42epi,
+                             "hr2epi"     : self.l_hr2epi,
+                             "dti2epi"    : self.l_dti2epi,
+                             "hr2std"     : self.l_hr2std,
+                             "epi2std"    : self.l_epi2std,
+                             "dti2std"    : self.l_dti2std,
+                             "std2std4"   : self.l_std2std4,
+                             "epi2std4"   : self.l_epi2std4,
+                             "hr2dti"     : self.l_hr2dti,
+                             "epi2dti"    : self.l_epi2dti,
+                             "std2dti"    : self.l_std2dti
+        }
+
+        non_linear_registration_type = {
+                             "std2hr"     : self.nl_std2hr,
+                             "std42hr"    : self.nl_std42hr,
+                             "epi2hr"     : self.nl_epi2hr,
+                             "dti2hr"     : self.nl_dti2hr,
+                             "std2epi"    : self.nl_std2epi,
+                             "std42epi"   : self.nl_std42epi,
+                             "hr2epi"     : self.nl_hr2epi,
+                             "dti2epi"    : self.nl_dti2epi,
+                             "hr2std"     : self.nl_hr2std,
+                             "epi2std"    : self.nl_epi2std,
+                             "dti2std"    : self.nl_dti2std,
+                             "std2std4"   : self.nl_std2std4,
+                             "epi2std4"   : self.nl_epi2std4,
+                             "hr2dti"     : self.nl_hr2dti,
+                             "epi2dti"    : self.nl_epi2dti,
+                             "std2dti"    : self.nl_std2dti,
+                             }
+
+        for roi in rois:
+
+            roi_name = os.path.basename(roi)
+            print("converting " + roi_name)
+
+            if islin is False:
+                # is non linear
+                output_roi = non_linear_registration_type[regtype]()
+            else:
+                output_roi = linear_registration_type[regtype]()
+
+            if thresh > 0:
+                output_roi_name     = os.path.basename(output_roi)
+                output_input_roi    = os.path.dirname(output_roi)
+
+                rrun("fslmaths " + output_roi + " -thr " + str(thresh) + " -bin " + os.path.join(output_input_roi, "mask_" + output_roi_name))
+
+                v1 = rrun("fslstats " + os.path.join(output_input_roi, "mask_" + output_roi_name) + " -V")[0]
+
+                if v1 == 0:
+                    if orf != "":
+                        print("subj: " + self.label + ", roi: " + roi_name + " ... is empty, thr: " + str(thresh)) # TODO: print to file
+
+
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def nl_std2hr(self):
+                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_standard/$roi
+                        fi
+                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
+                      $FSLDIR/bin/applywarp -i $input_roi -r $T1_BRAIN_DATA -o $output_roi --warp=$ROI_DIR/reg_t1/standard2highres_warp;;
+
+    def nl_std42hr)
+                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_standard4/$roi
+                        fi
+                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
+                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $standard_image -out $ROI_DIR/reg_t1/$roi_name"_standard" -applyisoxfm 2;
+                        $FSLDIR/bin/applywarp -i $ROI_DIR/reg_t1/$roi_name"_standard" -r $T1_BRAIN_DATA -o $output_roi --warp=$ROI_DIR/reg_t1/standard2highres_warp;
+                        $FSLDIR/bin/imrm $ROI_DIR/reg_t1/$roi_name"_standard";;
+
+    def nl_epi2hr)
+                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_epi/$roi
+                        fi
+                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
+                        $FSLDIR/bin/flirt -in $input_roi -ref $T1_BRAIN_DATA -out $output_roi -applyxfm -init $ROI_DIR/reg_dti/epi2highres.mat -interp trilinear;;
+
+    def nl_dti2hr)
+                        output_roi=$ROI_DIR/reg_dti/$roi"_dti"
+                        if [ "$path_type" = abs ]; then
+                            input_roi=$roi
+                        else
+                            input_roi=$ROI_DIR/reg_dti/$roi
+                        fi
+                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
+                        if [ $HAS_T2 -eq 1 ]; then
+                            $FSLDIR/bin/applywarp -i $input_roi -r $T1_BRAIN_DATA -o $output_roi --warp=$ROI_DIR/reg_t1/dti2highres_warp
+                        else
+                            $FSLDIR/bin/flirt -in $input_roi -ref $T1_BRAIN_DATA -out $output_roi -applyxfm -init $ROI_DIR/reg_t1/dti2highres.mat -interp trilinear
+                        fi;;
+
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def nl_std2epi)
+                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_standard/$roi
+                        fi
+                        $FSLDIR/bin/applywarp -i $input_roi -r $RS_EXAMPLEFUNC -o $output_roi --warp=$ROI_DIR/reg_epi/standard2epi_warp;;
+
+    def nl_std42epi)
+                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_standard4/$roi
+                        fi
+                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
+                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $standard_image -out $ROI_DIR/reg_epi/$roi_name"_standard" -applyisoxfm 2;
+                        $FSLDIR/bin/applywarp -i $ROI_DIR/reg_epi/$roi_name"_standard" -r $RS_EXAMPLEFUNC -o $output_roi --warp=$ROI_DIR/reg_epi/standard2epi_warp;
+                        $FSLDIR/bin/imrm $ROI_DIR/reg_epi/$roi_name"_standard";;
+
+    def nl_hr2epi)
+                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_t1/$roi
+                        fi
+                        echo "the hr2epi NON linear transformation does not exist.....using the linear one"
+                        $FSLDIR/bin/flirt -in $input_roi -ref $RS_EXAMPLEFUNC -out $output_roi -applyxfm -init $ROI_DIR/reg_epi/highres2epi.mat -interp trilinear;;
+
+    def nl_dti2epi)
+                        echo "registration type: dti2epi NOT SUPPORTED...exiting";exit;;
+
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def nl_hr2std)
+                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_t1/$roi
+                        fi
+                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $output_roi --warp=$ROI_DIR/reg_t1/highres2standard_warp;;
+
+    def nl_epi2std)
+                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_epi/$roi
+                        fi
+                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $output_roi --warp=$ROI_DIR/reg_standard/epi2standard_warp;;
+
+    def nl_dti2std)
+                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_dti/$roi
+                        fi
+                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $output_roi --warp=$ROI_DIR/reg_standard/dti2standard_warp;;
+
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def nl_std2std4)
+                        output_roi=$ROI_DIR/reg_standard4/$roi_name"_standard4"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_standard/$roi
+                        fi
+                        ${FSLDIR}/bin/flirt -in $input_roi -ref $standard_image -out $output_roi -applyisoxfm 4;;
+
+    def nl_epi2std4)
+                        output_roi=$ROI_DIR/reg_standard4/$roi_name"_standard"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_epi/$roi
+                        fi
+                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $ROI_DIR/reg_standard4/$roi_name"_standard2" --warp=$ROI_DIR/reg_standard/epi2standard_warp;
+                        ${FSLDIR}/bin/flirt  -in $ROI_DIR/reg_standard4/$roi_name"_standard2" -ref $standard_image -out $output_roi -applyisoxfm 4
+                        $FSLDIR/bin/imrm $ROI_DIR/reg_standard4/$roi_name"_standard2";;
+
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def nl_hr2dti)
+                        output_roi=$ROI_DIR/reg_dti/$roi_name"_dti"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_t1/$roi
+                        fi
+                        if [ $HAS_T2 -eq 1 -a `$FSLDIR/bin/imtest $ROI_DIR/reg_t1/highres2dti_warp` = 1 ]; then
+                            $FSLDIR/bin/applywarp -i $input_roi -r $ROI_DIR/reg_dti/nobrain_diff -o $output_roi --warp=$ROI_DIR/reg_t1/highres2dti_warp
+                        else
+                            echo "did not find the non linear registration from HR 2 DTI, I used a linear one"
+                            $FSLDIR/bin/flirt -in $input_roi -ref $ROI_DIR/reg_dti/nobrain_diff -out $output_roi -applyxfm -init $ROI_DIR/reg_dti/highres2dti.mat -interp trilinear
+                        fi;;
+
+    def nl_epi2dti)
+#								output_roi=$ROI_DIR/reg_dti/$roi_name"_dti"
+#								if [ "$path_type" = abs ]; then
+#									input_roi=$roi
+#								else
+#									input_roi=$ROI_DIR/reg_epi/$roi
+#								fi
+#								$FSLDIR/bin/applywarp -i $input_roi -r $ROI_DIR/reg_dti/nobrain_diff -o $ROI_DIR/reg_standard4/$roi_name"_standard2" --premat $ROI_DIR/reg_t1/epi2highres.mat --warp=$ROI_DIR/reg_standard/highres2standard_warp --postmat $ROI_DIR/reg_dti/standard2dti.mat;
+                        echo "registration type: epi2dti NOT SUPPORTED...exiting";exit;;
+
+    def nl_std2dti)
+                        output_roi=$ROI_DIR/reg_dti/$roi_name"_dti"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_standard/$roi
+                        fi
+                        $FSLDIR/bin/applywarp -i $input_roi -r $ROI_DIR/reg_dti/nodif_brain -o $output_roi --warp=$ROI_DIR/reg_dti/standard2dti_warp;;
+
+
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def nl_std2hr)
+                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_standard/$roi
+                        fi
+                      $FSLDIR/bin/applywarp -i $input_roi -r $T1_BRAIN_DATA -o $ROI_DIR/reg_t1/$roi_name"_highres" --warp=$ROI_DIR/reg_t1/standard2highres_warp;;
+
+    def nl_std42hr)
+                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_standard4/$roi
+                        fi
+                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $standard_image -out $ROI_DIR/reg_t1/$roi_name"_standard" -applyisoxfm 2;
+                        $FSLDIR/bin/applywarp -i $ROI_DIR/reg_t1/$roi_name"_standard" -r $T1_BRAIN_DATA -o $ROI_DIR/reg_epi/$roi_name"_highres" --warp=$ROI_DIR/reg_t1/standard2highres_warp;
+                        rm $ROI_DIR/reg_t1/$roi"_standard";;
+
+    def nl_epi2hr)
+                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_epi/$roi
+                        fi
+                        $FSLDIR/bin/flirt -in $input_roi -ref $T1_BRAIN_DATA -out $ROI_DIR/reg_t1/$roi_name"_highres" -applyxfm -init $ROI_DIR/reg_dti/epi2highres.mat -interp trilinear;;
+
+    def nl_dti2hr)
+                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_dti/$roi
+                        fi
+                        if [ $HAS_T2 -eq 1 ]; then
+                            $FSLDIR/bin/applywarp -i $input_roi -r $T1_BRAIN_DATA -o $ROI_DIR/reg_t1/$roi"_highres" --warp=$ROI_DIR/reg_t1/dti2highres_warp
+                        else
+                            $FSLDIR/bin/flirt -in $input_roi -ref $T1_BRAIN_DATA -out $ROI_DIR/reg_t1/$roi"_highres" -applyxfm -init $ROI_DIR/reg_dti/dti2highres.mat -interp trilinear
+                        fi;;
+
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def nl_std2epi)
+                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        elsegaz
+                            input_roi=$ROI_DIR/reg_standard/$roi
+                        fi
+                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $RS_EXAMPLEFUNC -out $output_roi -applyxfm -init $ROI_DIR/reg_epi/standard2epi.mat;;
+
+    def nl_std42epi)
+                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_standard4/$roi
+                        fi
+                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
+                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $standard_image -out $ROI_DIR/reg_epi/$roi_name"_standard" -applyisoxfm 2;
+                        $FSLDIR/bin/applywarp -i $ROI_DIR/reg_epi/$roi_name"_standard" -r $RS_EXAMPLEFUNC -o $ROI_DIR/reg_epi/$roi_name"_epi" --warp=$ROI_DIR/reg_epi/standard2epi_warp;
+                        $FSLDIR/bin/imrm $ROI_DIR/reg_epi/$roi_name"_standard";;
+
+    def nl_hr2epi)
+                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
+                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_t1/$roi
+                        fi
+                        $FSLDIR/bin/flirt -in $input_roi -ref $RS_EXAMPLEFUNC -out $output_roi -applyxfm -init $ROI_DIR/reg_epi/highres2epi.mat -interp trilinear;;
+
+    def nl_dti2epi)	echo "registration type: dti2epi NOT SUPPORTED...exiting";exit;;
+
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def nl_hr2std)
+                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_t1/$roi
+                        fi
+                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $ROI_DIR/reg_standard/$roi_name"_standard" --warp=$ROI_DIR/reg_t1/highres2standard_warp;;
+
+    def nl_epi2std)
+                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_epi/$roi
+                        fi
+                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $ROI_DIR/reg_standard/$roi_name"_standard" --warp=$ROI_DIR/reg_standard/epi2standard_warp;;
+
+    def nl_dti2std)
+                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_dti/$roi
+                        fi
+                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $ROI_DIR/reg_standard/$roi_name"_standard" --warp=$ROI_DIR/reg_standard/epi2standard_warp;;
+
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def nl_epi2std4)
+                        output_roi=$ROI_DIR/reg_standard4/$roi_name"_standard"
+                        if [ "$path_type" = abs ]; then
+                            input_roi=$roi
+                        else
+                            input_roi=$ROI_DIR/reg_epi/$roi
+                        fi
+                        $FSLDIR/bin/flirt -in $input_roi -ref $RS_EXAMPLEFUNC -out $ROI_DIR/reg_standard4/$roi_name"_standard2" -applyxfm -init $ROI_DIR/reg_standard/epi2standard.mat -interp trilinear
+                        ${FSLDIR}/bin/flirt  -in $ROI_DIR/reg_standard4/$roi_name"_standard2" -ref $standard_image -out $output_roi -applyisoxfm 4
+                        $FSLDIR/bin/imrm $ROI_DIR/reg_standard4/$roi_name"_standard2";;
+
+    def nl_std2std4)
+                        output_roi=$ROI_DIR/reg_standard4/$roi_name"_standard"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_standard/$roi
+                        fi
+                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $standard_image -out $output_roi -applyisoxfm 4;;
+
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def nl_hr2dti)
+                        output_roi=$ROI_DIR/reg_dti/$roi_name"_dti"
+                        if [ "$path_type" = abs ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_t1/$roi
+                        fi
+                        if [ $HAS_T2 -eq 1 ]; then
+                            $FSLDIR/bin/applywarp -i $input_roi -r $ROI_DIR/reg_dti/nobrain_diff -o $ROI_DIR/reg_dti/$roi_name"_dti" --warp=$ROI_DIR/reg_t1/highres2dti_warp
+                        else
+                            $FSLDIR/bin/flirt -in $input_roi -ref $ROI_DIR/reg_dti/nobrain_diff -out $ROI_DIR/reg_dti/$roi_name"_dti" -applyxfm -init $ROI_DIR/reg_dti/highres2dti.mat -interp trilinear
+                        fi;;
+
+    def nl_epi2dti)
+                        echo "registration type: epi2dti NOT SUPPORTED...exiting";exit;;
+
+    def nl_std2dti)
+                        output_roi=$ROI_DIR/reg_dti/$roi_name"_dti"
+                        if [ "$path_type" = "abs" ]; then
+                            input_roi=$roi
+                        elif [ "$path_type" == "rel" ]; then
+                            input_roi=$SUBJECT_DIR/$roi
+                        else
+                            input_roi=$ROI_DIR/reg_standard/$roi
+                        fi
+                        $FSLDIR/bin/applywarp -i $input_roi -r $ROI_DIR/reg_dti/nodif_brain -o $ROI_DIR/reg_dti/$roi_name"_dti" --warp=$ROI_DIR/reg_dti/standard2dti_warp;;
+
+                    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def transform_epi(self, do_bbr=True, std_img_label="standard", std_img="", std_img_head="", std_img_mask_dil="", wmseg=""):
+        
+        if std_img == "":
+            std_img             = self.project.globaldata.fsl_standard_mni_2mm
+
+        if std_img_head == "":
+            std_img_head        = self.project.globaldata.fsl_standard_mni_2mm_head
+
+        if std_img_mask_dil == "":
+            std_img_mask_dil    = self.project.globaldata.fsl_standard_mni_2mm_mask_dil
+
+        if wmseg == "":
+            wmseg = self.t1_segment_wm_bbr_path
+
+        os.makedirs(self.roi_epi_dir, exist_ok=True)
+        os.makedirs(os.path.join(self.roi_dir, "reg_" + std_img_label), exist_ok=True)
+
+        #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if imtest(self.t1_brain_data) is False:
+            print("returning")
+            return
+
+        if imtest(std_img) is False:
+            print("standard image (" + std_img + " not present....exiting")
+
+        if imtest(self.rs_examplefunc) is False:
+            rrun("fslmaths " + self.rs_data + " " + os.path.join(self.roi_epi_dir, "prefiltered_func_data") + " -odt float")
+            rrun("fslroi " + os.path.join(self.roi_epi_dir, "prefiltered_func_data") + " " + self.rs_examplefunc + " 100 1")
+            rrun("bet2 " + self.rs_examplefunc + " " + self.rs_examplefunc + " -f 0.3")
+
+            rrun("imrm " + os.path.join(self.roi_epi_dir, "prefiltered_func_data*"))
+
+        #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+        # ---- EPI <--> HIGHRES
+        epi2highres = os.path.join(self.roi_t1_dir, "epi2highres")
+
+        if do_bbr is True:
+            # BBR (taken from $FSLDIR/bin/epi_reg.sh)
+            rrun("flirt -ref " + self.t1_brain_data + " -in " + self.rs_examplefunc + " -dof 6 -omat " + epi2highres + "_init.mat")
+            
+            if imtest(self.t1_segment_wm_bbr_path) is False:
+                    print("Running FAST segmentation for subj " + self.label)
+                    temp_dir = os.path.join(self.roi_t1_dir, "temp")
+                    os.makedirs(temp_dir, exist_ok=True)
+                    rrun("fast -o " + os.path.join(temp_dir, "temp_" + self.t1_brain_data))
+                    rrun("fslmaths " + os.path.join(temp_dir, "temp_pve_2") + " -thr 0.5 -bin " + self.t1_segment_wm_bbr_path)
+                    runsystem("rm -rf " + temp_dir)
+
+            # => epi2highres.mat
+            if os.path.isfile(epi2highres + ".mat") is False:
+                rrun("flirt -ref " + self.t1_data + " -in " + self.rs_examplefunc + " -dof 6 -cost bbr -wmseg " + self.t1_segment_wm_bbr_path +
+                     " -init " + epi2highres + "_init.mat" + " -omat " + epi2highres + ".mat" + " -out " + epi2highres + " -schedule " + os.path.join(self.fsl_dir, "etc", "flirtsch", "bbr.sch"))
+
+            # => epi2highres.nii.gz
+            if imtest(epi2highres) is False:
+                rrun("applywarp -i " + self.rs_examplefunc + " -r " + self.t1_data + " -o " + epi2highres + "--premat=" + epi2highres + ".mat" + " --interp=spline")
+
+            runsystem("rm " + epi2highres + "_init.mat")
+        else:
+            # NOT BBR
+            if os.path.isfile(epi2highres + ".mat") is False:
+                rrun("flirt -in " + self.rs_examplefunc + " -ref " + self.t1_brain_data + " -out " + epi2highres + " -omat " + epi2highres + ".mat" + " -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+
+        highres2epi = os.path.join(self.roi_epi_dir, "highres2epi.mat")
+        if os.path.isfile(highres2epi) is False:
+            rrun("convert_xfm -inverse -omat " + highres2epi + " " + epi2highres + ".mat")
+    
+        #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+        # ---- EPI <--> STANDARD
+        epi2standard = os.path.join(self.roi_dir, "reg_" + std_img_label, "epi2standard")
+
+        # => epi2standard.mat (as concat)
+        if os.path.isfile(epi2standard + ".mat") is False:
+            rrun("convert_xfm -omat " + epi2standard + ".mat" + " -concat " + os.path.join(self.roi_dir, "reg_" + std_img_label, "highres2standard.mat") + epi2highres + ".mat")
+
+        # => standard2epi.mat
+        standard2epi = os.path.join(self.roi_epi_dir, std_img_label + "2epi")
+        if os.path.exist(standard2epi + ".mat") is False:
+            rrun("convert_xfm -inverse -omat " + standard2epi + ".mat " + epi2standard + ".mat")
+
+        # => $ROI_DIR/reg_${std_img_label}/epi2standard.nii.gz
+        if imtest(epi2standard) is False:
+            rrun("flirt -ref " + std_img + " -in " + self.rs_examplefunc + " -out " + epi2standard + " -applyxfm -init " + epi2standard + ".mat" + " -interp trilinear")
+
+        #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # epi -> highres -> standard
+        if imtest(epi2standard + "_warp") is False:
+            rrun("convertwarp --ref=" + std_img + " --premat=" + epi2highres + ".mat" + " --warp1=" + os.path.join(self.roi_dir, "reg_" + std_img_label, "highres2standard_warp") + " --out=" + epi2standard + "_warp")
+
+        # invwarp: standard -> highres -> epi
+        if imtest(standard2epi + "_warp") is False:
+            rrun("invwarp -r " + os.path.join(self.roi_epi_dir, "example_func") + " -w " + os.path.join(self.roi_dir, "reg_" + std_img_label, "epi2standard_warp") + " -o " + standard2epi + "_warp")
+
+    def transform_dti_t2(self):
+        pass
+
+    def transform_dti(self, std_img=""):
+
+        if std_img == "":
+            std_img = self.project.globaldata.fsl_standard_mni_2mm
+
+        if imtest(self.t1_brain_data) is False:
+            print("T1_BRAIN_DATA (" + self.t1_brain_data + ") is missing....exiting")
+            return
+
+        if imtest(std_img) is False:
+            print("standard image (" + std_img + ") is missing....exiting")
+            return
+
+        print(self.label + ":						STARTED : nonlin nodiff-t1-standard coregistration")
+        #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        roi_no_dif  = os.path.join(self.roi_dti_dir , "nodif")
+        no_dif      = os.path.join(self.dti_dir     , "nodif")
+        if imtest(roi_no_dif + "_brain") is False:
+            if imtest(no_dif + "_brain") is False:
+                rrun("fslroi " + self.dti_data + " " + no_dif + " 0 1")
+                rrun("bet " + no_dif + " " + no_dif + "_brain -m -f 0.3")
+
+            imcp(no_dif + "_brain", roi_no_dif + "_brain")
+
+        #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # dti -> highres
+        dti2highres = os.path.join(self.roi_t1_dir, "dti2highres")
+        if os.path.exist(dti2highres + ".mat") is False:
+            rrun("flirt -in " + no_dif + "_brain" + " -ref " + self.t1_brain_data + " -out " + dti2highres + " -omat " + dti2highres + ".mat" +
+                 " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 7 -interp trilinear")
+
+        if imtest(dti2highres + "_warp") is False:
+            rrun("fnirt --in=" + roi_no_dif + "_brain" + " --ref=" + self.t1_brain_data + " --aff=" + dti2highres + ".mat" + " --cout=" + dti2highres + "_warp" + " --iout=" + roi_no_dif + "_brain2highres_nl" + " -v &>" + dti2highres + "_nl.txt")
+
+        # highres -> dti
+        highres2dti = os.path.join(self.roi_dti_dir, "highres2dti")
+        if os.path.exist(highres2dti + ".mat") is False:
+            rrun("convert_xfm -omat " + highres2dti + ".mat" + " -inverse " + dti2highres + ".mat")
+
+        if imtest(highres2dti + "_warp") is False:
+            rrun("invwarp -r " + roi_no_dif + "_brain" + " -w " + dti2highres + "_warp" + " -o " + highres2dti + "_warp")
+
+        #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # dti -> highres -> standard
+        dti2standard = os.path.join(self.roi_standard_dir, "dti2standard")
+        if imtest(dti2standard + "_warp") is False:
+            rrun("convertwarp --ref=" + std_img + " --warp1=" + os.path.join(self.roi_t1_dir, "dti2highres_warp") + " --warp2=" + os.path.join(self.roi_standard_dir, "highres2standard_warp") + " --out=" + dti2standard + "_warp")
+
+        # standard -> highres -> dti
+        standard2dti = os.path.join(self.roi_dti_dir, "standard2dti")
+        if imtest(standard2dti + "_warp") is False:
+            rrun("invwarp -r " + roi_no_dif + "_brain" + " -w " + dti2standard + "_warp" + " -o " + standard2dti + "_warp")
+
+        #2: concat: standard -> highres -> dti
+        #$FSLDIR/bin/convertwarp --ref=$ROI_DIR/reg_dti/nodif_brain --warp1=$ROI_DIR/reg_t1/standard2highres_warp --postmat=$ROI_DIR/reg_dti/highres2dti --out=$ROI_DIR/reg_dti/standard2dti_warp
+
+
+    def transforms_mpr(self, std_img="", std_img_mask_dil="", std_img_label="standard"):
+        pass
+
+        if std_img == "":
+            std_img             = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
+
+        if std_img_mask_dil == "":
+            std_img_mask_dil    = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain_mask_dil")
+
+        if imtest(std_img) is False:
+            print("file std_img: " + std_img + ".nii.gz is not present...skipping reg_nonlin_epi_t1_standard.sh")
+            return
+
+        if imtest(std_img_mask_dil) is False:
+            print("file STD_IMAGE_MASK: " + std_img_mask_dil + ".nii.gz is not present...skipping reg_nonlin_epi_t1_standard.sh")
             return
 
         if imtest(self.t1_brain_data) is False:
@@ -1077,42 +1595,59 @@ class Subject:
 
         # highres <--> standard
 
-        os.makedirs(os.path.join(self.roi_dir, "reg_" + STD_IMAGE_LABEL), exist_ok=True)
-        os.makedirs(os.path.join(self.roi_dir, "reg_" + STD_IMAGE_LABEL + "4"), exist_ok=True)
-        os.makedirs(os.path.join(self.roi_dir, "reg_t1"), exist_ok=True)
+        os.makedirs(os.path.join(self.roi_dir, "reg_" + std_img_label), exist_ok=True)
+        os.makedirs(os.path.join(self.roi_dir, "reg_" + std_img_label + "4"), exist_ok=True)
+        os.makedirs(self.roi_t1_dir, exist_ok=True)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # ---- HIGHRES <--------> STANDARD
         # => highres2standard.mat
-# [ ! -f $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat] & & $FSLDIR / bin / flirt - in $T1_BRAIN_DATA - ref $STD_IMAGE - out $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard - omat $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat - cost corratio - dof 12 - searchrx - 90 90 - searchry - 90 90 - searchrz - 90 90 - interp trilinear
-# # => standard2highres.mat
-# [ ! -f $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres.mat] & & $FSLDIR / bin / convert_xfm - inverse - omat $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres.mat $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat
-#
-# # NON LINEAR
-# # => highres2standard_warp
-# [`$FSLDIR / bin / imtest $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard_warp` = 0] & & $FSLDIR / bin / fnirt - - in =$T1_BRAIN_DATA - -aff =$ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat - -cout =$ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard_warp - -iout =$ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard - -jout =$ROI_DIR / reg_t1 / highres2highres_jac - -config = T1_2_MNI152_2mm - -ref =$STD_IMAGE - -refmask =$STD_IMAGE_MASK - -warpres = 10, 10, 10
-#
-# # => standard2highres_warp
-# [`$FSLDIR / bin / imtest $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres_warp` = 0] & & $FSLDIR / bin / invwarp - r $T1_BRAIN_DATA - w $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard_warp - o $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres_warp
-#
-# ##	# => highres2${STD_IMAGE_LABEL}.nii.gz
-# ##	[ `$FSLDIR/bin/imtest $ROI_DIR/reg_${STD_IMAGE_LABEL}/highres2standard` = 0 ] && $FSLDIR/bin/applywarp -i $T1_BRAIN_DATA -r $STD_IMAGE -o $ROI_DIR/reg_${STD_IMAGE_LABEL}/highres2standard -w $ROI_DIR/reg_${STD_IMAGE_LABEL}/highres2standard_warp
-#
-# # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# # highres <--> standard4
-# mkdir - p $ROI_DIR / reg_${STD_IMAGE_LABEL}4
-#
-# highres2standard4_mat =$ROI_DIR / reg_${STD_IMAGE_LABEL}4 / highres2standard.mat
-# standard42highres_mat =$ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}42highres.mat
-# hr2std4_warp =$ROI_DIR / reg_${STD_IMAGE_LABEL}4 / highres2standard_warp.nii.gz
-# std42hr_warp =$ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}42highres_warp.nii.gz
-#
-# [ ! -f $highres2standard4_mat] & & $FSLDIR / bin / flirt - in $T1_BRAIN_DATA.nii.gz - ref $FSL_STANDARD_MNI_4mm - omat $highres2standard4_mat
-# [ ! -f $standard42highres_mat] & & $FSLDIR / bin / convert_xfm - omat $standard42highres_mat - inverse $highres2standard4_mat
-#
-# #	[ ! -f $hr2std4_warp ] && $FSLDIR/bin/fnirt --in=$T1_DATA --aff=$highres2standard4_mat --cout=$hr2std4_warp --iout=$ROI_DIR/reg_standard4/highres2standard --jout=$ROI_DIR/reg_standard4/highres2standard_jac --config=$GLOBAL_DATA_TEMPLATES/gray_matter/T1_2_MNI152_4mm --ref=$FSL_STANDARD_MNI_4mm --refmask=$GLOBAL_DATA_TEMPLATES/gray_matter/MNI152_T1_4mm_brain_mask_dil --warpres=10,10,10
-# #	[ ! -f $std42hr_warp ] && $FSLDIR/bin/invwarp -w $hr2std4_warp -o $std42hr_warp -r $T1_BRAIN_DATA
-# # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        highres2standard = os.path.join(self.roi_dir, "reg_" + std_img_label, "highres2standard")
+        if imtest(highres2standard + ".mat") is False:
+            rrun("flirt -in " + self.t1_brain_data + " -ref " + std_img_label + " -out " + highres2standard + " -omat " + highres2standard + ".mat -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
-# ==================================================================================================================================================
+        # # => standard2highres.mat
+        standard2highres = os.path.join(self.roi_t1_dir, std_img_label + "2highres")
+        if imtest(standard2highres + ".mat") is False:
+            rrun("convert_xfm -inverse -omat " + standard2highres + ".mat " + highres2standard + ".mat")
+
+        # NON LINEAR
+        # => highres2standard_warp
+        highres2standard_warp = os.path.join(self.roi_dir, "reg_" + std_img_label, "highres2standard_warp")
+        if imtest(highres2standard_warp) is False:
+            rrun("fnirt -- in =" + self.t1_brain_data + " --aff = " + highres2standard + ".mat --cout =" + highres2standard_warp + " --iout =" + highres2standard + "--jout =" + os.path.join(self.roi_t1_dir, "highres2highres_jac") + " --config = T1_2_MNI152_2mm --ref =" + std_img + " --refmask =" + std_img_mask_dil + "--warpres = 10, 10, 10")
+
+        # => standard2highres_warp
+        standard_warp2highres = os.path.join(self.roi_t1_dir, std_img_label + "2highres_warp")
+        if imtest(standard_warp2highres) is False:
+            rrun("invwarp -r " + self.t1_brain_data + " -w " + highres2standard_warp + " -o " + standard_warp2highres)
+
+        ## => highres2${std_img_label}.nii.gz
+        # [ `$FSLDIR/bin/imtest $ROI_DIR/reg_${std_img_label}/highres2standard` = 0 ] && $FSLDIR/bin/applywarp -i $T1_BRAIN_DATA -r $STD_IMAGE -o $ROI_DIR/reg_${std_img_label}/highres2standard -w $ROI_DIR/reg_${std_img_label}/highres2standard_warp
+
+        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # highres <--> standard4
+        os.makedirs(os.path.join(self.roi_dir, "reg_"+ std_img_label + "4"), exist_ok=True)
+
+        highres2standard4   = os.path.join(self.roi_dir, "reg_" + std_img_label + "4", "highres2standard")
+        standard42highres   = os.path.join(self.roi_t1_dir, std_img_label + "42highres")
+        hr2std4_warp        = os.path.join(self.roi_dir, "reg_" + std_img_label + "4", "highres2standard_warp.nii.gz")
+        std42hr_warp        = os.path.join(self.roi_t1_dir, std_img_label + "42highres_warp.nii.gz")
+
+
+        if os.path.isfile(highres2standard4 + ".mat") is False:
+            rrun("flirt -in " + self.t1_brain_data + " -ref " + self.project.globaldata.fsl_standard_mni_4mm + " -omat " + highres2standard4 + ".mat")
+
+        if os.path.isfile(standard42highres + ".mat") is False:
+            rrun("convert_xfm -omat " + standard42highres + ".mat" + " -inverse " + highres2standard4 + ".mat")
+
+        # if imtest(hr2std4_warp) is False:
+        #     rrun("fnirt --in " + self.t1_data + " --aff=" + highres2standard4 + ".mat" + " --cout=" + hr2std4_warp + " --iout=" + highres2standard4 +
+        #          " --jout=" + highres2standard4 + "_jac" + " --config=" + os.path.join(self.project.globaldata.global_data_templates, "gray_matter", "T1_2_MNI152_4mm") +
+        #          " --ref=" + self.project.globaldata.fsl_standard_mni_4mm + " --refmask=" + self.project.globaldata.fsl_standard_mni_4mm + "_mask_dil" + " --warpres=10,10,10")
+        #
+        # if imtest(std42hr_warp) is False:
+        #     rrun("inwarp -w " + hr2std4_warp + " -o " + std42hr_warp + " -r " + self.t1_brain_data)
+
+        # ==================================================================================================================================================
 
