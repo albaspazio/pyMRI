@@ -1,11 +1,6 @@
 import os
-import re
 import json
 import traceback
-
-from tkinter import *
-import numpy as np
-import matplotlib.pyplot as plt
 
 from pymri.Global import Global
 from pymri.Project import Project
@@ -14,82 +9,9 @@ from pymri.utility import startup_utilities
 from pymri.utility.fslfun import imtest, run_notexisting_img
 from pymri.fsl.utils.run import rrun
 
+from pymri.utility import import_data_file
+from pymri.utility import plot_data
 
-
-# read file, split in two columns (1-56 & 57-112), add a third column with the difference.
-def process_results2tp(fname, subjs_list, outname):
-    with open(fname) as f:
-        content = f.readlines()
-    # you may also want to remove whitespace characters like `\n` at the end of each line
-    content = [x.strip() for x in content]
-    nsubj = len(content)
-
-    list_str = []
-    for i in range(int(nsubj/2)):
-        list_str.append(subjs_list[i] + "\t" + f'{float(content[i]):.3f}' + "\t" +  f'{float(content[i + int(nsubj/2)]):.3f}' + "\t" + f'{float(content[i + int(nsubj/2)]) - float(content[i]):.3f}')
-
-    row = "\n".join(list_str)
-    with open(outname, "w") as fout:
-        fout.write(row)
-
-    return list_str
-
-
-# read file, create subjlabel and value columns
-def process_results(fname, subjs_list, outname):
-    with open(fname) as f:
-        content = f.readlines()
-    # you may also want to remove whitespace characters like `\n` at the end of each line
-    content = [x.strip() for x in content]
-    nsubj = len(content)
-
-    list_str = []
-    for i in range(nsubj):
-        list_str.append(subjs_list[i] + "\t" + f'{float(content[i]):.3f}')
-
-    row = "\n".join(list_str)
-    with open(outname, "w") as fout:
-        fout.write(row)
-
-    return list_str
-
-
-def scatter_plot(string_list, fnameout, col_id=3):
-
-    ctrl_y = []
-    ctrl_x = []
-    exp_y = []
-    exp_x = []
-
-    for s in range(len(string_list)):
-        l = re.split(r'\t+', string_list[s])
-        group_ch = l[0][0]
-        if group_ch == "4":
-            ctrl_y.append(float(l[col_id]))
-            ctrl_x.append(0.1*s)
-        else:
-            exp_y.append(float(l[col_id]))
-            exp_x.append(0.1*s + 3)
-
-    colors = ("red", "green")
-    groups = ("control", "experimental")
-
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1) #, axisbg="1.0")
-
-    ax.scatter(ctrl_x, ctrl_y, alpha=0.8, c=colors[0], edgecolors='none', s=30, label=groups[0])
-    ax.scatter(exp_x, exp_y, alpha=0.8, c=colors[1], edgecolors='none', s=30, label=groups[1])
-
-
-    plt.title(os.path.basename(fnameout))
-    plt.legend(loc=4)
-    plt.show()
-
-    plt.savefig(fnameout, dpi=1200)
-
-
-def check_images():
-    pass
 
 if __name__ == "__main__":
 
@@ -142,8 +64,9 @@ if __name__ == "__main__":
         DR_DIR                  = os.path.join(project.melodic_dr_dir, "templ_" + template_file_name, population_name)
         RESULTS2_OUT_DIR        = os.path.join(DR_DIR, "results", "standard2")
         RESULTS4_OUT_DIR        = os.path.join(DR_DIR, "results", "standard4")
-        standard_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_standard, "MNI152_T1_2mm_brain")
+        standard_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
 
+        subjects_data           = import_data_file.read_tabbed_file_with_header(os.path.join(project.dir, "data_2x56.txt"))
 
         # -----------------------------------------------------
         # registering results to standard 2mm
@@ -154,7 +77,7 @@ if __name__ == "__main__":
             # => /dr/templ_subjects_2x56_melodic_ST/subjects_2x56/results/standard2/bg_image_standard.nii.gz
             templ2standard_mat = os.path.join(TEMPL_STATS_DIR, "bg2standard.mat")
             bg_image_standard = os.path.join(RESULTS2_OUT_DIR, "bg_image_standard.nii.gz")
-            run_notexisting_img(bg_image_standard, "flirt -in " + melodic_template["TEMPLATE_BG_IMAGE"] + " -ref " + os.path.join(globaldata.fsl_data_standard, "MNI152_T1_2mm_brain") + " -out " + bg_image_standard + " -omat " + templ2standard_mat)
+            run_notexisting_img(bg_image_standard, "flirt -in " + melodic_template["TEMPLATE_BG_IMAGE"] + " -ref " + os.path.join(globaldata.fsl_data_standard_dir, "MNI152_T1_2mm_brain") + " -out " + bg_image_standard + " -omat " + templ2standard_mat)
 
             # -----------------------------------------------------
             # transform RSN image to standard(4mm) to standard(2mm)
@@ -212,10 +135,13 @@ if __name__ == "__main__":
             print(maskname)
             rrun("fslmeants -i " + ic_image + " -o " + raw_res_file_name + " -m " + maskpath)
             # str_lists = process_results2tp(raw_res_file_name, subjects, res_file_name)
-            str_lists           = process_results(raw_res_file_name, subjects, res_file_name)
+            str_lists           = import_data_file.process_results(raw_res_file_name, subjects, res_file_name)
 
-            scatter_plot(str_lists, os.path.join(RESULTS4_OUT_DIR, "fig_" + roi["roi"] + "_" + roi["rsn"] + ".png"),1)
-            a=1
+            # plot_data.histogram_plot_2groups(str_lists, os.path.join(RESULTS4_OUT_DIR, "fig_" + roi["roi"] + "_" + roi["rsn"] + ".png"), "4", 1)
+
+            data = [float(d) * (-1) for d in import_data_file.get_dict_column(subjects_data, "T2NoGo")]  # NoGo are errors: I want hits..since data are demeaned I can just invert the sign
+            plot_data.scatter_plot_2groups(str_lists, data, os.path.join(RESULTS4_OUT_DIR, "fig_" + roi["roi"] + "_" + roi["rsn"] + ".png"), "4", 1, colors=("white", "green"))
+            plot_data.scatter_plot_2groups(str_lists, data, os.path.join(RESULTS4_OUT_DIR, "fig_" + roi["roi"] + "_" + roi["rsn"] + ".png"), "4", 1, colors=("red", "white"))
 
     except Exception as e:
         traceback.print_exc()
