@@ -12,6 +12,7 @@ class Project:
         self.name                   = os.path.basename(self.dir)
         self.subjects_dir           = os.path.join(self.dir, "subjects")
         self.group_analysis_dir     = os.path.join(self.dir, "group_analysis")
+        self.script_dir             = os.path.join(self.dir, "script")
 
         self.melodic_templates_dir  = os.path.join(self.group_analysis_dir, "melodic", "group_templates")
         self.melodic_dr_dir         = os.path.join(self.group_analysis_dir, "melodic", "dr")
