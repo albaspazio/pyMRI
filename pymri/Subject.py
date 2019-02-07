@@ -1,12 +1,10 @@
 import os
 
-from pymri.utility.fslfun import imtest, immv, imcp, quick_smooth, run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img, remove_ext, mass_images_move
+from pymri.utility.fslfun import imtest, immv, imcp, imrm, quick_smooth, run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img, remove_ext, mass_images_move
 from pymri.fsl.utils.run import rrun
 
 import datetime
 import traceback
-
-# from nipype.interfaces.fsl import 
 
 class Subject:
 
@@ -114,6 +112,7 @@ class Subject:
         self.de_data        = os.path.join(self.de_dir, self.de_image_label)
         self.de_brain_data  = os.path.join(self.de_dir, self.de_image_label + "_brain")
 
+        self.has_T2         = False
         self.t2_dir         = self.de_dir
         self.t2_image_label = "t2"
         self.t2_data        = os.path.join(self.t2_dir, self.t2_image_label)
@@ -184,7 +183,7 @@ class Subject:
                         do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0,
                         std_image=""):
 
-        has_T2              = 0
+        self.has_T2              = 0
         BET_F_VALUE_T2      = "0.5"
         feat_preproc_model  = os.path.join(self.project.script_dir, "glm", "templates", feat_preproc_model)
         melodic_model       = os.path.join(self.project.script_dir, "glm", "templates", mel_preproc_model)
@@ -327,7 +326,7 @@ class Subject:
         #==============================================================================================================================================================
         if os.path.isdir(self.de_dir) is False:
             if imtest(self.t2_data) is True:
-                has_T2 = True
+                self.has_T2 = True
                 os.makedirs(os.path.join(self.roi_dir, "reg_t2"), exist_ok=True)
 
             if imtest(self.t2_brain_data) is False:
@@ -351,7 +350,7 @@ class Subject:
 
             os.makedirs(self.roi_dti_dir, exist_ok=True)
 
-            if has_T2 is True:
+            if self.has_T2 is True:
                 self.transform_dti_t2()
             else:
                 self.transform_dti()
@@ -703,7 +702,7 @@ class Subject:
             #	#### SUB-CORTICAL STRUCTURE SEGMENTATION (done in subject_t1_first)
             #	# required input: " + T1 + "_biascorr
             #	# output: " + T1 + "_first*
-            #	if [ `$FSLDIR/bin/imtest " + T1 + "_subcort_seg` = 0 -o $do_overwrite = yes ]; then
+            #	if imtest( " + T1 + "_subcort_seg` = 0 -o $do_overwrite = yes ]; then
             #		if [ $do_subcortseg = yes ] ; then
             #				print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Performing subcortical segmentation"
             #				# Future note, would be nice to use " + T1 + "_to_MNI_lin.mat to initialise first_flirt
@@ -970,9 +969,9 @@ class Subject:
         #==============================================================================================================
         print("registration_type " + regtype + ", do_linear = " + str(islin))
 
-        has_T2=0
+        self.has_T2=0
         if imtest(self.t2_data) is True:
-            has_T2 = True
+            self.has_T2 = True
 
 
         linear_registration_type = {
@@ -1020,9 +1019,9 @@ class Subject:
 
             if islin is False:
                 # is non linear
-                output_roi = non_linear_registration_type[regtype]()
+                output_roi = non_linear_registration_type[regtype](pathtype, roi_name, roi, std_img)
             else:
-                output_roi = linear_registration_type[regtype]()
+                output_roi = linear_registration_type[regtype](pathtype, roi_name, roi, std_img)
 
             if thresh > 0:
                 output_roi_name     = os.path.basename(output_roi)
@@ -1036,386 +1035,375 @@ class Subject:
                     if orf != "":
                         print("subj: " + self.label + ", roi: " + roi_name + " ... is empty, thr: " + str(thresh)) # TODO: print to file
 
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # TO HR
+
+    def nl_std2hr(self, path_type, roi_name, roi, std_img):
+        output_roi = os.path.join(self.roi_t1_dir,roi_name + "_highres")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_standard_dir, "roi")
+
+        if imtest(input_roi) is False:
+            print("error......input_roi (" + input_roi + ") is missing....exiting")
+            
+        rrun("applywarp -i " + input_roi + " -r " + self.t1_brain_data + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir,"standard2highres_warp"))
+    def l_std2hr(self, path_type, roi_name, roi, std_img):
+        output_roi = os.path.join(self.roi_t1_dir,roi_name + "_highres")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi = os.path.join(self.roi_standard_dir, "roi")
+
+        rrun("applywarp -i " + input_roi + " -r " +self.t1_brain_data + "-o " + os.path.join(self.roi_t1_dir,roi_name + "_highres") + " --warp=" + os.path.join(self.roi_t1_dir, "standard2highres_warp"))
+
+    def nl_std42hr(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_t1_dir,roi_name + "_highres")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_standard4_dir, roi)
+
+        if imtest(input_roi) is False:
+            print("error......input_roi (" + input_roi + ") is missing....exiting")
+        rrun("flirt -in " + input_roi + " -ref " + std_img + " -out " + os.path.join(self.roi_t1_dir,roi_name + "_standard") + " -applyisoxfm 2")
+        rrun("applywarp -i " +  os.path.join(self.roi_t1_dir, roi_name + "_standard") + " -r " + self.t1_brain_data + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir, "standard2highres_warp"))
+        imrm(os.path.join(self.roi_t1_dir,roi_name + "_standard"))
+    def l_std42hr(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_t1_dir,roi_name + "_highres")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_standard4_dir, roi)
+
+        rrun("flirt -in " + input_roi + " -ref " + std_img + " -out " + os.path.join(self.roi_t1_dir,roi_name + "_standard") + " -applyisoxfm 2")
+        rrun("applywarp -i " +  os.path.join(self.roi_t1_dir,roi_name + "_standard") + " -r " + self.t1_brain_data + " -o " + os.path.join(self.roi_epi_dir, roi_name + "_highres") + " --warp=" + os.path.join(self.roi_t1_dir, "standard2highres_warp"))
+        imrm(os.path.join(self.roi_t1_dir, roi + "_standard"))
+
+    def nl_epi2hr(self, path_type, roi_name, roi, std_img):
+        output_roi = os.path.join(self.roi_t1_dir,roi_name + "_highres")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi = os.path.join(self.roi_epi_dir, roi)
+
+        if imtest(input_roi) is False:
+            print("error......input_roi (" + input_roi + ") is missing....exiting")
+        rrun("flirt -in " + input_roi + " -ref " + self.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_dti_dir, "epi2highres.mat") + " -interp trilinear")
+    def l_epi2hr(self, path_type, roi_name, roi, std_img):
+        output_roi = os.path.join(self.roi_t1_dir,roi_name + "_highres")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi = os.path.join(self.roi_epi_dir, roi)
+
+        rrun("flirt -in " + input_roi + " -ref " + self.t1_brain_data + " -out " + os.path.join(self.roi_t1_dir, roi_name + "_highres") + " -applyxfm -init " + os.path.join(self.roi_dti_dir, "epi2highres.mat") + " -interp trilinear")
+
+    def nl_dti2hr(self, path_type, roi_name, roi, std_img):
+        output_roi = os.path.join(self.roi_dti_dir, roi + "_dti")
+        if path_type == "abs":
+            input_roi = roi
+        else:
+            input_roi = os.path.join(self.roi_dti_dir, roi)
+
+        if imtest(input_roi) is False:
+            print("error......input_roi (" + input_roi + ") is missing....exiting")
+        if self.has_T2 is True:
+            rrun("applywarp -i " + input_roi + " -r " + self.t1_brain_data + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir, "dti2highres_warp"))
+        else:
+            rrun("flirt -in " + input_roi + " -ref " + self.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_t1_dir, "dti2highres.mat") + " -interp trilinear")
+    def l_dti2hr(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_t1_dir, roi_name + "_highres")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_dti_dir, roi)
+
+        if self.has_T2 is True:
+            rrun("applywarp -i " + input_roi + " -r " +self.t1_brain_data + " -o " + os.path.join(self.roi_t1_dir, roi + "_highres") + " --warp=" + os.path.join(self.roi_t1_dir, "dti2highres_warp"))
+        else:
+            rrun("flirt -in " + input_roi + " -ref " + self.t1_brain_data + " -out " + os.path.join(self.roi_t1_dir, roi + "_highres") + " -applyxfm -init " + os.path.join(self.roi_dti_dir, "dti2highres.mat") + " -interp trilinear")
 
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    def nl_std2hr(self):
-                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_standard/$roi
-                        fi
-                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
-                      $FSLDIR/bin/applywarp -i $input_roi -r $T1_BRAIN_DATA -o $output_roi --warp=$ROI_DIR/reg_t1/standard2highres_warp;;
+    # TO EPI
 
-    def nl_std42hr)
-                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_standard4/$roi
-                        fi
-                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
-                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $standard_image -out $ROI_DIR/reg_t1/$roi_name"_standard" -applyisoxfm 2;
-                        $FSLDIR/bin/applywarp -i $ROI_DIR/reg_t1/$roi_name"_standard" -r $T1_BRAIN_DATA -o $output_roi --warp=$ROI_DIR/reg_t1/standard2highres_warp;
-                        $FSLDIR/bin/imrm $ROI_DIR/reg_t1/$roi_name"_standard";;
+    def nl_std2epi(self, path_type, roi_name, roi, std_img):
+        output_roi = os.path.join(self.roi_epi_dir, roi_name + "_epi")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_standard_dir, "roi")
 
-    def nl_epi2hr)
-                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_epi/$roi
-                        fi
-                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
-                        $FSLDIR/bin/flirt -in $input_roi -ref $T1_BRAIN_DATA -out $output_roi -applyxfm -init $ROI_DIR/reg_dti/epi2highres.mat -interp trilinear;;
+        rrun("applywarp -i " + input_roi + " -r " + self.rs_examplefunc + " -o " + output_roi + " --warp=" + os.path.join(self.roi_epi_dir, "standard2epi_warp"))
+    def l_std2epi(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_standard_dir, "roi")
 
-    def nl_dti2hr)
-                        output_roi=$ROI_DIR/reg_dti/$roi"_dti"
-                        if [ "$path_type" = abs ]; then
-                            input_roi=$roi
-                        else
-                            input_roi=$ROI_DIR/reg_dti/$roi
-                        fi
-                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
-                        if [ $HAS_T2 -eq 1 ]; then
-                            $FSLDIR/bin/applywarp -i $input_roi -r $T1_BRAIN_DATA -o $output_roi --warp=$ROI_DIR/reg_t1/dti2highres_warp
-                        else
-                            $FSLDIR/bin/flirt -in $input_roi -ref $T1_BRAIN_DATA -out $output_roi -applyxfm -init $ROI_DIR/reg_t1/dti2highres.mat -interp trilinear
-                        fi;;
+        rrun("flirt -in " + input_roi + " -ref " + self.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_epi_dir, "standard2epi.mat"))
 
-    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def nl_std42epi(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_standard4_dir, roi)
 
-    def nl_std2epi)
-                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_standard/$roi
-                        fi
-                        $FSLDIR/bin/applywarp -i $input_roi -r $RS_EXAMPLEFUNC -o $output_roi --warp=$ROI_DIR/reg_epi/standard2epi_warp;;
+        if imtest(input_roi) is False:
+            print("error......input_roi (" + input_roi + ") is missing....exiting")
+            
+        rrun("flirt -in " + input_roi + "-ref " + std_img + " -out " + os.path.join(self.roi_epi_dir, roi_name + "_standard") + " -applyisoxfm 2")
+        rrun("applywarp -i " + os.path.join(self.roi_epi_dir, roi_name + "_standard") + " -r " + self.rs_examplefunc + " -o " + output_roi + " --warp=" + os.path.join(self.roi_epi_dir, "standard2epi_warp"))
+        imrm(os.path.join(self.roi_epi_dir, roi_name + "_standard"))
+    def l_std42epi(self, path_type, roi_name, roi, std_img):
+        output_roi = os.path.join(self.roi_epi_dir, roi_name + "_epi")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi = os.path.join(self.roi_standard4_dir, roi)
 
-    def nl_std42epi)
-                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_standard4/$roi
-                        fi
-                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
-                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $standard_image -out $ROI_DIR/reg_epi/$roi_name"_standard" -applyisoxfm 2;
-                        $FSLDIR/bin/applywarp -i $ROI_DIR/reg_epi/$roi_name"_standard" -r $RS_EXAMPLEFUNC -o $output_roi --warp=$ROI_DIR/reg_epi/standard2epi_warp;
-                        $FSLDIR/bin/imrm $ROI_DIR/reg_epi/$roi_name"_standard";;
+        if imtest(input_roi) is False:
+            print("error......input_roi (" + input_roi + ") is missing....exiting")
 
-    def nl_hr2epi)
-                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_t1/$roi
-                        fi
-                        echo "the hr2epi NON linear transformation does not exist.....using the linear one"
-                        $FSLDIR/bin/flirt -in $input_roi -ref $RS_EXAMPLEFUNC -out $output_roi -applyxfm -init $ROI_DIR/reg_epi/highres2epi.mat -interp trilinear;;
+        rrun("flirt -in " + input_roi + " -ref " + std_img + " -out " + os.path.join(self.roi_epi_dir,
+                                                                                     roi_name + "_standard") + " -applyisoxfm 2")
+        rrun("applywarp -i " + os.path.join(self.roi_epi_dir,
+                                            roi_name + "_standard") + "-r " + self.rs_examplefunc + " -o " + os.path.join(
+            self.roi_epi_dir, roi_name + "_epi") + " --warp=" + os.path.join(self.roi_epi_dir, "standard2epi_warp"))
+        imrm(os.path.join(self.roi_epi_dir, roi_name + "_standard"))
 
-    def nl_dti2epi)
-                        echo "registration type: dti2epi NOT SUPPORTED...exiting";exit;;
+    def nl_hr2epi(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi = os.path.join(self.roi_t1_dir, roi)
+
+        print("the hr2epi NON linear transformation does not exist.....using the linear one")
+        rrun("flirt -in " + input_roi + " -ref " + self.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_epi_dir, "highres2epi.mat") + " -interp trilinear")
+    def l_hr2epi(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
+        output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_t1_dir,roi)
+
+        rrun("flirt -in " + input_roi + " -ref " + self.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_epi_dir, "highres2epi.mat") + " -interp trilinear")
+
+    def nl_dti2epi(self, path_type, roi_name, roi, std_img):
+        print("registration type: dti2epi NOT SUPPORTED...exiting")
+    def l_dti2epi(self, path_type, roi_name, roi, std_img):
+        print("registration type: dti2epi NOT SUPPORTED...exiting")
 
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # TO STD
 
-    def nl_hr2std)
-                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_t1/$roi
-                        fi
-                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $output_roi --warp=$ROI_DIR/reg_t1/highres2standard_warp;;
+    def nl_hr2std(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi = os.path.join(self.roi_t1_dir, roi)
 
-    def nl_epi2std)
-                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_epi/$roi
-                        fi
-                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $output_roi --warp=$ROI_DIR/reg_standard/epi2standard_warp;;
+        rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir, "highres2standard_warp"))
+    def l_hr2std(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_t1_dir,roi)
 
-    def nl_dti2std)
-                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_dti/$roi
-                        fi
-                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $output_roi --warp=$ROI_DIR/reg_standard/dti2standard_warp;;
+        rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + os.path.join(self.roi_standard_dir, roi_name + "_standard") + " --warp=" + os.path.join(self.roi_t1_dir, "highres2standard_warp"))
 
-    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def nl_epi2std(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_epi_dir, roi)
 
-    def nl_std2std4)
-                        output_roi=$ROI_DIR/reg_standard4/$roi_name"_standard4"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_standard/$roi
-                        fi
-                        ${FSLDIR}/bin/flirt -in $input_roi -ref $standard_image -out $output_roi -applyisoxfm 4;;
+        rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + output_roi + " --warp=" + os.path.join(self.roi_standard_dir, "epi2standard_warp"))
+    def l_epi2std(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_epi_dir, roi)
 
-    def nl_epi2std4)
-                        output_roi=$ROI_DIR/reg_standard4/$roi_name"_standard"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_epi/$roi
-                        fi
-                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $ROI_DIR/reg_standard4/$roi_name"_standard2" --warp=$ROI_DIR/reg_standard/epi2standard_warp;
-                        ${FSLDIR}/bin/flirt  -in $ROI_DIR/reg_standard4/$roi_name"_standard2" -ref $standard_image -out $output_roi -applyisoxfm 4
-                        $FSLDIR/bin/imrm $ROI_DIR/reg_standard4/$roi_name"_standard2";;
+        rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + os.path.join(self.roi_standard_dir, roi_name + "_standard") + " --warp=" + os.path.join(self.roi_standard_dir, "epi2standard_warp"))
 
-    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def nl_dti2std(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi = os.path.join(self.roi_dti_dir, roi)
 
-    def nl_hr2dti)
-                        output_roi=$ROI_DIR/reg_dti/$roi_name"_dti"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_t1/$roi
-                        fi
-                        if [ $HAS_T2 -eq 1 -a `$FSLDIR/bin/imtest $ROI_DIR/reg_t1/highres2dti_warp` = 1 ]; then
-                            $FSLDIR/bin/applywarp -i $input_roi -r $ROI_DIR/reg_dti/nobrain_diff -o $output_roi --warp=$ROI_DIR/reg_t1/highres2dti_warp
-                        else
-                            echo "did not find the non linear registration from HR 2 DTI, I used a linear one"
-                            $FSLDIR/bin/flirt -in $input_roi -ref $ROI_DIR/reg_dti/nobrain_diff -out $output_roi -applyxfm -init $ROI_DIR/reg_dti/highres2dti.mat -interp trilinear
-                        fi;;
+        rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + output_roi + " --warp=" + os.path.join(self.roi_standard_dir, "dti2standard_warp"))
+    def l_dti2std(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_dti_dir,roi)
 
-    def nl_epi2dti)
-#								output_roi=$ROI_DIR/reg_dti/$roi_name"_dti"
-#								if [ "$path_type" = abs ]; then
-#									input_roi=$roi
-#								else
-#									input_roi=$ROI_DIR/reg_epi/$roi
-#								fi
-#								$FSLDIR/bin/applywarp -i $input_roi -r $ROI_DIR/reg_dti/nobrain_diff -o $ROI_DIR/reg_standard4/$roi_name"_standard2" --premat $ROI_DIR/reg_t1/epi2highres.mat --warp=$ROI_DIR/reg_standard/highres2standard_warp --postmat $ROI_DIR/reg_dti/standard2dti.mat;
-                        echo "registration type: epi2dti NOT SUPPORTED...exiting";exit;;
-
-    def nl_std2dti)
-                        output_roi=$ROI_DIR/reg_dti/$roi_name"_dti"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_standard/$roi
-                        fi
-                        $FSLDIR/bin/applywarp -i $input_roi -r $ROI_DIR/reg_dti/nodif_brain -o $output_roi --warp=$ROI_DIR/reg_dti/standard2dti_warp;;
-
+        rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + os.path.join(self.roi_standard_dir, roi_name + "_standard") + " --warp=" + os.path.join(self.roi_standard_dir, "epi2standard_warp"))
 
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    def nl_std2hr)
-                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_standard/$roi
-                        fi
-                      $FSLDIR/bin/applywarp -i $input_roi -r $T1_BRAIN_DATA -o $ROI_DIR/reg_t1/$roi_name"_highres" --warp=$ROI_DIR/reg_t1/standard2highres_warp;;
+    # TO STD4
 
-    def nl_std42hr)
-                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_standard4/$roi
-                        fi
-                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $standard_image -out $ROI_DIR/reg_t1/$roi_name"_standard" -applyisoxfm 2;
-                        $FSLDIR/bin/applywarp -i $ROI_DIR/reg_t1/$roi_name"_standard" -r $T1_BRAIN_DATA -o $ROI_DIR/reg_epi/$roi_name"_highres" --warp=$ROI_DIR/reg_t1/standard2highres_warp;
-                        rm $ROI_DIR/reg_t1/$roi"_standard";;
+    def nl_std2std4(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_standard4_dir, roi_name + "_standard4")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_standard_dir, "roi")
 
-    def nl_epi2hr)
-                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_epi/$roi
-                        fi
-                        $FSLDIR/bin/flirt -in $input_roi -ref $T1_BRAIN_DATA -out $ROI_DIR/reg_t1/$roi_name"_highres" -applyxfm -init $ROI_DIR/reg_dti/epi2highres.mat -interp trilinear;;
+        rrun("flirt -in " + input_roi + " -ref " + std_img + " -out " + output_roi + " -applyisoxfm 4")
+    def l_epi2std4(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_standard4_dir, roi_name + "_standard")
+        if path_type == "abs":
+            input_roi=roi
+        else:
+            input_roi=os.path.join(self.roi_epi_dir, roi)
 
-    def nl_dti2hr)
-                        output_roi=$ROI_DIR/reg_t1/$roi_name"_highres"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_dti/$roi
-                        fi
-                        if [ $HAS_T2 -eq 1 ]; then
-                            $FSLDIR/bin/applywarp -i $input_roi -r $T1_BRAIN_DATA -o $ROI_DIR/reg_t1/$roi"_highres" --warp=$ROI_DIR/reg_t1/dti2highres_warp
-                        else
-                            $FSLDIR/bin/flirt -in $input_roi -ref $T1_BRAIN_DATA -out $ROI_DIR/reg_t1/$roi"_highres" -applyxfm -init $ROI_DIR/reg_dti/dti2highres.mat -interp trilinear
-                        fi;;
+        rrun("flirt -in " + input_roi + " -ref " + self.rs_examplefunc + " -out " + os.path.join(self.roi_standard4_dir, roi_name + "_standard2") + " -applyxfm -init " + os.path.join(self.roi_standard_dir, "epi2standard.mat") + " -interp trilinear")
+        rrun("flirt -in " + os.path.join(self.roi_standard4_dir, roi_name + "_standard2") + " -ref " + std_img + " -out " + output_roi + " -applyisoxfm 4")
+        imrm(os.path.join(self.roi_standard4_dir, roi_name + "_standard2"))
+
+    def nl_epi2std4(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_standard4_dir, roi_name + "_standard")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi = os.path.join(self.roi_epi_dir, roi)
+
+        rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + os.path.join(self.roi_standard4_dir, roi_name) + "_standard2" + " --warp=" + os.path.join(self.roi_standard_dir, "epi2standard_warp"))
+        rrun("flirt -in " + os.path.join(self.roi_standard4_dir, roi_name + "_standard2") + " -ref " + std_img + " -out " + output_roi + " -applyisoxfm 4")
+        imrm(os.path.join(self.roi_standard4_dir, roi_name + "_standard2"))
+    def l_std2std4(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_standard4_dir, roi_name + "_standard")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_standard_dir, "roi")
+
+        rrun("flirt -in " + input_roi + " -ref " + std_img + " -out " + output_roi + "-applyisoxfm 4")
 
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # TO DTI
 
-    def nl_std2epi)
-                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        elsegaz
-                            input_roi=$ROI_DIR/reg_standard/$roi
-                        fi
-                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $RS_EXAMPLEFUNC -out $output_roi -applyxfm -init $ROI_DIR/reg_epi/standard2epi.mat;;
+    def nl_hr2dti(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_dti_dir,roi_name + "_dti")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi = os.path.join(self.roi_t1_dir, roi)
 
-    def nl_std42epi)
-                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_standard4/$roi
-                        fi
-                        if [ `$FSLDIR/bin/imtest $input_roi` = 0 ]; then echo "error......input_roi ($input_roi) is missing....exiting"; exit; fi
-                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $standard_image -out $ROI_DIR/reg_epi/$roi_name"_standard" -applyisoxfm 2;
-                        $FSLDIR/bin/applywarp -i $ROI_DIR/reg_epi/$roi_name"_standard" -r $RS_EXAMPLEFUNC -o $ROI_DIR/reg_epi/$roi_name"_epi" --warp=$ROI_DIR/reg_epi/standard2epi_warp;
-                        $FSLDIR/bin/imrm $ROI_DIR/reg_epi/$roi_name"_standard";;
+        if self.has_T2 is True and imtest(os.path.join(self.roi_t1_dir, "highres2dti_warp")) is True:
+            rrun("applywarp -i " + input_roi + " -r " + os.path.join(self.roi_dti_dir, "nobrain_diff") + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir, "highres2dti_warp"))
+        else:
+            print("did not find the non linear registration from HR 2 DTI, I used a linear one")
+            rrun("flirt -in " + input_roi + " -ref " + os.path.join(self.roi_dti_dir, "nobrain_diff") + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_dti_dir, "highres2dti.mat") + " -interp trilinear")
+    def l_hr2dti(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_dti_dir, roi_name + "_dti")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi = os.path.join(self.roi_t1_dir, roi)
 
-    def nl_hr2epi)
-                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
-                        output_roi=$ROI_DIR/reg_epi/$roi_name"_epi"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_t1/$roi
-                        fi
-                        $FSLDIR/bin/flirt -in $input_roi -ref $RS_EXAMPLEFUNC -out $output_roi -applyxfm -init $ROI_DIR/reg_epi/highres2epi.mat -interp trilinear;;
+        if self.has_T2 is True:
+            rrun("applywarp -i " + input_roi + " -r " + os.path.join(self.roi_dti_dir, "nobrain_diff") + " -o " + os.path.join(self.roi_dti_dir, roi_name + "_dti") + " --warp=" + os.path.join(self.roi_t1_dir, "highres2dti_warp"))
+        else:
+            rrun("flirt -in " + input_roi + " -ref " + os.path.join(self.roi_dti_dir, "nobrain_diff") + " -out " + os.path.join(self.roi_dti_dir,roi_name + "_dti") + " -applyxfm -init " + os.path.join(self.roi_dti_dir, "highres2dti.mat") + " -interp trilinear")
 
-    def nl_dti2epi)	echo "registration type: dti2epi NOT SUPPORTED...exiting";exit;;
+    def nl_epi2dti(self, path_type, roi_name, roi, std_img):
+        # output_roi=os.path.join(self.roi_dti_dir,roi_name + "_dti"
+        # if [ "$path_type" = abs ]; then
+        #     input_roi=roi
+        # else:
+        #     input_roi=os.path.join(self.roi_epi_dir, roi
+        # fi
+        # rrun("applywarp -i " + input_roi -r os.path.join(self.roi_dti_dir, nobrain_diff -o os.path.join(self.roi_standard4_dir, roi_name + "_standard2" --premat os.path.join(self.roi_t1_dir,epi2highres.mat --warp=os.path.join(self.roi_standard_dir, highres2standard_warp --postmat os.path.join(self.roi_dti_dir, standard2dti.mat;
+        print("registration type: epi2dti NOT SUPPORTED...exiting")
+    def l_epi2dti(self, path_type, roi_name, roi, std_img):
+        print("registration type: epi2dti NOT SUPPORTED...exiting")
 
-    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def nl_std2dti(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_dti_dir,roi_name + "_dti")
+        if path_type == "abs":
+            input_roi = roi
+        elif path_type == "rel":
+            input_roi = self.roi_dir
+        else:
+            input_roi = os.path.join(self.roi_standard_dir, "roi")
 
-    def nl_hr2std)
-                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_t1/$roi
-                        fi
-                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $ROI_DIR/reg_standard/$roi_name"_standard" --warp=$ROI_DIR/reg_t1/highres2standard_warp;;
+        rrun("applywarp -i " + input_roi + " -r " + os.path.join(self.roi_dti_dir, "nodif_brain") + " -o " + output_roi + "--warp=" + os.path.join(self.roi_dti_dir, "standard2dti_warp"))
+    def l_std2dti(self, path_type, roi_name, roi, std_img):
+        output_roi=os.path.join(self.roi_dti_dir,roi_name + "_dti")
+        if path_type == "abs":
+            input_roi=roi
+        elif path_type == "rel":
+            input_roi=self.roi_dir
+        else:
+            input_roi=os.path.join(self.roi_standard_dir, "roi")
 
-    def nl_epi2std)
-                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_epi/$roi
-                        fi
-                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $ROI_DIR/reg_standard/$roi_name"_standard" --warp=$ROI_DIR/reg_standard/epi2standard_warp;;
+        rrun("applywarp -i " + input_roi + " -r " + os.path.join(self.roi_dti_dir, "nodif_brain") + " -o " + os.path.join(self.roi_dti_dir, roi_name + "_dti") + " --warp=" + os.path.join(self.roi_dti_dir, "standard2dti_warp"))
 
-    def nl_dti2std)
-                        output_roi=$ROI_DIR/reg_standard/$roi_name"_standard"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_dti/$roi
-                        fi
-                        $FSLDIR/bin/applywarp -i $input_roi -r $standard_image -o $ROI_DIR/reg_standard/$roi_name"_standard" --warp=$ROI_DIR/reg_standard/epi2standard_warp;;
 
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    def nl_epi2std4)
-                        output_roi=$ROI_DIR/reg_standard4/$roi_name"_standard"
-                        if [ "$path_type" = abs ]; then
-                            input_roi=$roi
-                        else
-                            input_roi=$ROI_DIR/reg_epi/$roi
-                        fi
-                        $FSLDIR/bin/flirt -in $input_roi -ref $RS_EXAMPLEFUNC -out $ROI_DIR/reg_standard4/$roi_name"_standard2" -applyxfm -init $ROI_DIR/reg_standard/epi2standard.mat -interp trilinear
-                        ${FSLDIR}/bin/flirt  -in $ROI_DIR/reg_standard4/$roi_name"_standard2" -ref $standard_image -out $output_roi -applyisoxfm 4
-                        $FSLDIR/bin/imrm $ROI_DIR/reg_standard4/$roi_name"_standard2";;
-
-    def nl_std2std4)
-                        output_roi=$ROI_DIR/reg_standard4/$roi_name"_standard"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_standard/$roi
-                        fi
-                        ${FSLDIR}/bin/flirt  -in $input_roi -ref $standard_image -out $output_roi -applyisoxfm 4;;
-
-    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    def nl_hr2dti)
-                        output_roi=$ROI_DIR/reg_dti/$roi_name"_dti"
-                        if [ "$path_type" = abs ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_t1/$roi
-                        fi
-                        if [ $HAS_T2 -eq 1 ]; then
-                            $FSLDIR/bin/applywarp -i $input_roi -r $ROI_DIR/reg_dti/nobrain_diff -o $ROI_DIR/reg_dti/$roi_name"_dti" --warp=$ROI_DIR/reg_t1/highres2dti_warp
-                        else
-                            $FSLDIR/bin/flirt -in $input_roi -ref $ROI_DIR/reg_dti/nobrain_diff -out $ROI_DIR/reg_dti/$roi_name"_dti" -applyxfm -init $ROI_DIR/reg_dti/highres2dti.mat -interp trilinear
-                        fi;;
-
-    def nl_epi2dti)
-                        echo "registration type: epi2dti NOT SUPPORTED...exiting";exit;;
-
-    def nl_std2dti)
-                        output_roi=$ROI_DIR/reg_dti/$roi_name"_dti"
-                        if [ "$path_type" = "abs" ]; then
-                            input_roi=$roi
-                        elif [ "$path_type" == "rel" ]; then
-                            input_roi=$SUBJECT_DIR/$roi
-                        else
-                            input_roi=$ROI_DIR/reg_standard/$roi
-                        fi
-                        $FSLDIR/bin/applywarp -i $input_roi -r $ROI_DIR/reg_dti/nodif_brain -o $ROI_DIR/reg_dti/$roi_name"_dti" --warp=$ROI_DIR/reg_dti/standard2dti_warp;;
-
-                    #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def transform_epi(self, do_bbr=True, std_img_label="standard", std_img="", std_img_head="", std_img_mask_dil="", wmseg=""):
         
@@ -1567,7 +1555,7 @@ class Subject:
             rrun("invwarp -r " + roi_no_dif + "_brain" + " -w " + dti2standard + "_warp" + " -o " + standard2dti + "_warp")
 
         #2: concat: standard -> highres -> dti
-        #$FSLDIR/bin/convertwarp --ref=$ROI_DIR/reg_dti/nodif_brain --warp1=$ROI_DIR/reg_t1/standard2highres_warp --postmat=$ROI_DIR/reg_dti/highres2dti --out=$ROI_DIR/reg_dti/standard2dti_warp
+        #$FSLDIR/bin/convertwarp --ref=os.path.join(self.roi_dti_dir, nodif_brain --warp1=os.path.join(self.roi_t1_dir,standard2highres_warp --postmat=os.path.join(self.roi_dti_dir, highres2dti --out=os.path.join(self.roi_dti_dir, standard2dti_warp
 
 
     def transforms_mpr(self, std_img="", std_img_mask_dil="", std_img_label="standard"):
@@ -1623,7 +1611,7 @@ class Subject:
             rrun("invwarp -r " + self.t1_brain_data + " -w " + highres2standard_warp + " -o " + standard_warp2highres)
 
         ## => highres2${std_img_label}.nii.gz
-        # [ `$FSLDIR/bin/imtest $ROI_DIR/reg_${std_img_label}/highres2standard` = 0 ] && $FSLDIR/bin/applywarp -i $T1_BRAIN_DATA -r $STD_IMAGE -o $ROI_DIR/reg_${std_img_label}/highres2standard -w $ROI_DIR/reg_${std_img_label}/highres2standard_warp
+        # [ `$FSLDIR/bin/imtest $ROI_DIR/reg_${std_img_label}/highres2standard` = 0 ] && rrun("applywarp -i " + T1_BRAIN_DATA -r $STD_IMAGE -o $ROI_DIR/reg_${std_img_label}/highres2standard -w $ROI_DIR/reg_${std_img_label}/highres2standard_warp
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # highres <--> standard4
