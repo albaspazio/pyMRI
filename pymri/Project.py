@@ -17,6 +17,8 @@ class Project:
         self.melodic_templates_dir  = os.path.join(self.group_analysis_dir, "melodic", "group_templates")
         self.melodic_dr_dir         = os.path.join(self.group_analysis_dir, "melodic", "dr")
 
+        self.sbfc_dir               = os.path.join(self.group_analysis_dir, "sbfc")
+
         self.globaldata         = globaldata
 
         self.subjects           = []
