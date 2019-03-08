@@ -115,11 +115,11 @@ def mass_images_move(wildcardsource, destdir, logFile=None):
             print("mv " + img + " " + dest_file, file=logFile)
 
 
-def is_image(file):
+def is_image(file, img_formats=IMAGE_FORMATS):
 
     file_extension = mysplittext(file)[1]
 
-    if file_extension in IMAGE_FORMATS:
+    if file_extension in img_formats:
         return True
     else:
         return False
@@ -132,7 +132,7 @@ def quick_smooth(inimg, outimg, logFile=None):
   # possibly do a tiny extra smooth to $out here?
   imrm(["vol16"])
 
-
+# get the whole extension  (e.g. abc.nii.gz => nii.gz )
 def mysplittext(img):
 
     filename, fext = os.path.splitext(img)

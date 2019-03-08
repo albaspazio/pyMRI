@@ -21,12 +21,13 @@ class Project:
 
         self.globaldata         = globaldata
 
-        self.subjects           = []
+        self.subjects               = []
+        self.nsubj                  = -1
 
-        self.hasT1              = hasT1
-        self.hasRS              = hasRS
-        self.hasDTI             = hasDTI
-        self.hasT1              = hasT2
+        self.hasT1                  = hasT1
+        self.hasRS                  = hasRS
+        self.hasDTI                 = hasDTI
+        self.hasT1                  = hasT2
 
         with open(os.path.join(self.dir, "subjects_lists.json")) as json_file:
             self.subjects_lists = json.load(json_file)
@@ -44,6 +45,7 @@ class Project:
         for subj in subjects:
             self.subjects.append(Subject(subj, sess_id, self))
 
+        self.nsubj = len(self.subjects)
         return self.subjects
 
     def get_subjects_labels(self):
@@ -68,5 +70,21 @@ class Project:
             self.load_subjects(subjects_list_label)
 
 
+    # *kwparams is a list of kwparams
+    def run_subject_methods(self, method_name, kwparams, nthread=1):
+
+        if len(kwparams) != self.nsubj:
+            print("ERROR in run_subject_method")
+            return
+
+
+
+
+        results = []
+        for i in range(self.nsubj):
+            subj = self.subjects[i]
+            results.append(eval("subj." + method_name + "(**kwparams[i])"))
+
+        return results
 
 
