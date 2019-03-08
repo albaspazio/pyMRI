@@ -1,12 +1,13 @@
 import os
 
-from pymri.utility.fslfun import imtest, immv, imcp, quick_smooth, run, runpipe, run_notexisting_img, run_move_notexisting_img, remove_ext, mass_images_move
+from pymri.utility.fslfun import imtest, immv, imcp, quick_smooth, run, runpipe, run_notexisting_img, run_move_notexisting_img, remove_ext, mass_images_move, is_image, mysplittext
 
 from pymri.fsl.utils.run import rrun
 # from fsl.utils import run
 # from fsl.scripts import immv
 import datetime
 import traceback
+import glob
 
 # from nipype.interfaces.fsl import 
 
@@ -109,6 +110,8 @@ class Subject:
         self.wb_image_label = self.label + "-wb_epi"
         self.wb_data = os.path.join(self.wb_dir, self.wb_image_label)
         self.wb_brain_data = os.path.join(self.wb_dir, self.wb_image_label + "_brain")
+
+        self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
 
 
     def create_file_system(self):
@@ -775,6 +778,58 @@ class Subject:
 # #	[ ! -f $hr2std4_warp ] && $FSLDIR/bin/fnirt --in=$T1_DATA --aff=$highres2standard4_mat --cout=$hr2std4_warp --iout=$ROI_DIR/reg_standard4/highres2standard --jout=$ROI_DIR/reg_standard4/highres2standard_jac --config=$GLOBAL_DATA_TEMPLATES/gray_matter/T1_2_MNI152_4mm --ref=$FSL_STANDARD_MNI_4mm --refmask=$GLOBAL_DATA_TEMPLATES/gray_matter/MNI152_T1_4mm_brain_mask_dil --warpres=10,10,10
 # #	[ ! -f $std42hr_warp ] && $FSLDIR/bin/invwarp -w $hr2std4_warp -o $std42hr_warp -r $T1_BRAIN_DATA
 # # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+    # ==================================================================================================================================================
+    # DATA CONVERSIONS
+    # ==================================================================================================================================================
+    # routines to convert original images to nifti format. assumes data are in an external folder and converted data are copied and renamed properly
+
+    # postconvert_cleanup:
+    #   0: don't do anything
+    #   1: delete only files (when original file are already in the final folder)
+    #   2: delete original folder
+    def mpr2nifti(self, extpath, postconvert_cleanup=0):
+
+        try:
+            rrun("dcm2nii " + extpath)      # it returns :. usefs coXXXXXX, oXXXXXXX and XXXXXXX images
+
+            files = glob.glob(os.path.join(extpath, "*"))
+
+            converted_images = []
+            original_images = []
+
+            for f in files:
+                if is_image(f, self.DCM2NII_IMAGE_FORMATS) is True:
+                    converted_images.append(f)
+                else:
+                    original_images.append(f)
+
+            for img in converted_images:
+                name    = os.path.basename(img)
+                fullext = mysplittext(name)[1]
+
+                if name.startswith("co") is True:
+                    dest_file = os.path.join(self.t1_dir, "co-" + self.t1_image_label + fullext)
+                    os.rename(img, dest_file)
+                elif name.startswith("o") is True:
+                    dest_file = os.path.join(self.t1_dir, "o-" + self.t1_image_label + fullext)
+                    os.rename(img, dest_file)
+                else:
+                    dest_file = os.path.join(self.t1_dir, self.t1_image_label + fullext)
+                    os.rename(img, dest_file)
+
+
+            if postconvert_cleanup == 1:
+                for img in original_images:
+                    os.remove(img)
+            elif postconvert_cleanup == 2 :
+                os.rmdir(extpath)
+
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
+
 
 # ==================================================================================================================================================
 

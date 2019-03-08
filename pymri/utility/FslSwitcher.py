@@ -19,7 +19,7 @@ class FslSwitcher:
         return self.fsl_ver
 
     def ver_600(self):
-        self.dir = "/usr/local/fsl"
+        self.dir = "/usr/local/fsl-6.0"
         self.fsl_ver = "6.0.0"
         return self.fsl_ver
 
