@@ -3,6 +3,7 @@ import sys
 from shutil import copyfile, move
 import glob
 import subprocess
+import xml.etree.ElementTree as ET
 
 from pymri.fsl.utils.run import rrun
 
@@ -89,6 +90,26 @@ def imrm(filelist, logFile=None):
 
         if logFile is not None:
             print("rm " + filename_src + ext, file=logFile)
+
+# extract header in xml format and returns it as a (possibly filtered by list_field) dictionary
+def read_header(file, list_field=None):
+
+    res             = rrun("fslhd -x " +  file)
+    root            = ET.fromstring(res)
+    attribs_dict    = root.attrib
+
+    if list_field is not None:
+        fields = dict()
+        for f in list_field:
+            fields[f] = attribs_dict[f]
+        return fields
+    else:
+        return attribs_dict
+
+# read header and calculate a dimension number hdr["nx"] * hdr["ny"] * hdr["nz"] * hdr["dx"] * hdr["dy"] * hdr["dz"]
+def get_image_dimension(file):
+    hdr = read_header(file)
+    return int(hdr["nx"]) * int(hdr["ny"]) * int(hdr["nz"]) * float(hdr["dx"]) * float(hdr["dy"]) * float(hdr["dz"])
 
 
 # return basename of given image (useful to return "image" from "image.nii.gz")

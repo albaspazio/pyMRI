@@ -203,13 +203,22 @@ class Subject:
             os.makedirs(self.fast_dir, exist_ok=True)
 
             if do_anat is True:
-                self.anatomical_processing(odn=odn, imgtype=imgtype, smooth=smooth,
+                self.anatomical_processing_prebet(odn=odn, imgtype=imgtype, smooth=smooth,
                         biascorr_type=biascorr_type,
                         do_reorient=do_reorient, do_crop=do_crop,
+                        do_bet=do_bet, do_overwrite=do_overwrite,
+                        use_lesionmask=use_lesionmask, lesionmask=lesionmask)
+
+                self.anatomical_processing_bet(odn=odn, imgtype=imgtype,
                         do_bet=do_bet, betfparam=betfparam,
                         do_reg=do_reg, do_nonlinreg=do_nonlinreg,
-                        do_seg=do_seg, do_subcortseg=do_subcortseg,
-                        do_skipflirtsearch=do_skipflirtsearch,
+                        do_overwrite=do_overwrite,
+                        use_lesionmask=use_lesionmask, lesionmask=lesionmask)
+
+                self.anatomical_processing_postbet(odn=odn, imgtype=imgtype, smooth=smooth,
+                        betfparam=betfparam,
+                        do_reg=do_reg, do_nonlinreg=do_nonlinreg,
+                        do_seg=do_seg,
                         do_cleanup=do_cleanup, do_strongcleanup=do_strongcleanup, do_overwrite=do_overwrite,
                         use_lesionmask=use_lesionmask, lesionmask=lesionmask)
 
@@ -385,30 +394,17 @@ class Subject:
     # ANATOMICAL
     # ==================================================================================================================================================
     # pre-processing:
-    def anatomical_processing(self,
+    def anatomical_processing_prebet(self,
                         odn="anat", imgtype=1, smooth=10,
                         biascorr_type=BIAS_TYPE_STRONG,
                         do_reorient=True, do_crop=True,
-                        do_bet=True, betfparam=0.5,
-                        do_reg=True, do_nonlinreg=True,
-                        do_seg=True, do_subcortseg=True,
-                        do_skipflirtsearch=False,
-                        do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
+                        do_bet=True,
+                        do_overwrite=False,
                         use_lesionmask=False, lesionmask=""
                     ):
         niter       = 5
         logfile     = os.path.join(self.t1_dir, "mpr_log.txt")
         curdir      = os.getcwd()
-
-        # check anatomical image imgtype
-        if imgtype is not 1:
-            if do_nonlinreg is True:
-                print("ERROR: Cannot do non-linear registration with non-T1 images, please re-run with do_nonlinreg=False")
-                return False
-
-            if do_subcortseg is True:
-                print("ERROR: Cannot perform subcortical segmentation (with FIRST) on a non-T1 image, please re-run with do_subcortseg=False")
-                return False
 
         # define placeholder variables for input dir and image name
         if imgtype == 1:
@@ -435,18 +431,6 @@ class Subject:
 
         # I CAN START PROCESSING !
         try:
-            # create some params strings
-            if do_skipflirtsearch is True:
-                flirtargs = " -nosearch"
-            else:
-                flirtargs = " "
-
-            if use_lesionmask is True:
-                fnirtargs = " --inmask=lesionmaskinv"
-            else:
-                fnirtargs = " "
-
-            betopts = "-f " + str(betfparam)
 
             # create processing dir (if non existent) and cd to it
             os.makedirs(anatdir, exist_ok=True)
@@ -610,6 +594,92 @@ class Subject:
                 else:
                     rrun("fslmaths " + T1 + " " + T1 + "_biascorr", logFile=log)
 
+            os.chdir(curdir)
+
+        except Exception as e:
+            traceback.print_exc()
+            os.chdir(curdir)
+            log.close()
+            print(e)
+
+
+    def anatomical_processing_bet(self,
+                                     odn="anat", imgtype=1,
+                                     do_bet=True, betfparam=0.5,
+                                     do_reg=True, do_nonlinreg=True,
+                                     do_skipflirtsearch=False,
+                                     do_overwrite=False,
+                                     use_lesionmask=False, lesionmask=""
+                                     ):
+
+        logfile = os.path.join(self.t1_dir, "mpr_log.txt")
+        curdir = os.getcwd()
+
+        # check anatomical image imgtype
+        if imgtype is not 1:
+            if do_nonlinreg is True:
+                print(
+                    "ERROR: Cannot do non-linear registration with non-T1 images, please re-run with do_nonlinreg=False")
+                return False
+
+        # define placeholder variables for input dir and image name
+        if imgtype == 1:
+            inputimage = self.t1_data
+            anatdir = os.path.join(self.t1_dir, odn)
+            T1 = "T1"
+        elif imgtype == 2:
+            inputimage = self.t2_data
+            anatdir = os.path.join(self.t2_dir, odn)
+            T1 = "T2"
+        else:
+            print("ERROR: PD input format is not supported")
+            return False
+
+        # check original image presence, otherwise exit
+        if imtest(inputimage) is False:
+            print("ERROR: input anatomical image is missing....exiting")
+            return False
+
+        # check given lesionmask presence, otherwise exit
+        if use_lesionmask is True and imtest(lesionmask) is False:
+            print("ERROR: given Lesion mask is missing....exiting")
+            return False
+
+        # I CAN START PROCESSING !
+        try:
+            # create some params strings
+            if do_skipflirtsearch is True:
+                flirtargs = " -nosearch"
+            else:
+                flirtargs = " "
+
+            if use_lesionmask is True:
+                fnirtargs = " --inmask=lesionmaskinv"
+            else:
+                fnirtargs = " "
+
+            betopts = "-B -f " + str(betfparam)
+
+            # create processing dir (if non existent) and cd to it
+            os.makedirs(anatdir, exist_ok=True)
+            os.chdir(anatdir)
+
+            # init or append log file
+            if os.path.isfile(logfile):
+                with open(logfile, "a") as text_file:
+                    print("******************************************************************", file=text_file)
+                    print("updating directory", file=text_file)
+                    print(" ", file=text_file)
+            else:
+                with open(logfile, "w") as text_file:
+                    # some initial reporting for the log file
+                    print("Script invoked from directory = " + os.getcwd(), file=text_file)
+                    print("Output directory " + anatdir, file=text_file)
+                    print("Input image is " + inputimage, file=text_file)
+                    print(" " + anatdir, file=text_file)
+
+            log = open(logfile, "a")
+
             #### REGISTRATION AND BRAIN EXTRACTION
             # required input: " + T1 + "_biascorr
             # output: " + T1 + "_biascorr_brain " + T1 + "_biascorr_brain_mask " + T1 + "_to_MNI_lin " + T1 + "_to_MNI [plus transforms, inverse transforms, jacobians, etc.]
@@ -645,10 +715,84 @@ class Subject:
                     if do_bet is True:
                         print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         print(self.label + " :Performing brain extraction (using BET)")
-                        rrun("bet -R " + T1 + "_biascorr " + T1 + "_biascorr_brain -m " + betopts, logFile=log)  ## results sensitive to the f parameter
+                        rrun("bet " + T1 + "_biascorr " + T1 + "_biascorr_brain -m " + betopts, logFile=log)  ## results sensitive to the f parameter
                     else:
                         rrun("fslmaths " + T1 + "_biascorr " + T1 + "_biascorr_brain", logFile=log)
                         rrun("fslmaths " + T1 + "_biascorr_brain -bin " + T1 + "_biascorr_brain_mask", logFile=log)
+
+
+        except Exception as e:
+            traceback.print_exc()
+            os.chdir(curdir)
+            log.close()
+            print(e)
+
+    def anatomical_processing_postbet(self,
+                                  odn="anat", imgtype=1, smooth=10,
+                                  betfparam=0.5,
+                                  do_reg=True, do_nonlinreg=True,
+                                  do_seg=True,
+                                  do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
+                                  use_lesionmask=False, lesionmask=""
+                                  ):
+        niter = 5
+        logfile = os.path.join(self.t1_dir, "mpr_log.txt")
+        curdir = os.getcwd()
+
+        # check anatomical image imgtype
+        if imgtype is not 1:
+            if do_nonlinreg is True:
+                print(
+                    "ERROR: Cannot do non-linear registration with non-T1 images, please re-run with do_nonlinreg=False")
+                return False
+
+        # define placeholder variables for input dir and image name
+        if imgtype == 1:
+            inputimage = self.t1_data
+            anatdir = os.path.join(self.t1_dir, odn)
+            T1 = "T1"
+        elif imgtype == 2:
+            inputimage = self.t2_data
+            anatdir = os.path.join(self.t2_dir, odn)
+            T1 = "T2"
+        else:
+            print("ERROR: PD input format is not supported")
+            return False
+
+        # check original image presence, otherwise exit
+        if imtest(inputimage) is False:
+            print("ERROR: input anatomical image is missing....exiting")
+            return False
+
+        # check given lesionmask presence, otherwise exit
+        if use_lesionmask is True and imtest(lesionmask) is False:
+            print("ERROR: given Lesion mask is missing....exiting")
+            return False
+
+        # I CAN START PROCESSING !
+        try:
+
+            betopts = "-f " + str(betfparam)
+
+            # create processing dir (if non existent) and cd to it
+            os.makedirs(anatdir, exist_ok=True)
+            os.chdir(anatdir)
+
+            # init or append log file
+            if os.path.isfile(logfile):
+                with open(logfile, "a") as text_file:
+                    print("******************************************************************", file=text_file)
+                    print("updating directory", file=text_file)
+                    print(" ", file=text_file)
+            else:
+                with open(logfile, "w") as text_file:
+                    # some initial reporting for the log file
+                    print("Script invoked from directory = " + os.getcwd(), file=text_file)
+                    print("Output directory " + anatdir, file=text_file)
+                    print("Input image is " + inputimage, file=text_file)
+                    print(" " + anatdir, file=text_file)
+
+            log = open(logfile, "a")
 
             #### TISSUE-TYPE SEGMENTATION
             # required input: " + T1 + "_biascorr " + T1 + "_biascorr_brain " + T1 + "_biascorr_brain_mask
@@ -675,68 +819,68 @@ class Subject:
                         # regenerate the standard space version with the new bias field correction applied
                         rrun("applywarp -i " + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_field -r " + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1 + "_2mm") + " -o " + T1 + "_to_MNI_nonlin --interp=spline", logFile=log)
 
-            #### SKULL-CONSTRAINED BRAIN VOLUME ESTIMATION (only done if registration turned on, and segmentation done, and it is a T1 image)
-            # required inputs: " + T1 + "_biascorr
-            # output: " + T1 + "_vols.txt
-            if os.path.isfile(T1 + "_vols.txt") is False or do_overwrite is True:
+                #### SKULL-CONSTRAINED BRAIN VOLUME ESTIMATION (only done if registration turned on, and segmentation done, and it is a T1 image)
+                # required inputs: " + T1 + "_biascorr
+                # output: " + T1 + "_vols.txt
+                if os.path.isfile(T1 + "_vols.txt") is False or do_overwrite is True:
 
-                if do_reg is True and do_seg is True and T1 == "T1":
-                    print(self.label + " :Skull-constrained registration (linear)")
+                    if do_reg is True and do_seg is True and T1 == "T1":
+                        print(self.label + " :Skull-constrained registration (linear)")
 
-                    rrun("bet " + T1 + "_biascorr " + T1 + "_biascorr_bet -s -m " + betopts, logFile=log)
-                    rrun("pairreg " + os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain") + " " + T1 + "_biascorr_bet " + os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_skull") + " " + T1 + "_biascorr_bet_skull " + T1 + "2std_skullcon.mat", logFile=log)
+                        rrun("bet " + T1 + "_biascorr " + T1 + "_biascorr_bet -s -m " + betopts, logFile=log)
+                        rrun("pairreg " + os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain") + " " + T1 + "_biascorr_bet " + os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_skull") + " " + T1 + "_biascorr_bet_skull " + T1 + "2std_skullcon.mat", logFile=log)
 
-                    if use_lesionmask is True:
-                        rrun("fslmathslesionmask -max " + T1 + "_fast_pve_2 " + T1 + "_fast_pve_2_plusmask -odt float", logFile=log)
-                        # ${FSLDIR}/bin/fslmaths lesionmask -bin -mul 3 -max " + T1 + "_fast_seg " + T1 + "_fast_seg_plusmask -odt int
+                        if use_lesionmask is True:
+                            rrun("fslmathslesionmask -max " + T1 + "_fast_pve_2 " + T1 + "_fast_pve_2_plusmask -odt float", logFile=log)
+                            # ${FSLDIR}/bin/fslmaths lesionmask -bin -mul 3 -max " + T1 + "_fast_seg " + T1 + "_fast_seg_plusmask -odt int
 
-                    vscale = float(runpipe("avscale " + T1 + "2std_skullcon.mat | grep Determinant | awk '{ print $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
-                    ugrey  = float(runpipe("fslstats " + T1 + "_fast_pve_1 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
-                    uwhite = float(runpipe("fslstats " + T1 + "_fast_pve_2 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
+                        vscale = float(runpipe("avscale " + T1 + "2std_skullcon.mat | grep Determinant | awk '{ print $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
+                        ugrey  = float(runpipe("fslstats " + T1 + "_fast_pve_1 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
+                        uwhite = float(runpipe("fslstats " + T1 + "_fast_pve_2 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
 
-                    ngrey  = ugrey * vscale
-                    nwhite = uwhite * vscale
-                    ubrain = ugrey + uwhite
-                    nbrain = ngrey + nwhite
+                        ngrey  = ugrey * vscale
+                        nwhite = uwhite * vscale
+                        ubrain = ugrey + uwhite
+                        nbrain = ngrey + nwhite
 
-                    with open(T1 + "_vols.txt", "w") as file_vol:
-                        print( "Scaling factor from " + T1 + " to MNI (using skull-constrained linear registration) = " + str(vscale), file=file_vol)
-                        print( "Brain volume in mm^3 (native/original space) = " + str(ubrain), file=file_vol)
-                        print( "Brain volume in mm^3 (normalised to MNI) = " + str(nbrain), file=file_vol)
+                        with open(T1 + "_vols.txt", "w") as file_vol:
+                            print( "Scaling factor from " + T1 + " to MNI (using skull-constrained linear registration) = " + str(vscale), file=file_vol)
+                            print( "Brain volume in mm^3 (native/original space) = " + str(ubrain), file=file_vol)
+                            print( "Brain volume in mm^3 (normalised to MNI) = " + str(nbrain), file=file_vol)
 
-            #	#### SUB-CORTICAL STRUCTURE SEGMENTATION (done in subject_t1_first)
-            #	# required input: " + T1 + "_biascorr
-            #	# output: " + T1 + "_first*
-            #	if imtest( " + T1 + "_subcort_seg` = 0 -o $do_overwrite = yes ]; then
-            #		if [ $do_subcortseg = yes ] ; then
-            #				print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Performing subcortical segmentation"
-            #				# Future note, would be nice to use " + T1 + "_to_MNI_lin.mat to initialise first_flirt
-            #				ffopts=""
-            #				if [ $use_lesionmask = yes ] ; then ffopts="$ffopts -inweight lesionmaskinv" ; fi
-            #				run $FSLDIR/bin/first_flirt " + T1 + "_biascorr " + T1 + "_biascorr_to_std_sub $ffopts
-            #				run mkdir -p first_results
-            #				run $FSLDIR/bin/run_first_all $firstreg -i " + T1 + "_biascorr -o first_results/" + T1 + "_first -a " + T1 + "_biascorr_to_std_sub.mat
-            #				# rather complicated way of making a link to a non-existent file or files (as FIRST may run on the cluster) - the alernative would be fsl_sub and job holds...
-            #				names=`$FSLDIR/bin/imglob -extensions " + T1 + "`;
-            #				for fn in $names;
-            #				do
-            #					ext=`print( $fn | sed "s/" + T1 + ".//"`;
-            #				  run cp -r first_results/" + T1 + "_first_all_fast_firstseg.${ext} " + T1 + "_subcort_seg.${ext}
-            #				done
-            #		fi
-            #	fi
+                #	#### SUB-CORTICAL STRUCTURE SEGMENTATION (done in subject_t1_first)
+                #	# required input: " + T1 + "_biascorr
+                #	# output: " + T1 + "_first*
+                #	if imtest( " + T1 + "_subcort_seg` = 0 -o $do_overwrite = yes ]; then
+                #		if [ $do_subcortseg = yes ] ; then
+                #				print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Performing subcortical segmentation"
+                #				# Future note, would be nice to use " + T1 + "_to_MNI_lin.mat to initialise first_flirt
+                #				ffopts=""
+                #				if [ $use_lesionmask = yes ] ; then ffopts="$ffopts -inweight lesionmaskinv" ; fi
+                #				run $FSLDIR/bin/first_flirt " + T1 + "_biascorr " + T1 + "_biascorr_to_std_sub $ffopts
+                #				run mkdir -p first_results
+                #				run $FSLDIR/bin/run_first_all $firstreg -i " + T1 + "_biascorr -o first_results/" + T1 + "_first -a " + T1 + "_biascorr_to_std_sub.mat
+                #				# rather complicated way of making a link to a non-existent file or files (as FIRST may run on the cluster) - the alernative would be fsl_sub and job holds...
+                #				names=`$FSLDIR/bin/imglob -extensions " + T1 + "`;
+                #				for fn in $names;
+                #				do
+                #					ext=`print( $fn | sed "s/" + T1 + ".//"`;
+                #				  run cp -r first_results/" + T1 + "_first_all_fast_firstseg.${ext} " + T1 + "_subcort_seg.${ext}
+                #				done
+                #		fi
+                #	fi
 
-            #### CLEANUP
-            if do_cleanup is True:
-                #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning up intermediate files"
-                rrun("imrm " + T1 + "_biascorr_bet_mask " + T1 + "_biascorr_bet " + T1 + "_biascorr_brain_mask2 " + T1 + "_biascorr_init " + T1 + "_biascorr_maskedbrain " + T1 + "_biascorr_to_std_sub " + T1 + "_fast_bias_idxmask " + T1 + "_fast_bias_init " + T1 + "_fast_bias_vol2 " + T1 + "_fast_bias_vol32 " + T1 + "_fast_totbias " + T1 + "_hpf* " + T1 + "_initfast* " + T1 + "_s20 " + T1 + "_initmask_s20", logFile=log)
+                #### CLEANUP
+                if do_cleanup is True:
+                    #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning up intermediate files"
+                    rrun("imrm " + T1 + "_biascorr_bet_mask " + T1 + "_biascorr_bet " + T1 + "_biascorr_brain_mask2 " + T1 + "_biascorr_init " + T1 + "_biascorr_maskedbrain " + T1 + "_biascorr_to_std_sub " + T1 + "_fast_bias_idxmask " + T1 + "_fast_bias_init " + T1 + "_fast_bias_vol2 " + T1 + "_fast_bias_vol32 " + T1 + "_fast_totbias " + T1 + "_hpf* " + T1 + "_initfast* " + T1 + "_s20 " + T1 + "_initmask_s20", logFile=log)
 
-            #### STRONG CLEANUP
-            if do_strongcleanup is True:
-                #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning all unnecessary files "
-                rrun("imrm " + T1 + " " + T1 + "_orig " + T1 + "_fullfov", logFile=log)
+                #### STRONG CLEANUP
+                if do_strongcleanup is True:
+                    #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning all unnecessary files "
+                    rrun("imrm " + T1 + " " + T1 + "_orig " + T1 + "_fullfov", logFile=log)
 
-            os.chdir(curdir)
+                os.chdir(curdir)
 
         except Exception as e:
             traceback.print_exc()
@@ -1056,6 +1200,7 @@ class Subject:
             print("error......input_roi (" + input_roi + ") is missing....exiting")
             
         rrun("applywarp -i " + input_roi + " -r " + self.t1_brain_data + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir,"standard2highres_warp"))
+
     def l_std2hr(self, path_type, roi_name, roi, std_img):
         output_roi = os.path.join(self.roi_t1_dir,roi_name + "_highres")
         if path_type == "abs":
@@ -1081,6 +1226,7 @@ class Subject:
         rrun("flirt -in " + input_roi + " -ref " + std_img + " -out " + os.path.join(self.roi_t1_dir,roi_name + "_standard") + " -applyisoxfm 2")
         rrun("applywarp -i " +  os.path.join(self.roi_t1_dir, roi_name + "_standard") + " -r " + self.t1_brain_data + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir, "standard2highres_warp"))
         imrm(os.path.join(self.roi_t1_dir,roi_name + "_standard"))
+
     def l_std42hr(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_t1_dir,roi_name + "_highres")
         if path_type == "abs":
@@ -1106,6 +1252,7 @@ class Subject:
         if imtest(input_roi) is False:
             print("error......input_roi (" + input_roi + ") is missing....exiting")
         rrun("flirt -in " + input_roi + " -ref " + self.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_dti_dir, "epi2highres.mat") + " -interp trilinear")
+
     def l_epi2hr(self, path_type, roi_name, roi, std_img):
         output_roi = os.path.join(self.roi_t1_dir,roi_name + "_highres")
         if path_type == "abs":
@@ -1130,6 +1277,7 @@ class Subject:
             rrun("applywarp -i " + input_roi + " -r " + self.t1_brain_data + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir, "dti2highres_warp"))
         else:
             rrun("flirt -in " + input_roi + " -ref " + self.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_t1_dir, "dti2highres.mat") + " -interp trilinear")
+
     def l_dti2hr(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_t1_dir, roi_name + "_highres")
         if path_type == "abs":
@@ -1183,6 +1331,7 @@ class Subject:
         rrun("flirt -in " + input_roi + "-ref " + std_img + " -out " + os.path.join(self.roi_epi_dir, roi_name + "_standard") + " -applyisoxfm 2")
         rrun("applywarp -i " + os.path.join(self.roi_epi_dir, roi_name + "_standard") + " -r " + self.rs_examplefunc + " -o " + output_roi + " --warp=" + os.path.join(self.roi_epi_dir, "standard2epi_warp"))
         imrm(os.path.join(self.roi_epi_dir, roi_name + "_standard"))
+
     def l_std42epi(self, path_type, roi_name, roi, std_img):
         output_roi = os.path.join(self.roi_epi_dir, roi_name + "_epi")
         if path_type == "abs":
@@ -1213,6 +1362,7 @@ class Subject:
 
         print("the hr2epi NON linear transformation does not exist.....using the linear one")
         rrun("flirt -in " + input_roi + " -ref " + self.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_epi_dir, "highres2epi.mat") + " -interp trilinear")
+
     def l_hr2epi(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
         output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
@@ -1227,6 +1377,7 @@ class Subject:
 
     def nl_dti2epi(self, path_type, roi_name, roi, std_img):
         print("registration type: dti2epi NOT SUPPORTED...exiting")
+
     def l_dti2epi(self, path_type, roi_name, roi, std_img):
         print("registration type: dti2epi NOT SUPPORTED...exiting")
 
@@ -1243,6 +1394,7 @@ class Subject:
             input_roi = os.path.join(self.roi_t1_dir, roi)
 
         rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir, "highres2standard_warp"))
+
     def l_hr2std(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
         if path_type == "abs":
@@ -1264,6 +1416,7 @@ class Subject:
             input_roi=os.path.join(self.roi_epi_dir, roi)
 
         rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + output_roi + " --warp=" + os.path.join(self.roi_standard_dir, "epi2standard_warp"))
+
     def l_epi2std(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
         if path_type == "abs":
@@ -1285,6 +1438,7 @@ class Subject:
             input_roi = os.path.join(self.roi_dti_dir, roi)
 
         rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + output_roi + " --warp=" + os.path.join(self.roi_standard_dir, "dti2standard_warp"))
+
     def l_dti2std(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
         if path_type == "abs":
@@ -1309,6 +1463,7 @@ class Subject:
             input_roi=os.path.join(self.roi_standard_dir, "roi")
 
         rrun("flirt -in " + input_roi + " -ref " + std_img + " -out " + output_roi + " -applyisoxfm 4")
+
     def l_epi2std4(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard4_dir, roi_name + "_standard")
         if path_type == "abs":
@@ -1332,6 +1487,7 @@ class Subject:
         rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + os.path.join(self.roi_standard4_dir, roi_name) + "_standard2" + " --warp=" + os.path.join(self.roi_standard_dir, "epi2standard_warp"))
         rrun("flirt -in " + os.path.join(self.roi_standard4_dir, roi_name + "_standard2") + " -ref " + std_img + " -out " + output_roi + " -applyisoxfm 4")
         imrm(os.path.join(self.roi_standard4_dir, roi_name + "_standard2"))
+
     def l_std2std4(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard4_dir, roi_name + "_standard")
         if path_type == "abs":
@@ -1360,6 +1516,7 @@ class Subject:
         else:
             print("did not find the non linear registration from HR 2 DTI, I used a linear one")
             rrun("flirt -in " + input_roi + " -ref " + os.path.join(self.roi_dti_dir, "nobrain_diff") + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_dti_dir, "highres2dti.mat") + " -interp trilinear")
+
     def l_hr2dti(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_dti_dir, roi_name + "_dti")
         if path_type == "abs":
@@ -1383,6 +1540,7 @@ class Subject:
         # fi
         # rrun("applywarp -i " + input_roi -r os.path.join(self.roi_dti_dir, nobrain_diff -o os.path.join(self.roi_standard4_dir, roi_name + "_standard2" --premat os.path.join(self.roi_t1_dir,epi2highres.mat --warp=os.path.join(self.roi_standard_dir, highres2standard_warp --postmat os.path.join(self.roi_dti_dir, standard2dti.mat;
         print("registration type: epi2dti NOT SUPPORTED...exiting")
+
     def l_epi2dti(self, path_type, roi_name, roi, std_img):
         print("registration type: epi2dti NOT SUPPORTED...exiting")
 
@@ -1562,7 +1720,6 @@ class Subject:
         #2: concat: standard -> highres -> dti
         #$FSLDIR/bin/convertwarp --ref=os.path.join(self.roi_dti_dir, nodif_brain --warp1=os.path.join(self.roi_t1_dir,standard2highres_warp --postmat=os.path.join(self.roi_dti_dir, highres2dti --out=os.path.join(self.roi_dti_dir, standard2dti_warp
 
-
     def transforms_mpr(self, std_img="", std_img_mask_dil="", std_img_label="standard"):
         pass
 
@@ -1684,7 +1841,7 @@ class Subject:
     #   0: don't do anything
     #   1: delete only files (when original file are already in the final folder)
     #   2: delete original folder
-    def mpr2nifti(self, extpath, postconvert_cleanup=0):
+    def mpr2nifti(self, extpath, cleanup=0):
 
         try:
             rrun("dcm2nii " + extpath)      # it returns :. usefs coXXXXXX, oXXXXXXX and XXXXXXX images
@@ -1715,10 +1872,10 @@ class Subject:
                     os.rename(img, dest_file)
 
 
-            if postconvert_cleanup == 1:
+            if cleanup == 1:
                 for img in original_images:
                     os.remove(img)
-            elif postconvert_cleanup == 2 :
+            elif cleanup == 2 :
                 os.rmdir(extpath)
 
         except Exception as e:
