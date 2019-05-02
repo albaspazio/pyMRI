@@ -489,6 +489,7 @@ class Subject:
                 if do_reorient is True:
                     print(self.label + " :Reorienting to standard orientation")
                     rrun("fslmaths " + T1 + " " + T1 + "_orig", logFile=log)
+                    # os.system("fslreorient2std " + T1 + " > " + T1 + "_orig2std.mat")
                     run("fslreorient2std " + T1 + " > " + T1 + "_orig2std.mat", logFile=log)
                     rrun("convert_xfm -omat " + T1 + "_std2orig.mat -inverse " + T1 + "_orig2std.mat", logFile=log)
                     rrun("fslmaths " + T1 + " " + T1 + "_orig", logFile=log)

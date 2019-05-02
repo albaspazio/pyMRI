@@ -2,6 +2,7 @@ import os
 import json
 import math
 from threading import Thread
+from inspect import signature
 
 from pymri.Subject import Subject
 
@@ -91,15 +92,31 @@ class Project:
     # if subj_labels is not given...use the loaded subjects
     def run_subjects_methods(self, method_name, kwparams, subj_labels=None, nthread=1):
 
+        # check subjects
         if subj_labels is None:
             subj_labels = self.get_subjects_labels()
-
         nsubj       = len(subj_labels)
-        nprocesses  = len(kwparams)
-
         if nsubj == 0:
             print("ERROR in run_subjects_methods: subject list is empty")
             return
+
+        # check number of NECESSARY (without a default value) method params
+        subj    = self.get_subject_by_label(subj_labels[0])
+        method  = eval("subj." + method_name)
+        sig     = signature(method)
+        nparams = len(sig.parameters)
+        for p in sig.parameters:
+            if sig.parameters[p].default is not None:
+                nparams = nparams - 1
+
+        if len(kwparams) is 0:
+            if nparams > 0:
+                print("ERROR in run_subjects_methods: given params list is empty, while method needs " + str(nparams) + " params" )
+                return
+            else:
+                kwparams = [None] * nsubj
+
+        nprocesses  = len(kwparams)
 
         if nsubj > 1 and nprocesses == 1:
             kwparams = [kwparams[0]] * nsubj        # duplicate the first kwparams up to given subj number
@@ -108,7 +125,7 @@ class Project:
                 print("ERROR in run_subject_method: given params list length differs from subjects list")
                 return
 
-        numblocks = math.ceil(nprocesses/nthread)
+        numblocks   = math.ceil(nprocesses/nthread)
 
         subjects    = []
         processes   = []

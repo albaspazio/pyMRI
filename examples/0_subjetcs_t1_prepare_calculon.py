@@ -8,10 +8,9 @@ from pymri.utility import fslfun
 if __name__ == "__main__":
 
     # ======================================================================================================================
-    global_script_dir = "/data/MRI/scripts"
-    proj_dir = "/data/MRI/projects/T15"
-    proj_dir = "/data/MRI/projects/T3"
-    fsl_code = "600"
+    global_script_dir   = "/media/alba/data/MRI/scripts"
+    proj_dir            = "/media/alba/dados/MRI/projects/T15"
+    fsl_code            = "509"
 
     if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
         print("Error")

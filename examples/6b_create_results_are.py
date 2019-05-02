@@ -30,28 +30,27 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # init vars
         # ======================================================================================================================
-        subjects_list_name  = "subjects_2x56"
+        subjects_list_name  = "are_2groups_71"                      # label of the subjects list within the json file
+        subjects_data_file  = "data_temperamento71_ARE2groups.txt"  # contains subjects data
         num_cpu             = 1
 
-        DO_REGISTER         = False
+        DO_REGISTER         = True
         DO_MELODIC_RES      = False
-        DO_SBFC_RES         = True
+        DO_SBFC_RES         = False
 
         SESS_ID             = 1
-        template_file_name  = "subjects_2x56_melodic_ST"
-        population_name     = "subjects_2x56"
+        template_file_name  = "subjects71_melodic_T71"
+        population_name     = "subjects_temperamento71"
         PTHRESH             = 0.95
 
-        arr_images_names    = ["R_ATN/2x56_x_age_maskrsn/R_ATN_longitudinal2x56_x_age_maskrsn_tfce_corrp_tstat6",
-                               "R_ATN/2x56_x_age_maskrsn/R_ATN_longitudinal2x56_x_age_maskrsn_tfce_corrp_tstat3",
-                               "L_ATN/2x56_maskrsn/L_ATN_longitudinal2x56_maskrsn_tfce_corrp_tstat6",
-                               "L_ATN/2x56_maskrsn/L_ATN_longitudinal2x56_maskrsn_tfce_corrp_tstat3"]
-        arr_rsn_id          = [10, 8]
-        arr_rsn_labels      = ["R_ATN", "L_ATN"]
-        input_rsn_image     = "dr_stage2_ic0000_diff.nii.gz"
+        arr_images_names    = ["aDMN/ARE_2groups_x_age_maskrsn/aDMN_ARE_2groups_x_age_maskrsn_tfce_corrp_tstat6",
+                               "OFC/ARE_2groups_x_age_maskrsn/OFC_ARE_2groups_x_age_maskrsn_tfce_corrp_tstat6"]
+        arr_rsn_id          = [2, 6]
+        arr_rsn_labels      = ["OFC", "aDMN"]
+        input_rsn_image     = "dr_stage2_ic0000.nii.gz"
 
-        arr_roi_2_extract_melodic   = [{"roi": "R_ATN_longitudinal2x56_x_age_maskrsn_tfce_corrp_tstat6", "rsn": "R_ATN"},
-                                       {"roi":"L_ATN_longitudinal2x56_x_age_maskrsn_tfce_corrp_tstat6", "rsn":"L_ATN"}]
+        arr_roi_2_extract_melodic   = [{"roi": "aDMN_ARE_2groups_x_age_maskrsn_tfce_corrp_tstat6", "rsn": "R_ATN"},
+                                       {"roi":"OFC_ARE_2groups_x_age_maskrsn_tfce_corrp_tstat6", "rsn":"L_ATN"}]
 
         # ======================================================================================================================
         # ======================================================================================================================
@@ -71,7 +70,7 @@ if __name__ == "__main__":
         RESULTS4_OUT_DIR        = os.path.join(DR_DIR, "results", "standard4")
         standard_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
 
-        subjects_data           = import_data_file.read_tabbed_file_with_header(os.path.join(project.dir, "data_2x56.txt"))
+        subjects_data           = import_data_file.read_tabbed_file_with_header(os.path.join(project.dir, subjects_data_file))
 
         # -----------------------------------------------------
         # SBFC

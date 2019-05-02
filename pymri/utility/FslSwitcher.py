@@ -1,5 +1,6 @@
 import os
-
+import subprocess
+from pymri.fsl.utils.run import rrun
 
 class FslSwitcher:
 
@@ -32,8 +33,14 @@ class FslSwitcher:
         return "Unknown Parameters. presently, only version 5.0.9, 5.0.11 and 6 (6.0.0) are installed"
 
     def send_cmd(self):
-        os.system("PATH=%s/bin:${PATH}" % self.dir)
-        os.system("FSL_VER=%s" % self.fsl_ver)
-        os.system("FSLDIR=%s" % self.dir)
-        os.system("export FSLDIR PATH FSL_VER")
-        os.system(". %s/etc/fslconf/fsl.sh" % self.dir)
+        os.environ['PATH']      ="%s/bin:${PATH}" % self.dir
+        os.environ['FSL_VER']   ="%s" % self.fsl_ver
+        os.environ['FSLDIR']    ="%s" % self.dir
+
+        # os.system("export PATH=%s/bin:${PATH}" % self.dir)
+        # os.system("export FSL_VER=%s" % self.fsl_ver)
+        # os.system("export FSLDIR=%s" % self.dir)
+        # os.system(". %s/etc/fslconf/fsl.sh" % self.dir)
+        # rrun(". %s/etc/fslconf/fsl.sh" % self.dir)
+        # process = subprocess.run(["bash", "%s/etc/fslconf/fsl.sh" % self.dir], stdin=subprocess.PIPE)
+        # process.wait()  # Wait for process to complete.
