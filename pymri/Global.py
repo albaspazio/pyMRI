@@ -11,7 +11,7 @@ class Global:
 
         self.ica_aroma_script_dir           = os.path.join(self.global_script_dir, "external_tools", "ica_aroma", "ica_aroma.py")
         self.autoptx_script_dir             = os.path.join(self.global_script_dir, "external_tools", "autoPtx_0_1_1")
-        self.trackvis_bin                   = "/media/data/MRI/scripts/external_tools/dtk"
+        self.trackvis_bin                   = os.path.join(globalscriptdir, "external_tools", "dtk")
 
         self.fsl_dir                        = os.getenv('FSLDIR')
         self.fsl_bin                        = os.path.join(self.fsl_dir, "bin")

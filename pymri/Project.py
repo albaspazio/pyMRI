@@ -119,7 +119,8 @@ class Project:
         nprocesses  = len(kwparams)
 
         if nsubj > 1 and nprocesses == 1:
-            kwparams = [kwparams[0]] * nsubj        # duplicate the first kwparams up to given subj number
+            kwparams    = [kwparams[0]] * nsubj        # duplicate the first kwparams up to given subj number
+            nprocesses  = nsubj
         else:
             if len(kwparams) != nsubj:
                 print("ERROR in run_subject_method: given params list length differs from subjects list")

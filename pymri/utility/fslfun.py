@@ -81,6 +81,7 @@ def imrm(filelist, logFile=None):
     for file in filelist:
         filename_src, file_extension_src = os.path.splitext(file)
 
+        ext = ""
         if os.path.isfile(filename_src + ".nii"):
             ext = ".nii"
         elif os.path.isfile(filename_src + ".nii.gz"):
@@ -148,10 +149,13 @@ def is_image(file, img_formats=IMAGE_FORMATS):
 
 def quick_smooth(inimg, outimg, logFile=None):
 
-  rrun("fslmaths " + inimg + " -subsamp2 -subsamp2 -subsamp2 -subsamp2 vol16", logFile=logFile)
-  rrun("flirt -in vol16 -ref " + inimg + " -out " + outimg + " -noresampblur -applyxfm -paddingsize 16", logFile=logFile)
-  # possibly do a tiny extra smooth to $out here?
-  imrm(["vol16"])
+    currpath    = os.path.dirname(inimg)
+    vol16       = os.path.join(currpath, "vol16")
+
+    rrun("fslmaths " + inimg + " -subsamp2 -subsamp2 -subsamp2 -subsamp2 " + vol16, logFile=logFile)
+    rrun("flirt -in " + vol16 + " -ref " + inimg + " -out " + outimg + " -noresampblur -applyxfm -paddingsize 16", logFile=logFile)
+    # possibly do a tiny extra smooth to $out here?
+    imrm([vol16])
 
 # get the whole extension  (e.g. abc.nii.gz => nii.gz )
 def mysplittext(img):

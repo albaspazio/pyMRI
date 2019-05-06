@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
     # ======================================================================================================================
     global_script_dir   = "/data/MRI/scripts"
-    proj_dir            = "/data/MRI/projects/T3"
+    proj_dir            = "/data/MRI/projects/T15"
     fsl_code            = "600"
 
     if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
@@ -24,22 +24,22 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # SUBJECTS
     # ======================================================================================================================
-
     project     = Project(proj_dir, globaldata, hasT1=True)
     SESS_ID     = 1
-    num_cpu     = 7
+    num_cpu     = 2
 
+    # load whole list & create its file system
     subjects    = project.load_subjects("full", SESS_ID)
+    # project.run_subjects_methods("create_file_system", [], project.get_subjects_labels(), nthread=num_cpu)
 
     # ======================================================================================================================
     # PROCESSING
     # ======================================================================================================================
-
+    kwparams    = []
 
     # ---------------------------------------------------------------------------------------------------------------------
     # CONVERT 2 NIFTI
     # ---------------------------------------------------------------------------------------------------------------------
-    # kwparams    = []
     # for p in range(len(subjects)):
     #     kwparams.append({"extpath":"/data/MRI/projects/T15/subjects/" + subjects[p].label + "/s1/mpr", "cleanup":0})
 
@@ -53,7 +53,23 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------------------------------
     # PRINT HEADER
     # ---------------------------------------------------------------------------------------------------------------------
-    for s in subjects:
-        # print(s.label + "\t" + str(fslfun.get_image_dimension(s.t1_data)))
-        print(s.label + "\t" + str(fslfun.read_header(s.t1_data, ["nx","ny","nz","dx","dy","dz","descrip"])))
+    # for s in subjects:
+    #     # print(s.label + "\t" + str(fslfun.get_image_dimension(s.t1_data)))
+    #     print(s.label + "\t" + str(fslfun.read_header(s.t1_data, ["nx","ny","nz","dx","dy","dz","descrip"])))
 
+    # ---------------------------------------------------------------------------------------------------------------------
+    # RESLICING
+    # ---------------------------------------------------------------------------------------------------------------------
+    subjects    = project.load_subjects("test2", SESS_ID)
+    # project.run_subjects_methods("reslice_image", [{"dir":"sag->axial"}], project.get_subjects_labels(), nthread=num_cpu)
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # PRE BET
+    # ---------------------------------------------------------------------------------------------------------------------
+    subjects    = project.load_subjects("test2", SESS_ID)
+    project.run_subjects_methods("anatomical_processing_prebet", [], project.get_subjects_labels(), nthread=num_cpu)
+
+
+    # kwparams    = []
+    # for p in range(len(subjects)):
+    #     kwparams.append({"extpath":"/data/MRI/projects/T15/subjects/" + subjects[p].label + "/s1/mpr", "cleanup":0})

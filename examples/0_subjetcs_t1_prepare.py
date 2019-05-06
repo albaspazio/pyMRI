@@ -10,7 +10,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     global_script_dir = "/data/MRI/scripts"
     proj_dir = "/data/MRI/projects/T15"
-    proj_dir = "/data/MRI/projects/T3"
+    # proj_dir = "/data/MRI/projects/T3"
     fsl_code = "600"
 
     if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     # print(str(fslfun.get_image_dimension(subject.t1_data)))
 
 
-    # subject.reslice_image("sag->axial")
+    subject.reslice_image("sag->axial")
     subject.anatomical_processing_prebet()
     # subject.anatomical_processing_bet(betfparam=0.45, do_reg=False, do_overwrite=True)
     # subject.post_anatomical_processing()

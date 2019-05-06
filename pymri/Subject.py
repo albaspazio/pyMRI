@@ -8,6 +8,7 @@ from pymri.fsl.utils.run import rrun
 import datetime
 import traceback
 import glob
+import os
 
 class Subject:
 
@@ -434,7 +435,8 @@ class Subject:
 
             # create processing dir (if non existent) and cd to it
             os.makedirs(anatdir, exist_ok=True)
-            os.chdir(anatdir)
+            # os.chdir(anatdir)
+            T1 = os.path.join(anatdir, T1)
 
             # init or append log file
             if os.path.isfile(logfile):
@@ -456,13 +458,15 @@ class Subject:
             if imtest(os.path.join(anatdir, T1)) is False:
                 rrun("fslmaths " + inputimage + " " + os.path.join(anatdir, T1), logFile=log)
 
-            # cp lesionmask to anat dir
+            # cp lesionmask to anat dir then (even it does not exist) update variable lesionmask=os.path.join(anatdir, "lesionmask")
             if use_lesionmask is True:
                 # I previously verified that it exists
                 rrun("fslmaths", [lesionmask, os.path.join(anatdir, "lesionmask")])
+                lesionmask = os.path.join(anatdir, "lesionmask")
                 with open(logfile, "a") as text_file:
                     text_file.write("copied lesion mask " + lesionmask)
-
+            else:
+                lesionmask = os.path.join(anatdir, "lesionmask")
             # ==================================================================================================================================================================
             # now the real work
             # ==================================================================================================================================================================
@@ -520,13 +524,13 @@ class Subject:
                     if not os.path.isfile(T1 + "_orig2roi.mat"):
                         transform = T1 + "_orig2roi.mat"
                     if transform is not "":
-                        rrun("fslmaths lesionmask lesionmask_orig", logFile=log)
-                        rrun("flirt -in lesionmask_orig -ref " + T1 + " -applyxfm -interp nearestneighbour -init " + transform + " -out lesionmask", logFile=log)
+                        rrun("fslmaths " + lesionmask + " " + lesionmask + "_orig", logFile=log)
+                        rrun("flirt -in " + lesionmask + "_orig" + " -ref " + T1 + " -applyxfm -interp nearestneighbour -init " + transform + " -out lesionmask", logFile=log)
                 else:
-                    rrun("fslmaths " +  T1 + " -mul 0 lesionmask", logFile=log)
+                    rrun("fslmaths " +  T1 + " -mul 0 " + lesionmask, logFile=log)
 
-                rrun("fslmaths lesionmask -bin lesionmask", logFile=log)
-                rrun("fslmaths lesionmask -binv lesionmaskinv", logFile=log)
+                rrun("fslmaths " + lesionmask + " -bin "  + lesionmask, logFile=log)
+                rrun("fslmaths " + lesionmask + " -binv " + lesionmask + "inv", logFile=log)
 
             #### BIAS FIELD CORRECTION (main work, although also refined later on if segmentation rrun)
             # required input: " + T1 + "
@@ -548,7 +552,7 @@ class Subject:
                             rrun("fslmaths " + T1 + "_hpf " + T1 + "_hpf_brain", logFile=log)
                             rrun("fslmaths " + T1 + "_hpf_brain -bin " + T1 + "_hpf_brain_mask", logFile=log)
 
-                        rrun("fslmaths " + T1 + "_hpf_brain_mask -mas lesionmaskinv " + T1 + "_hpf_brain_mask", logFile=log)
+                        rrun("fslmaths " + T1 + "_hpf_brain_mask -mas " + lesionmask + "inv " + T1 + "_hpf_brain_mask", logFile=log)
                         # get a smoothed version without the edge effects
                         rrun("fslmaths " + T1 + " -mas " + T1 + "_hpf_brain_mask " + T1 + "_hpf_s20", logFile=log)
                         quick_smooth(T1 + "_hpf_s20", T1 + "_hpf_s20", logFile=log)
@@ -562,9 +566,9 @@ class Subject:
                         
                         print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         print( self.label + " :Estimating and removing bias field (stage 2 - detailed fields)")
-                        rrun("fslmaths " + T1 + "_hpf2_brain -mas lesionmaskinv " + T1 + "_hpf2_maskedbrain", logFile=log)
+                        rrun("fslmaths " + T1 + "_hpf2_brain -mas " + lesionmask + "inv " + T1 + "_hpf2_maskedbrain", logFile=log)
                         rrun("fast -o " + T1 + "_initfast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_hpf2_maskedbrain", logFile=log)
-                        rrun("fslmaths " + T1 + "_initfast_restore -mas lesionmaskinv " + T1 + "_initfast_maskedrestore", logFile=log)
+                        rrun("fslmaths " + T1 + "_initfast_restore -mas " + lesionmask + "inv " + T1 + "_initfast_maskedrestore", logFile=log)
                         rrun("fast -o " + T1 + "_initfast2 -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_initfast_maskedrestore", logFile=log)
                         rrun("fslmaths " + T1 + "_hpf_brain_mask " + T1 + "_initfast2_brain_mask", logFile=log)
                     else:
@@ -579,13 +583,13 @@ class Subject:
                         rrun("fslmaths " + T1 + "_initfast2_brain " + T1 + "_initfast2_restore", logFile=log)
 
                     # redo fast again to try and improve bias field
-                    rrun("fslmaths " + T1 + "_initfast2_restore -mas lesionmaskinv " + T1 + "_initfast2_maskedrestore", logFile=log)
+                    rrun("fslmaths " + T1 + "_initfast2_restore -mas " + lesionmask + "inv " + T1 + "_initfast2_maskedrestore", logFile=log)
                     rrun("fast -o " + T1 + "_fast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_initfast2_maskedrestore", logFile=log)
                     print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                     print(self.label + " :Extrapolating bias field from central region")
                     # use the latest fast output
                     rrun("fslmaths " + T1 + " -div " + T1 + "_fast_restore -mas " + T1 + "_initfast2_brain_mask " + T1 + "_fast_totbias", logFile=log)
-                    rrun("fslmaths " + T1 + "_initfast2_brain_mask -ero -ero -ero -ero -mas lesionmaskinv " + T1 + "_initfast2_brain_mask2", logFile=log)
+                    rrun("fslmaths " + T1 + "_initfast2_brain_mask -ero -ero -ero -ero -mas " + lesionmask + "inv " + T1 + "_initfast2_brain_mask2", logFile=log)
                     rrun("fslmaths " + T1 + "_fast_totbias -sub 1 " + T1 + "_fast_totbias", logFile=log)
                     rrun("fslsmoothfill -i " + T1 + "_fast_totbias -m " + T1 + "_initfast2_brain_mask2 -o " + T1 + "_fast_bias", logFile=log)
                     rrun("fslmaths " + T1 + "_fast_bias -add 1 " + T1 + "_fast_bias", logFile=log)
@@ -599,6 +603,7 @@ class Subject:
 
         except Exception as e:
             traceback.print_exc()
+            print(self.label + "  " + os.getcwd())
             os.chdir(curdir)
             log.close()
             print(e)
