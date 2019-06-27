@@ -12,7 +12,8 @@ if __name__ == "__main__":
 
     # ======================================================================================================================
     global_script_dir   = "/data/MRI/scripts"
-    proj_dir            = "/data/MRI/projects/T15"
+    # proj_dir            = "/data/MRI/projects/T15"
+    proj_dir            = "/data/MRI/projects/T3"
     fsl_code            = "600"
 
     if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
@@ -29,8 +30,8 @@ if __name__ == "__main__":
     num_cpu     = 2
 
     # load whole list & create its file system
-    subjects    = project.load_subjects("full", SESS_ID)
-    # project.run_subjects_methods("create_file_system", [], project.get_subjects_labels(), nthread=num_cpu)
+    subjects    = project.load_subjects("controls", SESS_ID)
+    project.run_subjects_methods("create_file_system", [], project.get_subjects_labels(), nthread=num_cpu)
 
     # ======================================================================================================================
     # PROCESSING
@@ -40,15 +41,15 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------------------------------
     # CONVERT 2 NIFTI
     # ---------------------------------------------------------------------------------------------------------------------
-    # for p in range(len(subjects)):
-    #     kwparams.append({"extpath":"/data/MRI/projects/T15/subjects/" + subjects[p].label + "/s1/mpr", "cleanup":0})
+    for p in range(len(subjects)):
+        kwparams.append({"extpath":"/data/MRI/projects/3T_CONTROLLI/" + subjects[p].label, "cleanup":0})
 
     # kwparams    = []
     # subjects = ["T15_N_001", "T15_N_002", "T15_N_003", "T15_N_004", "T15_N_005", "T15_N_006", "T15_N_007"]
     # for p in range(len(subjects)):
     #     kwparams.append({"extpath":"/data/MRI/projects/T15/subjects/" + subjects[p] + "/s1/mpr", "cleanup":0})
 
-    # project.run_subjects_methods("mpr2nifti", kwparams, subjects, nthread=num_cpu)
+    # project.run_subjects_methods("mpr2nifti", kwparams, project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # PRINT HEADER
@@ -60,16 +61,40 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------------------------------
     # RESLICING
     # ---------------------------------------------------------------------------------------------------------------------
-    subjects    = project.load_subjects("test2", SESS_ID)
-    # project.run_subjects_methods("reslice_image", [{"dir":"sag->axial"}], project.get_subjects_labels(), nthread=num_cpu)
+    subjects    = project.load_subjects("controls", SESS_ID)
+    project.run_subjects_methods("reslice_image", [{"dir":"sag->axial"}], project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # PRE BET
     # ---------------------------------------------------------------------------------------------------------------------
-    subjects    = project.load_subjects("test2", SESS_ID)
+    subjects    = project.load_subjects("controls", SESS_ID)
     project.run_subjects_methods("anatomical_processing_prebet", [], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("anatomical_processing_prebet", [], ["T15_N_00"], nthread=num_cpu)
 
+    # ---------------------------------------------------------------------------------------------------------------------
+    # BET
+    # ---------------------------------------------------------------------------------------------------------------------
+    subjects    = project.load_subjects("full", SESS_ID)
+    kwparams    = []
+    for s in range(len(subjects)):
+        kwparams.append({"do_reg":False, "betfparam":[0.5], "do_overwrite":True})
 
-    # kwparams    = []
-    # for p in range(len(subjects)):
-    #     kwparams.append({"extpath":"/data/MRI/projects/T15/subjects/" + subjects[p].label + "/s1/mpr", "cleanup":0})
+    # project.run_subjects_methods("anatomical_processing_bet", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("anatomical_processing_bet", [{"do_reg":False, "betfparam":0.45}], ["T15_N_007"], nthread=num_cpu)
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # POST BET
+    # ---------------------------------------------------------------------------------------------------------------------
+    subjects    = project.load_subjects("full", SESS_ID)
+    kwparams    = []
+    for s in range(len(subjects)):
+        kwparams.append({"do_nonlinreg":False, "betfparam":0.45})
+
+    # project.run_subjects_methods("anatomical_processing_postbet", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # POST ANATOMICAL PROCESSING
+    # ---------------------------------------------------------------------------------------------------------------------
+    subjects    = project.load_subjects("full", SESS_ID)
+    # project.run_subjects_methods("post_anatomical_processing", [], project.get_subjects_labels(), nthread=num_cpu)
+

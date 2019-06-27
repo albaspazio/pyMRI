@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     # ======================================================================================================================
     global_script_dir   = "/data/MRI/scripts"
-    proj_dir            = "/data/MRI/projects/T3"
+    proj_dir            = "/data/MRI/projects/T15"
     fsl_code            = "600"
 
     if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
@@ -35,6 +35,6 @@ if __name__ == "__main__":
         # subject.mpr2nifti(subject.t1_dir, 1)
         hdr = fslfun.read_header(subject.t1_data)
         print(str(fslfun.get_image_dimension(subject.t1_data)))
-        # rrun("fsleyes " + subject.t1_data)
+        rrun("fsleyes " + subject.t1_data + " " + subject.t1_brain_data)
 
 

@@ -17,6 +17,7 @@ class Project:
         self.subjects_dir           = os.path.join(self.dir, "subjects")
         self.group_analysis_dir     = os.path.join(self.dir, "group_analysis")
         self.script_dir             = os.path.join(self.dir, "script")
+        self.script_dir             = os.path.join(self.dir, "script")
 
         self.melodic_templates_dir  = os.path.join(self.group_analysis_dir, "melodic", "group_templates")
         self.melodic_dr_dir         = os.path.join(self.group_analysis_dir, "melodic", "dr")
@@ -104,11 +105,12 @@ class Project:
         subj    = self.get_subject_by_label(subj_labels[0])
         method  = eval("subj." + method_name)
         sig     = signature(method)
-        nparams = len(sig.parameters)
+        nparams = len(sig.parameters)       # parameters that need a value
         for p in sig.parameters:
             if sig.parameters[p].default is not None:
-                nparams = nparams - 1
+                nparams = nparams - 1       # this param has a default value
 
+        # if no params are given, create a nsubj list of None
         if len(kwparams) is 0:
             if nparams > 0:
                 print("ERROR in run_subjects_methods: given params list is empty, while method needs " + str(nparams) + " params" )
@@ -122,11 +124,13 @@ class Project:
             kwparams    = [kwparams[0]] * nsubj        # duplicate the first kwparams up to given subj number
             nprocesses  = nsubj
         else:
-            if len(kwparams) != nsubj:
+            if nprocesses != nsubj:
                 print("ERROR in run_subject_method: given params list length differs from subjects list")
                 return
+        # here nparams is surely == nsubj
 
-        numblocks   = math.ceil(nprocesses/nthread)
+
+        numblocks   = math.ceil(nprocesses/nthread)     # num of provessing blocks (threads)
 
         subjects    = []
         processes   = []
@@ -137,6 +141,8 @@ class Project:
 
         proc4block = 0
         curr_block = 0
+
+        # divide nprocesses across numblocks
         for proc in range(nprocesses):
             processes[curr_block].append(kwparams[proc])
             subjects[curr_block].append(subj_labels[proc])
@@ -155,7 +161,7 @@ class Project:
 
                 if subj is not None:
                     method  = eval("subj." + method_name)
-                    process = Thread(target=method, kwargs=kwparams[s])
+                    process = Thread(target=method, kwargs=processes[bl][s])
                     process.start()
                     threads.append(process)
 
