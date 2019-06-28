@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 from pymri.fsl.utils.run import rrun
 
-IMAGE_FORMATS = [".nii", ".nii.gz", ".mnc", ".mnc.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
+IMAGE_FORMATS = [".nii", ".nii.gz", ".mnc", ".mnc.gz", ".hdr", ".hdr.gz", ".img", ".img.gz", ".mgz"]
 
 #===============================================================================================================================
 # manage images
@@ -43,6 +43,7 @@ def imcp(src, dest, logFile=None):
     filename_src, file_extension_src = os.path.splitext(src)
     filename_dst, file_extension_dst = os.path.splitext(dest)
 
+    ext = ""
     if os.path.isfile(filename_src + ".nii"):
         ext = ".nii"
     elif os.path.isfile(filename_src + ".nii.gz"):

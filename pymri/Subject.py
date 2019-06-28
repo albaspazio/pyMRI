@@ -49,6 +49,7 @@ class Subject:
         self.fast_dir               = os.path.join(self.t1_dir, "fast")
         self.first_dir              = os.path.join(self.t1_dir, "first")
         self.sienax_dir             = os.path.join(self.t1_dir, "sienax")
+        self.fs_dir                 = os.path.join(self.t1_dir, "freesurfer" + self.label)
 
 
         self.first_all_none_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_none_origsegs")
@@ -758,9 +759,13 @@ class Subject:
             print(e)
 
 
+    # segment T1 with SPM and create  WM+GM and WM+GM+CSF masks
+    # if requested: replace T1_biascorr_brain and T1_biascorr_brain_mask (produced by BET)
+    # if requested: replace brainmask (produced by FreeSurfer)
     def anatomical_processing_spm_segment(self,
                                      odn="anat", imgtype=1,
-                                     do_overwrite=False,
+                                     do_bet_overwrite=False,
+                                     do_fs_overwrite=False,
                                      spm_template_name="spm_segment_dartelimport_template_job.m"
                                      ):
 
@@ -780,8 +785,6 @@ class Subject:
 
         inputimage              = os.path.join(anatdir, T1 + "_biascorr")
 
-        # ungzip(inputimage + ".nii.gz", inputimage + ".nii")
-
         # set dirs
         spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
         out_batch_dir           = os.path.join(spm_script_dir, "batch")
@@ -791,9 +794,9 @@ class Subject:
         output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name)
         output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name)
 
-        os.makedirs(out_batch_dir, exist_ok = True)
-        copyfile(in_script_template, output_template)
-        copyfile(in_script_start, output_start)
+        os.makedirs(out_batch_dir   , exist_ok = True)
+        copyfile(in_script_template , output_template)
+        copyfile(in_script_start    , output_start)
 
         sed_inplace(output_template, "<T1_IMAGE>", inputimage + ".nii.gz")
         sed_inplace(output_start, "X", "1")
@@ -803,6 +806,49 @@ class Subject:
         eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
         eng.quit()
 
+        # create brainmask (WM+GM) and skullstrippedmask (WM+GM+CSF)
+        c1img               = os.path.join(anatdir, "spm_proc", "c1T1_biascorr.nii")
+        c2img               = os.path.join(anatdir, "spm_proc", "c2T1_biascorr.nii")
+        c3img               = os.path.join(anatdir, "spm_proc", "c2T1_biascorr.nii")
+
+        brain_mask          = os.path.join(anatdir, "spm_proc", "brain_mask.nii.gz")
+        skullstripped_mask  = os.path.join(anatdir, "spm_proc", "skullstripped_mask.nii.gz")
+
+        rrun("fslmaths " + c1img + " -add " + c2img                     + " -thr 0.1 -fillh " + brain_mask)
+        rrun("fslmaths " + c1img + " -add " + c2img + " -add " + c3img  + " -thr 0.1 -bin "   + skullstripped_mask)
+
+        if do_bet_overwrite is True:
+            inputimage_bet      = os.path.join(anatdir, T1 + "_biascorr_brain")
+            inputimage_bet_mask = os.path.join(anatdir, T1 + "_biascorr_brain_mask")
+
+            if imtest(inputimage_bet_mask):
+                # backup bet output
+                imcp(inputimage_bet_mask, inputimage_bet_mask + "_bet")
+                imcp(inputimage_bet     , inputimage_bet + "_bet")
+
+            # copy SPM mask and use it to mask T1_biascorr
+            imcp(brain_mask, inputimage_bet_mask)
+            rrun("fslmaths " + inputimage + " -mas " + inputimage_bet_mask + " " + inputimage_bet)
+
+        if do_fs_overwrite is True:
+
+            fs_brain_mask       = os.path.join(self.fs_dir, "brainmask.mgz")
+            fs_brain_mask_fsl   = os.path.join(self.fs_dir, "brainmask.nii.gz")
+            fs_t1               = os.path.join(self.fs_dir, "T1.mgz")
+            fs_t1_fsl           = os.path.join(self.fs_dir, "T1.nii.gz")
+
+            if not imtest(fs_t1):
+                print("anatomical_processing_spm_segment was called with freesurfer replace, but fs has not been run")
+                return
+
+            imcp(fs_brain_mask, os.path.join(self.fs_dir, "brainmask_orig.mgz"))    # backup original brainmask
+            rrun("mri_convert " + fs_t1 + " " + fs_t1_fsl)                          # convert t1.mgz
+
+            rrun("fslmaths " + fs_t1_fsl + " -mas " + brain_mask + " " + fs_brain_mask_fsl) # mask T1 with SPM brain_mask
+            rrun("mri_convert " + fs_brain_mask_fsl + " " + fs_brain_mask)                  # convert brainmask back to mgz
+
+            imrm(fs_t1_fsl)
+            imrm(fs_brain_mask_fsl)
 
 
     def anatomical_processing_postbet(self,
@@ -1107,7 +1153,7 @@ class Subject:
             os.system("OLD_SUBJECTS_DIR=$SUBJECTS_DIR")
             os.system("SUBJECTS_DIR=" + self.t1_dir)
     
-            rrun("recon-all -subject freesurfer" + self.label + " -i " + self.dti_data + ".mgz " + step)
+            rrun("recon-all -subject freesurfer" + " -i " + self.dti_data + ".mgz " + step)
 
             if step == "-all":
                 rrun("mri_convert " + os.path.join(self.t1_dir, "freesurfer" + self.label, "mri", "aparc+aseg.mgz") + " " + os.path.join(self.t1_dir, "freesurfer" +  self.label, "aparc+aseg.nii.gz"))
