@@ -10,7 +10,7 @@ import datetime
 import traceback
 import glob
 import os
-from pymri.utility.utilities import ungzip, sed_inplace
+from pymri.utility.utilities import gunzip, sed_inplace
 
 class Subject:
 
@@ -178,8 +178,7 @@ class Subject:
                         do_bet=True, betfparam=0.5,
                         do_sienax=True, bet_sienax_param_string="-SNB -f 0.2",
                         do_reg=True, do_nonlinreg=True,
-                        do_seg=True, do_subcortseg=True,
-                        do_skipflirtsearch=False,
+                        do_seg=True, do_spm_seg=True, spm_seg_over_bet=False, spm_seg_over_fs=False,  # over-ride bet an
                         do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
                         use_lesionmask=False, lesionmask="",
                         do_freesurfer=False,
@@ -207,19 +206,29 @@ class Subject:
             os.makedirs(self.fast_dir, exist_ok=True)
 
             if do_anat is True:
-                self.anatomical_processing_prebet(odn=odn, imgtype=imgtype, smooth=smooth,
-                        biascorr_type=biascorr_type,
-                        do_reorient=do_reorient, do_crop=do_crop,
-                        do_bet=do_bet, do_overwrite=do_overwrite,
-                        use_lesionmask=use_lesionmask, lesionmask=lesionmask)
+                self.anatomical_processing_prebet(
+                    odn=odn, imgtype=imgtype, smooth=smooth,
+                    biascorr_type=biascorr_type,
+                    do_reorient=do_reorient, do_crop=do_crop,
+                    do_bet=do_bet, do_overwrite=do_overwrite,
+                    use_lesionmask=use_lesionmask, lesionmask=lesionmask)
 
-                self.anatomical_processing_bet(odn=odn, imgtype=imgtype,
-                        do_bet=do_bet, betfparam=betfparam,
-                        do_reg=do_reg, do_nonlinreg=do_nonlinreg,
-                        do_overwrite=do_overwrite,
-                        use_lesionmask=use_lesionmask, lesionmask=lesionmask)
+                self.anatomical_processing_bet(
+                    odn=odn, imgtype=imgtype,
+                    do_bet=do_bet, betfparam=betfparam,
+                    do_reg=do_reg, do_nonlinreg=do_nonlinreg,
+                    do_overwrite=do_overwrite,
+                    use_lesionmask=use_lesionmask, lesionmask=lesionmask)
 
-                self.anatomical_processing_postbet(odn=odn, imgtype=imgtype, smooth=smooth,
+                if do_spm_seg is True:
+                    self.anatomical_processing_spm_segment(
+                        odn=odn,
+                        do_bet_overwrite=spm_seg_over_bet,
+                        do_fs_overwrite=spm_seg_over_fs,
+                        spm_template_name="spm_segment_dartelimport_template_job.m")
+
+                self.anatomical_processing_postbet(
+                        odn=odn, imgtype=imgtype, smooth=smooth,
                         betfparam=betfparam,
                         do_reg=do_reg, do_nonlinreg=do_nonlinreg,
                         do_seg=do_seg,
@@ -354,7 +363,6 @@ class Subject:
         #==============================================================================================================================================================
         # DTI data
         #==============================================================================================================================================================
-
         if os.path.isdir(self.dti_dir) is True:
             log_file = os.path.join(self.dti_dir, "log_dti_processing.txt")
             log = open(log_file, "a")
@@ -605,12 +613,9 @@ class Subject:
                 else:
                     rrun("fslmaths " + T1 + " " + T1 + "_biascorr", logFile=log)
 
-            # os.chdir(curdir)
-
         except Exception as e:
             traceback.print_exc()
             print(self.label + "  " + os.getcwd())
-            # os.chdir(curdir)
             log.close()
             print(e)
 
@@ -754,7 +759,6 @@ class Subject:
 
         except Exception as e:
             traceback.print_exc()
-            # os.chdir(curdir)
             log.close()
             print(e)
 
@@ -764,8 +768,8 @@ class Subject:
     # if requested: replace brainmask (produced by FreeSurfer)
     def anatomical_processing_spm_segment(self,
                                      odn="anat", imgtype=1,
-                                     do_bet_overwrite=False,
-                                     do_fs_overwrite=False,
+                                     do_bet_overwrite=True,
+                                     do_fs_overwrite=True,
                                      spm_template_name="spm_segment_dartelimport_template_job.m"
                                      ):
 
@@ -949,72 +953,47 @@ class Subject:
                         # regenerate the standard space version with the new bias field correction applied
                         rrun("applywarp -i " + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_field -r " + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1_label + "_2mm") + " -o " + T1 + "_to_MNI_nonlin --interp=spline", logFile=log)
 
-                #### SKULL-CONSTRAINED BRAIN VOLUME ESTIMATION (only done if registration turned on, and segmentation done, and it is a T1 image)
-                # required inputs: " + T1 + "_biascorr
-                # output: " + T1 + "_vols.txt
-                if os.path.isfile(T1 + "_vols.txt") is False or do_overwrite is True:
+            #### SKULL-CONSTRAINED BRAIN VOLUME ESTIMATION (only done if registration turned on, and segmentation done, and it is a T1 image)
+            # required inputs: " + T1 + "_biascorr
+            # output: " + T1 + "_vols.txt
+            if os.path.isfile(T1 + "_vols.txt") is False or do_overwrite is True:
 
-                    if do_reg is True and do_seg is True and T1 == "T1":
-                        print(self.label + " :Skull-constrained registration (linear)")
+                if do_reg is True and do_seg is True and T1 == "T1":
+                    print(self.label + " :Skull-constrained registration (linear)")
 
-                        rrun("bet " + T1 + "_biascorr " + T1 + "_biascorr_bet -s -m " + betopts, logFile=log)
-                        rrun("pairreg " + os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain") + " " + T1 + "_biascorr_bet " + os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_skull") + " " + T1 + "_biascorr_bet_skull " + T1 + "2std_skullcon.mat", logFile=log)
+                    rrun("bet " + T1 + "_biascorr " + T1 + "_biascorr_bet -s -m " + betopts, logFile=log)
+                    rrun("pairreg " + os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain") + " " + T1 + "_biascorr_bet " + os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_skull") + " " + T1 + "_biascorr_bet_skull " + T1 + "2std_skullcon.mat", logFile=log)
 
-                        if use_lesionmask is True:
-                            rrun("fslmaths " + lesionmask + " -max " + T1 + "_fast_pve_2 " + T1 + "_fast_pve_2_plusmask -odt float", logFile=log)
-                            # ${FSLDIR}/bin/fslmaths lesionmask -bin -mul 3 -max " + T1 + "_fast_seg " + T1 + "_fast_seg_plusmask -odt int
+                    if use_lesionmask is True:
+                        rrun("fslmaths " + lesionmask + " -max " + T1 + "_fast_pve_2 " + T1 + "_fast_pve_2_plusmask -odt float", logFile=log)
+                        # ${FSLDIR}/bin/fslmaths lesionmask -bin -mul 3 -max " + T1 + "_fast_seg " + T1 + "_fast_seg_plusmask -odt int
 
-                        vscale = float(runpipe("avscale " + T1 + "2std_skullcon.mat | grep Determinant | awk '{ print $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
-                        ugrey  = float(runpipe("fslstats " + T1 + "_fast_pve_1 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
-                        uwhite = float(runpipe("fslstats " + T1 + "_fast_pve_2 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
+                    vscale = float(runpipe("avscale " + T1 + "2std_skullcon.mat | grep Determinant | awk '{ print $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
+                    ugrey  = float(runpipe("fslstats " + T1 + "_fast_pve_1 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
+                    uwhite = float(runpipe("fslstats " + T1 + "_fast_pve_2 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
 
-                        ngrey  = ugrey * vscale
-                        nwhite = uwhite * vscale
-                        ubrain = ugrey + uwhite
-                        nbrain = ngrey + nwhite
+                    ngrey  = ugrey * vscale
+                    nwhite = uwhite * vscale
+                    ubrain = ugrey + uwhite
+                    nbrain = ngrey + nwhite
 
-                        with open(T1 + "_vols.txt", "w") as file_vol:
-                            print( "Scaling factor from " + T1 + " to MNI (using skull-constrained linear registration) = " + str(vscale), file=file_vol)
-                            print( "Brain volume in mm^3 (native/original space) = " + str(ubrain), file=file_vol)
-                            print( "Brain volume in mm^3 (normalised to MNI) = " + str(nbrain), file=file_vol)
+                    with open(T1 + "_vols.txt", "w") as file_vol:
+                        print( "Scaling factor from " + T1 + " to MNI (using skull-constrained linear registration) = " + str(vscale), file=file_vol)
+                        print( "Brain volume in mm^3 (native/original space) = " + str(ubrain), file=file_vol)
+                        print( "Brain volume in mm^3 (normalised to MNI) = " + str(nbrain), file=file_vol)
 
-                #	#### SUB-CORTICAL STRUCTURE SEGMENTATION (done in subject_t1_first)
-                #	# required input: " + T1 + "_biascorr
-                #	# output: " + T1 + "_first*
-                #	if imtest( " + T1 + "_subcort_seg` = 0 -o $do_overwrite = yes ]; then
-                #		if [ $do_subcortseg = yes ] ; then
-                #				print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Performing subcortical segmentation"
-                #				# Future note, would be nice to use " + T1 + "_to_MNI_lin.mat to initialise first_flirt
-                #				ffopts=""
-                #				if [ $use_lesionmask = yes ] ; then ffopts="$ffopts -inweight lesionmaskinv" ; fi
-                #				run $FSLDIR/bin/first_flirt " + T1 + "_biascorr " + T1 + "_biascorr_to_std_sub $ffopts
-                #				run mkdir -p first_results
-                #				run $FSLDIR/bin/run_first_all $firstreg -i " + T1 + "_biascorr -o first_results/" + T1 + "_first -a " + T1 + "_biascorr_to_std_sub.mat
-                #				# rather complicated way of making a link to a non-existent file or files (as FIRST may run on the cluster) - the alernative would be fsl_sub and job holds...
-                #				names=`$FSLDIR/bin/imglob -extensions " + T1 + "`;
-                #				for fn in $names;
-                #				do
-                #					ext=`print( $fn | sed "s/" + T1 + ".//"`;
-                #				  run cp -r first_results/" + T1 + "_first_all_fast_firstseg.${ext} " + T1 + "_subcort_seg.${ext}
-                #				done
-                #		fi
-                #	fi
+            #### CLEANUP
+            if do_cleanup is True:
+                #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning up intermediate files"
+                rrun("imrm " + T1 + "_biascorr_bet_mask " + T1 + "_biascorr_bet " + T1 + "_biascorr_brain_mask2 " + T1 + "_biascorr_init " + T1 + "_biascorr_maskedbrain " + T1 + "_biascorr_to_std_sub " + T1 + "_fast_bias_idxmask " + T1 + "_fast_bias_init " + T1 + "_fast_bias_vol2 " + T1 + "_fast_bias_vol32 " + T1 + "_fast_totbias " + T1 + "_hpf* " + T1 + "_initfast* " + T1 + "_s20 " + T1 + "_initmask_s20", logFile=log)
 
-                #### CLEANUP
-                if do_cleanup is True:
-                    #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning up intermediate files"
-                    rrun("imrm " + T1 + "_biascorr_bet_mask " + T1 + "_biascorr_bet " + T1 + "_biascorr_brain_mask2 " + T1 + "_biascorr_init " + T1 + "_biascorr_maskedbrain " + T1 + "_biascorr_to_std_sub " + T1 + "_fast_bias_idxmask " + T1 + "_fast_bias_init " + T1 + "_fast_bias_vol2 " + T1 + "_fast_bias_vol32 " + T1 + "_fast_totbias " + T1 + "_hpf* " + T1 + "_initfast* " + T1 + "_s20 " + T1 + "_initmask_s20", logFile=log)
-
-                #### STRONG CLEANUP
-                if do_strongcleanup is True:
-                    #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning all unnecessary files "
-                    rrun("imrm " + T1 + " " + T1 + "_orig " + T1 + "_fullfov", logFile=log)
-
-                # os.chdir(curdir)
+            #### STRONG CLEANUP
+            if do_strongcleanup is True:
+                #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning all unnecessary files "
+                rrun("imrm " + T1 + " " + T1 + "_orig " + T1 + "_fullfov", logFile=log)
 
         except Exception as e:
             traceback.print_exc()
-            # os.chdir(curdir)
             log.close()
             print(e)
 
@@ -1078,11 +1057,8 @@ class Subject:
             # run mv first_results $FIRST_DIR
             # run $FSLDIR/bin/immv ${T1}_subcort_seg $FIRST_DIR
 
-            # os.chdir(curdir)
-
         except Exception as e:
             traceback.print_exc()
-            # os.chdir(curdir)
             log.close()
             print(e)
             
@@ -1131,11 +1107,30 @@ class Subject:
             for struct in list_structs:
                 immv(image_label_path + "-" + struct + "_first.nii.gz", os.path.join(output_roi_dir, "mask_" + struct + "_highres.nii.gz"), logFile=log)
 
-            # os.chdir(curdir)
+            #	#### SUB-CORTICAL STRUCTURE SEGMENTATION (done in subject_t1_first)
+            #	# required input: " + T1 + "_biascorr
+            #	# output: " + T1 + "_first*
+            #	if imtest( " + T1 + "_subcort_seg` = 0 -o $do_overwrite = yes ]; then
+            #		if [ $do_subcortseg = yes ] ; then
+            #				print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Performing subcortical segmentation"
+            #				# Future note, would be nice to use " + T1 + "_to_MNI_lin.mat to initialise first_flirt
+            #				ffopts=""
+            #				if [ $use_lesionmask = yes ] ; then ffopts="$ffopts -inweight lesionmaskinv" ; fi
+            #				run $FSLDIR/bin/first_flirt " + T1 + "_biascorr " + T1 + "_biascorr_to_std_sub $ffopts
+            #				run mkdir -p first_results
+            #				run $FSLDIR/bin/run_first_all $firstreg -i " + T1 + "_biascorr -o first_results/" + T1 + "_first -a " + T1 + "_biascorr_to_std_sub.mat
+            #				# rather complicated way of making a link to a non-existent file or files (as FIRST may run on the cluster) - the alernative would be fsl_sub and job holds...
+            #				names=`$FSLDIR/bin/imglob -extensions " + T1 + "`;
+            #				for fn in $names;
+            #				do
+            #					ext=`print( $fn | sed "s/" + T1 + ".//"`;
+            #				  run cp -r first_results/" + T1 + "_first_all_fast_firstseg.${ext} " + T1 + "_subcort_seg.${ext}
+            #				done
+            #		fi
+            #	fi
 
         except Exception as e:
             traceback.print_exc()
-            # os.chdir(curdir)
             log.close()
             print(e)
 
@@ -1162,11 +1157,8 @@ class Subject:
 
             os.system("SUBJECTS_DIR=$OLD_SUBJECTS_DIR")
 
-            # os.chdir(curdir)
-
         except Exception as e:
             traceback.print_exc()
-            # os.chdir(curdir)
             log.close()
             print(e)
 

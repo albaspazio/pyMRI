@@ -14,6 +14,11 @@ class Global:
         self.trackvis_bin                   = os.path.join(globalscriptdir, "external_tools", "dtk")
 
         self.fsl_dir                        = os.getenv('FSLDIR')
+
+        if self.fsl_dir is None:
+            print("FSLDIR is undefined")
+            return
+
         self.fsl_bin                        = os.path.join(self.fsl_dir, "bin")
         self.fsl_data_standard_dir          = os.path.join(self.fsl_dir, "data", "standard")
         self.fsl_standard_mni_2mm_head      = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm")

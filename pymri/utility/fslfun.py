@@ -40,19 +40,23 @@ def imtest(image_path):
 
 def imcp(src, dest, logFile=None):
 
-    filename_src, file_extension_src = os.path.splitext(src)
-    filename_dst, file_extension_dst = os.path.splitext(dest)
+    # filename_src, file_extension_src = os.path.splitext(src)
+    # filename_dst, file_extension_dst = os.path.splitext(dest)
+
+    fileparts_src = mysplittext(src)
+    fileparts_dst = mysplittext(dest)
+
 
     ext = ""
-    if os.path.isfile(filename_src + ".nii"):
+    if os.path.isfile(fileparts_src[0] + ".nii"):
         ext = ".nii"
-    elif os.path.isfile(filename_src + ".nii.gz"):
+    elif os.path.isfile(fileparts_src[0] + ".nii.gz"):
         ext = ".nii.gz"
 
-    copyfile(filename_src + ext, filename_dst + ext)
+    copyfile(fileparts_src[0] + ext, fileparts_dst[0] + ext)
 
     if logFile is not None:
-        print("cp " + filename_src + ext + " " + filename_dst + ext, file=logFile)
+        print("cp " + fileparts_src[0] + fileparts_src[1] + " " + fileparts_dst[0] + fileparts_dst[1], file=logFile)
 
 
 def immv(src, dest, logFile=None):
