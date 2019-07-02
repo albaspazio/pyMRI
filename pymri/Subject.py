@@ -24,9 +24,10 @@ class Subject:
         self.sessid                 = sessid
 
         self.project                = project
-        self.fsl_dir                = project.globaldata.fsl_dir
-        self.fsl_bin                = project.globaldata.fsl_bin
-        self.fsl_data_standard_dir  = project.globaldata.fsl_data_standard_dir
+        self._global                = project.globaldata
+        self.fsl_dir                = self._global.fsl_dir
+        self.fsl_bin                = self._global.fsl_bin
+        self.fsl_data_standard_dir  = self._global.fsl_data_standard_dir
 
         self.project_subjects_dir   = project.subjects_dir
 
@@ -49,7 +50,7 @@ class Subject:
         self.fast_dir               = os.path.join(self.t1_dir, "fast")
         self.first_dir              = os.path.join(self.t1_dir, "first")
         self.sienax_dir             = os.path.join(self.t1_dir, "sienax")
-        self.fs_dir                 = os.path.join(self.t1_dir, "freesurfer" + self.label)
+        self.fs_dir                 = os.path.join(self.t1_dir, "freesurfer")
 
 
         self.first_all_none_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_none_origsegs")
@@ -717,7 +718,7 @@ class Subject:
                         if use_lesionmask is True:
                             flirtargs = flirtargs + " -inweight " + lesionmaskinv
 
-                        rrun("flirt -interp spline -dof 12 -in " + T1 + "_biascorr -ref " + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1 + "_2mm") + " -dof 12 -omat " + T1 + "_to_MNI_lin.mat -out " + T1 + "_to_MNI_lin " + flirtargs, logFile=log)
+                        rrun("flirt -interp spline -dof 12 -in " + T1 + "_biascorr -ref " + os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm") + " -dof 12 -omat " + T1 + "_to_MNI_lin.mat -out " + T1 + "_to_MNI_lin " + flirtargs, logFile=log)
 
                         if do_nonlinreg is True:
 
@@ -726,15 +727,15 @@ class Subject:
                             # mask T1 with above img
                             print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                             print( "Registering to standard space (non-linear)")
-                            refmask = "MNI152_" + T1 + "_2mm_brain_mask_dil1"
+                            refmask = os.path.join(anatdir, "MNI152_T1_2mm_brain_mask_dil1")
 
-                            rrun("fslmaths " + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1 + "_2mm_brain_mask") + " -fillh -dilF " + refmask, logFile=log)
-                            rrun("fnirt --in=" + T1 + "_biascorr --ref=" + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1 + "_2mm") + " --fout=" + T1 + "_to_MNI_nonlin_field --jout=" + T1 + "_to_MNI_nonlin_jac --iout=" + T1 + "_to_MNI_nonlin --logout=" + T1 + "_to_MNI_nonlin.txt --cout=" + T1 + "_to_MNI_nonlin_coeff --config=" + os.path.join(self.fsl_dir, "etc", "flirtsch", T1 + "_2_MNI152_2mm.cnf") + " --aff=" + T1 + "_to_MNI_lin.mat --refmask=" + refmask + " " + fnirtargs, logFile=log)
+                            rrun("fslmaths " + self._global.fsl_standard_mni_2mm_mask + " -fillh -dilF " + refmask, logFile=log)
+                            rrun("fnirt --in=" + T1 + "_biascorr --ref=" + self._global.fsl_standard_mni_2mm_head + " --fout=" + T1 + "_to_MNI_nonlin_field --jout=" + T1 + "_to_MNI_nonlin_jac --iout=" + T1 + "_to_MNI_nonlin --logout=" + T1 + "_to_MNI_nonlin.txt --cout=" + T1 + "_to_MNI_nonlin_coeff --config=" + self._global.fsl_standard_mni_2mm_cnf + " --aff=" + T1 + "_to_MNI_lin.mat --refmask=" + refmask + " " + fnirtargs, logFile=log)
 
                             print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                             print(self.label + " :Performing brain extraction (using FNIRT)")
-                            rrun("invwarp --ref=" + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_coeff -o MNI_to_" + T1 + "_nonlin_field", logFile=log)
-                            rrun("applywarp --interp=nn --in=" + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1 + "_2mm_brain_mask") + " --ref=" + T1 + "_biascorr -w MNI_to_" + T1 + "_nonlin_field -o " + T1 + "_biascorr_brain_mask", logFile=log)
+                            rrun("invwarp --ref=" + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_coeff -o " + os.path.join(anatdir, "MNI_to_T1_nonlin_field"), logFile=log)
+                            rrun("applywarp --interp=nn --in=" + self._global.fsl_standard_mni_2mm_mask + " --ref=" + T1 + "_biascorr -w " + os.path.join(anatdir, "MNI_to_T1_nonlin_field") + " -o " + T1 + "_biascorr_brain_mask", logFile=log)
                             rrun("fslmaths " + T1 + "_biascorr_brain_mask -fillh " + T1 + "_biascorr_brain_mask", logFile=log)
                             rrun("fslmaths " + T1 + "_biascorr -mas " + T1 + "_biascorr_brain_mask " + T1 + "_biascorr_brain", logFile=log)
                         ## In the future, could check the initial ROI extraction here
@@ -768,9 +769,9 @@ class Subject:
     # if requested: replace brainmask (produced by FreeSurfer)
     def anatomical_processing_spm_segment(self,
                                      odn="anat", imgtype=1,
-                                     do_bet_overwrite=True,
-                                     do_fs_overwrite=True,
-                                     spm_template_name="spm_segment_dartelimport_template_job.m"
+                                     do_bet_overwrite=False,
+                                     do_fs_overwrite=False,
+                                     spm_template_name="spm_segment_template_job.m"
                                      ):
 
         logfile = os.path.join(self.t1_dir, "mpr_log.txt")
@@ -958,7 +959,7 @@ class Subject:
             # output: " + T1 + "_vols.txt
             if os.path.isfile(T1 + "_vols.txt") is False or do_overwrite is True:
 
-                if do_reg is True and do_seg is True and T1 == "T1":
+                if do_reg is True and do_seg is True and T1_label == "T1":
                     print(self.label + " :Skull-constrained registration (linear)")
 
                     rrun("bet " + T1 + "_biascorr " + T1 + "_biascorr_bet -s -m " + betopts, logFile=log)
@@ -1145,10 +1146,11 @@ class Subject:
             curdir = os.getcwd()
             
             rrun("mri_convert " + self.t1_data + ".nii.gz " + self.t1_data + ".mgz")
-            os.system("OLD_SUBJECTS_DIR=$SUBJECTS_DIR")
-            os.system("SUBJECTS_DIR=" + self.t1_dir)
-    
-            rrun("recon-all -subject freesurfer" + " -i " + self.dti_data + ".mgz " + step)
+
+            os.environ['OLD_SUBJECTS_DIR'] = os.environ['SUBJECTS_DIR']
+            os.environ['SUBJECTS_DIR'] = self.t1_dir
+
+            rrun("recon-all -subject freesurfer" + " -i " + self.t1_data + ".mgz " + step)
 
             if step == "-all":
                 rrun("mri_convert " + os.path.join(self.t1_dir, "freesurfer" + self.label, "mri", "aparc+aseg.mgz") + " " + os.path.join(self.t1_dir, "freesurfer" +  self.label, "aparc+aseg.nii.gz"))
@@ -1236,7 +1238,7 @@ class Subject:
                 print( "ERROR: given standard image file (" + std_img + ") does not exist......exiting")
                 return
         else:
-            std_img = self.project.globaldata.fsl_standard_mni_2mm
+            std_img = self._global.fsl_standard_mni_2mm
 
         if mask != "":
             if imtest(mask) is False:
@@ -1703,13 +1705,13 @@ class Subject:
     def transform_epi(self, do_bbr=True, std_img_label="standard", std_img="", std_img_head="", std_img_mask_dil="", wmseg=""):
         
         if std_img == "":
-            std_img             = self.project.globaldata.fsl_standard_mni_2mm
+            std_img             = self._global.fsl_standard_mni_2mm
 
         if std_img_head == "":
-            std_img_head        = self.project.globaldata.fsl_standard_mni_2mm_head
+            std_img_head        = self._global.fsl_standard_mni_2mm_head
 
         if std_img_mask_dil == "":
-            std_img_mask_dil    = self.project.globaldata.fsl_standard_mni_2mm_mask_dil
+            std_img_mask_dil    = self._global.fsl_standard_mni_2mm_mask_dil
 
         if wmseg == "":
             wmseg = self.t1_segment_wm_bbr_path
@@ -1799,7 +1801,7 @@ class Subject:
     def transform_dti(self, std_img=""):
 
         if std_img == "":
-            std_img = self.project.globaldata.fsl_standard_mni_2mm
+            std_img = self._global.fsl_standard_mni_2mm
 
         if imtest(self.t1_brain_data) is False:
             print("T1_BRAIN_DATA (" + self.t1_brain_data + ") is missing....exiting")
@@ -1918,15 +1920,15 @@ class Subject:
 
 
         if os.path.isfile(highres2standard4 + ".mat") is False:
-            rrun("flirt -in " + self.t1_brain_data + " -ref " + self.project.globaldata.fsl_standard_mni_4mm + " -omat " + highres2standard4 + ".mat")
+            rrun("flirt -in " + self.t1_brain_data + " -ref " + self._global.fsl_standard_mni_4mm + " -omat " + highres2standard4 + ".mat")
 
         if os.path.isfile(standard42highres + ".mat") is False:
             rrun("convert_xfm -omat " + standard42highres + ".mat" + " -inverse " + highres2standard4 + ".mat")
 
         # if imtest(hr2std4_warp) is False:
         #     rrun("fnirt --in " + self.t1_data + " --aff=" + highres2standard4 + ".mat" + " --cout=" + hr2std4_warp + " --iout=" + highres2standard4 +
-        #          " --jout=" + highres2standard4 + "_jac" + " --config=" + os.path.join(self.project.globaldata.global_data_templates, "gray_matter", "T1_2_MNI152_4mm") +
-        #          " --ref=" + self.project.globaldata.fsl_standard_mni_4mm + " --refmask=" + self.project.globaldata.fsl_standard_mni_4mm + "_mask_dil" + " --warpres=10,10,10")
+        #          " --jout=" + highres2standard4 + "_jac" + " --config=" + os.path.join(self._global.global_data_templates, "gray_matter", "T1_2_MNI152_4mm") +
+        #          " --ref=" + self._global.fsl_standard_mni_4mm + " --refmask=" + self._global.fsl_standard_mni_4mm + "_mask_dil" + " --warpres=10,10,10")
         #
         # if imtest(std42hr_warp) is False:
         #     rrun("inwarp -w " + hr2std4_warp + " -o " + std42hr_warp + " -r " + self.t1_brain_data)
