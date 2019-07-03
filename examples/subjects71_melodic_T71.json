@@ -1,0 +1,12 @@
+{
+  "template_name"         :"subjects_2x56_melodic_ST",
+  "TEMPLATE_MELODIC_IC"   :"/media/alba/dados/MRI/projects/temperamento_murcia/group_analysis/melodic/group_templates/subjects_2x56_melodic_ST/melodic_IC.nii.gz",
+  "TEMPLATE_MASK_IMAGE"   :"/media/alba/dados/MRI/projects/temperamento_murcia/group_analysis/melodic/group_templates/subjects_2x56_melodic_ST/mask.nii.gz",
+  "TEMPLATE_BG_IMAGE"     :"/media/alba/dados/MRI/projects/temperamento_murcia/group_analysis/melodic/group_templates/subjects_2x56_melodic_ST/bg_image.nii.gz",
+  "TEMPLATE_STATS_FOLDER" :"/media/alba/dados/MRI/projects/temperamento_murcia/group_analysis/melodic/group_templates/subjects_2x56_melodic_ST/stats",
+  "TEMPLATE_MASK_FOLDER"  :"/media/alba/dados/MRI/projects/temperamento_murcia/group_analysis/melodic/group_templates/subjects_2x56_melodic_ST/stats",
+  "str_pruning_ic_id"     :"0,1,2,3,4,5,6,7,8,9,10,12,15,16,17,20,21,27,33",
+  "str_arr_IC_labels"     :"V1,OFC,pDMN2,pDMN,TV,aDMN,SM,FP,V1a,OCCIP,L_ATN,R_TV,R_ATN,LAT_VIS,pDMN3,EXEC,TV2,aDMN2,SM2",
+  "arr_IC_labels"         :["V1", "OFC", "pDMN2", "pDMN", "TV", "aDMN", "SM", "FP", "V1a", "OCCIP", "L_ATN", "R_TV", "R_ATN", "LAT_VIS", "pDMN3", "EXEC", "TV2", "aDMN2", "SM2"],
+  "arr_pruning_ic_id"     :[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 16, 17, 20, 21, 27, 33]
+}

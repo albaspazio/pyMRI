@@ -3,10 +3,11 @@ import sys
 from shutil import copyfile, move
 import glob
 import subprocess
+import xml.etree.ElementTree as ET
 
 from pymri.fsl.utils.run import rrun
 
-IMAGE_FORMATS = [".nii", ".nii.gz", ".mnc", ".mnc.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
+IMAGE_FORMATS = [".nii", ".nii.gz", ".mnc", ".mnc.gz", ".hdr", ".hdr.gz", ".img", ".img.gz", ".mgz"]
 
 #===============================================================================================================================
 # manage images
@@ -19,7 +20,7 @@ def imtest(image_path):
 
     fileparts = mysplittext(image_path)
 
-    if os.path.isfile(fileparts[0] + ".nii") or os.path.isfile(fileparts[0] + ".nii.gz"):
+    if os.path.isfile(fileparts[0] + ".nii") or os.path.isfile(fileparts[0] + ".nii.gz") or os.path.isfile(fileparts[0] + ".mgz"):
         return True
 
     if os.path.isfile(fileparts[0] + ".mnc") or os.path.isfile(fileparts[0] + ".mnc.gz"):
@@ -39,18 +40,23 @@ def imtest(image_path):
 
 def imcp(src, dest, logFile=None):
 
-    filename_src, file_extension_src = os.path.splitext(src)
-    filename_dst, file_extension_dst = os.path.splitext(dest)
+    # filename_src, file_extension_src = os.path.splitext(src)
+    # filename_dst, file_extension_dst = os.path.splitext(dest)
 
-    if os.path.isfile(filename_src + ".nii"):
+    fileparts_src = mysplittext(src)
+    fileparts_dst = mysplittext(dest)
+
+
+    ext = ""
+    if os.path.isfile(fileparts_src[0] + ".nii"):
         ext = ".nii"
-    elif os.path.isfile(filename_src + ".nii.gz"):
+    elif os.path.isfile(fileparts_src[0] + ".nii.gz"):
         ext = ".nii.gz"
 
-    copyfile(filename_src + ext, filename_dst + ext)
+    copyfile(fileparts_src[0] + ext, fileparts_dst[0] + ext)
 
     if logFile is not None:
-        print("cp " + filename_src + ext + " " + filename_dst + ext, file=logFile)
+        print("cp " + fileparts_src[0] + fileparts_src[1] + " " + fileparts_dst[0] + fileparts_dst[1], file=logFile)
 
 
 def immv(src, dest, logFile=None):
@@ -80,6 +86,7 @@ def imrm(filelist, logFile=None):
     for file in filelist:
         filename_src, file_extension_src = os.path.splitext(file)
 
+        ext = ""
         if os.path.isfile(filename_src + ".nii"):
             ext = ".nii"
         elif os.path.isfile(filename_src + ".nii.gz"):
@@ -89,6 +96,26 @@ def imrm(filelist, logFile=None):
 
         if logFile is not None:
             print("rm " + filename_src + ext, file=logFile)
+
+# extract header in xml format and returns it as a (possibly filtered by list_field) dictionary
+def read_header(file, list_field=None):
+
+    res             = rrun("fslhd -x " +  file)
+    root            = ET.fromstring(res)
+    attribs_dict    = root.attrib
+
+    if list_field is not None:
+        fields = dict()
+        for f in list_field:
+            fields[f] = attribs_dict[f]
+        return fields
+    else:
+        return attribs_dict
+
+# read header and calculate a dimension number hdr["nx"] * hdr["ny"] * hdr["nz"] * hdr["dx"] * hdr["dy"] * hdr["dz"]
+def get_image_dimension(file):
+    hdr = read_header(file)
+    return int(hdr["nx"]) * int(hdr["ny"]) * int(hdr["nz"]) * float(hdr["dx"]) * float(hdr["dy"]) * float(hdr["dz"])
 
 
 # return basename of given image (useful to return "image" from "image.nii.gz")
@@ -127,10 +154,13 @@ def is_image(file, img_formats=IMAGE_FORMATS):
 
 def quick_smooth(inimg, outimg, logFile=None):
 
-  rrun("fslmaths " + inimg + " -subsamp2 -subsamp2 -subsamp2 -subsamp2 vol16", logFile=logFile)
-  rrun("flirt -in vol16 -ref " + inimg + " -out " + outimg + " -noresampblur -applyxfm -paddingsize 16", logFile=logFile)
-  # possibly do a tiny extra smooth to $out here?
-  imrm(["vol16"])
+    currpath    = os.path.dirname(inimg)
+    vol16       = os.path.join(currpath, "vol16")
+
+    rrun("fslmaths " + inimg + " -subsamp2 -subsamp2 -subsamp2 -subsamp2 " + vol16, logFile=logFile)
+    rrun("flirt -in " + vol16 + " -ref " + inimg + " -out " + outimg + " -noresampblur -applyxfm -paddingsize 16", logFile=logFile)
+    # possibly do a tiny extra smooth to $out here?
+    imrm([vol16])
 
 # get the whole extension  (e.g. abc.nii.gz => nii.gz )
 def mysplittext(img):

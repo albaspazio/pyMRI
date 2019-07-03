@@ -1,17 +1,18 @@
-from threading import Thread
-# from Queue import Queue
+
+import os
 
 from pymri.Global import Global
 from pymri.Project import Project
 from pymri.utility import startup_utilities
-from pymri.Subject import Subject
+
 
 if __name__ == "__main__":
 
     # ======================================================================================================================
-    global_script_dir = "/data/MRI/scripts"
-    proj_dir = "/data/MRI/projects/T15"
-    fsl_code = "600"
+    global_script_dir   = "/data/MRI/bash-fsl-pipeline"
+    # proj_dir            = "/data/MRI/projects/T15"
+    proj_dir            = "/data/MRI/projects/T3"
+    fsl_code            = "601"
 
     if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
         print("Error")
@@ -22,58 +23,87 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # SUBJECTS
     # ======================================================================================================================
+    project     = Project(proj_dir, globaldata, hasT1=True)
+    SESS_ID     = 1
+    num_cpu     = 8
+    group_label = "blind"
 
-    project = Project(proj_dir, globaldata, hasT1=True)
-    SESS_ID = 1
-
-    # subject = Subject("T15_N_001", 1, project)
-    # subject.create_file_system()
-
-    project.load_subjects("test", SESS_ID)
+    # load whole list & create its file system
+    subjects    = project.load_subjects(group_label, SESS_ID)
+    # project.run_subjects_methods("create_file_system", [], project.get_subjects_labels(), nthread=num_cpu)
 
     # ======================================================================================================================
     # PROCESSING
     # ======================================================================================================================
-    paths = ["/data/MRI/projects/T15/subjects/T15_N_001/s1/mpr", "/data/MRI/projects/T15/subjects/T15_N_002/s1/mpr"]
+    kwparams    = []
 
-    kwpaths = [{"extpath":"/data/MRI/projects/T15/subjects/T15_N_001/s1/mpr"},
-               {"extpath":"/data/MRI/projects/T15/subjects/T15_N_002/s1/mpr"}]
+    # ---------------------------------------------------------------------------------------------------------------------
+    # CONVERT 2 NIFTI
+    # ---------------------------------------------------------------------------------------------------------------------
+    for p in range(len(subjects)):
+        kwparams.append({"extpath":"/data/MRI/projects/T3/" + subjects[p].label, "cleanup":0})
+    # project.run_subjects_methods("mpr2nifti", kwparams, project.get_subjects_labels(), nthread=num_cpu)
 
-    project.run_subject_methods("mpr2nifti", kwpaths)
+    # ---------------------------------------------------------------------------------------------------------------------
+    # PRINT HEADER
+    # ---------------------------------------------------------------------------------------------------------------------
+    # for s in subjects:
+    #     # print(s.label + "\t" + str(fslfun.get_image_dimension(s.t1_data)))
+    #     print(s.label + "\t" + str(fslfun.read_header(s.t1_data, ["nx","ny","nz","dx","dy","dz","descrip"])))
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # RESLICING
+    # ---------------------------------------------------------------------------------------------------------------------
+    subjects    = project.load_subjects(group_label, SESS_ID)
+    # project.run_subjects_methods("reslice_image", [{"dir":"sag->axial"}], project.get_subjects_labels(), nthread=num_cpu)
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # PRE BET
+    # ---------------------------------------------------------------------------------------------------------------------
+    subjects    = project.load_subjects(group_label, SESS_ID)
+    project.run_subjects_methods("anatomical_processing_prebet", [], project.get_subjects_labels(), nthread=num_cpu)
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # FREESURFER 1: autorecon1
+    # ---------------------------------------------------------------------------------------------------------------------
+    # talairach transf, conforming, skull-stripping
+    subjects    = project.load_subjects(group_label, SESS_ID)
+    # project.run_subjects_methods("fs_reconall", [{"step":"-autorecon1"}], project.get_subjects_labels(), nthread=num_cpu)
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # BET
+    # ---------------------------------------------------------------------------------------------------------------------
+    subjects    = project.load_subjects(group_label, SESS_ID)
+    # project.run_subjects_methods("anatomical_processing_bet", [{"do_reg":True, "betfparam":[0.5]}], project.get_subjects_labels(), nthread=num_cpu)
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # SPM SEGMENTATION
+    # ---------------------------------------------------------------------------------------------------------------------
+    # the proj_script/mpr/spm/batch folder must be already in the matlab path
+    # it may over-ride both BET and FS skull-stripping results
+    subjects    = project.load_subjects(group_label, SESS_ID)
+    # project.run_subjects_methods("anatomical_processing_spm_segment", [], project.get_subjects_labels(), nthread=num_cpu)
 
 
-    # methods manual threads
-    # trg = eval("subject.mpr2nifti")
-    # threads = []
-    # # In this case 'urls' is a list of urls to be crawled.
-    # for ii in range(len(paths)):
-    #     # We start one thread per url present.
-    #     process = Thread(target=trg, args=[paths[ii], 0])
-    #     process.start()
-    #     threads.append(process)
-    #
-    # # We now pause execution on the main thread by 'joining' all of our started threads. This ensures that each has finished processing.
-    # for process in threads:
-    #     process.join()
+    # ---------------------------------------------------------------------------------------------------------------------
+    # COMPARE BRAIN EXTRACTION
+    # ---------------------------------------------------------------------------------------------------------------------
+    subjects    = project.load_subjects(group_label, SESS_ID)
+    # project.compare_brain_extraction(os.path.join(project.mpr_dir, "controls_brains"))
 
+    # ---------------------------------------------------------------------------------------------------------------------
+    # POST BET
+    # ---------------------------------------------------------------------------------------------------------------------
+    subjects    = project.load_subjects(group_label, SESS_ID)
+    kwparams    = []
+    for s in range(len(subjects)):
+        kwparams.append({"do_nonlinreg":True, "betfparam":0.5})
+    # project.run_subjects_methods("anatomical_processing_postbet", kwparams, project.get_subjects_labels(), nthread=num_cpu)
 
-    # methods queue
-    # q = Queue(maxsize=0)
-    # # Use many threads (50 max, or one for each url)
-    # num_threads = min(2, len(paths))
-    #
-    # for i in range(len(paths)):
-    #     # need the index and the url in each queue item.
-    #     q.put((i, paths[i]))
+    # ---------------------------------------------------------------------------------------------------------------------
+    # POST ANATOMICAL PROCESSING
+    # ---------------------------------------------------------------------------------------------------------------------
+    subjects    = project.load_subjects(group_label, SESS_ID)
+    # project.run_subjects_methods("anatomical_processing_finalize", [], project.get_subjects_labels(), nthread=num_cpu)
 
-    # subject.mpr2nifti("/data/MRI/projects/T15/subjects/T15_N_001/s1/mpr", 1)
-
-
-    subject.reslice_image("sag->axial")
-    subject.anatomical_processing(do_cleanup=False)
-    subject.post_anatomical_processing()
-    # subject.do_first("L_Amyg,R_Amyg", odn="first")
-    subject.do_first()
-
-    num_cpu = 1
 
