@@ -10,8 +10,8 @@ if __name__ == "__main__":
 
     # ======================================================================================================================
     global_script_dir   = "/data/MRI/bash-fsl-pipeline"
-    proj_dir            = "/data/MRI/projects/T15"
-    # proj_dir            = "/data/MRI/projects/T3"
+    # proj_dir            = "/data/MRI/projects/T15"
+    proj_dir            = "/data/MRI/projects/T3"
     fsl_code            = "601"
 
     if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     project     = Project(proj_dir, globaldata, hasT1=True)
     SESS_ID     = 1
     num_cpu     = 8
-    group_label = "all"
+    group_label = "blind"
 
     # load whole list & create its file system
     subjects    = project.load_subjects(group_label, SESS_ID)
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     # CONVERT 2 NIFTI
     # ---------------------------------------------------------------------------------------------------------------------
     for p in range(len(subjects)):
-        kwparams.append({"extpath":"/data/MRI/projects/15T_CONTROLLI/" + subjects[p].label, "cleanup":0})
+        kwparams.append({"extpath":"/data/MRI/projects/T3/" + subjects[p].label, "cleanup":0})
     # project.run_subjects_methods("mpr2nifti", kwparams, project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
@@ -68,13 +68,13 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------------------------------
     # talairach transf, conforming, skull-stripping
     subjects    = project.load_subjects(group_label, SESS_ID)
-    project.run_subjects_methods("fs_reconall", [{"step":"-autorecon1"}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("fs_reconall", [{"step":"-autorecon1"}], project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # BET
     # ---------------------------------------------------------------------------------------------------------------------
     subjects    = project.load_subjects(group_label, SESS_ID)
-    project.run_subjects_methods("anatomical_processing_bet", [{"do_reg":True, "betfparam":[0.5]}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("anatomical_processing_bet", [{"do_reg":True, "betfparam":[0.5]}], project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM SEGMENTATION
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     # the proj_script/mpr/spm/batch folder must be already in the matlab path
     # it may over-ride both BET and FS skull-stripping results
     subjects    = project.load_subjects(group_label, SESS_ID)
-    project.run_subjects_methods("anatomical_processing_spm_segment", [], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("anatomical_processing_spm_segment", [], project.get_subjects_labels(), nthread=num_cpu)
 
 
     # ---------------------------------------------------------------------------------------------------------------------
@@ -98,12 +98,12 @@ if __name__ == "__main__":
     kwparams    = []
     for s in range(len(subjects)):
         kwparams.append({"do_nonlinreg":True, "betfparam":0.5})
-    project.run_subjects_methods("anatomical_processing_postbet", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("anatomical_processing_postbet", kwparams, project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # POST ANATOMICAL PROCESSING
     # ---------------------------------------------------------------------------------------------------------------------
     subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("post_anatomical_processing", [], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("anatomical_processing_finalize", [], project.get_subjects_labels(), nthread=num_cpu)
 
 

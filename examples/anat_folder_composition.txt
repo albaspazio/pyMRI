@@ -86,3 +86,87 @@ T1_fast_pve_2.nii.gz
 T1_fast_pve_1.nii.gz
 T1_fast_pve_0.nii.gz
 
+
+#===============================================
+# FINAL MPR FOLDER
+#===============================================
+
+mpr_log.txt
+T15_N_027-t1.mgz
+T15_N_027-t1_brain.nii.gz
+T15_N_027-t1_brain_mask.nii.gz
+T15_N_027-t1_orig.nii.gz
+T15_N_027-t1_sag.nii.gz
+
+    anat/lesionmask.nii.gz
+    anat/lesionmaskinv.nii.gz
+    anat/MNI152_T1_2mm_brain_mask_dil1.nii.gz
+    anat/T1.nii.gz
+    anat/T1_biascorr.nii.gz
+    anat/T1_biascorr_bet_skull.nii.gz
+    anat/T1_biascorr_brain.nii.gz
+    anat/T1_biascorr_brain_mask.nii.gz
+    anat/T1_fast_pve_1.nii.gz
+    anat/T1_fullfov.nii.gz
+    anat/T1_nonroi2roi.mat
+    anat/T1_orig.nii.gz
+    anat/T1_orig2roi.mat
+    anat/T1_orig2std.mat
+    anat/T1_roi.log
+    anat/T1_roi2nonroi.mat
+    anat/T1_roi2orig.mat
+    anat/T1_std2orig.mat
+    anat/T1_to_MNI_lin.mat
+    anat/T1_to_MNI_nonlin.txt
+    anat/T1_vols.txt
+    anat/T12std_skullcon.mat
+
+    anat/       spm_proc/brain_mask.nii.gz
+    anat/       spm_proc/c1T1_biascorr.nii
+    anat/       spm_proc/c2T1_biascorr.nii
+    anat/       spm_proc/c3T1_biascorr.nii
+    anat/       spm_proc/rc1T1_biascorr.nii
+    anat/       spm_proc/rc2T1_biascorr.nii
+    anat/       spm_proc/rc3T1_biascorr.nii
+    anat/       spm_proc/skullstripped_mask.nii.gz
+    anat/   spm_proc/T1_biascorr_seg8.mat
+
+    fast/T1_fast_bias.nii.gz
+    fast/T1_fast_mixeltype.nii.gz
+    fast/T1_fast_pve_0.nii.gz
+    fast/T1_fast_pve_1.nii.gz
+    fast/T1_fast_pve_2.nii.gz
+    fast/T1_fast_pveseg.nii.gz
+    fast/T1_fast_restore.nii.gz
+    fast/T1_fast_seg.nii.gz
+
+    freesurfer/mri/orig
+    freesurfer/mri/transforms
+    freesurfer/mri/brainmask.auto.mgz
+    freesurfer/mri/brainmask.mgz
+    freesurfer/mri/mri_nu_correct.mni.log
+    freesurfer/mri/mri_nu_correct.mni.log.bak
+    freesurfer/mri/nu.mgz
+    freesurfer/mri/orig.mgz
+    freesurfer/mri/orig_nu.mgz
+    freesurfer/mri/rawavg.mgz
+    freesurfer/mri/T1.mgz
+    freesurfer/mri/talairach_with_skull.log
+
+#===============================================
+# FINAL ROI FOLDER
+#===============================================
+
+reg_standard/highres2standard_warp.nii.gz
+reg_standard/T1_to_MNI_lin.nii.gz
+reg_standard/T1_to_MNI_nonlin.nii.gz
+reg_standard/T1_to_MNI_nonlin_coeff.nii.gz
+reg_standard/T1_to_MNI_nonlin_jac.nii.gz
+
+reg_t1/mask_t1_csf.nii.gz
+reg_t1/mask_t1_csfseg4Nuisance.nii.gz
+reg_t1/mask_t1_gm.nii.gz
+reg_t1/mask_t1_wm.nii.gz
+reg_t1/mask_t1_wmseg4Nuisance.nii.gz
+reg_t1/standard2highres_warp.nii.gz
+reg_t1/wmseg4bbr.nii.gz

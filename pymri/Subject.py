@@ -613,6 +613,7 @@ class Subject:
                     rrun("fslmaths " + T1 + " -div " + T1 + "_fast_bias " + T1 + "_biascorr", logFile=log)
                 else:
                     rrun("fslmaths " + T1 + " " + T1 + "_biascorr", logFile=log)
+            log.close()
 
         except Exception as e:
             traceback.print_exc()
@@ -756,7 +757,7 @@ class Subject:
                     else:
                         rrun("fslmaths " + T1 + "_biascorr " + T1 + "_biascorr_brain", logFile=log)
                         rrun("fslmaths " + T1 + "_biascorr_brain -bin " + T1 + "_biascorr_brain_mask", logFile=log)
-
+            log.close()
 
         except Exception as e:
             traceback.print_exc()
@@ -769,13 +770,11 @@ class Subject:
     # if requested: replace brainmask (produced by FreeSurfer)
     def anatomical_processing_spm_segment(self,
                                      odn="anat", imgtype=1,
+                                     do_overwrite=False,
                                      do_bet_overwrite=False,
                                      do_fs_overwrite=False,
                                      spm_template_name="spm_segment_template_job.m"
                                      ):
-
-        logfile = os.path.join(self.t1_dir, "mpr_log.txt")
-        curdir  = os.getcwd()
 
         # define placeholder variables for input dir and image name
         if imgtype == 1:
@@ -799,62 +798,83 @@ class Subject:
         output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name)
         output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name)
 
-        os.makedirs(out_batch_dir   , exist_ok = True)
-        copyfile(in_script_template , output_template)
-        copyfile(in_script_start    , output_start)
+        brain_mask              = os.path.join(anatdir, "spm_proc", "brain_mask.nii.gz")
+        skullstripped_mask      = os.path.join(anatdir, "spm_proc", "skullstripped_mask.nii.gz")
 
-        sed_inplace(output_template, "<T1_IMAGE>", inputimage + ".nii.gz")
-        sed_inplace(output_start, "X", "1")
-        sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
+        # check whether skipping
+        if imtest(brain_mask) is True and do_overwrite is False:
+            return
+        try:
 
-        eng = matlab.engine.start_matlab()
-        eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
-        eng.quit()
+            logfile = os.path.join(self.t1_dir, "mpr_log.txt")
 
-        # create brainmask (WM+GM) and skullstrippedmask (WM+GM+CSF)
-        c1img               = os.path.join(anatdir, "spm_proc", "c1T1_biascorr.nii")
-        c2img               = os.path.join(anatdir, "spm_proc", "c2T1_biascorr.nii")
-        c3img               = os.path.join(anatdir, "spm_proc", "c2T1_biascorr.nii")
+            with open(logfile, "a") as text_file:
+                print("******************************************************************", file=text_file)
+                print("updating directory", file=text_file)
+                print(" ", file=text_file)
 
-        brain_mask          = os.path.join(anatdir, "spm_proc", "brain_mask.nii.gz")
-        skullstripped_mask  = os.path.join(anatdir, "spm_proc", "skullstripped_mask.nii.gz")
+            log = open(logfile, "a")
 
-        rrun("fslmaths " + c1img + " -add " + c2img                     + " -thr 0.1 -fillh " + brain_mask)
-        rrun("fslmaths " + c1img + " -add " + c2img + " -add " + c3img  + " -thr 0.1 -bin "   + skullstripped_mask)
+            os.makedirs(out_batch_dir   , exist_ok = True)
+            copyfile(in_script_template , output_template)
+            copyfile(in_script_start    , output_start)
 
-        if do_bet_overwrite is True:
-            inputimage_bet      = os.path.join(anatdir, T1 + "_biascorr_brain")
-            inputimage_bet_mask = os.path.join(anatdir, T1 + "_biascorr_brain_mask")
+            sed_inplace(output_template, "<T1_IMAGE>", inputimage + ".nii.gz")
+            sed_inplace(output_start, "X", "1")
+            sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
-            if imtest(inputimage_bet_mask):
-                # backup bet output
-                imcp(inputimage_bet_mask, inputimage_bet_mask + "_bet")
-                imcp(inputimage_bet     , inputimage_bet + "_bet")
+            eng = matlab.engine.start_matlab()
+            print("running SPM batch template: " + output_template, file=log)
+            eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
+            eng.quit()
 
-            # copy SPM mask and use it to mask T1_biascorr
-            imcp(brain_mask, inputimage_bet_mask)
-            rrun("fslmaths " + inputimage + " -mas " + inputimage_bet_mask + " " + inputimage_bet)
+            # create brainmask (WM+GM) and skullstrippedmask (WM+GM+CSF)
+            c1img               = os.path.join(anatdir, "spm_proc", "c1T1_biascorr.nii")
+            c2img               = os.path.join(anatdir, "spm_proc", "c2T1_biascorr.nii")
+            c3img               = os.path.join(anatdir, "spm_proc", "c2T1_biascorr.nii")
 
-        if do_fs_overwrite is True:
+            rrun("fslmaths " + c1img + " -add " + c2img                     + " -thr 0.1 -fillh " + brain_mask, logFile=log)
+            rrun("fslmaths " + c1img + " -add " + c2img + " -add " + c3img  + " -thr 0.1 -bin "   + skullstripped_mask, logFile=log)
 
-            fs_brain_mask       = os.path.join(self.fs_dir, "brainmask.mgz")
-            fs_brain_mask_fsl   = os.path.join(self.fs_dir, "brainmask.nii.gz")
-            fs_t1               = os.path.join(self.fs_dir, "T1.mgz")
-            fs_t1_fsl           = os.path.join(self.fs_dir, "T1.nii.gz")
+            if do_bet_overwrite is True:
+                inputimage_bet      = os.path.join(anatdir, T1 + "_biascorr_brain")
+                inputimage_bet_mask = os.path.join(anatdir, T1 + "_biascorr_brain_mask")
 
-            if not imtest(fs_t1):
-                print("anatomical_processing_spm_segment was called with freesurfer replace, but fs has not been run")
-                return
+                if imtest(inputimage_bet_mask):
+                    # backup bet output
+                    imcp(inputimage_bet_mask, inputimage_bet_mask + "_bet", logFile=log)
+                    imcp(inputimage_bet     , inputimage_bet + "_bet", logFile=log)
 
-            imcp(fs_brain_mask, os.path.join(self.fs_dir, "brainmask_orig.mgz"))    # backup original brainmask
-            rrun("mri_convert " + fs_t1 + " " + fs_t1_fsl)                          # convert t1.mgz
+                # copy SPM mask and use it to mask T1_biascorr
+                imcp(brain_mask, inputimage_bet_mask, logFile=log)
+                rrun("fslmaths " + inputimage + " -mas " + inputimage_bet_mask + " " + inputimage_bet, logFile=log)
 
-            rrun("fslmaths " + fs_t1_fsl + " -mas " + brain_mask + " " + fs_brain_mask_fsl) # mask T1 with SPM brain_mask
-            rrun("mri_convert " + fs_brain_mask_fsl + " " + fs_brain_mask)                  # convert brainmask back to mgz
+            if do_fs_overwrite is True:
 
-            imrm(fs_t1_fsl)
-            imrm(fs_brain_mask_fsl)
+                fs_brain_mask       = os.path.join(self.fs_dir, "brainmask.mgz")
+                fs_brain_mask_fsl   = os.path.join(self.fs_dir, "brainmask.nii.gz")
+                fs_t1               = os.path.join(self.fs_dir, "T1.mgz")
+                fs_t1_fsl           = os.path.join(self.fs_dir, "T1.nii.gz")
 
+                if not imtest(fs_t1):
+                    print("anatomical_processing_spm_segment was called with freesurfer replace, but fs has not been run")
+                    return
+
+                imcp(fs_brain_mask, os.path.join(self.fs_dir, "brainmask_orig.mgz"), logFile=log)    # backup original brainmask
+                rrun("mri_convert " + fs_t1 + " " + fs_t1_fsl, logFile=log)                          # convert t1.mgz
+
+                rrun("fslmaths " + fs_t1_fsl + " -mas " + brain_mask + " " + fs_brain_mask_fsl, logFile=log) # mask T1 with SPM brain_mask
+                rrun("mri_convert " + fs_brain_mask_fsl + " " + fs_brain_mask, logFile=log)                  # convert brainmask back to mgz
+
+                imrm(fs_t1_fsl, logFile=log)
+                imrm(fs_brain_mask_fsl, logFile=log)
+
+            log.close()
+
+        except Exception as e:
+            traceback.print_exc()
+            log.close()
+            print(e)
 
     def anatomical_processing_postbet(self,
                                   odn="anat", imgtype=1, smooth=10,
@@ -998,7 +1018,7 @@ class Subject:
             log.close()
             print(e)
 
-    def post_anatomical_processing(self, odn="anat", imgtype=1):
+    def anatomical_processing_finalize(self, odn="anat", imgtype=1):
 
         logfile     = os.path.join(self.t1_dir, "mpr_log.txt")
         curdir      = os.getcwd()
@@ -1136,28 +1156,41 @@ class Subject:
             print(e)
 
     # FreeSurfer recon-all
-    def fs_reconall(self, step="-all"):
+    def fs_reconall(self, step="-all", do_overwrite=False):
 
-        logfile = os.path.join(self.t1_dir, "log.txt")
-        
+        # check whether skipping
+        if step == "-all" and imtest(os.path.join(self.t1_dir, "freesurfer", "aparc+aseg.nii.gz")) is True and do_overwrite is False:
+            return
+
+        if step == "-autorecon1" and imtest(os.path.join(self.t1_dir, "freesurfer", "mri", "brainmask.mgz")) is True and do_overwrite is False:
+            return
+
+
         try:
+            logfile = os.path.join(self.t1_dir, "mpr_log.txt")
+
+            with open(logfile, "a") as text_file:
+                print("******************************************************************", file=text_file)
+                print("updating directory", file=text_file)
+                print(" ", file=text_file)
+
             log = open(logfile, "a")
 
             curdir = os.getcwd()
             
-            rrun("mri_convert " + self.t1_data + ".nii.gz " + self.t1_data + ".mgz")
+            rrun("mri_convert " + self.t1_data + ".nii.gz " + self.t1_data + ".mgz", logFile=log)
 
             os.environ['OLD_SUBJECTS_DIR'] = os.environ['SUBJECTS_DIR']
             os.environ['SUBJECTS_DIR'] = self.t1_dir
 
-            rrun("recon-all -subject freesurfer" + " -i " + self.t1_data + ".mgz " + step)
+            rrun("recon-all -subject freesurfer" + " -i " + self.t1_data + ".mgz " + step, logFile=log)
 
             if step == "-all":
-                rrun("mri_convert " + os.path.join(self.t1_dir, "freesurfer" + self.label, "mri", "aparc+aseg.mgz") + " " + os.path.join(self.t1_dir, "freesurfer" +  self.label, "aparc+aseg.nii.gz"))
-                rrun("mri_convert " + os.path.join(self.t1_dir, "freesurfer" + self.label, "mri", "aseg.mgz") + " " + os.path.join(self.t1_dir, "freesurfer" +  self.label, "aseg.nii.gz"))
+                rrun("mri_convert " + os.path.join(self.t1_dir, "freesurfer", "mri", "aparc+aseg.mgz") + " " + os.path.join(self.t1_dir, "freesurfer", "aparc+aseg.nii.gz"), logFile=log)
+                rrun("mri_convert " + os.path.join(self.t1_dir, "freesurfer", "mri", "aseg.mgz") + " "       + os.path.join(self.t1_dir, "freesurfer", "aseg.nii.gz"), logFile=log)
                 os.system("rm " + self.dti_data + ".mgz")
 
-            os.system("SUBJECTS_DIR=$OLD_SUBJECTS_DIR")
+            os.environ['SUBJECTS_DIR'] = os.environ['OLD_SUBJECTS_DIR']
 
         except Exception as e:
             traceback.print_exc()
