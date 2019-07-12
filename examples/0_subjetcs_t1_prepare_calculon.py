@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
 
     # subject.reslice_image("sag->axial")
-    subject.anatomical_processing_prebet()
+    subject.mpr_prebet()
     # subject.anatomical_processing_bet(betfparam=0.45, do_reg=False, do_overwrite=True)
     # subject.post_anatomical_processing()
     # subject.do_first("L_Amyg,R_Amyg", odn="first")

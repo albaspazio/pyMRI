@@ -4,7 +4,7 @@ import math
 from threading import Thread
 from inspect import signature
 
-from pymri.utility.fslfun import imcp
+from pymri.utility.fslfun import imcp, imtest
 from pymri.fsl.utils.run import rrun
 from pymri.Subject import Subject
 
@@ -190,15 +190,8 @@ class Project:
         os.makedirs(tempdir,exist_ok=True)
 
         for subj in subjs:
+            subj.compare_brain_extraction(tempdir)
 
-            spmdir  = os.path.join(subj.t1_dir, "anat", "spm_proc")
-            rrun("fslmaths " + subj.t1_data + " -mas " + os.path.join(spmdir, "brain_mask") + " " + os.path.join(tempdir, subj.label + "_spm"))
-
-            betdir  = os.path.join(subj.t1_dir, "anat")
-            imcp(os.path.join(betdir, "T1_biascorr_brain"), os.path.join(tempdir, subj.label + "_bet.nii.gz"))
-
-            fsmask   = os.path.join(subj.t1_dir, "freesurfer", "mri", "brainmask")
-            rrun("mri_convert " + fsmask + ".mgz " + os.path.join(tempdir, subj.label + "_brainmask.nii.gz"))
 
         # curr_dir = os.getcwd()
         # os.chdir(tempdir)

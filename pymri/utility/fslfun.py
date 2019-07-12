@@ -84,18 +84,20 @@ def immv(src, dest, logFile=None):
 def imrm(filelist, logFile=None):
 
     for file in filelist:
-        filename_src, file_extension_src = os.path.splitext(file)
+        fileparts = mysplittext(file)
 
         ext = ""
-        if os.path.isfile(filename_src + ".nii"):
+        if os.path.isfile(fileparts[0] + ".nii"):
             ext = ".nii"
-        elif os.path.isfile(filename_src + ".nii.gz"):
+        elif os.path.isfile(fileparts[0] + ".nii.gz"):
             ext = ".nii.gz"
+        elif os.path.isfile(fileparts[0] + ".mgz"):
+            ext = ".mgz"
 
-        os.remove(filename_src + ext)
+        os.remove(fileparts[0] + ext)
 
         if logFile is not None:
-            print("rm " + filename_src + ext, file=logFile)
+            print("rm " + fileparts[0] + ext, file=logFile)
 
 # extract header in xml format and returns it as a (possibly filtered by list_field) dictionary
 def read_header(file, list_field=None):

@@ -34,24 +34,32 @@ class Subject:
         self.dir                    = os.path.join(project.subjects_dir, self.label, "s" + str(self.sessid))
         self.roi_dir                = os.path.join(self.dir, "roi")
 
-        self.roi_t1_dir             = os.path.join(self.roi_dir, "reg_t1")
         self.roi_epi_dir            = os.path.join(self.roi_dir, "reg_epi")
         self.roi_dti_dir            = os.path.join(self.roi_dir, "reg_dti")
+
         self.roi_t2_dir             = os.path.join(self.roi_dir, "reg_t2")
+
         self.roi_standard_dir       = os.path.join(self.roi_dir, "reg_standard")
+
         self.roi_standard4_dir      = os.path.join(self.roi_dir, "reg_standard4")
 
-        self.t1_image_label         = self.label + "-t1"
         self.t1_dir                 = os.path.join(self.dir, "mpr")
-        self.t1_data                = os.path.join(self.t1_dir, self.t1_image_label)
-        self.t1_brain_data          = os.path.join(self.t1_dir, self.t1_image_label + "_brain")
-        self.t1_brain_data_mask     = os.path.join(self.t1_dir, self.t1_image_label + "_brain_mask")
-        
+        self.roi_t1_dir             = os.path.join(self.roi_dir, "reg_t1")
         self.fast_dir               = os.path.join(self.t1_dir, "fast")
         self.first_dir              = os.path.join(self.t1_dir, "first")
         self.sienax_dir             = os.path.join(self.t1_dir, "sienax")
-        self.fs_dir                 = os.path.join(self.t1_dir, "freesurfer")
+        self.t1_fs_dir              = os.path.join(self.t1_dir, "freesurfer")
+        self.t1_fs_mri_dir          = os.path.join(self.t1_fs_dir, "mri")
+        self.t1_anat_dir            = os.path.join(self.t1_dir, "anat")
+        self.t1_spm_dir             = os.path.join(self.t1_anat_dir, "spm_proc")
 
+
+        self.t1_image_label         = self.label + "-t1"
+        self.t1_data                = os.path.join(self.t1_dir, self.t1_image_label)
+        self.t1_brain_data          = os.path.join(self.t1_dir, self.t1_image_label + "_brain")
+        self.t1_brain_data_mask     = os.path.join(self.t1_dir, self.t1_image_label + "_brain_mask")
+        self.t1_fs_brainmask_data   = os.path.join(self.t1_fs_dir, "mri", "brainmask")
+        self.t1_fs_data             = os.path.join(self.t1_fs_dir, "mri", "T1")     # T1 coronal [1x1x1] after conform
 
         self.first_all_none_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_none_origsegs")
         self.first_all_fast_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_fast_origsegs")
@@ -133,7 +141,9 @@ class Subject:
 
         self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
 
-
+    # ==================================================================================================
+    # GENERAL
+    # ==================================================================================================
     def create_file_system(self):
 
         os.makedirs(os.path.join(self.dir, "mpr"), exist_ok = True)
@@ -169,6 +179,21 @@ class Subject:
 
         return missing_images
 
+    def reslice_image(self, dir):
+
+        if dir == "sag->axial":
+            bckfilename = self.t1_image_label + "_sag"
+            conversion_str = " -z -x y "
+        else:
+            print("invalid conversion")
+            return
+
+        bckfilepath = os.path.join(self.t1_dir, bckfilename)
+        if imtest(bckfilepath):
+            return
+
+        imcp(self.t1_data, bckfilepath)          # create backup copy
+        rrun("fslswapdim " + self.t1_data + conversion_str + self.t1_data)   # run reslicing
     # ==================================================================================================================================================
     # WELCOME
     # ==================================================================================================================================================
@@ -207,14 +232,14 @@ class Subject:
             os.makedirs(self.fast_dir, exist_ok=True)
 
             if do_anat is True:
-                self.anatomical_processing_prebet(
+                self.mpr_prebet(
                     odn=odn, imgtype=imgtype, smooth=smooth,
                     biascorr_type=biascorr_type,
                     do_reorient=do_reorient, do_crop=do_crop,
                     do_bet=do_bet, do_overwrite=do_overwrite,
                     use_lesionmask=use_lesionmask, lesionmask=lesionmask)
 
-                self.anatomical_processing_bet(
+                self.mpr_bet(
                     odn=odn, imgtype=imgtype,
                     do_bet=do_bet, betfparam=betfparam,
                     do_reg=do_reg, do_nonlinreg=do_nonlinreg,
@@ -222,13 +247,13 @@ class Subject:
                     use_lesionmask=use_lesionmask, lesionmask=lesionmask)
 
                 if do_spm_seg is True:
-                    self.anatomical_processing_spm_segment(
+                    self.mpr_spm_segment(
                         odn=odn,
                         do_bet_overwrite=spm_seg_over_bet,
                         do_fs_overwrite=spm_seg_over_fs,
                         spm_template_name="spm_segment_dartelimport_template_job.m")
 
-                self.anatomical_processing_postbet(
+                self.mpr_postbet(
                         odn=odn, imgtype=imgtype, smooth=smooth,
                         betfparam=betfparam,
                         do_reg=do_reg, do_nonlinreg=do_nonlinreg,
@@ -245,10 +270,10 @@ class Subject:
             self.transforms_mpr()
             if do_first is True:
               if imtest(self.first_all_fast_origsegs) is False and imtest(self.first_all_none_origsegs) is False:
-                  self.do_first(first_struct, odn=first_odn)
+                  self.mpr_first(first_struct, odn=first_odn)
 
             if do_freesurfer is True:
-                self.fs_reconall()
+                self.mpr_fs_reconall()
 
         #==============================================================================================================================================================
         # WB data
@@ -407,14 +432,14 @@ class Subject:
     # ANATOMICAL
     # ==================================================================================================================================================
     # pre-processing:
-    def anatomical_processing_prebet(self,
-                        odn="anat", imgtype=1, smooth=10,
-                        biascorr_type=BIAS_TYPE_STRONG,
-                        do_reorient=True, do_crop=True,
-                        do_bet=True,
-                        do_overwrite=False,
-                        use_lesionmask=False, lesionmask=""
-                    ):
+    def mpr_prebet(self,
+                   odn="anat", imgtype=1, smooth=10,
+                   biascorr_type=BIAS_TYPE_STRONG,
+                   do_reorient=True, do_crop=True,
+                   do_bet=True,
+                   do_overwrite=False,
+                   use_lesionmask=False, lesionmask=""
+                   ):
         niter       = 5
         logfile     = os.path.join(self.t1_dir, "mpr_log.txt")
         curdir      = os.getcwd()
@@ -621,14 +646,14 @@ class Subject:
             log.close()
             print(e)
 
-    def anatomical_processing_bet(self,
-                                     odn="anat", imgtype=1,
-                                     do_bet=True, betfparam=[], bettypeparam="-R",
-                                     do_reg=True, do_nonlinreg=True,
-                                     do_skipflirtsearch=False,
-                                     do_overwrite=False,
-                                     use_lesionmask=False, lesionmask="lesionmask"
-                                     ):
+    def mpr_bet(self,
+                odn="anat", imgtype=1,
+                do_bet=True, betfparam=[], bettypeparam="-R",
+                do_reg=True, do_nonlinreg=True,
+                do_skipflirtsearch=False,
+                do_overwrite=False,
+                use_lesionmask=False, lesionmask="lesionmask"
+                ):
 
         logfile = os.path.join(self.t1_dir, "mpr_log.txt")
         curdir  = os.getcwd()
@@ -766,15 +791,18 @@ class Subject:
 
 
     # segment T1 with SPM and create  WM+GM and WM+GM+CSF masks
+    # add_bet_mask params is used to correct the presence of holes (only partially filled) in the WM+GM mask.
+    # assuming the bet produced a smaller mask in outer part of the gray matter, I add also the bet mask
     # if requested: replace T1_biascorr_brain and T1_biascorr_brain_mask (produced by BET)
     # if requested: replace brainmask (produced by FreeSurfer)
-    def anatomical_processing_spm_segment(self,
-                                     odn="anat", imgtype=1,
-                                     do_overwrite=False,
-                                     do_bet_overwrite=False,
-                                     do_fs_overwrite=False,
-                                     spm_template_name="spm_segment_template_job.m"
-                                     ):
+    def mpr_spm_segment(self,
+                        odn="anat", imgtype=1,
+                        do_overwrite=False,
+                        do_bet_overwrite=False,
+                        do_fs_overwrite=False,
+                        add_bet_mask=True,
+                        spm_template_name="spm_segment_template_job.m"
+                        ):
 
         # define placeholder variables for input dir and image name
         if imgtype == 1:
@@ -798,8 +826,8 @@ class Subject:
         output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name)
         output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name)
 
-        brain_mask              = os.path.join(anatdir, "spm_proc", "brain_mask.nii.gz")
-        skullstripped_mask      = os.path.join(anatdir, "spm_proc", "skullstripped_mask.nii.gz")
+        brain_mask              = os.path.join(self.t1_spm_dir, "brain_mask.nii.gz")
+        skullstripped_mask      = os.path.join(self.t1_spm_dir, "skullstripped_mask.nii.gz")
 
         # check whether skipping
         if imtest(brain_mask) is True and do_overwrite is False:
@@ -836,6 +864,9 @@ class Subject:
             rrun("fslmaths " + c1img + " -add " + c2img                     + " -thr 0.1 -fillh " + brain_mask, logFile=log)
             rrun("fslmaths " + c1img + " -add " + c2img + " -add " + c3img  + " -thr 0.1 -bin "   + skullstripped_mask, logFile=log)
 
+            if add_bet_mask is True:
+                rrun("fslmaths " + brain_mask + " -add " + self.t1_brain_data_mask + " " + brain_mask)
+
             if do_bet_overwrite is True:
                 inputimage_bet      = os.path.join(anatdir, T1 + "_biascorr_brain")
                 inputimage_bet_mask = os.path.join(anatdir, T1 + "_biascorr_brain_mask")
@@ -851,16 +882,16 @@ class Subject:
 
             if do_fs_overwrite is True:
 
-                fs_brain_mask       = os.path.join(self.fs_dir, "brainmask.mgz")
-                fs_brain_mask_fsl   = os.path.join(self.fs_dir, "brainmask.nii.gz")
-                fs_t1               = os.path.join(self.fs_dir, "T1.mgz")
-                fs_t1_fsl           = os.path.join(self.fs_dir, "T1.nii.gz")
+                fs_brain_mask       = os.path.join(self.t1_fs_dir, "brainmask.mgz")
+                fs_brain_mask_fsl   = os.path.join(self.t1_fs_dir, "brainmask.nii.gz")
+                fs_t1               = os.path.join(self.t1_fs_dir, "T1.mgz")
+                fs_t1_fsl           = os.path.join(self.t1_fs_dir, "T1.nii.gz")
 
                 if not imtest(fs_t1):
                     print("anatomical_processing_spm_segment was called with freesurfer replace, but fs has not been run")
                     return
 
-                imcp(fs_brain_mask, os.path.join(self.fs_dir, "brainmask_orig.mgz"), logFile=log)    # backup original brainmask
+                imcp(fs_brain_mask, os.path.join(self.t1_fs_dir, "brainmask_orig.mgz"), logFile=log)    # backup original brainmask
                 rrun("mri_convert " + fs_t1 + " " + fs_t1_fsl, logFile=log)                          # convert t1.mgz
 
                 rrun("fslmaths " + fs_t1_fsl + " -mas " + brain_mask + " " + fs_brain_mask_fsl, logFile=log) # mask T1 with SPM brain_mask
@@ -876,14 +907,14 @@ class Subject:
             log.close()
             print(e)
 
-    def anatomical_processing_postbet(self,
-                                  odn="anat", imgtype=1, smooth=10,
-                                  betfparam=0.5,
-                                  do_reg=True, do_nonlinreg=True,
-                                  do_seg=True,
-                                  do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
-                                  use_lesionmask=False, lesionmask="lesionmask"
-                                  ):
+    def mpr_postbet(self,
+                    odn="anat", imgtype=1, smooth=10,
+                    betfparam=0.5,
+                    do_reg=True, do_nonlinreg=True,
+                    do_seg=True,
+                    do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
+                    use_lesionmask=False, lesionmask="lesionmask"
+                    ):
         niter = 5
         logfile = os.path.join(self.t1_dir, "mpr_log.txt")
         curdir = os.getcwd()
@@ -954,12 +985,14 @@ class Subject:
             # output: " + T1 + "_biascorr " + T1 + "_biascorr_brain (modified) " + T1 + "_fast* (as normally output by fast) " + T1 + "_fast_bias (modified)
             if imtest(T1 + "_fast_pve_1") is False or do_overwrite is True:
                 if do_seg is True:
+
                     print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                     print(self.label + " :Performing tissue-imgtype segmentation")
                     rrun("fslmaths " + T1 + "_biascorr_brain -mas " + lesionmaskinv + " " + T1 + "_biascorr_maskedbrain", logFile=log)
                     rrun("fast -o " + T1 + "_fast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " " + T1 + "_biascorr_maskedbrain", logFile=log)
                     immv(T1 + "_biascorr", T1 + "_biascorr_init", logFile=log)
                     rrun("fslmaths " + T1 + "_fast_restore " + T1 + "_biascorr_brain", logFile=log)
+
                     # extrapolate bias field and apply to the whole head image
                     rrun("fslmaths " + T1 + "_biascorr_brain_mask -mas " + lesionmaskinv + " " + T1 + "_biascorr_brain_mask2", logFile=log)
                     rrun("fslmaths " + T1 + "_biascorr_init -div " + T1 + "_fast_restore -mas " + T1 + "_biascorr_brain_mask2 " + T1 + "_fast_totbias", logFile=log)
@@ -971,8 +1004,15 @@ class Subject:
                     rrun("fslmaths " + T1 + "_biascorr_init -div " + T1 + "_fast_bias " + T1 + "_biascorr", logFile=log)
 
                     if do_nonlinreg is True:
+
                         # regenerate the standard space version with the new bias field correction applied
-                        rrun("applywarp -i " + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_field -r " + os.path.join(self.fsl_data_standard_dir, "MNI152_" + T1_label + "_2mm") + " -o " + T1 + "_to_MNI_nonlin --interp=spline", logFile=log)
+                        if imtest(T1 + "_to_MNI_nonlin_field") is True:
+                            rrun("applywarp -i " + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_field -r " + os.path.join(self.fsl_data_standard_dir,"MNI152_" + T1_label + "_2mm") + " -o " + T1 + "_to_MNI_nonlin --interp=spline",logFile=log)
+                        else:
+                            if imtest(os.path.join(self.roi_standard_dir, "highres2standard_warp")) is True:
+                                rrun("applywarp -i " + T1 + "_biascorr -w " + os.path.join(self.roi_standard_dir, "highres2standard_warp") + " -r " + os.path.join(self.fsl_data_standard_dir,"MNI152_" + T1_label + "_2mm") + " -o " + T1 + "_to_MNI_nonlin --interp=spline",logFile=log)
+                            else:
+                                print("WARNING in mpr_postbet: either " + T1 + "_to_MNI_nonlin_field" + " or " + os.path.join(self.roi_standard_dir, "highres2standard_warp") + " is missing")
 
             #### SKULL-CONSTRAINED BRAIN VOLUME ESTIMATION (only done if registration turned on, and segmentation done, and it is a T1 image)
             # required inputs: " + T1 + "_biascorr
@@ -1018,7 +1058,7 @@ class Subject:
             log.close()
             print(e)
 
-    def anatomical_processing_finalize(self, odn="anat", imgtype=1):
+    def mpr_finalize(self, odn="anat", imgtype=1):
 
         logfile     = os.path.join(self.t1_dir, "mpr_log.txt")
         curdir      = os.getcwd()
@@ -1083,7 +1123,7 @@ class Subject:
             log.close()
             print(e)
             
-    def do_first(self, structures="", t1_image="", odn=""):
+    def mpr_first(self, structures="", t1_image="", odn=""):
 
         logfile     = os.path.join(self.t1_dir, "mpr_log.txt")
         curdir      = os.getcwd()
@@ -1156,7 +1196,7 @@ class Subject:
             print(e)
 
     # FreeSurfer recon-all
-    def fs_reconall(self, step="-all", do_overwrite=False):
+    def mpr_fs_reconall(self, step="-all", do_overwrite=False, backtransfparams=" RL PA IS "):
 
         # check whether skipping
         if step == "-all" and imtest(os.path.join(self.t1_dir, "freesurfer", "aparc+aseg.nii.gz")) is True and do_overwrite is False:
@@ -1164,7 +1204,6 @@ class Subject:
 
         if step == "-autorecon1" and imtest(os.path.join(self.t1_dir, "freesurfer", "mri", "brainmask.mgz")) is True and do_overwrite is False:
             return
-
 
         try:
             logfile = os.path.join(self.t1_dir, "mpr_log.txt")
@@ -1177,13 +1216,20 @@ class Subject:
             log = open(logfile, "a")
 
             curdir = os.getcwd()
-            
+
             rrun("mri_convert " + self.t1_data + ".nii.gz " + self.t1_data + ".mgz", logFile=log)
 
             os.environ['OLD_SUBJECTS_DIR'] = os.environ['SUBJECTS_DIR']
             os.environ['SUBJECTS_DIR'] = self.t1_dir
 
             rrun("recon-all -subject freesurfer" + " -i " + self.t1_data + ".mgz " + step, logFile=log)
+
+            # calculate linear trasf to move coronal-conformed T1 back to original reference (specified by backtransfparams)
+            # I convert T1.mgz => nii.gz, then I swapdim to axial and coregister to t1_data
+            rrun("mri_convert " + self.t1_fs_data + ".mgz " + self.t1_fs_data + ".nii.gz")
+            rrun("fslswapdim " + self.t1_fs_data + ".nii.gz" + backtransfparams + self.t1_fs_data + "_orig.nii.gz")
+            rrun("flirt -in " + self.t1_fs_data + "_orig.nii.gz" + " -ref " + self.t1_data + " -omat " + os.path.join(self.t1_fs_mri_dir,"fscor2t1.mat") + " -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+            imrm([self.t1_fs_data + ".nii.gz", self.t1_fs_data + "_orig.nii.gz"])
 
             if step == "-all":
                 rrun("mri_convert " + os.path.join(self.t1_dir, "freesurfer", "mri", "aparc+aseg.mgz") + " " + os.path.join(self.t1_dir, "freesurfer", "aparc+aseg.nii.gz"), logFile=log)
@@ -1194,28 +1240,79 @@ class Subject:
 
         except Exception as e:
             traceback.print_exc()
-            log.close()
+            # log.close()
             print(e)
 
-    def reslice_image(self, dir):
+    # check whether substituting bet brain with the one created by freesurfer.
+    # fs mask is usually bigger then fsl/spm brain, so may need some erosion
+    # since the latter op create holes within the image. I create a mask with the latter and the bet mask (which must be coregistered since fs ones are coronal)
+    def mpr_use_fs_brainmask(self, backtransfparams=" RL PA IS ", erosiontype=" -kernel boxv 5 ", is_interactive=True, do_clean=True):
 
-        if dir == "sag->axial":
-            bckfilename = self.t1_image_label + "_sag"
-            conversion_str = " -z -x y "
+        # convert fs brainmask to nii.gz => move to axial => erode it
+        rrun("mri_convert " + self.t1_fs_brainmask_data + ".mgz " + self.t1_fs_brainmask_data + ".nii.gz")
+        rrun("fslswapdim " + self.t1_fs_brainmask_data + ".nii.gz" + backtransfparams + self.t1_fs_brainmask_data + "_axial.nii.gz")
+        rrun("fslmaths " + self.t1_fs_brainmask_data + "_axial.nii.gz" + erosiontype + " -ero " + self.t1_fs_brainmask_data + "_axial_ero.nii.gz")
+
+        if is_interactive is True:
+            rrun("fsleyes " + self.t1_data + " " + self.t1_brain_data + " " + self.t1_fs_brainmask_data + "_axial_ero.nii.gz")
+
+            do_substitute = input("do you want to substitute bet image with this one? press y or n\n : ")
+
+            if do_substitute == "y":
+                self.mpr_use_fs_brainmask_exec(do_clean)
+
         else:
-            print("invalid conversion")
-            return
+            self.mpr_use_fs_brainmask_exec(do_clean)
 
-        bckfilepath = os.path.join(self.t1_dir, bckfilename)
-        if imtest(bckfilepath):
-            return
+        if do_clean is True:
+            imrm([self.t1_fs_brainmask_data + ".nii.gz", self.t1_fs_brainmask_data + "_axial.nii.gz", self.t1_fs_brainmask_data + "_axial_ero.nii.gz"])
 
-        imcp(self.t1_data, bckfilepath)          # create backup copy
-        rrun("fslswapdim " + self.t1_data + conversion_str + self.t1_data)   # run reslicing
+    def mpr_use_fs_brainmask_exec(self, do_clean=True):
 
+        # I may have manually edited self.t1_fs_brainmask + "_axial_ero.nii.gz"
+        # 1) I move this axial brainmask to the same space as t1 and t1_brain, applying the coronalconformed->original transformation to eroded brainmask_axial
+        rrun("flirt -in " + self.t1_fs_brainmask_data + "_axial_ero.nii.gz" + " -ref " + self.t1_data + " -out " + self.t1_fs_brainmask_data + "_axial_ero_in_t1.nii.gz" + " -applyxfm -init " + os.path.join(self.t1_fs_mri_dir, "fscor2t1.mat") + " -interp trilinear")
+
+        # => I create its mask (with holes) and add to the bet's one (assumed as smaller but without holes)
+        rrun("fslmaths " + self.t1_fs_brainmask_data + "_axial_ero_in_t1.nii.gz" + " -bin -add " + self.t1_brain_data_mask + " -bin " + self.t1_fs_brainmask_data + "_axial_ero_mask.nii.gz")
+
+        imcp(self.t1_fs_brainmask_data + "_axial_ero_mask.nii.gz", self.t1_brain_data_mask)  # substitute bet mask with this one
+        rrun("fslmaths " + self.t1_data + " -mas " + self.t1_fs_brainmask_data + "_axial_ero_mask.nii.gz" + " " + self.t1_brain_data)
+
+        if do_clean is True:
+            imrm([self.t1_fs_brainmask_data + "_axial_ero_mask.nii.gz", self.t1_fs_brainmask_data + "_axial_ero_in_t1.nii.gz"])
+
+
+    # copy bet, spm and fs extracted brain to given directory
+    def compare_brain_extraction(self, tempdir):
+
+        # bet
+        imcp(os.path.join(self.t1_anat_dir, "T1_biascorr_brain"), os.path.join(tempdir, self.label + "_bet.nii.gz"))
+
+        # spm (assuming bet mask is smaller than spm's one and the latter contains holes...I make their union to mask the t1
+        if imtest(os.path.join(self.t1_spm_dir, "brain_mask")) is True:
+            rrun("fslmaths " + os.path.join(self.t1_spm_dir, "brain_mask") + " -add " + self.t1_brain_data_mask + " " + os.path.join(tempdir, self.label + "_bet_spm_mask"))
+            rrun("fslmaths " + self.t1_data + " -mas " + os.path.join(tempdir,self.label + "_bet_spm_mask") + " " + os.path.join(tempdir, self.label + "_spm"))
+        else:
+            print("subject " + self.label + " spm mask is not present")
+
+        # freesurfer
+        fsmask = os.path.join(self.t1_dir, "freesurfer", "mri", "brainmask")
+        if imtest(fsmask) is True:
+            rrun("mri_convert " + fsmask + ".mgz " + os.path.join(tempdir, self.label + "_brainmask.nii.gz"))
+
+            rrun("fslswapdim " + os.path.join(tempdir, self.label + "_brainmask.nii.gz") + " RL PA IS " + os.path.join(tempdir, self.label + "_brainmask.nii.gz"))
+            rrun("flirt -in " +  os.path.join(tempdir, self.label + "_brainmask.nii.gz") + " -ref " + self.t1_data + " -out " + os.path.join(tempdir, self.label + "_brainmask.nii.gz") + " -applyxfm -init " + os.path.join(self.t1_fs_mri_dir, "fscor2t1.mat") + " -interp trilinear")
+
+            # rrun("fslmaths " + os.path.join(tempdir, subj.label + "_brainmask.nii.gz") + " -bin " + os.path.join(tempdir, subj.label + "_brainmask.nii.gz"))
+            # rrun("fslmaths " + os.path.join(betdir, "T1_biascorr_brain") + " -mas " + os.path.join(tempdir, subj.label + "_brainmask.nii.gz") + " " + os.path.join(tempdir, subj.label + "_brainmask.nii.gz"))
+        else:
+            print("subject " + self.label + " freesurfer's brainmask is not present")
     # ==================================================================================================================================================
     # DIFFUSION
     # ==================================================================================================================================================
+
+
 
     def dti_ec_fit(self):
         pass
