@@ -1,16 +1,16 @@
 
 
-from pymri.utility.fslfun import imtest, immv, imcp, imrm, quick_smooth, run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img, remove_ext, mass_images_move, is_image, mysplittext
+from pymri.utility.fslfun import imtest, immv, imcp, imrm, quick_smooth, run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img, remove_ext, mass_images_move, is_image, mysplittext, imgname
 
 from shutil import copyfile
 from pymri.fsl.utils.run import rrun
 import matlab.engine
-
 import datetime
 import traceback
 import glob
 import os
-from pymri.utility.utilities import gunzip, sed_inplace
+from pymri.utility.utilities import sed_inplace, gunzip
+
 
 class Subject:
 
@@ -194,6 +194,7 @@ class Subject:
 
         imcp(self.t1_data, bckfilepath)          # create backup copy
         rrun("fslswapdim " + self.t1_data + conversion_str + self.t1_data)   # run reslicing
+
     # ==================================================================================================================================================
     # WELCOME
     # ==================================================================================================================================================
@@ -803,7 +804,8 @@ class Subject:
                         do_bet_overwrite=False,
                         do_fs_overwrite=False,
                         add_bet_mask=True,
-                        spm_template_name="spm_segment_template_job.m"
+                        set_origin=False,
+                        spm_template_name="spm_segment_tissuevolume_template_job.m"
                         ):
 
         # define placeholder variables for input dir and image name
@@ -817,7 +819,8 @@ class Subject:
             print("ERROR: PD input format is not supported")
             return False
 
-        inputimage              = os.path.join(anatdir, T1 + "_biascorr")
+        srcinputimage           = os.path.join(anatdir, T1 + "_biascorr")
+        inputimage              = os.path.join(self.t1_spm_dir, T1 + "_biascorr_" + self.label)
 
         # set dirs
         spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
@@ -830,6 +833,8 @@ class Subject:
 
         brain_mask              = os.path.join(self.t1_spm_dir, "brain_mask.nii.gz")
         skullstripped_mask      = os.path.join(self.t1_spm_dir, "skullstripped_mask.nii.gz")
+
+        icv_file                = os.path.join(self.t1_spm_dir, "icv_" + self.label + ".dat")
 
         # check whether skipping
         if imtest(brain_mask) is True and do_overwrite is False:
@@ -846,10 +851,19 @@ class Subject:
             log = open(logfile, "a")
 
             os.makedirs(out_batch_dir   , exist_ok = True)
+            os.makedirs(self.t1_spm_dir   , exist_ok = True)
+
+            gunzip(srcinputimage + ".nii.gz", inputimage + ".nii")
+
+            # here I may stop script to allow resetting the nii origin. sometimes is necessary to perform the segmentation
+            if set_origin is True:
+                input("press keyboard when finished setting the origin for subj " + self.label + " :")
+
             copyfile(in_script_template , output_template)
             copyfile(in_script_start    , output_start)
 
-            sed_inplace(output_template, "<T1_IMAGE>", inputimage + ".nii.gz")
+            sed_inplace(output_template, "<T1_IMAGE>", inputimage + ".nii")
+            sed_inplace(output_template, "<ICV_FILE>", icv_file)
             sed_inplace(output_start, "X", "1")
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
@@ -859,17 +873,24 @@ class Subject:
             eng.quit()
 
             # create brainmask (WM+GM) and skullstrippedmask (WM+GM+CSF)
-            c1img               = os.path.join(anatdir, "spm_proc", "c1T1_biascorr.nii")
-            c2img               = os.path.join(anatdir, "spm_proc", "c2T1_biascorr.nii")
-            c3img               = os.path.join(anatdir, "spm_proc", "c2T1_biascorr.nii")
+            c1img               = os.path.join(anatdir, "spm_proc", "c1T1_biascorr_" + self.label + ".nii")
+            c2img               = os.path.join(anatdir, "spm_proc", "c2T1_biascorr_" + self.label + ".nii")
+            c3img               = os.path.join(anatdir, "spm_proc", "c3T1_biascorr_" + self.label + ".nii")
 
             rrun("fslmaths " + c1img + " -add " + c2img                     + " -thr 0.1 -fillh " + brain_mask, logFile=log)
             rrun("fslmaths " + c1img + " -add " + c2img + " -add " + c3img  + " -thr 0.1 -bin "   + skullstripped_mask, logFile=log)
 
+            # this codes have two aims:
+            # 1) it resets like in the original image the dt header parameters that spm set to 0.
+            #    otherwise it fails some operations like fnirt as it sees the mask and the brain data of different dimensions
+            # 2) changing image origin in spm, changes how fsleyes display the image. while, masking in this ways, everything goes right
+            rrun("fslmaths " + srcinputimage + ".nii.gz" + " -mas " + brain_mask + " -bin " + brain_mask)
+            rrun("fslmaths " + srcinputimage + ".nii.gz" + " -mas " + skullstripped_mask + " -bin " + skullstripped_mask)
+
             if add_bet_mask is True:
 
                 if imtest(os.path.join(self.t1_anat_dir, "T1_biascorr_brain_mask")) is True:
-                    rrun("fslmaths " + brain_mask + " -add " + os.path.join(self.t1_anat_dir, "T1_biascorr_brain_mask") + " " + brain_mask)
+                    rrun("fslmaths " + brain_mask + " -add " + os.path.join(self.t1_anat_dir, "T1_biascorr_brain_mask") + " -bin " + brain_mask)
                 elif imtest(self.t1_brain_data_mask) is True:
                     rrun("fslmaths " + brain_mask + " -add " + self.t1_brain_data_mask + " " + brain_mask)
                 else:
@@ -881,6 +902,7 @@ class Subject:
                 imcp(brain_mask, self.t1_brain_data_mask, logFile=log)
                 rrun("fslmaths " + inputimage + " -mas " + brain_mask + " " + self.t1_brain_data, logFile=log)
 
+            imrm([inputimage + ".nii"])
             # if do_fs_overwrite is True:
             #
             #     fs_brain_mask       = os.path.join(self.t1_fs_dir, "brainmask.mgz")
@@ -907,6 +929,37 @@ class Subject:
             traceback.print_exc()
             log.close()
             print(e)
+
+
+    def mpr_spm_tissue_volumes(self,
+                        spm_template_name="spm_icv_template_job.m"
+                        ):
+
+        seg_mat                = os.path.join(self.t1_spm_dir, "T1_biascorr_" + self.label + "_seg8.mat")
+        icv_file                = os.path.join(self.t1_spm_dir, "icv_" + self.label + ".dat")
+
+        # set dirs
+        spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
+        out_batch_dir           = os.path.join(spm_script_dir, "batch")
+        in_script_template      = os.path.join(spm_script_dir, "templates", spm_template_name)
+        in_script_start         = os.path.join(spm_script_dir, "templates", "spm_job_start.m")
+
+        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name)
+        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name)
+
+        copyfile(in_script_template, output_template)
+        copyfile(in_script_start, output_start)
+
+        sed_inplace(output_template, "<SEG_MAT>", seg_mat)
+        sed_inplace(output_template, "<ICV_FILE>", icv_file)
+        sed_inplace(output_start, "X", "1")
+        sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
+
+        eng = matlab.engine.start_matlab()
+        print("running SPM batch template: " + output_template)
+        eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
+        eng.quit()
+
 
     def mpr_postbet(self,
                     odn="anat", imgtype=1, smooth=10,
@@ -1404,6 +1457,52 @@ class Subject:
     # path_type =   "standard"      : a roi name, located in the default folder (subjectXX/s1/roi/reg_YYY/INPUTPATH),
     #	            "rel"			: a path relative to SUBJECT_DIR (subjectXX/s1/INPUTPATH)
     #               "abs"			: a full path (INPUTPATH)
+
+    def fnirt(self, ref, ofn="", odp="", refmask="", inimg="t1_brain"):
+
+        if inimg == "t1_brain":
+            img = self.t1_brain_data
+        elif inimg == "t1":
+            img = self.t1_data
+        elif inimg == "t2_brain":
+            img = self.t2_brain_data
+        elif inimg == "t2":
+            img = self.t2_brain
+        else:
+            print("ERROR in fnirt: unknown input image....returning")
+            return
+
+        if odp == "":
+            odp = os.path.dirname(ref)
+
+        if ofn == "":
+            ofn = imgname(img) + "_2_" + imgname(ref)
+
+
+        # inputs sanity check
+        if imtest(img) is False:
+            print("ERROR in fnirt: specified input image does not exist......returning")
+            return
+
+        if imtest(ref) is False:
+            print("ERROR in fnirt: specified ref image does not exist......returning")
+            return
+
+        if os.path.isdir(odp) is False:
+            print("ERROR in fnirt: specified output path does not exist......creating it !!")
+            os.makedirs(odp, exist_ok=True)
+
+        REF_STRING = ""
+        if refmask != "":
+            if imtest(refmask) is False:
+                print("ERROR in fnirt: specified refmask image does not exist......returning")
+                return
+            REF_STRING= " --refmask=" + refmask
+
+
+        rrun("flirt -in " + img + "-ref " + ref + " -omat " + os.path.join(odp, ofn + ".mat") + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+        rrun("fnirt --iout= " + os.path.join(odp, ofn) + " --in=" + inimg + " --aff=" + os.path.join(odp, ofn + ".mat") + " --ref=" + ref + REF_STRING)
+
 
     def transform_roi(self, regtype, pathtype="standard", mask="", orf="", thresh=0.2, islin=True, std_img="", rois=[]):
 

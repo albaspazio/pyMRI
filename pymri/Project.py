@@ -19,13 +19,14 @@ class Project:
         self.subjects_dir           = os.path.join(self.dir, "subjects")
         self.group_analysis_dir     = os.path.join(self.dir, "group_analysis")
         self.script_dir             = os.path.join(self.dir, "script")
-        self.script_dir             = os.path.join(self.dir, "script")
 
         self.melodic_templates_dir  = os.path.join(self.group_analysis_dir, "melodic", "group_templates")
         self.melodic_dr_dir         = os.path.join(self.group_analysis_dir, "melodic", "dr")
 
         self.sbfc_dir               = os.path.join(self.group_analysis_dir, "sbfc")
         self.mpr_dir                = os.path.join(self.group_analysis_dir, "mpr")
+
+        self.vbm_dir                = os.path.join(self.mpr_dir, "vbm")
 
         self.globaldata         = globaldata
 
@@ -76,11 +77,6 @@ class Project:
                 incomplete_subjects.append({"label":subj.label, "images":missing})
 
         return incomplete_subjects
-
-    def anatomical_processing(self, subjects_list_label=None, numthread=1):
-
-        if subjects_list_label is not None:
-            self.load_subjects(subjects_list_label)
 
     # get subject with given label
     def get_subject_by_label(self, subj_label):

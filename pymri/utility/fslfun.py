@@ -1,5 +1,6 @@
 import os
 import sys
+import ntpath
 from shutil import copyfile, move
 import glob
 import subprocess
@@ -167,13 +168,24 @@ def quick_smooth(inimg, outimg, logFile=None):
 # get the whole extension  (e.g. abc.nii.gz => nii.gz )
 def mysplittext(img):
 
-    filename, fext = os.path.splitext(img)
+    filepath = ntpath.dirname(img)
+    filename = ntpath.basename(img)
+
+    filename, fext = os.path.splitext(filename)
+
     fullext = fext
     while "." in filename:
         filename, fext = os.path.splitext(filename)
         fullext = fext + fullext
 
-    return [filename, fullext]
+    return [os.path.join(filepath, filename), fullext]
+
+
+def imgname(img):
+
+    namepath = mysplittext(img)[0]
+    return ntpath.basename(namepath)
+
 
 #===============================================================================================================================
 # some run functions

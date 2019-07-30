@@ -25,8 +25,8 @@ if __name__ == "__main__":
     # ======================================================================================================================
     project     = Project(proj_dir, globaldata, hasT1=True)
     SESS_ID     = 1
-    num_cpu     = 8
-    group_label = "all"
+    num_cpu     = 1
+    group_label = "single"
 
     # ======================================================================================================================
     # PROCESSING
@@ -85,7 +85,23 @@ if __name__ == "__main__":
     # the proj_script/mpr/spm/batch folder must be already in the matlab path
     # it may over-ride both BET and FS skull-stripping results
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("mpr_spm_segment", [{"do_overwrite":True, "do_bet_overwrite":True}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("mpr_spm_segment", [{"do_overwrite":True, "do_bet_overwrite":True, "set_origin":False}], project.get_subjects_labels(), nthread=num_cpu)
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # SPM SEGMENTATION INTERACTIVE (SET ORIGIN BEFORE)
+    # ---------------------------------------------------------------------------------------------------------------------
+    # it let user set the image origin before proceeding. suitable for some mpr that otherwise do not segment properly.
+    # the proj_script/mpr/spm/batch folder must be already in the matlab path
+    # it may over-ride both BET and FS skull-stripping results
+    subjects    = project.load_subjects(group_label, SESS_ID)
+    project.run_subjects_methods("mpr_spm_segment", [{"do_overwrite":True, "do_bet_overwrite":False, "set_origin":True}], project.get_subjects_labels(), nthread=1)
+
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # SPM TISSUE VOLUMES
+    # ---------------------------------------------------------------------------------------------------------------------
+    # subjects    = project.load_subjects(group_label, SESS_ID)
+    # project.run_subjects_methods("mpr_spm_tissue_volumes", [], project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # COMPARE BRAIN EXTRACTION
@@ -102,16 +118,16 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------------------------------
     # POST BET
     # ---------------------------------------------------------------------------------------------------------------------
-    subjects    = project.load_subjects(group_label, SESS_ID)
-    kwparams    = []
-    for s in range(len(subjects)):
-        kwparams.append({"do_nonlinreg":True, "betfparam":0.5, "do_overwrite":True})
-    project.run_subjects_methods("mpr_postbet", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+    # subjects    = project.load_subjects(group_label, SESS_ID)
+    # kwparams    = []
+    # for s in range(len(subjects)):
+    #     kwparams.append({"do_nonlinreg":True, "betfparam":0.5, "do_overwrite":True})
+    # project.run_subjects_methods("mpr_postbet", kwparams, project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # POST ANATOMICAL PROCESSING
     # ---------------------------------------------------------------------------------------------------------------------
-    subjects    = project.load_subjects(group_label, SESS_ID)
-    project.run_subjects_methods("mpr_finalize", [], project.get_subjects_labels(), nthread=num_cpu)
+    # subjects    = project.load_subjects(group_label, SESS_ID)
+    # project.run_subjects_methods("mpr_finalize", [], project.get_subjects_labels(), nthread=num_cpu)
 
 
