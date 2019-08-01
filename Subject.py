@@ -1,15 +1,15 @@
 
 
-from pymri.utility.fslfun import imtest, immv, imcp, imrm, quick_smooth, run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img, remove_ext, mass_images_move, is_image, mysplittext, imgname
+from utility.fslfun import imtest, immv, imcp, imrm, quick_smooth, run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img, remove_ext, mass_images_move, is_image, mysplittext, imgname
+from utility.utilities import sed_inplace, gunzip
 
 from shutil import copyfile
-from pymri.fsl.utils.run import rrun
+from fsl.utils.run import rrun
 import matlab.engine
 import datetime
 import traceback
 import glob
 import os
-from pymri.utility.utilities import sed_inplace, gunzip
 
 
 class Subject:
@@ -202,7 +202,7 @@ class Subject:
     def wellcome(self,  do_anat=True, odn = "anat", imgtype = 1, smooth = 10,
                         biascorr_type=BIAS_TYPE_STRONG,
                         do_reorient=True, do_crop=True,
-                        do_bet=True, betfparam=0.5,
+                        do_bet=True, betfparam=[0.5],
                         do_sienax=True, bet_sienax_param_string="-SNB -f 0.2",
                         do_reg=True, do_nonlinreg=True,
                         do_seg=True, do_spm_seg=True, spm_seg_over_bet=False, spm_seg_over_fs=False,  # over-ride bet an
@@ -262,7 +262,7 @@ class Subject:
                         do_cleanup=do_cleanup, do_strongcleanup=do_strongcleanup, do_overwrite=do_overwrite,
                         use_lesionmask=use_lesionmask, lesionmask=lesionmask)
 
-                self.post_anatomical_processing(odn=odn)
+                self.mpr_finalize(odn=odn)
 
             if do_sienax is True:
                 print(self.label + " : sienax with " + bet_sienax_param_string)

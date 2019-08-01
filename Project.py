@@ -4,9 +4,7 @@ import math
 from threading import Thread
 from inspect import signature
 
-from pymri.utility.fslfun import imcp, imtest
-from pymri.fsl.utils.run import rrun
-from pymri.Subject import Subject
+from Subject import Subject
 
 class Project:
 
@@ -36,7 +34,7 @@ class Project:
         self.hasT1                  = hasT1
         self.hasRS                  = hasRS
         self.hasDTI                 = hasDTI
-        self.hasT1                  = hasT2
+        self.hasT2                  = hasT2
 
         # load all possible subjects list into self.subjects_lists
         with open(os.path.join(self.dir, "subjects_lists.json")) as json_file:

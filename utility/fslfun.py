@@ -6,7 +6,7 @@ import glob
 import subprocess
 import xml.etree.ElementTree as ET
 
-from pymri.fsl.utils.run import rrun
+from fsl.utils.run import rrun
 
 IMAGE_FORMATS = [".nii", ".nii.gz", ".mnc", ".mnc.gz", ".hdr", ".hdr.gz", ".img", ".img.gz", ".mgz"]
 
@@ -244,7 +244,7 @@ def run(cmd, logFile=None, is_fsl=True):
 # run a fsl (default) or generic pipe command
 def runpipe(cmd, logFile=None, is_fsl=True):
     try:
-
+        cmdstr = ""
         if is_fsl is True:
             fsl_bin = os.path.join(os.getenv('FSLDIR'), "bin")
             cmdstr = os.path.join(fsl_bin, cmd)

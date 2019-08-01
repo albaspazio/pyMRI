@@ -1,6 +1,4 @@
 import os
-import subprocess
-from pymri.fsl.utils.run import rrun
 
 class FslSwitcher:
 

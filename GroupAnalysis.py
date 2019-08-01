@@ -2,9 +2,9 @@ import os
 import shutil
 
 from shutil import copyfile, move
-from pymri.fsl.utils.run import rrun
-from pymri.utility.fslfun import imcp
-from pymri.utility.utilities import sed_inplace
+from fsl.utils.run import rrun
+from utility.fslfun import imcp
+from utility.utilities import sed_inplace
 import matlab.engine
 import numpy
 
@@ -86,7 +86,7 @@ class GroupAnalysis:
         stats_dir = os.path.join(vbmfsl_folder, "stats")
         struct_dir = os.path.join(vbmfsl_folder, "struct")
 
-        os.makedirs(stats_dir,  exist_ok="True")
+        os.makedirs(stats_dir, exist_ok="True")
         os.makedirs(struct_dir, exist_ok="True")
 
         for subj in subjs:

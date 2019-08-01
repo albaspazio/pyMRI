@@ -1,5 +1,5 @@
 import os
-from pymri.utility import FslSwitcher
+from utility import FslSwitcher
 
 
 def init(globalscriptdir, projectdir, fsl_ver):
