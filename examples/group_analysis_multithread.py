@@ -4,8 +4,7 @@ import os
 from pymri.Global import Global
 from pymri.GroupAnalysis import GroupAnalysis
 from pymri.Project import Project
-from pymri.utility import startup_utilities
-
+from utility import startup_utilities
 
 if __name__ == "__main__":
 

@@ -1,9 +1,6 @@
-import os
-
 from pymri.Global import Global
 from pymri.Project import Project
-from pymri.utility import startup_utilities
-from pymri.Subject import Subject
+from utility import startup_utilities
 from pymri.utility import fslfun
 from pymri.fsl.utils.run import rrun
 

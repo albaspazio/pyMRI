@@ -4,7 +4,7 @@ import traceback
 
 from pymri.Global import Global
 from pymri.Project import Project
-from pymri.utility import startup_utilities
+from utility import startup_utilities
 
 from pymri.utility.fslfun import imtest, run_notexisting_img
 from pymri.fsl.utils.run import rrun

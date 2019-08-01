@@ -1,12 +1,8 @@
-from threading import Thread
 # from Queue import Queue
 
 from pymri.Global import Global
 from pymri.Project import Project
-from pymri.utility import startup_utilities
-from pymri.Subject import Subject
-from pymri.utility import fslfun
-
+from utility import startup_utilities
 
 if __name__ == "__main__":
 

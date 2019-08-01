@@ -5,14 +5,11 @@ from shutil import copyfile, move
 
 from pymri.Global import Global
 from pymri.Project import Project
-from pymri.utility import startup_utilities
+from utility import startup_utilities
 
-from pymri.utility.fslfun import imtest, run_notexisting_img
 from pymri.fsl.utils.run import rrun
 
 from pymri.utility import import_data_file
-from pymri.utility import plot_data
-
 
 if __name__ == "__main__":
 
