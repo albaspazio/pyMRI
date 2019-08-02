@@ -37,7 +37,7 @@ class Project:
         self.hasT2                  = hasT2
 
         # load all possible subjects list into self.subjects_lists
-        with open(os.path.join(self.dir, "subjects_lists.json")) as json_file:
+        with open(os.path.join(self.script_dir, "subjects_lists.json")) as json_file:
             self.subjects_lists = json.load(json_file)
 
     # retrieve a specific list of subjects

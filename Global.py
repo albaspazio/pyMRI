@@ -1,9 +1,28 @@
+import inspect
 import os
 
+
+# user must set:
+# - spm_dir
+# - cat version
 
 class Global:
 
     def __init__(self, globalscriptdir):
+
+        # --------------------------------------------------------------------------------------------------------
+        # USER DEPENDENT
+        # --------------------------------------------------------------------------------------------------------
+        self.spm_dir                        = "/data/matlab_toolbox/spm12"
+        self.cat_version                    = "cat12"
+        # --------------------------------------------------------------------------------------------------------
+        # --------------------------------------------------------------------------------------------------------
+
+        filename                            = inspect.getframeinfo(inspect.currentframe()).filename
+        self.framework_dir                  = os.path.dirname(os.path.abspath(filename))
+
+        self.templates_dir                  = os.path.join(self.framework_dir, "templates")
+        self.spm_templates_dir              = os.path.join(self.framework_dir, "templates", "spm")
 
         self.global_script_dir              = globalscriptdir
         self.global_data_templates          = os.path.join(self.global_script_dir, "data_templates")
@@ -18,6 +37,9 @@ class Global:
         if self.fsl_dir is None:
             print("FSLDIR is undefined")
             return
+
+        self.cat_dartel_template            = os.path.join(self.spm_dir,"toolbox", self.cat_version, "templates_1.50mm", "Template_1_IXI555_MNI152.nii")
+        self.spm_tissue_map                 = os.path.join(self.spm_dir, "tpm", "TPM.nii")
 
         self.fsl_bin                        = os.path.join(self.fsl_dir, "bin")
         self.fsl_data_standard_dir          = os.path.join(self.fsl_dir, "data", "standard")
