@@ -931,6 +931,146 @@ class Subject:
             print(e)
 
 
+    # segment T1 with SPM and create  WM+GM and WM+GM+CSF masks
+    # add_bet_mask params is used to correct the presence of holes (only partially filled) in the WM+GM mask.
+    # assuming the bet produced a smaller mask in outer part of the gray matter, I add also the bet mask
+    # if requested: replace label-t1_brain and label-t1_brain_mask (produced by BET)
+    # if requested: replace brainmask (produced by FreeSurfer)  BUGGED !!! ignore it
+    def mpr_cat_segment(self,
+                        odn="anat", imgtype=1,
+                        do_overwrite=False,
+                        do_bet_overwrite=False,
+                        do_fs_overwrite=False,
+                        add_bet_mask=True,
+                        set_origin=False,
+                        spm_template_name="spm_segment_tissuevolume_template_job.m"
+                        ):
+
+        # define placeholder variables for input dir and image name
+        if imgtype == 1:
+            anatdir = os.path.join(self.t1_dir, odn)
+            T1 = "T1"
+        elif imgtype == 2:
+            anatdir = os.path.join(self.t2_dir, odn)
+            T1 = "T2"
+        else:
+            print("ERROR: PD input format is not supported")
+            return False
+
+        srcinputimage           = os.path.join(anatdir, T1 + "_biascorr")
+        inputimage              = os.path.join(self.t1_spm_dir, T1 + "_biascorr_" + self.label)
+
+        # set dirs
+        spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
+        out_batch_dir           = os.path.join(spm_script_dir, "batch")
+        in_script_template      = os.path.join(spm_script_dir, "templates", spm_template_name)
+        in_script_start         = os.path.join(spm_script_dir, "templates", "spm_job_start.m")
+
+        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name)
+        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name)
+
+        brain_mask              = os.path.join(self.t1_spm_dir, "brain_mask.nii.gz")
+        skullstripped_mask      = os.path.join(self.t1_spm_dir, "skullstripped_mask.nii.gz")
+
+        icv_file                = os.path.join(self.t1_spm_dir, "icv_" + self.label + ".dat")
+
+        # check whether skipping
+        if imtest(brain_mask) is True and do_overwrite is False:
+            return
+        try:
+
+            logfile = os.path.join(self.t1_dir, "mpr_log.txt")
+
+            with open(logfile, "a") as text_file:
+                print("******************************************************************", file=text_file)
+                print("updating directory", file=text_file)
+                print(" ", file=text_file)
+
+            log = open(logfile, "a")
+
+            os.makedirs(out_batch_dir   , exist_ok = True)
+            os.makedirs(self.t1_spm_dir   , exist_ok = True)
+
+            gunzip(srcinputimage + ".nii.gz", inputimage + ".nii")
+
+            # here I may stop script to allow resetting the nii origin. sometimes is necessary to perform the segmentation
+            if set_origin is True:
+                input("press keyboard when finished setting the origin for subj " + self.label + " :")
+
+            copyfile(in_script_template , output_template)
+            copyfile(in_script_start    , output_start)
+
+            sed_inplace(output_template, "<T1_IMAGE>", inputimage + ".nii")
+            sed_inplace(output_template, "<ICV_FILE>", icv_file)
+            sed_inplace(output_start, "X", "1")
+            sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
+
+            eng = matlab.engine.start_matlab()
+            print("running SPM batch template: " + output_template, file=log)
+            eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
+            eng.quit()
+
+            # create brainmask (WM+GM) and skullstrippedmask (WM+GM+CSF)
+            c1img               = os.path.join(anatdir, "spm_proc", "c1T1_biascorr_" + self.label + ".nii")
+            c2img               = os.path.join(anatdir, "spm_proc", "c2T1_biascorr_" + self.label + ".nii")
+            c3img               = os.path.join(anatdir, "spm_proc", "c3T1_biascorr_" + self.label + ".nii")
+
+            rrun("fslmaths " + c1img + " -add " + c2img                     + " -thr 0.1 -fillh " + brain_mask, logFile=log)
+            rrun("fslmaths " + c1img + " -add " + c2img + " -add " + c3img  + " -thr 0.1 -bin "   + skullstripped_mask, logFile=log)
+
+            # this codes have two aims:
+            # 1) it resets like in the original image the dt header parameters that spm set to 0.
+            #    otherwise it fails some operations like fnirt as it sees the mask and the brain data of different dimensions
+            # 2) changing image origin in spm, changes how fsleyes display the image. while, masking in this ways, everything goes right
+            rrun("fslmaths " + srcinputimage + ".nii.gz" + " -mas " + brain_mask + " -bin " + brain_mask)
+            rrun("fslmaths " + srcinputimage + ".nii.gz" + " -mas " + skullstripped_mask + " -bin " + skullstripped_mask)
+
+            if add_bet_mask is True:
+
+                if imtest(os.path.join(self.t1_anat_dir, "T1_biascorr_brain_mask")) is True:
+                    rrun("fslmaths " + brain_mask + " -add " + os.path.join(self.t1_anat_dir, "T1_biascorr_brain_mask") + " -bin " + brain_mask)
+                elif imtest(self.t1_brain_data_mask) is True:
+                    rrun("fslmaths " + brain_mask + " -add " + self.t1_brain_data_mask + " " + brain_mask)
+                else:
+                    print("warning in mpr_spm_segment: no other bet mask to add to spm one")
+
+            if do_bet_overwrite is True:
+
+                # copy SPM mask and use it to mask T1_biascorr
+                imcp(brain_mask, self.t1_brain_data_mask, logFile=log)
+                rrun("fslmaths " + inputimage + " -mas " + brain_mask + " " + self.t1_brain_data, logFile=log)
+
+            imrm([inputimage + ".nii"])
+            # if do_fs_overwrite is True:
+            #
+            #     fs_brain_mask       = os.path.join(self.t1_fs_dir, "brainmask.mgz")
+            #     fs_brain_mask_fsl   = os.path.join(self.t1_fs_dir, "brainmask.nii.gz")
+            #     fs_t1               = os.path.join(self.t1_fs_dir, "T1.mgz")
+            #     fs_t1_fsl           = os.path.join(self.t1_fs_dir, "T1.nii.gz")
+            #
+            #     if not imtest(fs_t1):
+            #         print("anatomical_processing_spm_segment was called with freesurfer replace, but fs has not been run")
+            #         return
+            #
+            #     imcp(fs_brain_mask, os.path.join(self.t1_fs_dir, "brainmask_orig.mgz"), logFile=log)    # backup original brainmask
+            #     rrun("mri_convert " + fs_t1 + " " + fs_t1_fsl, logFile=log)                          # convert t1.mgz
+            #
+            #     rrun("fslmaths " + fs_t1_fsl + " -mas " + brain_mask + " " + fs_brain_mask_fsl, logFile=log) # mask T1 with SPM brain_mask
+            #     rrun("mri_convert " + fs_brain_mask_fsl + " " + fs_brain_mask, logFile=log)                  # convert brainmask back to mgz
+            #
+            #     imrm(fs_t1_fsl, logFile=log)
+            #     imrm(fs_brain_mask_fsl, logFile=log)
+
+            log.close()
+
+        except Exception as e:
+            traceback.print_exc()
+            log.close()
+            print(e)
+
+
+
+
     def mpr_spm_tissue_volumes(self,
                         spm_template_name="spm_icv_template_job.m"
                         ):
