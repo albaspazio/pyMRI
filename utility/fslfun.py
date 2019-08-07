@@ -6,7 +6,7 @@ import glob
 import subprocess
 import xml.etree.ElementTree as ET
 
-from fsl.utils.run import rrun
+from myfsl.utils.run import rrun
 
 IMAGE_FORMATS = [".nii", ".nii.gz", ".mnc", ".mnc.gz", ".hdr", ".hdr.gz", ".img", ".img.gz", ".mgz"]
 

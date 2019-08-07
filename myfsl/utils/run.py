@@ -42,8 +42,8 @@ import os
 import               six
 
 # from   fsl.utils.platform import platform as fslplatform
-import fsl.utils.fslsub                   as fslsub
-import fsl.utils.tempdir                  as tempdir
+import myfsl.utils.fslsub                   as fslsub
+import myfsl.utils.tempdir                  as tempdir
 
 
 log = logging.getLogger(__name__)

@@ -9,7 +9,7 @@ line tool. It is assumed that the computing cluster is managed by SGE.
 
 Example usage, building a short pipeline::
 
-    from fsl.utils.fslsub import submit, wait
+    from myfsl.utils.fslsub import submit, wait
 
     # submits bet to veryshort queue unless <mask_filename> already exists
     bet_job = submit('bet <input_filename> -m',

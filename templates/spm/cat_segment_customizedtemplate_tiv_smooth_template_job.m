@@ -4,7 +4,7 @@
 % cfg_basicio BasicIO - Unknown
 %-----------------------------------------------------------------------
 matlabbatch{1}.spm.tools.cat.estwrite.data = {'<T1_IMAGE>,1'};
-matlabbatch{1}.spm.tools.cat.estwrite.nproc = 4;
+matlabbatch{1}.spm.tools.cat.estwrite.nproc = <N_PROC>;
 matlabbatch{1}.spm.tools.cat.estwrite.opts.tpm = {'<TEMPLATE_SEGMENTATION>,1'};
 matlabbatch{1}.spm.tools.cat.estwrite.opts.affreg = 'mni';
 matlabbatch{1}.spm.tools.cat.estwrite.opts.biasstr = 0.5;

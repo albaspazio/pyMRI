@@ -4,7 +4,7 @@ from utility.fslfun import imtest, immv, imcp, imrm, quick_smooth, run, runpipe,
 from utility.utilities import sed_inplace, gunzip
 
 from shutil import copyfile
-from fsl.utils.run import rrun
+from myfsl.utils.run import rrun
 import matlab.engine
 import datetime
 import traceback
@@ -944,7 +944,8 @@ class Subject:
                         seg_templ="",
                         coreg_templ="",
                         calc_surfaces=0,
-                        spm_template_name="cat_segment_customizedtemplate_tiv_smooth_job.m"
+                        num_proc=1,
+                        spm_template_name="cat_segment_customizedtemplate_tiv_smooth_template_job.m"
                         ):
 
         # define placeholder variables for input dir and image name
@@ -1004,7 +1005,7 @@ class Subject:
             log = open(logfile, "a")
 
             os.makedirs(out_batch_dir   , exist_ok = True)
-            os.makedirs(self.t1_spm_dir , exist_ok = True)
+            os.makedirs(self.t1_cat_dir , exist_ok = True)
 
             gunzip(srcinputimage + ".nii.gz", inputimage + ".nii")
 
@@ -1016,10 +1017,11 @@ class Subject:
             copyfile(in_script_start    , output_start)
 
             sed_inplace(output_template, "<T1_IMAGE>", inputimage + ".nii")
-            sed_inplace(output_template, "<TEMPLATE_SEGMENTATION>", inputimage + ".nii")
-            sed_inplace(output_template, "<TEMPLATE_COREGISTRATION>", inputimage + ".nii")
-            sed_inplace(output_template, "<CALC_SURFACES>", calc_surfaces)
-            sed_inplace(output_template, "<ICV_FILE>", icv_file)
+            sed_inplace(output_template, "<TEMPLATE_SEGMENTATION>", seg_templ)
+            sed_inplace(output_template, "<TEMPLATE_COREGISTRATION>", coreg_templ)
+            sed_inplace(output_template, "<CALC_SURFACES>", str(calc_surfaces))
+            sed_inplace(output_template, "<TIV_FILE>", icv_file)
+            sed_inplace(output_template, "<N_PROC>", str(num_proc))
             sed_inplace(output_start, "X", "1")
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
