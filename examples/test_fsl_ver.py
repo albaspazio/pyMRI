@@ -1,4 +1,4 @@
-from pymri.utility import FslSwitcher
+from utility import FslSwitcher
 import os
 
 if __name__ == "__main__":

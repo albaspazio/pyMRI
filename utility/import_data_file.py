@@ -19,8 +19,29 @@ def read_tabbed_file_with_header(filepath):
         return data
 
 def get_dict_column(dic, colname):
-
     return [d[colname] for d in dic]
+
+def get_filtered_dict_column(dic, colname, filt_col="", filter=None):
+
+    if filt_col != "":
+        res = []
+        if filter is not None and isinstance(filter, list):
+            for d in dic:
+                if d[filt_col] in filter:
+                    res.append(d[colname])
+            return res
+        else:
+            print("Error in get_filtered_dict_column")
+    else:
+        return get_dict_column(dic, colname)
+
+# get a data list and return a \n separated string
+def list2spm_text_column(datalist):
+    datastr = ""
+
+    for r in datalist:
+        datastr = datastr + r + "\n"
+    return datastr
 
 
 # read file, create subjlabel and value columns

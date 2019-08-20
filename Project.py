@@ -46,16 +46,20 @@ class Project:
             if subj["label"] == label:
                 return subj["list"]
 
+    def get_subjects(self, list_label, sess_id=1):
+
+        subjects = self.get_list_by_label(list_label)
+        subjs = []
+        for subj in subjects:
+            subjs.append(Subject(subj, sess_id, self))
+
+        return subjs
+
     # load a list of subjects
     def load_subjects(self, list_label, sess_id=1):
 
-        subjects = self.get_list_by_label(list_label)
-
-        self.subjects = []
-        for subj in subjects:
-            self.subjects.append(Subject(subj, sess_id, self))
-
-        self.nsubj = len(self.subjects)
+        self.subjects   = self.get_subjects(list_label, sess_id)
+        self.nsubj      = len(self.subjects)
         return self.subjects
 
     # get the list of loaded subjects' label

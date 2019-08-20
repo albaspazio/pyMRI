@@ -1,5 +1,7 @@
-from pymri.Global import Global
-from pymri.Project import Project
+import os
+
+from Global import Global
+from Project import Project
 from utility import startup_utilities
 
 if __name__ == "__main__":
@@ -21,8 +23,8 @@ if __name__ == "__main__":
     # ======================================================================================================================
     project     = Project(proj_dir, globaldata, hasT1=True)
     SESS_ID     = 1
-    num_cpu     = 1
-    group_label = "single"
+    num_cpu     = 8
+    group_label = "all"
 
     # ======================================================================================================================
     # PROCESSING
@@ -81,7 +83,7 @@ if __name__ == "__main__":
     # the proj_script/mpr/spm/batch folder must be already in the matlab path
     # it may over-ride both BET and FS skull-stripping results
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("mpr_spm_segment", [{"do_overwrite":True, "do_bet_overwrite":True, "set_origin":False}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("mpr_spm_segment", [{"do_overwrite":True, "do_bet_overwrite":True}], project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM SEGMENTATION INTERACTIVE (SET ORIGIN BEFORE)
@@ -89,9 +91,21 @@ if __name__ == "__main__":
     # it let user set the image origin before proceeding. suitable for some mpr that otherwise do not segment properly.
     # the proj_script/mpr/spm/batch folder must be already in the matlab path
     # it may over-ride both BET and FS skull-stripping results
-    subjects    = project.load_subjects(group_label, SESS_ID)
-    project.run_subjects_methods("mpr_spm_segment", [{"do_overwrite":True, "do_bet_overwrite":False, "set_origin":True}], project.get_subjects_labels(), nthread=1)
+    # subjects    = project.load_subjects(group_label, SESS_ID)
+    # project.run_subjects_methods("mpr_spm_segment", [{"do_overwrite":True, "do_bet_overwrite":False, "set_origin":True}], project.get_subjects_labels(), nthread=1)
 
+
+    # ---------------------------------------------------------------------------------------------------------------------
+    # CAT SEGMENTATION & THICKNESS
+    # ---------------------------------------------------------------------------------------------------------------------
+    # the proj_script/mpr/spm/batch folder must be already in the matlab path
+    # it may over-ride both BET and FS skull-stripping results
+    # default usage analyzes in parallel num_cpu subjects using one CPU for each.
+    segmentation_template   = os.path.join(project.group_analysis_dir, "templates", "com", "mw_com_prior_Age_0070.nii")
+    coregistration_template = os.path.join(project.group_analysis_dir, "templates", "com", "mw_com_Template_1_Age_0070.nii")
+    calc_surfaces           = 1
+    subjects                = project.load_subjects(group_label, SESS_ID)
+    project.run_subjects_methods("mpr_cat_segment", [{"do_overwrite":True, "seg_templ":segmentation_template, "coreg_templ":coregistration_template, "calc_surfaces":calc_surfaces, "num_proc":1}], project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM TISSUE VOLUMES

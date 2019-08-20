@@ -1,15 +1,15 @@
 import os
 import json
 import traceback
-from shutil import copyfile, move
+from shutil import copyfile
 
-from pymri.Global import Global
-from pymri.Project import Project
+from Global import Global
+from Project import Project
 from utility import startup_utilities
 
-from pymri.fsl.utils.run import rrun
+from myfsl.utils.run import rrun
 
-from pymri.utility import import_data_file
+from utility import import_data_file
 
 if __name__ == "__main__":
 

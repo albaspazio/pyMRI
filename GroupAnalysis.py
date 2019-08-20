@@ -2,9 +2,11 @@ import os
 import shutil
 
 from shutil import copyfile, move
-from fsl.utils.run import rrun
+from myfsl.utils.run import rrun
 from utility.fslfun import imcp
 from utility.utilities import sed_inplace
+from utility import import_data_file
+
 import matlab.engine
 import numpy
 
@@ -13,6 +15,7 @@ class GroupAnalysis:
 
     def __init__(self, proj):
         self.project        = proj
+        self._global        = self.project.globaldata
 
 
     # given a subjects list, it creates their template and project all the c1 images to its normalized version
@@ -77,9 +80,161 @@ class GroupAnalysis:
         affine_trasf_mat = os.path.join(self.subjects_list[0].t1_spm_dir, name + "_6_2mni.mat")
         move(affine_trasf_mat, os.path.join(self.project.vbm_dir, name, "flowfields", name + "_6_2mni.mat"))
 
-
     def create_vbm_spm_stats(self, name, subjs, input_data_file, sess_id=1, spm_template="spm_dartel_createtemplate_normalize_template_job.m"):
         pass
+
+    # params to replace: <STATS_DIR>, <GROUPS_IMAGES>, <COV1_LIST>, <COV1_NAME>
+    # <GROUPS_IMAGES> must be something like :
+    #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(1).scans = {  'xxx'
+    #                                                                               'yyy'
+    #                                                                            };
+    #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
+    def create_spm_stats_1Wanova_1cov(self, statsdir, groups_labels, cov_name, data_file="data.dat", sess_id=1, spm_template_name="cat_thickness_stats_1Wanova_template_job.m"):
+
+        # set dirs
+        spm_script_dir = os.path.join(self.project.script_dir, "mpr", "spm")
+        out_batch_dir = os.path.join(spm_script_dir, "batch")
+
+        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+        in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name)
+
+        out_batch_start = os.path.join(out_batch_dir, "create_cat_thickness_1Wanova_1cov_stats_1_start.m")
+        out_batch_job = os.path.join(out_batch_dir, "create_cat_thickness_1Wanova_1cov_stats_1_job.m")
+
+        # compose images string
+        cells_images = ""
+        cnt = 0
+        for grp in groups_labels:
+            cnt = cnt + 1
+            cells_images = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.anova.icell("+str(cnt) + ").scans = "
+
+            subjs = self.project.get_subjects(grp)
+
+            grp1_images="{\r"
+            for subj in subjs:
+                grp1_images  = grp1_images + "\'" + subj.t1_cat_resampled_surface + "\'\r"
+            grp1_images    = grp1_images + "\r};"
+
+            cells_images = cells_images + grp1_images + "\r"
+
+        # get cov values
+        datafile = os.path.join(self.project.script_dir, "data.dat")
+        data = import_data_file.read_tabbed_file_with_header(datafile)
+
+        cov = []
+        for grp in groups_labels:
+            cov = cov + import_data_file.get_filtered_dict_column(data, "age", "subj", self.project.get_list_by_label(grp))
+
+        str_cov = "\n" + import_data_file.list2spm_text_column(cov) + "\n"
+
+        # set job file
+        copyfile(in_batch_job, out_batch_job)
+        sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
+
+        sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
+        sed_inplace(out_batch_job, "<COV1_NAME>", cov_name)
+        sed_inplace(out_batch_job, "<COV1_LIST>", str_cov)
+
+        # set start file
+        copyfile(in_batch_start, out_batch_start)
+        sed_inplace(out_batch_start, "X", "1")
+        sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
+
+        eng = matlab.engine.start_matlab()
+        print("running SPM batch template: " + statsdir)
+        eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
+        eng.quit()
+
+    # params to replace: <STATS_DIR>, <GROUP1_IMAGES>, <GROUP2_IMAGES>, <COV1_LIST>, <COV1_NAME>
+    # GROUPx_IMAGES are :  'mpr/anat/cat_proc/surf/s15.mesh.thickness.resampled_32k.T1_XXXXXXXXXX.gii,1'
+    def create_cat_thickness_2samplesttest_1cov_stats_1(self, statsdir, grp1_label, grp2_label, cov_name, data_file="data.dat", sess_id=1, spm_template_name="cat_thickness_stats_2samples_ttest_template_job.m"):
+
+        # set dirs
+        spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
+        out_batch_dir           = os.path.join(spm_script_dir, "batch")
+        
+        in_batch_start         = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+        in_batch_job           = os.path.join(self._global.spm_templates_dir, spm_template_name)
+
+        out_batch_start        = os.path.join(out_batch_dir, "create_cat_thickness_ttest_1cov_stats_1_start.m")
+        out_batch_job          = os.path.join(out_batch_dir, "create_cat_thickness_ttest_1cov_stats_1_job.m")
+        
+        # get subjects lists
+        subjs1                  = self.project.get_subjects(grp1_label)
+        subjs2                  = self.project.get_subjects(grp2_label)
+
+        # compose images string
+        grp1_images="{\r"
+        for subj in subjs1:
+            grp1_images  = grp1_images + "\'" + subj.t1_cat_resampled_surface + "\'\r"
+        grp1_images    = grp1_images + "\r}"
+
+        grp2_images="{\r"
+        for subj in subjs2:
+            grp2_images  = grp2_images + "\'" + subj.t1_cat_resampled_surface + "\'\r"
+        grp2_images    = grp2_images + "\r}"
+
+        # get cov values
+        datafile = os.path.join(self.project.script_dir, "data.dat")
+        data = import_data_file.read_tabbed_file_with_header(datafile)
+
+        cov1 = import_data_file.get_filtered_dict_column(data, "age", "subj", self.project.get_list_by_label(grp1_label))
+        cov2 = import_data_file.get_filtered_dict_column(data, "age", "subj", self.project.get_list_by_label(grp2_label))
+
+        cov1 = cov1 + cov2
+        str_cov = "\n" + import_data_file.list2spm_text_column(cov1) + "\n"
+
+        # set job file
+        copyfile(in_batch_job, out_batch_job)
+        sed_inplace(out_batch_job, "<GROUP1_IMAGES>", grp1_images)
+        sed_inplace(out_batch_job, "<GROUP2_IMAGES>", grp2_images)
+        sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
+        sed_inplace(out_batch_job, "<COV1_NAME>", cov_name)
+        sed_inplace(out_batch_job, "<COV1_LIST>", str_cov)
+
+        # set start file
+        copyfile(in_batch_start, out_batch_start)
+        sed_inplace(out_batch_start, "X", "1")
+        sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
+
+        eng = matlab.engine.start_matlab()
+        print("running SPM batch template: " + statsdir)
+        eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
+        eng.quit()
+
+        return os.path.join(statsdir, "SPM.mat")
+
+    def create_spm_2samplesttest_contrasts_results(self, spmmat, c1_name="A>B", c2_name="B>A", spm_template_name="spm_stats_2samplesttest_contrasts_results_template_job.m", mult_corr="FWE", pvalue=0.05, cluster_extend=0):
+
+        # set dirs
+        spm_script_dir = os.path.join(self.project.script_dir, "mpr", "spm")
+        out_batch_dir = os.path.join(spm_script_dir, "batch")
+
+        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+        in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name)
+
+        out_batch_start = os.path.join(out_batch_dir, "spm_stats_2samplesttest_contrasts_results_start.m")
+        out_batch_job = os.path.join(out_batch_dir, "spm_stats_2samplesttest_contrasts_results_job.m")
+
+        # set job file
+        copyfile(in_batch_job, out_batch_job)
+        sed_inplace(out_batch_job, "<SPM_MAT>", spmmat)
+        sed_inplace(out_batch_job, "<C1_NAME>", c1_name)
+        sed_inplace(out_batch_job, "<C2_NAME>", c2_name)
+        sed_inplace(out_batch_job, "<MULT_CORR>", mult_corr)
+        sed_inplace(out_batch_job, "<PVALUE>", str(pvalue))
+        sed_inplace(out_batch_job, "<CLUSTER_EXTEND>", str(cluster_extend))
+
+        # set start file
+        copyfile(in_batch_start, out_batch_start)
+        sed_inplace(out_batch_start, "X", "1")
+        sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
+
+        eng = matlab.engine.start_matlab()
+        print("running SPM batch template: " + spmmat)
+        eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
+        eng.quit()
+
 
     def create_fslvbm_from_spm(self, subjs, smw_folder, vbmfsl_folder):
 

@@ -3,7 +3,7 @@
 from utility.fslfun import imtest, immv, imcp, imrm, quick_smooth, run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img, remove_ext, mass_images_move, is_image, mysplittext, imgname
 from utility.utilities import sed_inplace, gunzip
 
-from shutil import copyfile
+from shutil import copyfile, move
 from myfsl.utils.run import rrun
 import matlab.engine
 import datetime
@@ -74,6 +74,9 @@ class Subject:
         self.t1_segment_wm_ero_path     = os.path.join(self.roi_t1_dir, "mask_t1_wmseg4Nuisance")
         self.t1_segment_csf_ero_path    = os.path.join(self.roi_t1_dir, "mask_t1_csfseg4Nuisance")
 
+        self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
+        self.t1_cat_resampled_surface   = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
+
         self.dti_image_label            = self.label + "- dti"
         self.dti_EC_image_label         = self.label + "-dti_ec"
         self.dti_rotated_bvec           = self.label + "-dti_rotated.bvec"
@@ -139,6 +142,10 @@ class Subject:
         self.wb_image_label = self.label + "-wb_epi"
         self.wb_data        = os.path.join(self.wb_dir, self.wb_image_label)
         self.wb_brain_data  = os.path.join(self.wb_dir, self.wb_image_label + "_brain")
+
+        self.epi_image_label         = self.label + "-epi"
+        self.epi_dir                 = os.path.join(self.dir, "epi")
+        self.epi_data                = os.path.join(self.epi_dir, self.epi_image_label)
 
         self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
 
@@ -1029,33 +1036,6 @@ class Subject:
             print("running SPM batch template: " + output_template, file=log)
             eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
             eng.quit()
-            #
-            # # create brainmask (WM+GM) and skullstrippedmask (WM+GM+CSF)
-            # c1img               = os.path.join(anatdir, "spm_proc", "c1T1_" + self.label + ".nii")
-            # c2img               = os.path.join(anatdir, "spm_proc", "c2T1_" + self.label + ".nii")
-            #
-            # rrun("fslmaths " + c1img + " -add " + c2img + " -thr 0.1 -fillh " + brain_mask, logFile=log)
-            #
-            # # this codes have two aims:
-            # # 1) it resets like in the original image the dt header parameters that spm set to 0.
-            # #    otherwise it fails some operations like fnirt as it sees the mask and the brain data of different dimensions
-            # # 2) changing image origin in spm, changes how fsleyes display the image. while, masking in this ways, everything goes right
-            # rrun("fslmaths " + srcinputimage + ".nii.gz" + " -mas " + brain_mask + " -bin " + brain_mask)
-            #
-            # if add_bet_mask is True:
-            #
-            #     if imtest(os.path.join(self.t1_anat_dir, "T1_biascorr_brain_mask")) is True:
-            #         rrun("fslmaths " + brain_mask + " -add " + os.path.join(self.t1_anat_dir, "T1_biascorr_brain_mask") + " -bin " + brain_mask)
-            #     elif imtest(self.t1_brain_data_mask) is True:
-            #         rrun("fslmaths " + brain_mask + " -add " + self.t1_brain_data_mask + " " + brain_mask)
-            #     else:
-            #         print("warning in mpr_spm_segment: no other bet mask to add to spm one")
-            #
-            # if do_bet_overwrite is True:
-            #
-            #     # copy SPM mask and use it to mask T1_biascorr
-            #     imcp(brain_mask, self.t1_brain_data_mask, logFile=log)
-            #     rrun("fslmaths " + inputimage + " -mas " + brain_mask + " " + self.t1_brain_data, logFile=log)
 
             imrm([inputimage + ".nii"])
             log.close()
@@ -1064,6 +1044,8 @@ class Subject:
             traceback.print_exc()
             log.close()
             print(e)
+
+
 
 
     def mpr_spm_tissue_volumes(self,
@@ -2418,7 +2400,7 @@ class Subject:
                     os.remove(img)
                 else:
                     dest_file = os.path.join(self.t1_dir, self.t1_image_label + fullext)
-                    os.rename(img, dest_file)
+                    move(img, dest_file)
 
 
             if cleanup == 1:
@@ -2430,6 +2412,54 @@ class Subject:
         except Exception as e:
             traceback.print_exc()
             print(e)
+
+    def epi2nifti(self, extpath, cleanup=0, session_label=""):
+
+        try:
+
+            if "." in extpath:
+                print("ERROR : input path " + str(extpath) + " cannot contain dots !!!")
+                return
+
+            rrun("dcm2nii " + extpath)      # it returns :. usefs coXXXXXX, oXXXXXXX and XXXXXXX images
+
+            files = glob.glob(os.path.join(extpath, "*"))
+
+            converted_images = []
+            original_images = []
+
+            for f in files:
+                if is_image(f, self.DCM2NII_IMAGE_FORMATS) is True:
+                    converted_images.append(f)
+                else:
+                    original_images.append(f)
+
+            for img in converted_images:
+                name    = os.path.basename(img)
+                fullext = mysplittext(name)[1]
+
+                dest_file = os.path.join(self.epi_dir, self.epi_image_label + session_label + fullext)
+                move(img, dest_file)
+
+
+            if cleanup == 1:
+                for img in original_images:
+                    os.remove(img)
+            elif cleanup == 2 :
+                os.rmdir(extpath)
+
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
+
+
+    def mri_merger(self, input_files, outputname, dimension="-t"):
+
+        cur_dir = os.path.curdir
+        os.chdir(self.epi_dir)
+
+        rrun("fslmerge " + dimension + " " + outputname + " " + " ".join(input_files))
+        os.chdir(cur_dir)
 
 
 # ==================================================================================================================================================
