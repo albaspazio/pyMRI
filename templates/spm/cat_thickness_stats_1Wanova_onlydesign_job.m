@@ -9,10 +9,7 @@ matlabbatch{1}.spm.stats.factorial_design.des.anova.dept = 0;
 matlabbatch{1}.spm.stats.factorial_design.des.anova.variance = 1;
 matlabbatch{1}.spm.stats.factorial_design.des.anova.gmsca = 0;
 matlabbatch{1}.spm.stats.factorial_design.des.anova.ancova = 0;
-matlabbatch{1}.spm.stats.factorial_design.cov.c = [<COV1_LIST>];
-matlabbatch{1}.spm.stats.factorial_design.cov.cname = '<COV1_NAME>';
-matlabbatch{1}.spm.stats.factorial_design.cov.iCFI = 1;
-matlabbatch{1}.spm.stats.factorial_design.cov.iCC = 1;
+<COV_STRING>
 matlabbatch{1}.spm.stats.factorial_design.multi_cov = struct('files', {}, 'iCFI', {}, 'iCC', {});
 matlabbatch{1}.spm.stats.factorial_design.masking.tm.tm_none = 1;
 matlabbatch{1}.spm.stats.factorial_design.masking.im = 1;

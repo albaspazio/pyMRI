@@ -812,7 +812,7 @@ class Subject:
                         do_bet_overwrite=False,
                         add_bet_mask=True,
                         set_origin=False,
-                        spm_template_name="spm_segment_tissuevolume_template_job.m"
+                        spm_template_name="spm_segment_tissuevolume_job.m"
                         ):
 
         # define placeholder variables for input dir and image name
@@ -952,7 +952,7 @@ class Subject:
                         coreg_templ="",
                         calc_surfaces=0,
                         num_proc=1,
-                        spm_template_name="cat_segment_customizedtemplate_tiv_smooth_template_job.m"
+                        spm_template_name="cat_segment_customizedtemplate_tiv_smooth_job.m"
                         ):
 
         # define placeholder variables for input dir and image name
