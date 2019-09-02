@@ -146,6 +146,8 @@ class Subject:
         self.epi_image_label         = self.label + "-epi"
         self.epi_dir                 = os.path.join(self.dir, "epi")
         self.epi_data                = os.path.join(self.epi_dir, self.epi_image_label)
+        self.epi_pe_data             = os.path.join(self.epi_dir, self.epi_image_label + "_pe")
+        self.epi_acq_params          = os.path.join(self.epi_dir, "acqparams.txt")
 
         self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
 
@@ -1549,6 +1551,110 @@ class Subject:
     # ==================================================================================================================================================
     # FUNCTIONAL
     # ==================================================================================================================================================
+
+
+
+    # assumes opposite PE direction sequence is called label-epi_pe and acquisition parameters
+    # - epi_ref_vol/pe_ref_vol =-1 means use the middle volume
+    # 1: get number of volumes of epi image in main phase-encoding direction and extract middle volume (add "_ref")
+    # 1': same with epi image in opposite phase-encoding dir (epi_pe) (add "_ref")
+    # 2: merge the 2 ref volumes into one (add "_ref_merged")
+    # 3: run topup using ref_merged, acq params; used_templates: "_topup"
+    # 4: applytopup --> choose images whose distortion we want to correct
+
+    #
+    def epi_get_closest_volume(self, ref_image_pe="", ref_volume_pe=-1, spm_template_name="realign_estimate_to_given_vol"):
+        # will calculate the closest vol from self.epi_data to ref_image
+        # Steps:
+        # 0: get epi_pe central volume + unzip so SPM can use it
+        # 1: merge all the sessions into one file ("_merged-sessions") + unzip so SPM can use it
+        # 2: align all the volumes within merged file to epi_pe central volume (SPM12-Realign:Estimate)
+        # 3: calculate the "less motion corrected" volume from the merged file with respect to the epi-pe in terms of rotation around x, y and z axis).
+
+        if ref_image_pe is "":
+            ref_image_pe = self.epi_pe_data
+
+        if ref_volume_pe == -1:
+            # 0
+            epi_pe_nvols = int(rrun('fslnvols ' + ref_image_pe + '.nii.gz'))
+            ref_volume_pe = epi_pe_nvols // 2
+
+        os.system('gzip -d -k ' + ref_image_pe + '.nii.gz')
+        os.system('gzip -d -k ' + self.epi_data + '.nii.gz')
+
+        # 2.1: select the input spm template obtained from batch (we defined it in spm_template_name) + its run file …
+
+        # set dirs
+        spm_script_dir = os.path.join(self.project.script_dir, "mpr", "spm")
+        out_batch_dir = os.path.join(spm_script_dir, "batch")
+
+        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+        in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job_template.m')
+
+        # 2.1' … and establish location of output spm template + output run file:
+        out_batch_start = os.path.join(out_batch_dir, spm_template_name + self.label + '_start.m')
+        out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
+
+        # 2.2: create "output spm template" by copying "input spm template" + changing general tags for our specific ones…
+        copyfile(in_batch_job, out_batch_job)
+        sed_inplace(out_batch_job, '<REF_IMAGE,refvol>', ref_image_pe + '.nii,' + str(ref_volume_pe + 1))  # <-- i added 1 to ref_volume_pe bc spm counts the volumes from 1, not from 0 as FSL
+
+        # 2.2' …now we want to select all the volumes from the epi file and insert that into the template:
+        epi_nvols = int(rrun('fslnvols ' + self.epi_data + '.nii'))
+        epi_path_name = self.epi_data + '.nii'
+        epi_all_volumes = ''
+        for i in range(1, epi_nvols + 1):
+            epi_volume = epi_path_name + ',' + str(i) + "'"
+            epi_all_volumes = epi_all_volumes + epi_volume + '\n' + "'"
+
+        sed_inplace(out_batch_job, '<TO_ALIGN_IMAGES,1-n_vols>', epi_all_volumes)
+
+        # 2.3: run job --> create "output run spm template" by analogue process + call matlab and run it:
+        copyfile(in_batch_start, out_batch_start)
+        sed_inplace(out_batch_start, 'X', '1')
+        sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
+
+        eng = matlab.engine.start_matlab()
+        print("running SPM batch template: " + out_batch_start) #, file=log)
+        eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
+
+        # 3: call matlab function that calculates best volume:
+        best_vol = eng.least_mov(os.path.join(self.epi_dir, 'rp_' + self.label + '-epi_pe.txt'))
+        eng.quit()
+
+        return best_vol
+
+    def epi_correct(self, motionfirst=True, epi_ref_vol=-1, ref_image_pe="", ref_volume_pe=-1):
+
+        imcp(self.epi_data, self.epi_data + "_distorted") # this will refer to a file with all the sessions merged <--------!!
+
+        #1
+        if ref_image_pe is "":
+            ref_image_pe = self.epi_pe_data
+
+        if ref_volume_pe == -1:
+            nvols_pe = rrun("fslnvols " + ref_image_pe + '.nii.gz')
+            central_vol_pe = int(nvols_pe) // 2
+        else:
+            central_vol_pe = ref_volume_pe
+
+        rrun("fslselectvols -i " + ref_image_pe + " -o " + ref_image_pe + "_ref" + " --vols=" + str(central_vol_pe))
+
+        #1'
+        if epi_ref_vol == -1:
+            central_vol = self.epi_get_closest_volume(ref_image_pe, ref_volume_pe)
+        else:
+            central_vol = epi_ref_vol
+
+        rrun("fslselectvols -i " + self.epi_data + " -o " + self.epi_data + "_ref" + " --vols=" + str(central_vol))
+
+        #2
+        rrun("fslmerge -t " + self.epi_data + "_PE_ref_merged" + " " + self.epi_data + "_ref" + " " + ref_image_pe + "_ref")
+        # 3 —assumes merged epi volumes appear in the same order as acqparams.txt (--datain)
+        rrun("topup --imain=" + self.epi_data + "_PE_ref_merged" + " --datain=" + self.epi_acq_params + " --config=b02b0.cnf --out=" + self.epi_data + "_PE_ref_topup" + " --iout=" + self.epi_data + "_PE_ref_topup_corrected")
+        # 4 —again these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
+        rrun("applytopup --imain=" + self.epi_data + " --topup=" + self.epi_data + "_PE_ref_topup" + " --datain=" + self.epi_acq_params + " --inindex=1 --out=" + self.epi_data)
+
 
     def epi_resting_nuisance(self, hpfsec=100):
         pass
