@@ -5,6 +5,7 @@ from utility.utilities import sed_inplace, gunzip
 
 from shutil import copyfile, move
 from myfsl.utils.run import rrun
+from numpy import arange, concatenate, array
 import matlab.engine
 import datetime
 import traceback
@@ -1585,7 +1586,7 @@ class Subject:
         # 2.1: select the input spm template obtained from batch (we defined it in spm_template_name) + its run file …
 
         # set dirs
-        spm_script_dir = os.path.join(self.project.script_dir, "mpr", "spm")
+        spm_script_dir = os.path.join(self.project.script_dir, "epi", "spm")
         out_batch_dir = os.path.join(spm_script_dir, "batch")
 
         in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
@@ -1655,6 +1656,87 @@ class Subject:
         # 4 —again these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
         rrun("applytopup --imain=" + self.epi_data + " --topup=" + self.epi_data + "_PE_ref_topup" + " --datain=" + self.epi_acq_params + " --inindex=1 --out=" + self.epi_data)
 
+    def epi_get_slicetiming_params(self, nslices, scheme = 1, params=None):
+
+        # =============Sequential ascending: 1=============
+        if scheme == 1:
+            params = arange(1, nslices + 1)
+
+        # =============Sequential descending: 2=============
+        elif scheme == 2:
+            params = arange(nslices, 0, -1)
+
+        # =============Interleaved ascending: 3=============
+        elif scheme == 3:
+            params = concatenate((arange(1, nslices + 1, 2), arange(2, nslices + 1, 2)))
+
+        # =============Interleaved descending: 4=============
+        elif scheme == 4:
+            params = concatenate((arange(nslices, 0, -2), arange(nslices - 1, 0, -2)))
+
+        elif scheme == 0:
+            if params is None:
+                print("error")
+                return
+            else:
+                params = array(params)
+
+        str_params = [ str(p) for p in params]
+        return str_params
+
+
+
+    def epi_fmri_preprocessing(self , num_slices, TR , TA=-1 , acq_scheme=0, ref_slice = -1 , slice_timing = None, spm_template_name='spm_fmri_preprocessing'):
+        #default params:
+        #TA - if not otherwise indicated, it assumes the acquisition is continuous and TA = TR - (TR/num slices)
+        if TA == -1:
+            TA = TR - (TR/num_slices)
+
+        #takes central slice as a reference
+        if ref_slice == -1:
+             ref_slice = num_slices // 2 + 1
+
+        #
+        if slice_timing == None:
+            slice_timing = self.epi_get_slicetiming_params(num_slices,acq_scheme, slice_timing)
+        else:
+            slice_timing = array(slice_timing)
+
+        #set dirs
+        in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
+        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+
+        spm_script_dir = os.path.join(self.project.script_dir, "epi", "spm")
+        out_batch_dir = os.path.join(spm_script_dir, "batch")
+
+        out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
+        out_batch_start = os.path.join(out_batch_dir, spm_template_name + self.label + '_start.m')
+
+        #substitute for all the volumes + rest of params
+        epi_nvols = int(rrun('fslnvols ' + self.epi_data + '.nii.gz'))
+        epi_path_name = self.epi_data + '.nii'
+        epi_all_volumes = ''
+        for i in range(1, epi_nvols + 1):
+            epi_volume = epi_path_name + ',' + str(i) + "'"
+            epi_all_volumes = epi_all_volumes + epi_volume + '\n' + "'"
+
+        copyfile(in_batch_job, out_batch_job)
+        sed_inplace(out_batch_job, '<FMRI_IMAGES>', epi_all_volumes)
+        sed_inplace(out_batch_job, '<NUM_SLICES>', str(num_slices))
+        sed_inplace(out_batch_job, '<TR_VALUE>', str(TR))
+        sed_inplace(out_batch_job, '<TA_VALUE>', str(TA))
+        sed_inplace(out_batch_job, '<SLICETIMING_PARAMS>', ' '.join(slice_timing))
+        sed_inplace(out_batch_job, '<REF_SLICE>', str(ref_slice))
+        sed_inplace(out_batch_job, '<T1_IMAGE>', self.t1_data + '.nii,1')
+
+        copyfile(in_batch_start, out_batch_start)
+        sed_inplace(out_batch_start, 'X', '1')
+        sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
+
+        eng = matlab.engine.start_matlab()
+        print("running SPM batch template: " + out_batch_start)  # , file=log)
+        eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
+        eng.quit()
 
     def epi_resting_nuisance(self, hpfsec=100):
         pass
