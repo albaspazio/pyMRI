@@ -1717,7 +1717,7 @@ class Subject:
         if slice_timing == None:
             slice_timing = self.epi_get_slicetiming_params(num_slices,acq_scheme, slice_timing)
         else:
-            slice_timing = array(slice_timing)
+            slice_timing = [str(p) for p in slice_timing]
 
         #set dirs
         in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
