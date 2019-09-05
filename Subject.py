@@ -1564,7 +1564,7 @@ class Subject:
     # 4: applytopup --> choose images whose distortion we want to correct
 
     #
-    def epi_get_closest_volume(self, ref_image_pe="", ref_volume_pe=-1, spm_template_name="realign_estimate_to_given_vol"):
+    def epi_get_closest_volume(self, ref_image_pe="", ref_volume_pe=-1, spm_template_name="spm_fmri_realign_estimate_to_given_vol"):
         # will calculate the closest vol from self.epi_data to ref_image
         # Steps:
         # 0: get epi_pe central volume + unzip so SPM can use it
@@ -1590,11 +1590,13 @@ class Subject:
         out_batch_dir = os.path.join(spm_script_dir, "batch")
 
         in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-        in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job_template.m')
+        in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
 
         # 2.1' … and establish location of output spm template + output run file:
         out_batch_start = os.path.join(out_batch_dir, spm_template_name + self.label + '_start.m')
         out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
+
+        os.makedirs(out_batch_dir, exist_ok=True)
 
         # 2.2: create "output spm template" by copying "input spm template" + changing general tags for our specific ones…
         copyfile(in_batch_job, out_batch_job)
