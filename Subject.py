@@ -1684,6 +1684,23 @@ class Subject:
         str_params = [ str(p) for p in params]
         return str_params
 
+    def epi_remove_slices(self, numslice2remove=1, whichslices2remove="updown", remove_dimension="axial"):
+
+        # dim_str = ""
+        # if remove_dimension == "axial":
+        #     dim_str = " -1 -1 "
+        nslices = 36
+        imcp(self.epi_data, self.epi_data + "full")
+        # rrun('fslroi ' + self.epi_data + " " + self.epi_data + " -1 -1  1 35")
+        rrun('fslroi ' + self.epi_data + " " + self.epi_data + " -1 -1  0 34")
+
+    def epi_merge(self, premerge_labels):
+
+        seq_string = " "
+        for seq in premerge_labels:
+            seq_string = seq_string + self.epi_data + "_" + seq + " "
+
+        rrun('fslmerge -t ' + self.epi_data + " " + seq_string)
 
 
     def epi_fmri_preprocessing(self , num_slices, TR , TA=-1 , acq_scheme=0, ref_slice = -1 , slice_timing = None, spm_template_name='spm_fmri_preprocessing'):
