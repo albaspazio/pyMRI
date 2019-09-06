@@ -1579,12 +1579,19 @@ class Subject:
                 print ("Error in epi_spm_motioncorrection, given ref_image image is not valid....exiting")
                 return
 
+        if os.path.isfile(ref_image + ".nii.gz") and not os.path.isfile(ref_image + ".nii"):
+            gunzip(ref_image + ".nii.gz", ref_image + ".nii")
+
+
         if epi2correct is None:
             epi2correct = self.epi_data
         else:
             if imtest(epi2correct) is False:
                 print ("Error in epi_spm_motioncorrection, given epi2correct image is not valid....exiting")
                 return
+
+        if os.path.isfile(epi2correct + ".nii.gz") and not os.path.isfile(epi2correct + ".nii"):
+            gunzip(epi2correct + ".nii.gz", epi2correct + ".nii")
 
         # 2.1: select the input spm template obtained from batch (we defined it in spm_template_name) + its run file …
 
@@ -1695,6 +1702,8 @@ class Subject:
 
         # 5 -motion correction using central_vol
         self.epi_spm_motioncorrection(central_vol)
+        os.remove(self.epi_data + ".nii.gz")            # remove old with-motion nii.gz
+        os.system('gzip ' + self.epi_data + ".nii")     # gzip the motion corrected file
 
         # 6 —again these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
         rrun("applytopup --imain=" + self.epi_data + " --topup=" + self.epi_data + "_PE_ref_topup" + " --datain=" + self.epi_acq_params + " --inindex=1 --out=" + self.epi_data)
