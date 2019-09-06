@@ -1706,7 +1706,7 @@ class Subject:
         os.system('gzip ' + self.epi_data + ".nii")     # gzip the motion corrected file
 
         # 6 —again these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
-        rrun("applytopup --imain=" + self.epi_data + " --topup=" + self.epi_data + "_PE_ref_topup" + " --datain=" + self.epi_acq_params + " --inindex=1 --out=" + self.epi_data)
+        rrun("applytopup --imain=" + self.epi_data + " --topup=" + self.epi_data + "_PE_ref_topup" + " --datain=" + self.epi_acq_params + " --inindex=1 --method=jac --interp=spline --out=" + self.epi_data)
 
     def epi_get_slicetiming_params(self, nslices, scheme = 1, params=None):
 
