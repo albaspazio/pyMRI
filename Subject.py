@@ -1,16 +1,29 @@
-
-
-from utility.fslfun import imtest, immv, imcp, imrm, quick_smooth, run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img, remove_ext, mass_images_move, is_image, mysplittext, imgname
-from utility.utilities import sed_inplace, gunzip
-
-from shutil import copyfile, move
-from myfsl.utils.run import rrun
-from numpy import arange, concatenate, array
-import matlab.engine
 import datetime
 import traceback
 import glob
 import os
+
+from shutil import copyfile, move
+from numpy import arange, concatenate, array
+
+from utility.fslfun import run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img
+from utility.manage_images import imtest, immv, imcp, imrm, quick_smooth, remove_ext, mass_images_move, is_image, mysplittext, imgname
+from utility.utilities import sed_inplace, gunzip
+from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
+from myfsl.utils.run import rrun
+import datetime
+import traceback
+import glob
+import os
+
+from shutil import copyfile, move, rmtree
+from numpy import arange, concatenate, array
+
+from utility.fslfun import run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img
+from utility.manage_images import imtest, immv, imcp, imrm, quick_smooth, remove_ext, mass_images_move, is_image, mysplittext, imgname
+from utility.utilities import sed_inplace, gunzip
+from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
+from myfsl.utils.run import rrun
 
 
 class Subject:
@@ -877,10 +890,11 @@ class Subject:
             sed_inplace(output_start, "X", "1")
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
-            eng = matlab.engine.start_matlab()
-            print("running SPM batch template: " + output_template, file=log)
-            eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
-            eng.quit()
+            call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], log)
+            # eng = matlab.engine.start_matlab()
+            # print("running SPM batch template: " + output_template, file=log)
+            # eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
+            # eng.quit()
 
             # create brainmask (WM+GM) and skullstrippedmask (WM+GM+CSF)
             c1img               = os.path.join(anatdir, "spm_proc", "c1T1_" + self.label + ".nii")
@@ -1035,10 +1049,11 @@ class Subject:
             sed_inplace(output_start, "X", "1")
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
-            eng = matlab.engine.start_matlab()
-            print("running SPM batch template: " + output_template, file=log)
-            eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
-            eng.quit()
+            call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], log)
+            # eng = matlab.engine.start_matlab()
+            # print("running SPM batch template: " + output_template, file=log)
+            # eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
+            # eng.quit()
 
             imrm([inputimage + ".nii"])
             log.close()
@@ -1075,10 +1090,11 @@ class Subject:
         sed_inplace(output_start, "X", "1")
         sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
-        eng = matlab.engine.start_matlab()
-        print("running SPM batch template: " + output_template)
-        eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
-        eng.quit()
+        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], log)
+        # eng = matlab.engine.start_matlab()
+        # print("running SPM batch template: " + output_template)
+        # eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
+        # eng.quit()
 
 
     def mpr_postbet(self,
@@ -1501,7 +1517,7 @@ class Subject:
             imrm([self.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz"])
 
     # copy bet, spm and fs extracted brain to given directory
-    def compare_brain_extraction(self, tempdir, backtransfparams=" RL PA IS "):
+    def mpr_compare_brain_extraction(self, tempdir, backtransfparams=" RL PA IS "):
 
         # bet
         imcp(os.path.join(self.t1_anat_dir, "T1_biascorr_brain"), os.path.join(tempdir, self.label + "_bet.nii.gz"))
@@ -1553,18 +1569,61 @@ class Subject:
     # FUNCTIONAL
     # ==================================================================================================================================================
 
+    # coregister epi (or a given image) to given volume of given image (usually the epi itself, the pepolar in case of distortion correction process)
+    def epi_spm_motioncorrection(self, ref_vol=1, ref_image=None, epi2correct=None, spm_template_name="spm_fmri_realign_estimate_to_given_vol"):
 
+        if ref_image is None:
+            ref_image = self.epi_data
+        else:
+            if imtest(ref_image) is False:
+                print ("Error in epi_spm_motioncorrection, given ref_image image is not valid....exiting")
+                return
 
-    # assumes opposite PE direction sequence is called label-epi_pe and acquisition parameters
-    # - epi_ref_vol/pe_ref_vol =-1 means use the middle volume
-    # 1: get number of volumes of epi image in main phase-encoding direction and extract middle volume (add "_ref")
-    # 1': same with epi image in opposite phase-encoding dir (epi_pe) (add "_ref")
-    # 2: merge the 2 ref volumes into one (add "_ref_merged")
-    # 3: run topup using ref_merged, acq params; used_templates: "_topup"
-    # 4: applytopup --> choose images whose distortion we want to correct
+        if epi2correct is None:
+            epi2correct = self.epi_data
+        else:
+            if imtest(epi2correct) is False:
+                print ("Error in epi_spm_motioncorrection, given epi2correct image is not valid....exiting")
+                return
+
+        # 2.1: select the input spm template obtained from batch (we defined it in spm_template_name) + its run file …
+
+        # set dirs
+        spm_script_dir  = os.path.join(self.project.script_dir, "epi", "spm")
+        out_batch_dir   = os.path.join(spm_script_dir, "batch")
+
+        in_batch_start  = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+        in_batch_job    = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
+
+        # 2.1' … and establish location of output spm template + output run file:
+        out_batch_start = os.path.join(out_batch_dir, spm_template_name + self.label + '_start.m')
+        out_batch_job   = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
+
+        os.makedirs(out_batch_dir, exist_ok=True)
+
+        # 2.2: create "output spm template" by copying "input spm template" + changing general tags for our specific ones…
+        copyfile(in_batch_job, out_batch_job)
+        sed_inplace(out_batch_job, '<REF_IMAGE,refvol>', ref_image + '.nii,' + str(ref_vol + 1))  # <-- i added 1 to ref_volume_pe bc spm counts the volumes from 1, not from 0 as FSL
+
+        # 2.2' …now we want to select all the volumes from the epi file and insert that into the template:
+        epi_nvols = int(rrun('fslnvols ' + epi2correct + '.nii'))
+        epi_path_name = epi2correct + '.nii'
+        epi_all_volumes = ''
+        for i in range(1, epi_nvols + 1):
+            epi_volume = epi_path_name + ',' + str(i) + "'"
+            epi_all_volumes = epi_all_volumes + epi_volume + '\n' + "'"
+
+        sed_inplace(out_batch_job, '<TO_ALIGN_IMAGES,1-n_vols>', epi_all_volumes)
+
+        # 2.3: run job --> create "output run spm template" by analogue process + call matlab and run it:
+        copyfile(in_batch_start, out_batch_start)
+        sed_inplace(out_batch_start, 'X', '1')
+        sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir], endengine=False)
+
 
     #
-    def epi_get_closest_volume(self, ref_image_pe="", ref_volume_pe=-1, spm_template_name="spm_fmri_realign_estimate_to_given_vol"):
+    def epi_get_closest_volume(self, ref_image_pe="", ref_volume_pe=-1):
         # will calculate the closest vol from self.epi_data to ref_image
         # Steps:
         # 0: get epi_pe central volume + unzip so SPM can use it
@@ -1580,58 +1639,36 @@ class Subject:
             epi_pe_nvols = int(rrun('fslnvols ' + ref_image_pe + '.nii.gz'))
             ref_volume_pe = epi_pe_nvols // 2
 
-        os.system('gzip -d -k ' + ref_image_pe + '.nii.gz')
-        os.system('gzip -d -k ' + self.epi_data + '.nii.gz')
-
-        # 2.1: select the input spm template obtained from batch (we defined it in spm_template_name) + its run file …
-
-        # set dirs
-        spm_script_dir = os.path.join(self.project.script_dir, "epi", "spm")
-        out_batch_dir = os.path.join(spm_script_dir, "batch")
-
-        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-        in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
-
-        # 2.1' … and establish location of output spm template + output run file:
-        out_batch_start = os.path.join(out_batch_dir, spm_template_name + self.label + '_start.m')
-        out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
-
-        os.makedirs(out_batch_dir, exist_ok=True)
-
-        # 2.2: create "output spm template" by copying "input spm template" + changing general tags for our specific ones…
-        copyfile(in_batch_job, out_batch_job)
-        sed_inplace(out_batch_job, '<REF_IMAGE,refvol>', ref_image_pe + '.nii,' + str(ref_volume_pe + 1))  # <-- i added 1 to ref_volume_pe bc spm counts the volumes from 1, not from 0 as FSL
-
-        # 2.2' …now we want to select all the volumes from the epi file and insert that into the template:
-        epi_nvols = int(rrun('fslnvols ' + self.epi_data + '.nii'))
-        epi_path_name = self.epi_data + '.nii'
-        epi_all_volumes = ''
-        for i in range(1, epi_nvols + 1):
-            epi_volume = epi_path_name + ',' + str(i) + "'"
-            epi_all_volumes = epi_all_volumes + epi_volume + '\n' + "'"
-
-        sed_inplace(out_batch_job, '<TO_ALIGN_IMAGES,1-n_vols>', epi_all_volumes)
-
-        # 2.3: run job --> create "output run spm template" by analogue process + call matlab and run it:
-        copyfile(in_batch_start, out_batch_start)
-        sed_inplace(out_batch_start, 'X', '1')
-        sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
-
-        eng = matlab.engine.start_matlab()
-        print("running SPM batch template: " + out_batch_start) #, file=log)
-        eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
+        # create temp folder, copy there epi and epi_pe, unzip and run mc (then I can simply remove it when ended)
+        temp_distorsion_mc = os.path.join(self.epi_dir, "temp_distorsion_mc")
+        os.makedirs(temp_distorsion_mc)
+        temp_epi    = os.path.join(temp_distorsion_mc, self.epi_image_label)
+        temp_epi_pe = os.path.join(temp_distorsion_mc, self.epi_image_label + "_pe")
+        imcp(self.epi_data, temp_epi)
+        imcp(ref_image_pe, temp_epi_pe)
+        os.system('gzip -d -k ' + temp_epi_pe + '.nii.gz')
+        os.system('gzip -d -k ' + temp_epi + '.nii.gz')
+        self.epi_spm_motioncorrection(ref_volume_pe, temp_epi_pe, temp_epi)
 
         # 3: call matlab function that calculates best volume:
-        best_vol = eng.least_mov(os.path.join(self.epi_dir, 'rp_' + self.label + '-epi_pe.txt'))
-        eng.quit()
+        best_vol = call_matlab_function("least_mov", [self._global.spm_functions_dir], "\"" + os.path.join(self.epi_dir, "temp_distorsion_mc", 'rp_' + self.label + '-epi_pe.txt' + "\""))[1]
+        rmtree(temp_distorsion_mc)
 
         return best_vol
 
-    def epi_correct(self, motionfirst=True, epi_ref_vol=-1, ref_image_pe="", ref_volume_pe=-1):
+    # assumes opposite PE direction sequence is called label-epi_pe and acquisition parameters
+    # - epi_ref_vol/pe_ref_vol =-1 means use the middle volume
+    # 1: get number of volumes of epi_pe image in opposite phase-encoding direction and extract middle volume (add "_ref")
+    # 2: look for the epi volume closest to epi_pe_ref volume
+    # 3: merge the 2 ref volumes into one (add "_ref_merged")
+    # 4: run topup using ref_merged, acq params; used_templates: "_topup"
+    # 5: do motion correction with the chosen volume
+    # 6: applytopup --> choose images whose distortion we want to correct
+    def epi_pepolar_correction(self, motionfirst=True, epi_ref_vol=-1, ref_image_pe="", ref_volume_pe=-1):
 
         imcp(self.epi_data, self.epi_data + "_distorted") # this will refer to a file with all the sessions merged <--------!!
 
-        #1
+        # 1
         if ref_image_pe is "":
             ref_image_pe = self.epi_pe_data
 
@@ -1643,7 +1680,7 @@ class Subject:
 
         rrun("fslselectvols -i " + ref_image_pe + " -o " + ref_image_pe + "_ref" + " --vols=" + str(central_vol_pe))
 
-        #1'
+        # 2
         if epi_ref_vol == -1:
             central_vol = self.epi_get_closest_volume(ref_image_pe, ref_volume_pe)
         else:
@@ -1651,11 +1688,15 @@ class Subject:
 
         rrun("fslselectvols -i " + self.epi_data + " -o " + self.epi_data + "_ref" + " --vols=" + str(central_vol))
 
-        #2
+        # 3
         rrun("fslmerge -t " + self.epi_data + "_PE_ref_merged" + " " + self.epi_data + "_ref" + " " + ref_image_pe + "_ref")
-        # 3 —assumes merged epi volumes appear in the same order as acqparams.txt (--datain)
+        # 4 —assumes merged epi volumes appear in the same order as acqparams.txt (--datain)
         rrun("topup --imain=" + self.epi_data + "_PE_ref_merged" + " --datain=" + self.epi_acq_params + " --config=b02b0.cnf --out=" + self.epi_data + "_PE_ref_topup" + " --iout=" + self.epi_data + "_PE_ref_topup_corrected")
-        # 4 —again these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
+
+        # 5 -motion correction using central_vol
+        self.epi_spm_motioncorrection(central_vol)
+
+        # 6 —again these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
         rrun("applytopup --imain=" + self.epi_data + " --topup=" + self.epi_data + "_PE_ref_topup" + " --datain=" + self.epi_acq_params + " --inindex=1 --out=" + self.epi_data)
 
     def epi_get_slicetiming_params(self, nslices, scheme = 1, params=None):
@@ -1704,7 +1745,6 @@ class Subject:
 
         rrun('fslmerge -t ' + self.epi_data + " " + seq_string)
 
-
     def epi_fmri_preprocessing(self , num_slices, TR , TA=-1 , acq_scheme=0, ref_slice = -1 , slice_timing = None, spm_template_name='spm_fmri_preprocessing'):
         #default params:
         #TA - if not otherwise indicated, it assumes the acquisition is continuous and TA = TR - (TR/num slices)
@@ -1752,10 +1792,11 @@ class Subject:
         sed_inplace(out_batch_start, 'X', '1')
         sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
 
-        eng = matlab.engine.start_matlab()
-        print("running SPM batch template: " + out_batch_start)  # , file=log)
-        eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
-        eng.quit()
+        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], log)
+        # eng = matlab.engine.start_matlab()
+        # print("running SPM batch template: " + out_batch_start)  # , file=log)
+        # eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
+        # eng.quit()
 
     def epi_resting_nuisance(self, hpfsec=100):
         pass
@@ -1855,41 +1896,41 @@ class Subject:
 
 
         linear_registration_type = {
-                             "std2hr"     : self.l_std2hr,
-                             "std42hr"    : self.l_std42hr,
-                             "epi2hr"     : self.l_epi2hr,
-                             "dti2hr"     : self.l_dti2hr,
-                             "std2epi"    : self.l_std2epi,
-                             "std42epi"   : self.l_std42epi,
-                             "hr2epi"     : self.l_hr2epi,
-                             "dti2epi"    : self.l_dti2epi,
-                             "hr2std"     : self.l_hr2std,
-                             "epi2std"    : self.l_epi2std,
-                             "dti2std"    : self.l_dti2std,
-                             "std2std4"   : self.l_std2std4,
-                             "epi2std4"   : self.l_epi2std4,
-                             "hr2dti"     : self.l_hr2dti,
-                             "epi2dti"    : self.l_epi2dti,
-                             "std2dti"    : self.l_std2dti
+                             "std2hr"     : self.transform_l_std2hr,
+                             "std42hr"    : self.transform_l_std42hr,
+                             "epi2hr"     : self.transform_l_epi2hr,
+                             "dti2hr"     : self.transform_l_dti2hr,
+                             "std2epi"    : self.transform_l_std2epi,
+                             "std42epi"   : self.transform_l_std42epi,
+                             "hr2epi"     : self.transform_l_hr2epi,
+                             "dti2epi"    : self.transform_l_dti2epi,
+                             "hr2std"     : self.transform_l_hr2std,
+                             "epi2std"    : self.transform_l_epi2std,
+                             "dti2std"    : self.transform_l_dti2std,
+                             "std2std4"   : self.transform_l_std2std4,
+                             "epi2std4"   : self.transform_l_epi2std4,
+                             "hr2dti"     : self.transform_l_hr2dti,
+                             "epi2dti"    : self.transform_l_epi2dti,
+                             "std2dti"    : self.transform_l_std2dti
         }
 
         non_linear_registration_type = {
-                             "std2hr"     : self.nl_std2hr,
-                             "std42hr"    : self.nl_std42hr,
-                             "epi2hr"     : self.nl_epi2hr,
-                             "dti2hr"     : self.nl_dti2hr,
-                             "std2epi"    : self.nl_std2epi,
-                             "std42epi"   : self.nl_std42epi,
-                             "hr2epi"     : self.nl_hr2epi,
-                             "dti2epi"    : self.nl_dti2epi,
-                             "hr2std"     : self.nl_hr2std,
-                             "epi2std"    : self.nl_epi2std,
-                             "dti2std"    : self.nl_dti2std,
-                             "std2std4"   : self.nl_std2std4,
-                             "epi2std4"   : self.nl_epi2std4,
-                             "hr2dti"     : self.nl_hr2dti,
-                             "epi2dti"    : self.nl_epi2dti,
-                             "std2dti"    : self.nl_std2dti,
+                             "std2hr"     : self.transform_nl_std2hr,
+                             "std42hr"    : self.transform_nl_std42hr,
+                             "epi2hr"     : self.transform_nl_epi2hr,
+                             "dti2hr"     : self.transform_nl_dti2hr,
+                             "std2epi"    : self.transform_nl_std2epi,
+                             "std42epi"   : self.transform_nl_std42epi,
+                             "hr2epi"     : self.transform_nl_hr2epi,
+                             "dti2epi"    : self.transform_nl_dti2epi,
+                             "hr2std"     : self.transform_nl_hr2std,
+                             "epi2std"    : self.transform_nl_epi2std,
+                             "dti2std"    : self.transform_nl_dti2std,
+                             "std2std4"   : self.transform_nl_std2std4,
+                             "epi2std4"   : self.transform_nl_epi2std4,
+                             "hr2dti"     : self.transform_nl_hr2dti,
+                             "epi2dti"    : self.transform_nl_epi2dti,
+                             "std2dti"    : self.transform_nl_std2dti,
                              }
 
         for roi in rois:
@@ -1918,7 +1959,7 @@ class Subject:
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO HR
 
-    def nl_std2hr(self, path_type, roi_name, roi, std_img):
+    def transform_nl_std2hr(self, path_type, roi_name, roi, std_img):
         output_roi = os.path.join(self.roi_t1_dir,roi_name + "_highres")
         if path_type == "abs":
             input_roi = roi
@@ -1932,7 +1973,7 @@ class Subject:
             
         rrun("applywarp -i " + input_roi + " -r " + self.t1_brain_data + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir,"standard2highres_warp"))
 
-    def l_std2hr(self, path_type, roi_name, roi, std_img):
+    def transform_l_std2hr(self, path_type, roi_name, roi, std_img):
         output_roi = os.path.join(self.roi_t1_dir,roi_name + "_highres")
         if path_type == "abs":
             input_roi=roi
@@ -1943,7 +1984,7 @@ class Subject:
 
         rrun("applywarp -i " + input_roi + " -r " +self.t1_brain_data + "-o " + os.path.join(self.roi_t1_dir,roi_name + "_highres") + " --warp=" + os.path.join(self.roi_t1_dir, "standard2highres_warp"))
 
-    def nl_std42hr(self, path_type, roi_name, roi, std_img):
+    def transform_nl_std42hr(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_t1_dir,roi_name + "_highres")
         if path_type == "abs":
             input_roi = roi
@@ -1958,7 +1999,7 @@ class Subject:
         rrun("applywarp -i " +  os.path.join(self.roi_t1_dir, roi_name + "_standard") + " -r " + self.t1_brain_data + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir, "standard2highres_warp"))
         imrm(os.path.join(self.roi_t1_dir,roi_name + "_standard"))
 
-    def l_std42hr(self, path_type, roi_name, roi, std_img):
+    def transform_l_std42hr(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_t1_dir,roi_name + "_highres")
         if path_type == "abs":
             input_roi=roi
@@ -1971,7 +2012,7 @@ class Subject:
         rrun("applywarp -i " +  os.path.join(self.roi_t1_dir,roi_name + "_standard") + " -r " + self.t1_brain_data + " -o " + os.path.join(self.roi_epi_dir, roi_name + "_highres") + " --warp=" + os.path.join(self.roi_t1_dir, "standard2highres_warp"))
         imrm(os.path.join(self.roi_t1_dir, roi + "_standard"))
 
-    def nl_epi2hr(self, path_type, roi_name, roi, std_img):
+    def transform_nl_epi2hr(self, path_type, roi_name, roi, std_img):
         output_roi = os.path.join(self.roi_t1_dir,roi_name + "_highres")
         if path_type == "abs":
             input_roi = roi
@@ -1984,7 +2025,7 @@ class Subject:
             print("error......input_roi (" + input_roi + ") is missing....exiting")
         rrun("flirt -in " + input_roi + " -ref " + self.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_dti_dir, "epi2highres.mat") + " -interp trilinear")
 
-    def l_epi2hr(self, path_type, roi_name, roi, std_img):
+    def transform_l_epi2hr(self, path_type, roi_name, roi, std_img):
         output_roi = os.path.join(self.roi_t1_dir,roi_name + "_highres")
         if path_type == "abs":
             input_roi = roi
@@ -1995,7 +2036,7 @@ class Subject:
 
         rrun("flirt -in " + input_roi + " -ref " + self.t1_brain_data + " -out " + os.path.join(self.roi_t1_dir, roi_name + "_highres") + " -applyxfm -init " + os.path.join(self.roi_dti_dir, "epi2highres.mat") + " -interp trilinear")
 
-    def nl_dti2hr(self, path_type, roi_name, roi, std_img):
+    def transform_nl_dti2hr(self, path_type, roi_name, roi, std_img):
         output_roi = os.path.join(self.roi_dti_dir, roi + "_dti")
         if path_type == "abs":
             input_roi = roi
@@ -2009,7 +2050,7 @@ class Subject:
         else:
             rrun("flirt -in " + input_roi + " -ref " + self.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_t1_dir, "dti2highres.mat") + " -interp trilinear")
 
-    def l_dti2hr(self, path_type, roi_name, roi, std_img):
+    def transform_l_dti2hr(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_t1_dir, roi_name + "_highres")
         if path_type == "abs":
             input_roi=roi
@@ -2026,7 +2067,7 @@ class Subject:
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO EPI
 
-    def nl_std2epi(self, path_type, roi_name, roi, std_img):
+    def transform_nl_std2epi(self, path_type, roi_name, roi, std_img):
         output_roi = os.path.join(self.roi_epi_dir, roi_name + "_epi")
         if path_type == "abs":
             input_roi = roi
@@ -2036,7 +2077,7 @@ class Subject:
             input_roi=os.path.join(self.roi_standard_dir, "roi")
 
         rrun("applywarp -i " + input_roi + " -r " + self.rs_examplefunc + " -o " + output_roi + " --warp=" + os.path.join(self.roi_epi_dir, "standard2epi_warp"))
-    def l_std2epi(self, path_type, roi_name, roi, std_img):
+    def transform_l_std2epi(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
         if path_type == "abs":
             input_roi=roi
@@ -2047,7 +2088,7 @@ class Subject:
 
         rrun("flirt -in " + input_roi + " -ref " + self.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_epi_dir, "standard2epi.mat"))
 
-    def nl_std42epi(self, path_type, roi_name, roi, std_img):
+    def transform_nl_std42epi(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
         if path_type == "abs":
             input_roi=roi
@@ -2063,7 +2104,7 @@ class Subject:
         rrun("applywarp -i " + os.path.join(self.roi_epi_dir, roi_name + "_standard") + " -r " + self.rs_examplefunc + " -o " + output_roi + " --warp=" + os.path.join(self.roi_epi_dir, "standard2epi_warp"))
         imrm(os.path.join(self.roi_epi_dir, roi_name + "_standard"))
 
-    def l_std42epi(self, path_type, roi_name, roi, std_img):
+    def transform_l_std42epi(self, path_type, roi_name, roi, std_img):
         output_roi = os.path.join(self.roi_epi_dir, roi_name + "_epi")
         if path_type == "abs":
             input_roi = roi
@@ -2082,7 +2123,7 @@ class Subject:
             self.roi_epi_dir, roi_name + "_epi") + " --warp=" + os.path.join(self.roi_epi_dir, "standard2epi_warp"))
         imrm(os.path.join(self.roi_epi_dir, roi_name + "_standard"))
 
-    def nl_hr2epi(self, path_type, roi_name, roi, std_img):
+    def transform_nl_hr2epi(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
         if path_type == "abs":
             input_roi = roi
@@ -2094,7 +2135,7 @@ class Subject:
         print("the hr2epi NON linear transformation does not exist.....using the linear one")
         rrun("flirt -in " + input_roi + " -ref " + self.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_epi_dir, "highres2epi.mat") + " -interp trilinear")
 
-    def l_hr2epi(self, path_type, roi_name, roi, std_img):
+    def transform_l_hr2epi(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
         output_roi=os.path.join(self.roi_epi_dir, roi_name + "_epi")
         if path_type == "abs":
@@ -2106,16 +2147,16 @@ class Subject:
 
         rrun("flirt -in " + input_roi + " -ref " + self.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_epi_dir, "highres2epi.mat") + " -interp trilinear")
 
-    def nl_dti2epi(self, path_type, roi_name, roi, std_img):
+    def transform_nl_dti2epi(self, path_type, roi_name, roi, std_img):
         print("registration type: dti2epi NOT SUPPORTED...exiting")
 
-    def l_dti2epi(self, path_type, roi_name, roi, std_img):
+    def transform_l_dti2epi(self, path_type, roi_name, roi, std_img):
         print("registration type: dti2epi NOT SUPPORTED...exiting")
 
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO STD
 
-    def nl_hr2std(self, path_type, roi_name, roi, std_img):
+    def transform_nl_hr2std(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
         if path_type == "abs":
             input_roi = roi
@@ -2126,7 +2167,7 @@ class Subject:
 
         rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + output_roi + " --warp=" + os.path.join(self.roi_t1_dir, "highres2standard_warp"))
 
-    def l_hr2std(self, path_type, roi_name, roi, std_img):
+    def transform_l_hr2std(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
         if path_type == "abs":
             input_roi=roi
@@ -2137,7 +2178,7 @@ class Subject:
 
         rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + os.path.join(self.roi_standard_dir, roi_name + "_standard") + " --warp=" + os.path.join(self.roi_t1_dir, "highres2standard_warp"))
 
-    def nl_epi2std(self, path_type, roi_name, roi, std_img):
+    def transform_nl_epi2std(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
         if path_type == "abs":
             input_roi = roi
@@ -2148,7 +2189,7 @@ class Subject:
 
         rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + output_roi + " --warp=" + os.path.join(self.roi_standard_dir, "epi2standard_warp"))
 
-    def l_epi2std(self, path_type, roi_name, roi, std_img):
+    def transform_l_epi2std(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
         if path_type == "abs":
             input_roi=roi
@@ -2159,7 +2200,7 @@ class Subject:
 
         rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + os.path.join(self.roi_standard_dir, roi_name + "_standard") + " --warp=" + os.path.join(self.roi_standard_dir, "epi2standard_warp"))
 
-    def nl_dti2std(self, path_type, roi_name, roi, std_img):
+    def transform_nl_dti2std(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
         if path_type == "abs":
             input_roi = roi
@@ -2170,7 +2211,7 @@ class Subject:
 
         rrun("applywarp -i " + input_roi + " -r " + std_img + " -o " + output_roi + " --warp=" + os.path.join(self.roi_standard_dir, "dti2standard_warp"))
 
-    def l_dti2std(self, path_type, roi_name, roi, std_img):
+    def transform_l_dti2std(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard_dir, roi_name + "_standard")
         if path_type == "abs":
             input_roi=roi
@@ -2184,7 +2225,7 @@ class Subject:
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO STD4
 
-    def nl_std2std4(self, path_type, roi_name, roi, std_img):
+    def transform_nl_std2std4(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard4_dir, roi_name + "_standard4")
         if path_type == "abs":
             input_roi=roi
@@ -2195,7 +2236,7 @@ class Subject:
 
         rrun("flirt -in " + input_roi + " -ref " + std_img + " -out " + output_roi + " -applyisoxfm 4")
 
-    def l_epi2std4(self, path_type, roi_name, roi, std_img):
+    def transform_l_epi2std4(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard4_dir, roi_name + "_standard")
         if path_type == "abs":
             input_roi=roi
@@ -2206,7 +2247,7 @@ class Subject:
         rrun("flirt -in " + os.path.join(self.roi_standard4_dir, roi_name + "_standard2") + " -ref " + std_img + " -out " + output_roi + " -applyisoxfm 4")
         imrm(os.path.join(self.roi_standard4_dir, roi_name + "_standard2"))
 
-    def nl_epi2std4(self, path_type, roi_name, roi, std_img):
+    def transform_nl_epi2std4(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard4_dir, roi_name + "_standard")
         if path_type == "abs":
             input_roi = roi
@@ -2219,7 +2260,7 @@ class Subject:
         rrun("flirt -in " + os.path.join(self.roi_standard4_dir, roi_name + "_standard2") + " -ref " + std_img + " -out " + output_roi + " -applyisoxfm 4")
         imrm(os.path.join(self.roi_standard4_dir, roi_name + "_standard2"))
 
-    def l_std2std4(self, path_type, roi_name, roi, std_img):
+    def transform_l_std2std4(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_standard4_dir, roi_name + "_standard")
         if path_type == "abs":
             input_roi=roi
@@ -2233,7 +2274,7 @@ class Subject:
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO DTI
 
-    def nl_hr2dti(self, path_type, roi_name, roi, std_img):
+    def transform_nl_hr2dti(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_dti_dir,roi_name + "_dti")
         if path_type == "abs":
             input_roi = roi
@@ -2248,7 +2289,7 @@ class Subject:
             print("did not find the non linear registration from HR 2 DTI, I used a linear one")
             rrun("flirt -in " + input_roi + " -ref " + os.path.join(self.roi_dti_dir, "nobrain_diff") + " -out " + output_roi + " -applyxfm -init " + os.path.join(self.roi_dti_dir, "highres2dti.mat") + " -interp trilinear")
 
-    def l_hr2dti(self, path_type, roi_name, roi, std_img):
+    def transform_l_hr2dti(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_dti_dir, roi_name + "_dti")
         if path_type == "abs":
             input_roi = roi
@@ -2262,7 +2303,7 @@ class Subject:
         else:
             rrun("flirt -in " + input_roi + " -ref " + os.path.join(self.roi_dti_dir, "nobrain_diff") + " -out " + os.path.join(self.roi_dti_dir,roi_name + "_dti") + " -applyxfm -init " + os.path.join(self.roi_dti_dir, "highres2dti.mat") + " -interp trilinear")
 
-    def nl_epi2dti(self, path_type, roi_name, roi, std_img):
+    def transform_nl_epi2dti(self, path_type, roi_name, roi, std_img):
         # output_roi=os.path.join(self.roi_dti_dir,roi_name + "_dti"
         # if [ "$path_type" = abs ]; then
         #     input_roi=roi
@@ -2272,10 +2313,10 @@ class Subject:
         # rrun("applywarp -i " + input_roi -r os.path.join(self.roi_dti_dir, nobrain_diff -o os.path.join(self.roi_standard4_dir, roi_name + "_standard2" --premat os.path.join(self.roi_t1_dir,epi2highres.mat --warp=os.path.join(self.roi_standard_dir, highres2standard_warp --postmat os.path.join(self.roi_dti_dir, standard2dti.mat;
         print("registration type: epi2dti NOT SUPPORTED...exiting")
 
-    def l_epi2dti(self, path_type, roi_name, roi, std_img):
+    def transform_l_epi2dti(self, path_type, roi_name, roi, std_img):
         print("registration type: epi2dti NOT SUPPORTED...exiting")
 
-    def nl_std2dti(self, path_type, roi_name, roi, std_img):
+    def transform_nl_std2dti(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_dti_dir,roi_name + "_dti")
         if path_type == "abs":
             input_roi = roi
@@ -2285,7 +2326,7 @@ class Subject:
             input_roi = os.path.join(self.roi_standard_dir, "roi")
 
         rrun("applywarp -i " + input_roi + " -r " + os.path.join(self.roi_dti_dir, "nodif_brain") + " -o " + output_roi + "--warp=" + os.path.join(self.roi_dti_dir, "standard2dti_warp"))
-    def l_std2dti(self, path_type, roi_name, roi, std_img):
+    def transform_l_std2dti(self, path_type, roi_name, roi, std_img):
         output_roi=os.path.join(self.roi_dti_dir,roi_name + "_dti")
         if path_type == "abs":
             input_roi=roi
@@ -2532,35 +2573,35 @@ class Subject:
 
         # ==================================================================================================================================================
 
-# [ ! -f $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat] & & $FSLDIR / bin / flirt - in $T1_BRAIN_DATA - ref $STD_IMAGE - out $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard - omat $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat - cost corratio - dof 12 - searchrx - 90 90 - searchry - 90 90 - searchrz - 90 90 - interp trilinear
-# # => standard2highres.mat
-# [ ! -f $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres.mat] & & $FSLDIR / bin / convert_xfm - inverse - omat $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres.mat $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat
-#
-# # NON LINEAR
-# # => highres2standard_warp
-# [`$FSLDIR / bin / imtest $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard_warp` = 0] & & $FSLDIR / bin / fnirt - - in =$T1_BRAIN_DATA - -aff =$ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat - -cout =$ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard_warp - -iout =$ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard - -jout =$ROI_DIR / reg_t1 / highres2highres_jac - -config = T1_2_MNI152_2mm - -ref =$STD_IMAGE - -refmask =$STD_IMAGE_MASK - -warpres = 10, 10, 10
-#
-# # => standard2highres_warp
-# [`$FSLDIR / bin / imtest $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres_warp` = 0] & & $FSLDIR / bin / invwarp - r $T1_BRAIN_DATA - w $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard_warp - o $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres_warp
-#
-# ##	# => highres2${STD_IMAGE_LABEL}.nii.gz
-# ##	[ `$FSLDIR/bin/imtest $ROI_DIR/reg_${STD_IMAGE_LABEL}/highres2standard` = 0 ] && $FSLDIR/bin/applywarp -i $T1_BRAIN_DATA -r $STD_IMAGE -o $ROI_DIR/reg_${STD_IMAGE_LABEL}/highres2standard -w $ROI_DIR/reg_${STD_IMAGE_LABEL}/highres2standard_warp
-#
-# # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# # highres <--> standard4
-# mkdir - p $ROI_DIR / reg_${STD_IMAGE_LABEL}4
-#
-# highres2standard4_mat =$ROI_DIR / reg_${STD_IMAGE_LABEL}4 / highres2standard.mat
-# standard42highres_mat =$ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}42highres.mat
-# hr2std4_warp =$ROI_DIR / reg_${STD_IMAGE_LABEL}4 / highres2standard_warp.nii.gz
-# std42hr_warp =$ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}42highres_warp.nii.gz
-#
-# [ ! -f $highres2standard4_mat] & & $FSLDIR / bin / flirt - in $T1_BRAIN_DATA.nii.gz - ref $FSL_STANDARD_MNI_4mm - omat $highres2standard4_mat
-# [ ! -f $standard42highres_mat] & & $FSLDIR / bin / convert_xfm - omat $standard42highres_mat - inverse $highres2standard4_mat
-#
-# #	[ ! -f $hr2std4_warp ] && $FSLDIR/bin/fnirt --in=$T1_DATA --aff=$highres2standard4_mat --cout=$hr2std4_warp --iout=$ROI_DIR/reg_standard4/highres2standard --jout=$ROI_DIR/reg_standard4/highres2standard_jac --config=$GLOBAL_DATA_TEMPLATES/gray_matter/T1_2_MNI152_4mm --ref=$FSL_STANDARD_MNI_4mm --refmask=$GLOBAL_DATA_TEMPLATES/gray_matter/MNI152_T1_4mm_brain_mask_dil --warpres=10,10,10
-# #	[ ! -f $std42hr_warp ] && $FSLDIR/bin/invwarp -w $hr2std4_warp -o $std42hr_warp -r $T1_BRAIN_DATA
-# # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # [ ! -f $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat] & & $FSLDIR / bin / flirt - in $T1_BRAIN_DATA - ref $STD_IMAGE - out $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard - omat $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat - cost corratio - dof 12 - searchrx - 90 90 - searchry - 90 90 - searchrz - 90 90 - interp trilinear
+        # # => standard2highres.mat
+        # [ ! -f $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres.mat] & & $FSLDIR / bin / convert_xfm - inverse - omat $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres.mat $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat
+        #
+        # # NON LINEAR
+        # # => highres2standard_warp
+        # [`$FSLDIR / bin / imtest $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard_warp` = 0] & & $FSLDIR / bin / fnirt - - in =$T1_BRAIN_DATA - -aff =$ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard.mat - -cout =$ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard_warp - -iout =$ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard - -jout =$ROI_DIR / reg_t1 / highres2highres_jac - -config = T1_2_MNI152_2mm - -ref =$STD_IMAGE - -refmask =$STD_IMAGE_MASK - -warpres = 10, 10, 10
+        #
+        # # => standard2highres_warp
+        # [`$FSLDIR / bin / imtest $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres_warp` = 0] & & $FSLDIR / bin / invwarp - r $T1_BRAIN_DATA - w $ROI_DIR / reg_${STD_IMAGE_LABEL} / highres2standard_warp - o $ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}2highres_warp
+        #
+        # ##	# => highres2${STD_IMAGE_LABEL}.nii.gz
+        # ##	[ `$FSLDIR/bin/imtest $ROI_DIR/reg_${STD_IMAGE_LABEL}/highres2standard` = 0 ] && $FSLDIR/bin/applywarp -i $T1_BRAIN_DATA -r $STD_IMAGE -o $ROI_DIR/reg_${STD_IMAGE_LABEL}/highres2standard -w $ROI_DIR/reg_${STD_IMAGE_LABEL}/highres2standard_warp
+        #
+        # # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # # highres <--> standard4
+        # mkdir - p $ROI_DIR / reg_${STD_IMAGE_LABEL}4
+        #
+        # highres2standard4_mat =$ROI_DIR / reg_${STD_IMAGE_LABEL}4 / highres2standard.mat
+        # standard42highres_mat =$ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}42highres.mat
+        # hr2std4_warp =$ROI_DIR / reg_${STD_IMAGE_LABEL}4 / highres2standard_warp.nii.gz
+        # std42hr_warp =$ROI_DIR / reg_t1 /${STD_IMAGE_LABEL}42highres_warp.nii.gz
+        #
+        # [ ! -f $highres2standard4_mat] & & $FSLDIR / bin / flirt - in $T1_BRAIN_DATA.nii.gz - ref $FSL_STANDARD_MNI_4mm - omat $highres2standard4_mat
+        # [ ! -f $standard42highres_mat] & & $FSLDIR / bin / convert_xfm - omat $standard42highres_mat - inverse $highres2standard4_mat
+        #
+        # #	[ ! -f $hr2std4_warp ] && $FSLDIR/bin/fnirt --in=$T1_DATA --aff=$highres2standard4_mat --cout=$hr2std4_warp --iout=$ROI_DIR/reg_standard4/highres2standard --jout=$ROI_DIR/reg_standard4/highres2standard_jac --config=$GLOBAL_DATA_TEMPLATES/gray_matter/T1_2_MNI152_4mm --ref=$FSL_STANDARD_MNI_4mm --refmask=$GLOBAL_DATA_TEMPLATES/gray_matter/MNI152_T1_4mm_brain_mask_dil --warpres=10,10,10
+        # #	[ ! -f $std42hr_warp ] && $FSLDIR/bin/invwarp -w $hr2std4_warp -o $std42hr_warp -r $T1_BRAIN_DATA
+        # # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
     # ==================================================================================================================================================

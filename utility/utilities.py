@@ -2,7 +2,6 @@ import gzip
 import re, shutil, tempfile
 
 
-
 def gunzip(src, dest):
 
     fp = open(dest, "wb")

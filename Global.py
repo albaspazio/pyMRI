@@ -23,6 +23,7 @@ class Global:
 
         self.templates_dir                  = os.path.join(self.framework_dir, "templates")
         self.spm_templates_dir              = os.path.join(self.framework_dir, "templates", "spm")
+        self.spm_functions_dir              = os.path.join(self.framework_dir, "matlab")
 
         self.global_script_dir              = globalscriptdir
         self.global_data_templates          = os.path.join(self.global_script_dir, "data_templates")

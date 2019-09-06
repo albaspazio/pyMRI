@@ -1,5 +1,5 @@
-from pymri.Global import Global
-from pymri.Project import Project
+from Global import Global
+from Project import Project
 from utility import startup_utilities
 
 if __name__ == "__main__":

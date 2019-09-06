@@ -188,7 +188,7 @@ class Project:
         os.makedirs(tempdir,exist_ok=True)
 
         for subj in subjs:
-            subj.compare_brain_extraction(tempdir)
+            subj.mpr_compare_brain_extraction(tempdir)
 
 
         # curr_dir = os.getcwd()

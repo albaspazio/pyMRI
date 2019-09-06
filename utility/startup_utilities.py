@@ -1,5 +1,5 @@
 import os
-from utility import FslSwitcher
+from utility import fsl_switcher
 
 
 def init(globalscriptdir, projectdir, fsl_ver):
@@ -12,7 +12,7 @@ def init(globalscriptdir, projectdir, fsl_ver):
         print("PROJECT_DIR not defined.....exiting")
         return False
 
-    fslswitch = FslSwitcher.FslSwitcher()
+    fslswitch = fsl_switcher.FslSwitcher()
     res = fslswitch.activate_fsl_version(fsl_ver)
 
     return True
