@@ -2,31 +2,43 @@ import os
 import json
 import traceback
 
-from pymri.Global import Global
-from pymri.Project import Project
-from utility import startup_utilities
+from Global import Global
+from Project import Project
 
-from pymri.utility.fslfun import imtest, run_notexisting_img
-from pymri.fsl.utils.run import rrun
+from utility.fslfun import imtest, run_notexisting_img
+from myfsl.utils.run import rrun
 
-from pymri.utility import import_data_file
-from pymri.utility import plot_data
+from utility import import_data_file
+from utility import plot_data
 
 
 if __name__ == "__main__":
 
     # ======================================================================================================================
-    global_script_dir = "/media/alba/data/MRI/scripts"
-    proj_dir = "/media/alba/dados/MRI/projects/temperamento_murcia"
-    fsl_code = "509"
-
+    # check global data and external toolboxes
+    # ======================================================================================================================
+    fsl_code = "601"
     try:
-        if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
-            print("Error")
-            exit()
+        globaldata = Global(fsl_code)
 
-        globaldata = Global(global_script_dir)
+    except Exception as e:
+        print(e)
+        exit()
 
+    # ======================================================================================================================
+    # HEADER
+    # ======================================================================================================================
+    proj_dir = "/media/alba/dados/MRI/projects/temperamento_murcia"
+    project     = Project(proj_dir, globaldata, hasT1=True)
+    SESS_ID     = 1
+    num_cpu     = 4
+    group_label = "single"
+
+    # ======================================================================================================================
+    # PROCESSING
+    # ======================================================================================================================
+    
+    try:
         # ======================================================================================================================
         # init vars
         # ======================================================================================================================

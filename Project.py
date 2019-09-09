@@ -10,6 +10,9 @@ class Project:
 
     def __init__(self, dir, globaldata, hasT1=True, hasRS=False, hasDTI=False, hasT2=False):
 
+        if not os.path.exists(dir):
+            raise Exception("PROJECT_DIR not defined.....exiting")
+
         self.dir                    = dir
         self.label                  = os.path.basename(self.dir)
 

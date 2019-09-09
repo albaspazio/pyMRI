@@ -1,30 +1,38 @@
+import os
+
 from Global import Global
 from Project import Project
-from utility import startup_utilities
 
 if __name__ == "__main__":
 
     # ======================================================================================================================
-    global_script_dir = "/data/MRI/scripts"
-    proj_dir = "/data/MRI/projects/T15"
-    # proj_dir = "/data/MRI/projects/T3"
-    fsl_code = "600"
+    # check global data and external toolboxes
+    # ======================================================================================================================
+    fsl_code = "601"
+    try:
+        globaldata = Global(fsl_code)
 
-    if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
-        print("Error")
+    except Exception as e:
+        print(e)
         exit()
 
-    globaldata = Global(global_script_dir)
     # ======================================================================================================================
+    # HEADER
+    # ======================================================================================================================
+    proj_dir    = "/data/MRI/projects/T15"
+    project     = Project(proj_dir, globaldata, hasT1=True)
+    SESS_ID     = 1
+    group_label = "controls_test"
 
-    project = Project(proj_dir, globaldata, hasT1=True)
-    SESS_ID = 1
-
+    # ======================================================================================================================
+    # PROCESSING
+    # ======================================================================================================================
+    
     # subject = Subject("test", 1, project)
     # subject.create_file_system()
     # subject.mpr2nifti(subject.t1_dir, 1)
 
-    subjects    = project.load_subjects("controls_test", SESS_ID)
+    subjects    = project.load_subjects(group_label, SESS_ID)
 
     subject     = subjects[0]
     # hdr = fslfun.read_header(subject.t1_data)

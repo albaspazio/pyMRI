@@ -11,6 +11,7 @@ class FslSwitcher:
         method = getattr(self, method_name, lambda: self.unknown_version())        # Get the method from 'self'. Default to a lambda.
         method()         # Call the method as we return it
         self.send_cmd()
+        return "using fsl " + self.fsl_ver
 
     def ver_509(self):
         self.dir = "/usr/local/fsl-5.0.9"

@@ -1,5 +1,18 @@
 import csv
 
+def read_varlist_file(filepath, comment_char="#"):
+    data = {}
+    with open(filepath, "r") as f:
+        
+        lines = f.readlines()
+        for line in lines:
+            
+            if line[0] == comment_char:
+                continue
+            values = line.rstrip().split("=")   # also remove trailing characters
+            data[values[0]] = values[1]
+    return data
+
 def read_tabbed_file_with_header(filepath):
 
     data = []

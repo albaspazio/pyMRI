@@ -1,38 +1,35 @@
-
 import os
 
 from Global import Global
-from GroupAnalysis import GroupAnalysis
 from Project import Project
-from utility import startup_utilities, import_data_file
+from GroupAnalysis import GroupAnalysis
 
 if __name__ == "__main__":
 
     # ======================================================================================================================
-    global_script_dir   = "/data/MRI/bash-fsl-pipeline"
-    proj_dir            = "/data/MRI/projects/T15"
-    # proj_dir            = "/data/MRI/projects/T3"
-    fsl_code            = "601"
+    # check global data and external toolboxes
+    # ======================================================================================================================
+    fsl_code = "601"
+    try:
+        globaldata = Global(fsl_code)
 
-    if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
-        print("Error")
+    except Exception as e:
+        print(e)
         exit()
 
-    globaldata = Global(global_script_dir)
-
     # ======================================================================================================================
-    # SUBJECTS
+    # HEADER
     # ======================================================================================================================
+    proj_dir    = "/data/MRI/projects/T15"
     project     = Project(proj_dir, globaldata, hasT1=True)
     SESS_ID     = 1
     num_cpu     = 1
     group_label = "all"
 
+    # ======================================================================================================================
+    # PROCESSING
+    # ======================================================================================================================
     subjects    = project.load_subjects(group_label, SESS_ID)
-
-    # ======================================================================================================================
-    # VBM
-    # ======================================================================================================================
 
     # template
     analysis_name   = "c28_b50"

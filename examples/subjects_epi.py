@@ -2,24 +2,24 @@ import os
 
 from Global import Global
 from Project import Project
-from utility import startup_utilities
 
 if __name__ == "__main__":
 
     # ======================================================================================================================
-    global_script_dir   = "/media/campus/SeagateBackupPlusDrive/MRI/bash-fsl-pipeline"
-    proj_dir            = "/media/campus/SeagateBackupPlusDrive/MRI/projects/bisection_pisa"
-    fsl_code            = "601"
+    # check global data and external toolboxes
+    # ======================================================================================================================
+    fsl_code = "601"
+    try:
+        globaldata = Global(fsl_code)
 
-    if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
-        print("Error")
+    except Exception as e:
+        print(e)
         exit()
 
-    globaldata = Global(global_script_dir)
-
     # ======================================================================================================================
-    # SUBJECTS
+    # HEADER
     # ======================================================================================================================
+    proj_dir    = "/media/campus/SeagateBackupPlusDrive/MRI/projects/bisection_pisa"
     project     = Project(proj_dir, globaldata, hasT1=True)
     SESS_ID     = 1
     num_cpu     = 4

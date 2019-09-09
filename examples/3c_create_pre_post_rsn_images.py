@@ -5,25 +5,38 @@ from shutil import copyfile
 
 from Global import Global
 from Project import Project
-from utility import startup_utilities
 
 from myfsl.utils.run import rrun
 
 from utility import import_data_file
 
 if __name__ == "__main__":
+    
+    
+    # ======================================================================================================================
+    # check global data and external toolboxes
+    # ======================================================================================================================
+    fsl_code = "601"
+    try:
+        globaldata = Global(fsl_code)
+
+    except Exception as e:
+        print(e)
+        exit()
 
     # ======================================================================================================================
-    global_script_dir = "/media/alba/data/MRI/scripts"
+    # HEADER
+    # ======================================================================================================================
     proj_dir = "/media/alba/dados/MRI/projects/temperamento_murcia"
-    fsl_code = "509"
+    project     = Project(proj_dir, globaldata, hasT1=True)
+    SESS_ID     = 1
+    num_cpu     = 4
+    group_label = "single"
 
+    # ======================================================================================================================
+    # PROCESSING
+    # ======================================================================================================================
     try:
-        if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
-            print("Error")
-            exit()
-
-        globaldata = Global(global_script_dir)
 
         # ======================================================================================================================
         # init vars

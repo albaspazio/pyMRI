@@ -887,6 +887,8 @@ class Subject:
 
             sed_inplace(output_template, "<T1_IMAGE>", inputimage + ".nii")
             sed_inplace(output_template, "<ICV_FILE>", icv_file)
+            sed_inplace(output_template, '<SPM_DIR>', self._global.spm_dir)
+
             sed_inplace(output_start, "X", "1")
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
@@ -1796,6 +1798,7 @@ class Subject:
         sed_inplace(out_batch_job, '<SLICETIMING_PARAMS>', ' '.join(slice_timing))
         sed_inplace(out_batch_job, '<REF_SLICE>', str(ref_slice))
         sed_inplace(out_batch_job, '<T1_IMAGE>', self.t1_data + '.nii,1')
+        sed_inplace(out_batch_job, '<SPM_DIR>', self._global.spm_dir)
 
         copyfile(in_batch_start, out_batch_start)
         sed_inplace(out_batch_start, 'X', '1')

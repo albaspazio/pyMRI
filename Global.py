@@ -1,40 +1,47 @@
 import inspect
 import os
+from utility import fsl_switcher, import_data_file
 
-
-# user must set:
-# - spm_dir
-# - cat version
 
 class Global:
 
-    def __init__(self, globalscriptdir):
+    def __init__(self, fsl_ver, ignore_warnings=True):
 
-        # --------------------------------------------------------------------------------------------------------
-        # USER DEPENDENT
-        # --------------------------------------------------------------------------------------------------------
-        self.spm_dir                        = "/data/matlab_toolbox/spm12"
-        self.cat_version                    = "cat12"
-        # --------------------------------------------------------------------------------------------------------
-        # --------------------------------------------------------------------------------------------------------
+        fslswitch = fsl_switcher.FslSwitcher()
+        print(fslswitch.activate_fsl_version(fsl_ver))
 
+        self.ignore_warnings                = ignore_warnings
+        # --------------------------------------------------------------------------------------------------------
+        # determine framework folder
         filename                            = inspect.getframeinfo(inspect.currentframe()).filename
         self.framework_dir                  = os.path.dirname(os.path.abspath(filename))
+        # --------------------------------------------------------------------------------------------------------
+        # READ local.settings and fill corresponding variables
+        local_settings = os.path.join(self.framework_dir, "local.settings")
 
-        self.templates_dir                  = os.path.join(self.framework_dir, "templates")
-        self.spm_templates_dir              = os.path.join(self.framework_dir, "templates", "spm")
+        # check its presence
+        if os.path.isfile(local_settings) is False:
+            raise Exception("ERROR. the file \"local.settings\" must be present in the framework root folder (" + self.framework_dir + ")\n" +
+                            "copy and rename the file " + os.path.join(self.framework_dir, "examples", "local.settings.example") + " there and modify its content according to your local settings")
+
+
+        local_settings_data = import_data_file.read_varlist_file(local_settings)
+
+        self.spm_dir                        = local_settings_data["spm_dir"]
+        self.cat_version                    = local_settings_data["cat_version"]
+        self.global_data_templates          = local_settings_data["global_data_templates"]
+        self.ica_aroma_script               = local_settings_data["ica_aroma_script"]
+        self.trackvis_bin                   = local_settings_data["trackvis_bin"]
+        self.autoptx_script_dir             = local_settings_data["autoptx_script_dir"]
+
+        self.check_paths()
+        # --------------------------------------------------------------------------------------------------------
+
+        self.data_templates_dir             = os.path.join(self.framework_dir, "templates")
+        self.spm_data_templates_dir         = os.path.join(self.framework_dir, "templates", "spm")
         self.spm_functions_dir              = os.path.join(self.framework_dir, "matlab")
 
-        self.global_script_dir              = globalscriptdir
-        self.global_data_templates          = os.path.join(self.global_script_dir, "data_templates")
-        self.global_utility_script          = os.path.join(self.global_script_dir, "utility")
-
-        self.ica_aroma_script_dir           = os.path.join(self.global_script_dir, "external_tools", "ica_aroma", "ica_aroma.py")
-        self.autoptx_script_dir             = os.path.join(self.global_script_dir, "external_tools", "autoPtx_0_1_1")
-        self.trackvis_bin                   = os.path.join(globalscriptdir, "external_tools", "dtk")
-
         self.fsl_dir                        = os.getenv('FSLDIR')
-
         if self.fsl_dir is None:
             print("FSLDIR is undefined")
             return
@@ -49,10 +56,43 @@ class Global:
         self.fsl_standard_mni_2mm_mask      = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain_mask")
         self.fsl_standard_mni_2mm_mask_dil  = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain_mask_dil")
         self.fsl_standard_mni_4mm           = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_4mm_brain")
-
         self.fsl_standard_mni_2mm_cnf       = os.path.join(self.fsl_dir, "etc", "flirtsch", "T1_2_MNI152_2mm.cnf")
 
         self.standard_aal_atlas_2mm         = os.path.join(self.global_data_templates, "mpr", "aal_262_standard")
 
-        self.vtk_transpose_file             = os.path.join(self.global_utility_script, "transpose_dti32.awk")
+    def check_paths(self):
+
+        if len(self.spm_dir) > 0:
+            if os.path.isdir(self.spm_dir) is False:
+                raise Exception("Error: SPM is not present")
+        else:
+            if not self.ignore_warnings:
+                print("Warning: SPM has not been specified")
+
+        if len(self.cat_version) > 0:
+            if os.path.isdir(os.path.join(self.spm_dir, "toolbox", self.cat_version)) is False:
+                raise Exception("Error: CAT is not present")
+        else:
+            if not self.ignore_warnings:
+                print("Warning: CAT has not been specified")
+
+        if len(self.ica_aroma_script) > 0:
+            if os.path.isfile(self.ica_aroma_script) is False:
+                raise Exception("Error: ICA-AROMA script is not present")
+        else:
+            if not self.ignore_warnings:
+                print("Warning: ICA-AROMA has not been specified")
+
+        # accessory elements. do not warn if they are not specified
+        if len(self.global_data_templates) > 0:
+            if os.path.isdir(self.global_data_templates) is False:
+                raise Exception("Error: DATA TEMPLATES folder is not present")
+
+        if len(self.trackvis_bin) > 0:
+            if os.path.isdir(self.trackvis_bin) is False:
+                raise Exception("Error: TRACKVIS BIN folder is not present")
+
+        if len(self.autoptx_script_dir) > 0:
+            if os.path.isdir(self.autoptx_script_dir) is False:
+                raise Exception("Error: DATA AUTOPTX folder is not present")
 
