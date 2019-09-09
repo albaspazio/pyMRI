@@ -38,7 +38,7 @@ class Global:
         # --------------------------------------------------------------------------------------------------------
 
         self.data_templates_dir             = os.path.join(self.framework_dir, "templates")
-        self.spm_data_templates_dir         = os.path.join(self.framework_dir, "templates", "spm")
+        self.spm_templates_dir              = os.path.join(self.framework_dir, "templates", "spm")
         self.spm_functions_dir              = os.path.join(self.framework_dir, "matlab")
 
         self.fsl_dir                        = os.getenv('FSLDIR')
