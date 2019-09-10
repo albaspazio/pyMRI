@@ -3,27 +3,15 @@ import traceback
 import glob
 import os
 
+from utility.fslfun import run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img
+from utility.manage_images import imtest, immv, imcp, imrm, quick_smooth, remove_ext, mass_images_move, is_image, mysplittext, imgname
+from utility.utilities import sed_inplace, gunzip
+from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
+from myfsl.utils.run import rrun
+from Stats import Stats
+
 from shutil import copyfile, move
 from numpy import arange, concatenate, array
-
-from utility.fslfun import run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img
-from utility.manage_images import imtest, immv, imcp, imrm, quick_smooth, remove_ext, mass_images_move, is_image, mysplittext, imgname
-from utility.utilities import sed_inplace, gunzip
-from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
-from myfsl.utils.run import rrun
-import datetime
-import traceback
-import glob
-import os
-
-from shutil import copyfile, move, rmtree
-from numpy import arange, concatenate, array
-
-from utility.fslfun import run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img
-from utility.manage_images import imtest, immv, imcp, imrm, quick_smooth, remove_ext, mass_images_move, is_image, mysplittext, imgname
-from utility.utilities import sed_inplace, gunzip
-from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
-from myfsl.utils.run import rrun
 
 
 class Subject:
@@ -1092,7 +1080,7 @@ class Subject:
         sed_inplace(output_start, "X", "1")
         sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
-        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], log)
+        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir])
         # eng = matlab.engine.start_matlab()
         # print("running SPM batch template: " + output_template)
         # eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
@@ -1570,6 +1558,7 @@ class Subject:
     # ==================================================================================================================================================
     # FUNCTIONAL
     # ==================================================================================================================================================
+    # epi_spm_XXXXX are methods editing and lauching a SPM batch file
 
     # coregister epi (or a given image) to given volume of given image (usually the epi itself, the pepolar in case of distortion correction process)
     def epi_spm_motioncorrection(self, ref_vol=1, ref_image=None, epi2correct=None, spm_template_name="spm_fmri_realign_estimate_to_given_vol"):
@@ -1631,7 +1620,6 @@ class Subject:
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir], endengine=False)
 
 
-    #
     def epi_get_closest_volume(self, ref_image_pe="", ref_volume_pe=-1):
         # will calculate the closest vol from self.epi_data to ref_image
         # Steps:
@@ -1756,7 +1744,7 @@ class Subject:
 
         rrun('fslmerge -t ' + self.epi_data + " " + seq_string)
 
-    def epi_fmri_preprocessing(self , num_slices, TR , TA=-1 , acq_scheme=0, ref_slice = -1 , slice_timing = None, spm_template_name='spm_fmri_preprocessing'):
+    def epi_spm_fmri_preprocessing(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice = -1, slice_timing = None, spm_template_name='spm_fmri_preprocessing'):
         #default params:
         #TA - if not otherwise indicated, it assumes the acquisition is continuous and TA = TR - (TR/num slices)
         if TA == -1:
@@ -1809,6 +1797,57 @@ class Subject:
         # print("running SPM batch template: " + out_batch_start)  # , file=log)
         # eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
         # eng.quit()
+
+    # conditions_lists[{"name", "onsets", "duration"}, ....]
+    def epi_spm_fmri_1st_level_analysis(self, analysis_name, TR, num_slices, conditions_lists, events_unit="secs", spm_template_name='spm_fmri_stats_1st_level', rp_filemame=""):
+        #default params:
+        stats_dir = os.path.join(self.epi_dir, "stats", analysis_name)
+        os.makedirs(stats_dir, exist_ok=True)
+
+        ref_slice = num_slices // 2 + 1
+
+        if rp_filemame == "":
+            rp_filemame = os.path.join(self.epi_dir, "rp_" + self.epi_image_label + ".txt")
+
+        #set dirs
+        in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
+        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+
+        spm_script_dir = os.path.join(self.project.script_dir, "epi", "spm")
+        out_batch_dir = os.path.join(spm_script_dir, "batch")
+
+        out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
+        out_batch_start = os.path.join(out_batch_dir, spm_template_name + self.label + '_start.m')
+
+        #substitute for all the volumes
+        epi_nvols = int(rrun('fslnvols ' + self.epi_data + '.nii.gz'))
+        epi_path_name = os.path.join(self.epi_dir, "swar" + self.epi_image_label + '.nii')
+        epi_all_volumes = ""
+        for i in range(1, epi_nvols + 1):
+            epi_volume = "'" + epi_path_name + ',' + str(i) + "'"
+            epi_all_volumes = epi_all_volumes + epi_volume + '\n' # + "'"
+
+        copyfile(in_batch_job, out_batch_job)
+        sed_inplace(out_batch_job, '<SPM_DIR>', stats_dir)
+        sed_inplace(out_batch_job, '<EVENTS_UNIT>', events_unit)
+        sed_inplace(out_batch_job, '<TR_VALUE>', str(TR))
+        sed_inplace(out_batch_job, '<MICROTIME_RES>', str(num_slices))
+        sed_inplace(out_batch_job, '<MICROTIME_ONSET>', str(ref_slice))
+        sed_inplace(out_batch_job, '<SMOOTHED_VOLS>', epi_all_volumes)
+        sed_inplace(out_batch_job, '<MOTION_PARAMS>', rp_filemame)
+
+        Stats.spm_stats_add_conditions(out_batch_job, conditions_lists)
+
+        copyfile(in_batch_start, out_batch_start)
+        sed_inplace(out_batch_start, 'X', '1')
+        sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
+
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
+        # eng = matlab.engine.start_matlab()
+        # print("running SPM batch template: " + out_batch_start)  # , file=log)
+        # eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
+        # eng.quit()
+
 
     def epi_resting_nuisance(self, hpfsec=100):
         pass

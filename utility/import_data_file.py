@@ -53,7 +53,7 @@ def list2spm_text_column(datalist):
     datastr = ""
 
     for r in datalist:
-        datastr = datastr + r + "\n"
+        datastr = datastr + str(r) + "\n"
     return datastr
 
 

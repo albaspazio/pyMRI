@@ -1,15 +1,15 @@
 import os
 import shutil
 import traceback
+import matlab.engine
+import numpy
 
 from shutil import copyfile, move
 from myfsl.utils.run import rrun
 from utility.manage_images import imcp
 from utility.utilities import sed_inplace
 from utility import import_data_file
-
-import matlab.engine
-import numpy
+from Stats import Stats
 
 
 class GroupAnalysis:
@@ -189,7 +189,7 @@ class GroupAnalysis:
 
             # check whether adding a covariate
             if cov_name != "":
-                self.spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, cov_name, data_file)
+                Stats.spm_stats_add_1cov_manygroups(os.path.join(self.project.script_dir, "data.dat"), out_batch_job, groups_labels, cov_name, self.project)
             else:
                 sed_inplace(out_batch_job, "<COV_STRING>","matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
@@ -265,7 +265,7 @@ class GroupAnalysis:
 
             # check whether adding a covariate
             if cov_name != "":
-                self.spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, cov_name, data_file)
+                Stats.spm_stats_add_1cov_manygroups(os.path.join(self.project.script_dir, "data.dat"), out_batch_job, groups_labels, cov_name, self.project)
             else:
                 sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
@@ -330,7 +330,7 @@ class GroupAnalysis:
 
             # check whether adding a covariate
             if cov_name != "":
-                self.spm_stats_add_1cov_manygroups(out_batch_job, [grp1_label, grp2_label], cov_name, data_file)
+                Stats.spm_stats_add_1cov_manygroups(os.path.join(self.project.script_dir, "data.dat"), out_batch_job, [grp1_label, grp2_label], cov_name, self.project)
             else:
                 sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
@@ -357,26 +357,11 @@ class GroupAnalysis:
             print(e)
             return ""
 
+
+
     # ---------------------------------------------------
     # STATS - GENERAL
     # ---------------------------------------------------
-    def spm_stats_add_1cov_manygroups(self, out_batch_job, groups_labels, cov_name, data_file="data.dat"):
-
-        # get cov values
-        datafile = os.path.join(self.project.script_dir, data_file)
-        data = import_data_file.read_tabbed_file_with_header(datafile)
-
-        cov = []
-        for grp in groups_labels:
-            cov = cov + import_data_file.get_filtered_dict_column(data, "age", "subj", self.project.get_list_by_label(grp))
-        str_cov = "\n" + import_data_file.list2spm_text_column(cov) # ends with a "\n"
-
-        cov_string = "matlabbatch{1}.spm.stats.factorial_design.cov.c = "
-        cov_string = cov_string + "[" + str_cov + "];\n"
-        cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.cname = '" + cov_name + "';\n"
-        cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCFI = 1;\nmatlabbatch{1}.spm.stats.factorial_design.cov.iCC = 1;"
-
-        sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
 
     # calculate contrasts and report their results on a given, already estimated, SPM.mat
     def create_spm_stats_2samplesttest_contrasts_results(self, spmmat, c1_name="A>B", c2_name="B>A", spm_template_name="spm_stats_2samplesttest_contrasts_results", mult_corr="FWE", pvalue=0.05, cluster_extend=0):
