@@ -4,7 +4,7 @@ import traceback
 
 from shutil import copyfile, move
 from myfsl.utils.run import rrun
-from utility.fslfun import imcp
+from utility.manage_images import imcp
 from utility.utilities import sed_inplace
 from utility import import_data_file
 
