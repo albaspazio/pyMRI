@@ -10,6 +10,13 @@ def gunzip(src, dest):
     fp.write(bindata)
     fp.close()
 
+def compress(src, dest):
+
+    fp = open(src, "rb")
+    with gzip.open(dest, "wb") as f:
+        f.write(fp.read())
+    fp.close()
+
 
 def sed_inplace(filename, pattern, repl):
     '''

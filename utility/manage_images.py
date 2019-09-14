@@ -207,3 +207,4 @@ def read_header(file, list_field=None):
         return fields
     else:
         return attribs_dict
+

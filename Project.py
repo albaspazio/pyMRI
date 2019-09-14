@@ -3,7 +3,8 @@ import json
 import math
 from threading import Thread
 from inspect import signature
-
+from utility.manage_images import imcp, imrm
+from utility.utilities import gunzip, compress
 from Subject import Subject
 
 class Project:
@@ -29,7 +30,7 @@ class Project:
 
         self.vbm_dir                = os.path.join(self.mpr_dir, "vbm")
 
-        self.globaldata         = globaldata
+        self._global                = globaldata
 
         self.subjects               = []
         self.nsubj                  = -1
@@ -174,7 +175,6 @@ class Project:
 
             print("completed block " + str(bl) + " with processes: " + str(subjects[bl]))
 
-
     # create a folder where it copies the brain extracted from BET, FreeSurfer and SPM
     def compare_brain_extraction(self, tempdir, list_subj_label=None):
 
@@ -199,3 +199,26 @@ class Project:
         # rrun("slicesdir *")
         # os.chdir(curr_dir)
 
+    def prepare_mpr_for_setorigin1(self, destdirname, group_label, sess_id, overwrite=False):
+        subjects    = self.load_subjects(group_label, sess_id)
+        tempdir     = os.path.join(self.dir, destdirname)
+        os.makedirs(tempdir, exist_ok=True)
+        for subj in subjects:
+            niifile = os.path.join(tempdir, subj.t1_image_label + "_" + str(sess_id) + ".nii")
+
+            if overwrite is True or os.path.exists(niifile) is False:
+                gunzip(subj.t1_data + ".nii.gz", niifile)
+            # call_matlab_function_noret("spm_display_image", [self._global.spm_functions_dir], "\'" + niifile + "\'", endengine=False)
+            # input("press any key to continue")
+
+    def prepare_mpr_for_setorigin2(self, destdirname, group_label, sess_id, replaceOrig=False):
+        subjects    = self.load_subjects(group_label, sess_id)
+        tempdir     = os.path.join(self.dir, destdirname)
+        src_image   = os.path.join(tempdir, subj.t1_image_label + "_" + str(sess_id) + ".nii")
+        for subj in subjects:
+            if replaceOrig is True:
+                imrm([subj.t1_data])
+                compress(src_image, subj.t1_data)
+            else:
+                os.makedirs(subj.t1_cat_dir, exist_ok=True)
+                imcp(src_image, os.path.join(subj.t1_cat_dir, "T1_" + subj.label + ".nii"))

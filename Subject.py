@@ -26,7 +26,7 @@ class Subject:
         self.sessid                 = sessid
 
         self.project                = project
-        self._global                = project.globaldata
+        self._global                = project._global
         self.fsl_dir                = self._global.fsl_dir
         self.fsl_bin                = self._global.fsl_bin
         self.fsl_data_standard_dir  = self._global.fsl_data_standard_dir
@@ -959,6 +959,7 @@ class Subject:
                         coreg_templ="",
                         calc_surfaces=0,
                         num_proc=1,
+                        use_existing_nii=True,
                         spm_template_name="cat_segment_customizedtemplate_tiv_smooth_job.m"
                         ):
 
@@ -1021,7 +1022,11 @@ class Subject:
             os.makedirs(out_batch_dir   , exist_ok = True)
             os.makedirs(self.t1_cat_dir , exist_ok = True)
 
-            gunzip(srcinputimage + ".nii.gz", inputimage + ".nii")
+            # I may want to process with cat after having previously processed without having set image's origin.
+            # thus I may have created a nii version in the cat_proc folder , with the origin properly set
+            # unzip nii.gz -> nii in cat folder only if nii is absent or I want to overwrite it.
+            if os.path.exists(inputimage + ".nii") is False or use_existing_nii is False:
+                gunzip(srcinputimage + ".nii.gz", inputimage + ".nii")
 
             # here I may stop script to allow resetting the nii origin. sometimes is necessary to perform the segmentation
             if set_origin is True:
@@ -1039,7 +1044,7 @@ class Subject:
             sed_inplace(output_start, "X", "1")
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
-            call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], log)
+            call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], log)
             # eng = matlab.engine.start_matlab()
             # print("running SPM batch template: " + output_template, file=log)
             # eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
