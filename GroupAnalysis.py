@@ -16,7 +16,7 @@ class GroupAnalysis:
 
     def __init__(self, proj):
         self.project        = proj
-        self._global        = self.project.globaldata
+        self._global        = self.project._global
 
     # ====================================================================================================================================================
     # DATA PREPARATION
@@ -262,6 +262,91 @@ class GroupAnalysis:
             sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
 
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
+
+            # check whether adding a covariate
+            if cov_name != "":
+                Stats.spm_stats_add_1cov_manygroups(os.path.join(self.project.script_dir, "data.dat"), out_batch_job, groups_labels, cov_name, self.project)
+            else:
+                sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
+
+            # set start file
+            copyfile(in_batch_start, out_batch_start)
+            sed_inplace(out_batch_start, "X", "1")
+            sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
+
+            eng = matlab.engine.start_matlab()
+            # eng.eval("dbstop in myMATLABscript if error")
+
+            print("running SPM batch template: " + statsdir)
+            eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
+
+            # model estimate
+            print("estimating surface model")
+            eng.pymri_cat_surfaces_stat_spm(statsdir, nargout=0)
+            eng.quit()
+
+            return os.path.join(statsdir, "SPM.mat")
+
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
+
+    # params to replace: <STATS_DIR>, <GROUPS_IMAGES>, <COV1_LIST>, <COV1_NAME>
+    # <FACTORS_CELLS> must be something like :
+    # matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(1).levels = [1
+    #                                                          1];
+    # matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(1).scans = {
+    #     '/data/MRI/projects/T15/subjects/T15_C_001/s1/mpr/anat/cat_proc/surf/s15.mesh.thickness.resampled_32k.T1_T15_C_001.gii'
+    #     '/data/MRI/projects/T15/subjects/T15_C_001/s1/mpr/anat/cat_proc/surf/rh.sphere.T1_T15_C_001.gii'
+    # };
+    # cells is [factor][level][subjects_label]
+    def create_cat_thickness_stats_2Wanova(self, statsdir, factors_labels, cells, cov_name="", data_file="data.dat", sess_id=1, spm_template_name="spm_stats_2Wanova_onlydesign"):
+
+        try:
+            os.makedirs(statsdir, exist_ok=True)
+            # set dirs
+            spm_script_dir  = os.path.join(self.project.script_dir, "mpr", "spm")
+            out_batch_dir   = os.path.join(spm_script_dir, "batch")
+
+            in_batch_start  = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+            in_batch_job    = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
+
+            out_batch_start = os.path.join(out_batch_dir, "create_" + spm_template_name + "_start.m")
+            out_batch_job   = os.path.join(out_batch_dir, "create_" + spm_template_name + "_job.m")
+
+            nfactors    = len(factors_labels)
+            nlevels     = [len(cells), len(cells[0])]   # nlevels for each factor
+
+            # checks
+            # if nfactors != len(cells):
+            #     print("Error: num of factors labels (" + str(nfactors) + ") differs from cells content (" + str(len(cells)) + ")")
+            #     return
+
+
+            # compose cells string
+            groups_labels   = []  # will host the subjects labels for covariate specification
+            cells_images    = ""
+            ncell           = 0
+            for f1 in range(0, nlevels[0]):
+                for f2 in range(0, nlevels[1]):
+                    ncell = ncell + 1
+                    cells_images = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(" + str(ncell) + ").levels = [" + str(f1+1) + "\n" + str(f2+1) + "];\n"
+                    cells_images = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(" + str(ncell) + ").scans = {\n"
+
+                    subjs = self.project.get_subjects(cells[f1][f2], sess_id)
+                    for subj in subjs:
+                        cells_images = cells_images + "'" + subj.t1_cat_resampled_surface + "'\n"
+                    cells_images = cells_images + "};"
+
+            # set job file
+            copyfile(in_batch_job, out_batch_job)
+
+            sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
+            sed_inplace(out_batch_job, "<FACTOR1_NAME>", factors_labels[0])
+            sed_inplace(out_batch_job, "<FACTOR1_NLEV>", str(nlevels[0]))
+            sed_inplace(out_batch_job, "<FACTOR2_NAME>", factors_labels[1])
+            sed_inplace(out_batch_job, "<FACTOR2_NLEV>", str(nlevels[1]))
+            sed_inplace(out_batch_job, "<FACTORS_CELLS>", cells_images)
 
             # check whether adding a covariate
             if cov_name != "":
