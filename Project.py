@@ -3,6 +3,8 @@ import json
 import math
 from threading import Thread
 from inspect import signature
+from copy import deepcopy
+
 from utility.manage_images import imcp, imrm
 from utility.utilities import gunzip, compress
 from Subject import Subject
@@ -84,11 +86,15 @@ class Project:
 
         return incomplete_subjects
 
-    # get subject with given label
-    def get_subject_by_label(self, subj_label):
+    # get a deepcopy of subject with given label
+    def get_subject_by_label(self, subj_label, sess=1):
+
         for subj in self.subjects:
             if subj.label == subj_label:
-                return subj
+                if subj.sessid == sess:
+                    return deepcopy(subj)
+                else:
+                    return subj.set_file_system(sess, rollback=True)    # it returns a deepcopy of requested session
         return None
 
     def get_subjects_num(self):
@@ -214,8 +220,8 @@ class Project:
     def prepare_mpr_for_setorigin2(self, destdirname, group_label, sess_id, replaceOrig=False):
         subjects    = self.load_subjects(group_label, sess_id)
         tempdir     = os.path.join(self.dir, destdirname)
-        src_image   = os.path.join(tempdir, subj.t1_image_label + "_" + str(sess_id) + ".nii")
         for subj in subjects:
+            src_image = os.path.join(tempdir, subj.t1_image_label + "_" + str(sess_id) + ".nii")
             if replaceOrig is True:
                 imrm([subj.t1_data])
                 compress(src_image, subj.t1_data)

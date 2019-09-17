@@ -2,6 +2,9 @@ import datetime
 import traceback
 import glob
 import os
+from copy import deepcopy
+from shutil import copyfile, move
+from numpy import arange, concatenate, array
 
 from utility.fslfun import run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img
 from utility.manage_images import imtest, immv, imcp, imrm, quick_smooth, remove_ext, mass_images_move, is_image, mysplittext, imgname
@@ -9,9 +12,6 @@ from utility.utilities import sed_inplace, gunzip
 from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
 from myfsl.utils.run import rrun
 from Stats import Stats
-
-from shutil import copyfile, move
-from numpy import arange, concatenate, array
 
 
 class Subject:
@@ -33,26 +33,33 @@ class Subject:
 
         self.project_subjects_dir   = project.subjects_dir
 
-        self.dir                    = os.path.join(project.subjects_dir, self.label, "s" + str(self.sessid))
-        self.roi_dir                = os.path.join(self.dir, "roi")
+        self.set_file_system(self.sessid)
 
+    def get_sess_file_system(self, sess):
+        return self.set_file_system(sess, True)
+
+    # this method has 2 usages:
+    # 1) DEFAULT : to create filesystem names at startup    => returns : self  (DOUBT !! alternatively may always return a deepcopy)
+    # 2) to get a copy with names of another session        => returns : deepcopy(self)
+    def set_file_system(self, sess, rollback=False):
+
+        self.dir                    = os.path.join(self.project.subjects_dir, self.label, "s" + str(sess))
+
+        self.roi_dir                = os.path.join(self.dir, "roi")
         self.roi_epi_dir            = os.path.join(self.roi_dir, "reg_epi")
         self.roi_dti_dir            = os.path.join(self.roi_dir, "reg_dti")
-
         self.roi_t2_dir             = os.path.join(self.roi_dir, "reg_t2")
-
         self.roi_standard_dir       = os.path.join(self.roi_dir, "reg_standard")
-
         self.roi_standard4_dir      = os.path.join(self.roi_dir, "reg_standard4")
+        self.roi_t1_dir             = os.path.join(self.roi_dir, "reg_t1")
 
         self.t1_dir                 = os.path.join(self.dir, "mpr")
-        self.roi_t1_dir             = os.path.join(self.roi_dir, "reg_t1")
+        self.t1_anat_dir            = os.path.join(self.t1_dir, "anat")
         self.fast_dir               = os.path.join(self.t1_dir, "fast")
         self.first_dir              = os.path.join(self.t1_dir, "first")
         self.sienax_dir             = os.path.join(self.t1_dir, "sienax")
         self.t1_fs_dir              = os.path.join(self.t1_dir, "freesurfer")
         self.t1_fs_mri_dir          = os.path.join(self.t1_fs_dir, "mri")
-        self.t1_anat_dir            = os.path.join(self.t1_dir, "anat")
         self.t1_spm_dir             = os.path.join(self.t1_anat_dir, "spm_proc")
         self.t1_cat_dir             = os.path.join(self.t1_anat_dir, "cat_proc")
 
@@ -152,6 +159,14 @@ class Subject:
         self.epi_acq_params          = os.path.join(self.epi_dir, "acqparams.txt")
 
         self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
+
+        self_copy = deepcopy(self)
+        if rollback is True:
+            self.set_file_system(self.sessid, False)
+            return self_copy
+        else:
+            self.sessid = sess
+            return self
 
     # ==================================================================================================
     # GENERAL
@@ -1040,16 +1055,21 @@ class Subject:
             sed_inplace(output_template, "<TEMPLATE_COREGISTRATION>", coreg_templ)
             sed_inplace(output_template, "<CALC_SURFACES>", str(calc_surfaces))
             sed_inplace(output_template, "<TIV_FILE>", icv_file)
-            sed_inplace(output_template, "<N_PROC>", str(num_proc))
+
+            resample_string = ""
+            if calc_surfaces == 1:
+                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.data_surf(1) = cfg_dep('CAT12: Segmentation: Left Thickness',substruct('.', 'val', '{}', {1}, '.', 'val','{}', {1}, '.', 'val', '{}', {1},'.', 'val', '{}', {1}),substruct('()', {1}, '.', 'lhthickness','()', {':'}));\n"
+                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
+                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
+                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.fwhm_surf = 15;\n"
+                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
+
+            sed_inplace(output_template, "<SURF_RESAMPLE>", resample_string)
+
             sed_inplace(output_start, "X", "1")
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
             call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], log)
-            # eng = matlab.engine.start_matlab()
-            # print("running SPM batch template: " + output_template, file=log)
-            # eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
-            # eng.quit()
-
             imrm([inputimage + ".nii"])
             log.close()
 
@@ -1060,10 +1080,152 @@ class Subject:
 
 
 
-
-    def mpr_spm_tissue_volumes(self,
-                        spm_template_name="spm_icv_template_job.m"
+    # longitudinal segment T1 with CAT and create  WM+GM mask (CSF is not created)
+    # add_bet_mask params is used to correct the presence of holes (only partially filled) in the WM+GM mask.
+    # assuming the bet produced a smaller mask in outer part of the gray matter, I add also the bet mask
+    # if requested: replace label-t1_brain and label-t1_brain_mask (produced by BET)
+    def mpr_cat_segment_longitudinal(self,
+                        sessions,
+                        odn="anat", imgtype=1,
+                        do_overwrite=False,
+                        do_bet_overwrite=False,
+                        add_bet_mask=True,
+                        set_origin=False,
+                        seg_templ="",
+                        coreg_templ="",
+                        calc_surfaces=0,
+                        num_proc=1,
+                        use_existing_nii=True,
+                        spm_template_name="cat_segment_longitudinal_customizedtemplate_tiv_smooth_job.m"
                         ):
+
+        current_session = self.sessid
+        # define placeholder variables for input dir and image name
+
+        if seg_templ == "":
+            seg_templ = self._global.spm_tissue_map
+        else:
+            if imtest(seg_templ) is False:
+                print("ERROR in mpr_cat_segment: given template segmentation is not present")
+                return
+
+        if coreg_templ == "":
+            coreg_templ = self._global.cat_dartel_template
+        else:
+            if imtest(coreg_templ) is False:
+                print("ERROR in mpr_cat_segment: given template coregistration is not present")
+                return
+
+        # set dirs
+        spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
+        out_batch_dir           = os.path.join(spm_script_dir, "batch")
+        in_script_template      = os.path.join(self._global.spm_templates_dir, spm_template_name)
+        in_script_start         = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+
+        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name)
+        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name)
+
+        copyfile(in_script_template, output_template)
+        copyfile(in_script_start, output_start)
+
+        try:
+
+            logfile = os.path.join(self.t1_dir, "mpr_log.txt")
+
+            with open(logfile, "a") as text_file:
+                print("******************************************************************", file=text_file)
+                print("updating directory", file=text_file)
+                print(" ", file=text_file)
+
+            log = open(logfile, "a")
+
+            os.makedirs(out_batch_dir   , exist_ok = True)
+
+            images_string   = ""
+            images_list     = []
+            # create images list
+            for sess in sessions:
+
+                subj = self.get_sess_file_system(sess)
+
+                if imgtype == 1:
+                    anatdir = os.path.join(subj.t1_dir, odn)
+                    T1 = "T1"
+                elif imgtype == 2:
+                    anatdir = os.path.join(subj.t2_dir, odn)
+                    T1 = "T2"
+                else:
+                    print("ERROR: PD input format is not supported")
+                    return False
+
+                srcinputimage   = os.path.join(anatdir, T1 + "_biascorr")
+                inputimage      = os.path.join(subj.t1_cat_dir, T1 + "_" + subj.label)
+                brain_mask      = os.path.join(subj.t1_cat_dir, "brain_mask.nii.gz")
+
+                # check whether skipping
+                if imtest(brain_mask) is True and do_overwrite is False:
+                    return
+
+                os.makedirs(subj.t1_cat_dir, exist_ok=True)
+
+                # I may want to process with cat after having previously processed without having set image's origin.
+                # thus I may have created a nii version in the cat_proc folder , with the origin properly set
+                # unzip nii.gz -> nii in cat folder only if nii is absent or I want to overwrite it.
+                if os.path.exists(inputimage + ".nii") is False or use_existing_nii is False:
+                    gunzip(srcinputimage + ".nii.gz", inputimage + ".nii")
+
+                # here I may stop script to allow resetting the nii origin. sometimes is necessary to perform the segmentation
+                if set_origin is True:
+                    input("press keyboard when finished setting the origin for subj " + subj.label + " :")
+
+                images_string = images_string + "'" + inputimage + ".nii,1'\n"
+                images_list.append(inputimage + ".nii")
+
+
+            sed_inplace(output_template, "<T1_IMAGES>", images_string)
+            sed_inplace(output_template, "<TEMPLATE_SEGMENTATION>", seg_templ)
+            sed_inplace(output_template, "<TEMPLATE_COREGISTRATION>", coreg_templ)
+            sed_inplace(output_template, "<CALC_SURFACES>", str(calc_surfaces))
+            sed_inplace(output_template, "<N_PROC>", str(num_proc))
+
+            resample_string = ""
+            next_block_id   = 3  # id of the RESAMPLE
+            if calc_surfaces == 1:
+                resample_string = resample_string + "matlabbatch{3}.spm.tools.cat.stools.surfresamp.data_surf(1) = cfg_dep('Smooth: Smoothed Images', substruct('.','val', '{}',{3}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','files'));\n"
+                resample_string = resample_string + "matlabbatch{3}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
+                resample_string = resample_string + "matlabbatch{3}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
+                resample_string = resample_string + "matlabbatch{3}.spm.tools.cat.stools.surfresamp.fwhm_surf = 15;\n"
+                resample_string = resample_string + "matlabbatch{3}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
+                next_block_id = next_block_id + 1
+            sed_inplace(output_template, "<SURF_RESAMPLE>", resample_string)
+
+            icv_string = ""
+            for sess in sessions:
+                sess_subj       = self.set_file_system(sess)
+                icv_file        = os.path.join(self.t1_cat_dir, "tiv_" + self.label + ".txt")
+                report_file     = os.path.join(self.t1_cat_dir, "report", "cat_T1_" + self.label + ".xml")
+                icv_string      = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.data_xml = {'" + report_file + "'};\n"
+                icv_string      = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.calcvol_TIV = 1;\n"
+                icv_string      = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.calcvol_name = '" + icv_file + "';\n"
+                next_block_id   = next_block_id + 1
+            sed_inplace(output_template, "<ICV_CALCULATION>", icv_string)
+
+            sed_inplace(output_start, "X", "1")
+            sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
+
+            call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], log)
+            imrm([images_list])
+            log.close()
+
+            self.sessid = current_session
+
+        except Exception as e:
+            traceback.print_exc()
+            log.close()
+            print(e)
+
+
+    def mpr_spm_tissue_volumes(self, spm_template_name="spm_icv_template_job.m"):
 
         seg_mat                = os.path.join(self.t1_spm_dir, "T1_biascorr_" + self.label + "_seg8.mat")
         icv_file                = os.path.join(self.t1_spm_dir, "icv_" + self.label + ".dat")
@@ -1086,11 +1248,6 @@ class Subject:
         sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
         call_matlab_spmbatch(output_start, [self._global.spm_functions_dir])
-        # eng = matlab.engine.start_matlab()
-        # print("running SPM batch template: " + output_template)
-        # eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
-        # eng.quit()
-
 
     def mpr_postbet(self,
                     odn="anat", imgtype=1, smooth=10,
