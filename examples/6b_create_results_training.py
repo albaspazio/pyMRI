@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # HEADER
     # ======================================================================================================================
     proj_dir = "/media/alba/dados/MRI/projects/temperamento_murcia"
-    project     = Project(proj_dir, globaldata, hasT1=True)
+    project     = Project(proj_dir, globaldata)
     SESS_ID     = 1
     num_cpu     = 4
     group_label = "single"
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
         # ======================================================================================================================
         # ======================================================================================================================
-        project = Project(proj_dir, globaldata, hasT1=True)
+        project = Project(proj_dir, globaldata)
 
         project.load_subjects(subjects_list_name)
         subjects            = project.get_subjects_labels()
@@ -82,7 +82,7 @@ if __name__ == "__main__":
         RESULTS4_OUT_DIR        = os.path.join(DR_DIR, "results", "standard4")
         standard_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
 
-        subjects_data           = import_data_file.read_tabbed_file_with_header(os.path.join(project.dir, "data_2x56.txt"))
+        subjects_data           = import_data_file.tabbed_file_with_header2dict_list(os.path.join(project.dir, "data_2x56.txt"))
 
         # -----------------------------------------------------
         # SBFC

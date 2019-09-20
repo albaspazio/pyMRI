@@ -8,10 +8,13 @@ from copy import deepcopy
 from utility.manage_images import imcp, imrm
 from utility.utilities import gunzip, compress
 from Subject import Subject
+from utility.import_data_file import tabbed_file_with_header2subj_dic, get_filtered_subj_dict_column
+from utility import import_data_file
+
 
 class Project:
 
-    def __init__(self, dir, globaldata, hasT1=True, hasRS=False, hasDTI=False, hasT2=False):
+    def __init__(self, dir, globaldata, data="data.dat"):
 
         if not os.path.exists(dir):
             raise Exception("PROJECT_DIR not defined.....exiting")
@@ -37,10 +40,17 @@ class Project:
         self.subjects               = []
         self.nsubj                  = -1
 
-        self.hasT1                  = hasT1
-        self.hasRS                  = hasRS
-        self.hasDTI                 = hasDTI
-        self.hasT2                  = hasT2
+        self.hasT1                  = False
+        self.hasRS                  = False
+        self.hasDTI                 = False
+        self.hasT2                  = False
+
+        # load data file if exist
+        self.data_file              = os.path.join(self.script_dir, data)
+        if os.path.exists(self.data_file) is True:
+            self.data = tabbed_file_with_header2subj_dic(self.data_file)
+        else:
+            self.data = []
 
         # load all possible subjects list into self.subjects_lists
         with open(os.path.join(self.script_dir, "subjects_lists.json")) as json_file:
@@ -140,7 +150,6 @@ class Project:
                 return
         # here nparams is surely == nsubj
 
-
         numblocks   = math.ceil(nprocesses/nthread)     # num of provessing blocks (threads)
 
         subjects    = []
@@ -228,3 +237,36 @@ class Project:
             else:
                 os.makedirs(subj.t1_cat_dir, exist_ok=True)
                 imcp(src_image, os.path.join(subj.t1_cat_dir, "T1_" + subj.label + ".nii"))
+
+    # returns a matrix (values x subjects) containing values of the requested columns of given subjects
+    # user can also pass a datafile path or a custom subj_dictionary
+    def get_filtered_matrix(self, columns_list, subjects_label, data=None):
+
+        subj_list   = self.get_list_by_label(subjects_label)
+        valid_data  = self.data
+        if data is not None:
+            if isinstance(data, dict):
+                valid_data = data
+            else:
+                if isinstance(data, str):
+                    if os.path.exists(data) is True:
+                        valid_data = import_data_file.tabbed_file_with_header2subj_dic(data)
+
+        return import_data_file.get_filtered_subj_dict_columns(valid_data, columns_list, subj_list)
+
+
+    # returns a vector (nsubj) containing values of the requested column of given subjects
+    # user can also pass a datafile path or a custom subj_dictionary
+    def get_filtered_column(self, column, subjects_label, data=None):
+
+        subj_list   = self.get_list_by_label(subjects_label)
+        valid_data  = self.data
+        if data is not None:
+            if isinstance(data, dict):
+                valid_data = data
+            else:
+                if isinstance(data, str):
+                    if os.path.exists(data) is True:
+                        valid_data = import_data_file.tabbed_file_with_header2subj_dic(data)
+
+        return import_data_file.get_filtered_subj_dict_column(valid_data, column, subj_list)

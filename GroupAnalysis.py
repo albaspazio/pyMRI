@@ -146,7 +146,7 @@ class GroupAnalysis:
     #                                                                               'yyy'
     #                                                                            };
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
-    def create_spm_vbm_stats_1Wanova(self, statsdir, groups_labels, cov_name, data_file="data.dat", sess_id=1, spm_template_name="spm_vbm_stats_1Wanova_design_estimate"):
+    def create_spm_vbm_stats_1Wanova(self, statsdir, groups_labels, cov_name, cov_interaction=1, data_file=None, sess_id=1, spm_template_name="spm_vbm_stats_1Wanova_design_estimate"):
 
         try:
             os.makedirs(statsdir, exist_ok=True)
@@ -176,20 +176,16 @@ class GroupAnalysis:
 
                 cells_images = cells_images + grp1_images + "\n"
 
-            # get cov values
-            datafile = os.path.join(self.project.script_dir, "data.dat")
-            data = import_data_file.read_tabbed_file_with_header(datafile)
-
             # get ICV values
             icv = []
             for grp in groups_labels:
-                icv = icv + import_data_file.get_filtered_dict_column(data, "icv", "subj", self.project.get_list_by_label(grp))
+                icv = icv + self.project.get_filtered_column("icv", self.project.get_list_by_label(grp))
 
             str_icv = "\n" + import_data_file.list2spm_text_column(icv) + "\n"
 
             # check whether adding a covariate
             if cov_name != "":
-                Stats.spm_stats_add_1cov_manygroups(os.path.join(self.project.script_dir, "data.dat"), out_batch_job, groups_labels, cov_name, self.project)
+                Stats.spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, self.project, cov_name, cov_interaction, data_file)
             else:
                 sed_inplace(out_batch_job, "<COV_STRING>","matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
@@ -227,7 +223,7 @@ class GroupAnalysis:
     #                                                                               'yyy'
     #                                                                            };
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
-    def create_cat_thickness_stats_1Wanova(self, statsdir, groups_labels, cov_name, data_file="data.dat", sess_id=1, spm_template_name="cat_thickness_stats_1Wanova_onlydesign"):
+    def create_cat_thickness_stats_1Wanova(self, statsdir, groups_labels, cov_name, cov_interaction=1, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_1Wanova_onlydesign"):
 
         try:
             os.makedirs(statsdir, exist_ok=True)
@@ -265,7 +261,7 @@ class GroupAnalysis:
 
             # check whether adding a covariate
             if cov_name != "":
-                Stats.spm_stats_add_1cov_manygroups(os.path.join(self.project.script_dir, "data.dat"), out_batch_job, groups_labels, cov_name, self.project)
+                Stats.spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, self.project, cov_name, cov_interaction, data_file)
             else:
                 sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
@@ -300,7 +296,7 @@ class GroupAnalysis:
     #     '/data/MRI/projects/T15/subjects/T15_C_001/s1/mpr/anat/cat_proc/surf/rh.sphere.T1_T15_C_001.gii'
     # };
     # cells is [factor][level][subjects_label]
-    def create_cat_thickness_stats_2Wanova(self, statsdir, factors_labels, cells, cov_name="", data_file="data.dat", sess_id=1, spm_template_name="spm_stats_2Wanova_onlydesign"):
+    def create_cat_thickness_stats_2Wanova(self, statsdir, factors_labels, cells, cov_name="", cov_interaction=1, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_2Wanova_onlydesign"):
 
         try:
             os.makedirs(statsdir, exist_ok=True)
@@ -350,7 +346,7 @@ class GroupAnalysis:
 
             # check whether adding a covariate
             if cov_name != "":
-                Stats.spm_stats_add_1cov_manygroups(os.path.join(self.project.script_dir, "data.dat"), out_batch_job, groups_labels, cov_name, self.project)
+                Stats.spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, self.project, cov_name, cov_interaction, data_file)
             else:
                 sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
@@ -378,7 +374,7 @@ class GroupAnalysis:
 
     # params to replace: <STATS_DIR>, <GROUP1_IMAGES>, <GROUP2_IMAGES>, <COV1_LIST>, <COV1_NAME>
     # GROUPx_IMAGES are :  'mpr/anat/cat_proc/surf/s15.mesh.thickness.resampled_32k.T1_XXXXXXXXXX.gii,1'
-    def create_cat_thickness_stats_2samplesttest(self, statsdir, grp1_label, grp2_label, cov_name="", data_file="data.dat", sess_id=1, spm_template_name="cat_thickness_stats_2samples_ttest_onlydesign", mult_corr="FWE", pvalue=0.05, cluster_extend=0):
+    def create_cat_thickness_stats_2samplesttest(self, statsdir, grp1_label, grp2_label, cov_name="", cov_interaction=1, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_2samples_ttest_onlydesign", mult_corr="FWE", pvalue=0.05, cluster_extend=0):
 
         try:
             os.makedirs(statsdir, exist_ok=True)
@@ -415,7 +411,7 @@ class GroupAnalysis:
 
             # check whether adding a covariate
             if cov_name != "":
-                Stats.spm_stats_add_1cov_manygroups(os.path.join(self.project.script_dir, "data.dat"), out_batch_job, [grp1_label, grp2_label], cov_name, self.project)
+                Stats.spm_stats_add_1cov_manygroups(out_batch_job, [grp1_label, grp2_label], self.project, cov_name, cov_interaction, data_file)
             else:
                 sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
@@ -441,8 +437,6 @@ class GroupAnalysis:
             traceback.print_exc()
             print(e)
             return ""
-
-
 
     # ---------------------------------------------------
     # STATS - GENERAL

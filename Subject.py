@@ -3,7 +3,7 @@ import traceback
 import glob
 import os
 from copy import deepcopy
-from shutil import copyfile, move
+from shutil import copyfile, move, rmtree
 from numpy import arange, concatenate, array
 
 from utility.fslfun import run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img
@@ -896,10 +896,6 @@ class Subject:
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
             call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], log)
-            # eng = matlab.engine.start_matlab()
-            # print("running SPM batch template: " + output_template, file=log)
-            # eval("eng." + os.path.basename(os.path.splitext(output_start)[0]) + "(nargout=0)")
-            # eng.quit()
 
             # create brainmask (WM+GM) and skullstrippedmask (WM+GM+CSF)
             c1img               = os.path.join(anatdir, "spm_proc", "c1T1_" + self.label + ".nii")
@@ -1003,7 +999,6 @@ class Subject:
                 print("ERROR in mpr_cat_segment: given template coregistration is not present")
                 return
 
-
         srcinputimage           = os.path.join(anatdir, T1 + "_biascorr")
         inputimage              = os.path.join(self.t1_cat_dir, T1 + "_" + self.label)
 
@@ -1077,7 +1072,6 @@ class Subject:
             traceback.print_exc()
             log.close()
             print(e)
-
 
 
     # longitudinal segment T1 with CAT and create  WM+GM mask (CSF is not created)

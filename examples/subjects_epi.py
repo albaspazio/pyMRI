@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # HEADER
     # ======================================================================================================================
     proj_dir    = "/media/campus/SeagateBackupPlusDrive/MRI/projects/bisection_pisa"
-    project     = Project(proj_dir, globaldata, hasT1=True)
+    project     = Project(proj_dir, globaldata)
     SESS_ID     = 1
     num_cpu     = 4
     group_label = "single"

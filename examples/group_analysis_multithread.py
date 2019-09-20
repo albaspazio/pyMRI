@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # HEADER
     # ======================================================================================================================
     proj_dir    = "/data/MRI/projects/T15"
-    project     = Project(proj_dir, globaldata, hasT1=True)
+    project     = Project(proj_dir, globaldata)
     SESS_ID     = 1
     num_cpu     = 1
     group_label = "all"

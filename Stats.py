@@ -4,22 +4,21 @@ from utility import import_data_file
 
 class Stats:
 
+    # get cov values from many groups and concat them into a single vector
+    # interaction=1 : no interaction, otherwise specify factors (1-based + 1, e.g. first factor = 2)
     @staticmethod
-    def spm_stats_add_1cov_manygroups(datafile, out_batch_job, groups_labels, cov_name, project):
-
-        # get cov values
-        data = import_data_file.read_tabbed_file_with_header(datafile)
+    def spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, project, cov_name, cov_interaction=1, datafile=None):
 
         cov = []
         for grp in groups_labels:
-            cov = cov + import_data_file.get_filtered_dict_column(data, "age", "subj", project.get_list_by_label(grp))
+            cov = cov + project.get_filtered_column(cov_name, grp, datafile)
         str_cov = "\n" + import_data_file.list2spm_text_column(cov) # ends with a "\n"
 
         cov_string = "matlabbatch{1}.spm.stats.factorial_design.cov.c = "
         cov_string = cov_string + "[" + str_cov + "];\n"
         cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.cname = '" + cov_name + "';\n"
-        cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCFI = 1;\nmatlabbatch{1}.spm.stats.factorial_design.cov.iCC = 1;"
-
+        cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCFI = " + str(cov_interaction) + ";\n"
+        cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCC = 1;"
         sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
 
 

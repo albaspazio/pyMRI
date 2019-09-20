@@ -13,8 +13,11 @@ def read_varlist_file(filepath, comment_char="#"):
             data[values[0]] = values[1]
     return data
 
-def read_tabbed_file_with_header(filepath):
-
+# =====================================================================================
+# DATA EXTRACTION FROM A PLAIN DICTIONARY [{"a":..., "b":...., }]
+# =====================================================================================
+# returns a list of filtered
+def tabbed_file_with_header2dict_list(filepath):
     data = []
     with open(filepath, "r") as f:
         reader = csv.reader(f, dialect='excel', delimiter='\t')
@@ -31,6 +34,68 @@ def read_tabbed_file_with_header(filepath):
 
         return data
 
+# =====================================================================================
+# DATA EXTRACTION FROM A "SUBJ" DICTIONARY {"a_subj_label":{"a":..., "b":...., }}
+# =====================================================================================
+
+# assumes that the first column represents subjects' labels (it will act as dictionary's key).
+# creates a dictionary with subj label as key and data columns as a dictionary  {subjlabel:{"a":..., "b":..., }}
+def tabbed_file_with_header2subj_dic(filepath):
+
+    data = {}
+    with open(filepath, "r") as f:
+        reader = csv.reader(f, dialect='excel', delimiter='\t')
+        for row in reader:
+            if reader.line_num == 1:
+                header = row
+            else:
+                data_row = {}
+                cnt=0
+                for elem in row:
+                    if cnt == 0:
+                        subj_lab = elem
+                        if elem == "T15_P_134":
+                            a=1
+                    else:
+                        data_row[header[cnt]] = elem
+                    cnt = cnt+1
+                data[subj_lab] = data_row
+        return data
+
+# works with a "subj" dict
+# returns a filtered matrix [subj x colnames]
+def get_filtered_subj_dict_columns(dic, colnames, subj_labels):
+
+    res = []
+    for subj in subj_labels:
+        try:
+            subj_dic = dic[subj]
+            subj_row = []
+            for colname in colnames:
+                subj_row.append(subj_dic[colname])
+            res.append(subj_row)
+        except KeyError:
+            print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+            return
+    return res
+
+# works with a "subj" dict
+# returns a filtered vector [nsubj]
+def get_filtered_subj_dict_column(dic, colname, subj_labels):
+
+    res = []
+    for subj in subj_labels:
+        try:
+            subj_dic = dic[subj]
+            res.append(subj_dic[colname])
+        except KeyError:
+            print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+            return
+    return res
+
+# =====================================================================================
+# =====================================================================================
+# return a list of values from a given column
 def get_dict_column(dic, colname):
     return [d[colname] for d in dic]
 
