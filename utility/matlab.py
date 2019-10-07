@@ -1,5 +1,8 @@
+import matlab.engine.engineerror
 import matlab.engine
+# from matlab.engine import
 import os
+import io
 
 
 # start a new matlab session (if no session are active) or connect to the first one available or return None.
@@ -31,12 +34,14 @@ def call_matlab_function(func, standard_paths, params="", logfile=None, endengin
 
     # add file path to matlab
     engine.addpath(os.path.dirname(func))
-    print("running matlab function: " + func, file=logfile)
-    res = eval("engine." + os.path.basename(os.path.splitext(func)[0]) + "(" + params + ")")
+    batch_file = os.path.basename(os.path.splitext(func)[0])
+
+    print("running matlab function: " + batch_file, file=logfile)
+    res = eval("engine." + batch_file + "(" + params + ")")
 
     if endengine is True:
         engine.quit()
-        print("quitting matlab session")
+        print("quitting matlab session of " + batch_file)
 
     return [engine, res]
 
@@ -47,19 +52,23 @@ def call_matlab_function_noret(func, standard_paths, params="", logfile=None, en
     if engine is None:
         return
 
+    batch_file = os.path.basename(os.path.splitext(func)[0])
+
     if params == "":
         str_params = "(nargout=0)"
     else:
         str_params = "(" + params + ",nargout=0)"
 
+    batch_file = os.path.basename(os.path.splitext(func)[0])
     # add file path to matlab
-    engine.addpath(os.path.dirname(func))
-    print("running matlab function: " + func, file=logfile)
-    eval("engine." + os.path.basename(os.path.splitext(func)[0]) + str_params)
+    engine.addpath(os.path.dirname(batch_file))
+
+    print("running matlab function: " + batch_file, file=logfile)
+    eval("engine." + batch_file + str_params)
 
     if endengine is True:
         engine.quit()
-        print("quitting matlab session")
+        print("quitting matlab session of " + batch_file)
 
     return engine
 
@@ -67,27 +76,53 @@ def call_matlab_function_noret(func, standard_paths, params="", logfile=None, en
 # subcase of call_matlab_function_noret: call a SPM batch file that does not return anything
 def call_matlab_spmbatch(func, standard_paths, logfile=None, endengine=True):
 
-    engine = start_matlab(standard_paths)
-    if engine is None:
-        return
+    batch_file = os.path.basename(os.path.splitext(func)[0])
+    # err = io.StringIO
 
-    # add file path to matlab
-    engine.addpath(os.path.dirname(func))
-    print("running SPM batch template: " + func, file=logfile)
-    eval("engine." + os.path.basename(os.path.splitext(func)[0]) + "(nargout=0)")
+    try:
 
-    if endengine is True:
-        engine.quit()
-        print("quitting matlab session")
+        engine = start_matlab(standard_paths)
+        if engine is None:
+            return
 
-    return engine
+        # add file path to matlab
+        engine.addpath(os.path.dirname(func))
+
+        print("running SPM batch template: " + func, file=logfile)
+        eval("engine." + batch_file + "(nargout=0)")
+        # eval("engine." + batch_file + "(nargout=0, stderr=err)")
+
+        if endengine is True:
+            engine.quit()
+            print("quitting matlab session of " + batch_file)
+
+        return engine
+
+    except Exception as e:
+        print("error in " + batch_file)
+        # print(err.getvalue())
+        print(e)
+        exit()
 
 
 
 
-
-
-
+    #
+    # def _execute_sync(self, code):
+    #     out = io.StringIO()
+    #     err = io.StringIO()
+    #     if not isinstance(code, str):
+    #         code = code.encode('utf8')
+    #     try:
+    #         self._matlab.eval(code, nargout=0, stdout=out, stderr=err)
+    #     except (SyntaxError, MatlabExecutionError) as exc:
+    #         stdout = exc.args[0]
+    #         self.Error(stdout)
+    #         raise exc
+    #     stdout = out.getvalue()
+    #     self.Print(stdout)
+    #
+    #
 
 
 

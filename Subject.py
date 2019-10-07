@@ -1135,8 +1135,12 @@ class Subject:
 
             os.makedirs(out_batch_dir   , exist_ok = True)
 
-            images_string   = ""
-            images_list     = []
+            images_string       = ""
+            images_list         = []
+            surfaces_list       = []
+            icv_files_list      = []
+            report_file_list    = []
+
             # create images list
             for sess in sessions:
 
@@ -1174,6 +1178,9 @@ class Subject:
 
                 images_string = images_string + "'" + inputimage + ".nii,1'\n"
                 images_list.append(inputimage + ".nii")
+                surfaces_list.append(os.path.join(subj.t1_cat_dir, "surf", "lh.thickness." + T1 + "_" + subj.label))
+                icv_files_list.append(os.path.join(subj.t1_cat_dir, "tiv_" + subj.label + ".txt"))
+                report_file_list.append(os.path.join(subj.t1_cat_dir, "report", "cat_rT1_" + subj.label + ".xml"))
 
 
             sed_inplace(output_template, "<T1_IMAGES>", images_string)
@@ -1183,25 +1190,26 @@ class Subject:
             sed_inplace(output_template, "<N_PROC>", str(num_proc))
 
             resample_string = ""
+            icv_string      = ""
             next_block_id   = 3  # id of the RESAMPLE
-            if calc_surfaces == 1:
-                resample_string = resample_string + "matlabbatch{3}.spm.tools.cat.stools.surfresamp.data_surf(1) = cfg_dep('Smooth: Smoothed Images', substruct('.','val', '{}',{3}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','files'));\n"
-                resample_string = resample_string + "matlabbatch{3}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
-                resample_string = resample_string + "matlabbatch{3}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
-                resample_string = resample_string + "matlabbatch{3}.spm.tools.cat.stools.surfresamp.fwhm_surf = 15;\n"
-                resample_string = resample_string + "matlabbatch{3}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
-                next_block_id = next_block_id + 1
-            sed_inplace(output_template, "<SURF_RESAMPLE>", resample_string)
 
-            icv_string = ""
-            for sess in sessions:
-                sess_subj       = self.set_file_system(sess)
-                icv_file        = os.path.join(self.t1_cat_dir, "tiv_" + self.label + ".txt")
-                report_file     = os.path.join(self.t1_cat_dir, "report", "cat_T1_" + self.label + ".xml")
-                icv_string      = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.data_xml = {'" + report_file + "'};\n"
+            for s in range(len(sessions)):
+                if calc_surfaces == 1:
+                    resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.data_surf = {'" + surfaces_list[s] + "'};\n"
+                    resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
+                    resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
+                    resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.fwhm_surf = 15;\n"
+                    resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
+                    next_block_id = next_block_id + 1
+
+            for s in range(len(sessions)):
+
+                icv_string      = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.data_xml = {'" + report_file_list[s] + "'};\n"
                 icv_string      = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.calcvol_TIV = 1;\n"
-                icv_string      = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.calcvol_name = '" + icv_file + "';\n"
+                icv_string      = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.calcvol_name = '" + icv_files_list[s] + "';\n"
                 next_block_id   = next_block_id + 1
+
+            sed_inplace(output_template, "<SURF_RESAMPLE>", resample_string)
             sed_inplace(output_template, "<ICV_CALCULATION>", icv_string)
 
             sed_inplace(output_start, "X", "1")

@@ -226,6 +226,9 @@ class Project:
             # call_matlab_function_noret("spm_display_image", [self._global.spm_functions_dir], "\'" + niifile + "\'", endengine=False)
             # input("press any key to continue")
 
+    # copy from temp to :
+    # - subj.t1_data
+    # - t1_cat_dir
     def prepare_mpr_for_setorigin2(self, destdirname, group_label, sess_id, replaceOrig=False):
         subjects    = self.load_subjects(group_label, sess_id)
         tempdir     = os.path.join(self.dir, destdirname)
