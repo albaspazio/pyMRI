@@ -69,7 +69,7 @@ if __name__ == "__main__":
         project = Project(proj_dir, globaldata)
 
         project.load_subjects(subjects_list_name)
-        subjects            = project.get_subjects_labels()
+        subjects            = project.get_loaded_subjects_labels()
         NUM_SUBJ            = len(subjects)
 
         # load melodic template

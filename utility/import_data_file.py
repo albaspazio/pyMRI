@@ -1,5 +1,8 @@
 import csv
 
+from utility.utilities import argsort, reorder_list, typeUnknown
+
+
 def read_varlist_file(filepath, comment_char="#"):
     data = {}
     with open(filepath, "r") as f:
@@ -54,8 +57,6 @@ def tabbed_file_with_header2subj_dic(filepath):
                 for elem in row:
                     if cnt == 0:
                         subj_lab = elem
-                        if elem == "T15_P_134":
-                            a=1
                     else:
                         data_row[header[cnt]] = elem
                     cnt = cnt+1
@@ -64,9 +65,10 @@ def tabbed_file_with_header2subj_dic(filepath):
 
 # works with a "subj" dict
 # returns a filtered matrix [subj x colnames]
-def get_filtered_subj_dict_columns(dic, colnames, subj_labels):
+def get_filtered_subj_dict_columns(dic, colnames, subj_labels, sort=-1):
 
     res = []
+    lab = []
     for subj in subj_labels:
         try:
             subj_dic = dic[subj]
@@ -74,24 +76,124 @@ def get_filtered_subj_dict_columns(dic, colnames, subj_labels):
             for colname in colnames:
                 subj_row.append(subj_dic[colname])
             res.append(subj_row)
+            lab.append(subj)
+
         except KeyError:
             print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
             return
-    return res
+
+    if sort is True:
+        sort_schema = argsort(res)
+        res.sort()
+        lab = reorder_list(lab, sort_schema)
+
+    return res, lab
 
 # works with a "subj" dict
-# returns a filtered vector [nsubj]
-def get_filtered_subj_dict_column(dic, colname, subj_labels):
+# returns two vectors filtered by [subj labels]
+# - [values]
+# - [labels]
+def get_filtered_subj_dict_column(dic, colname, subjects_label, sort=False):
 
     res = []
-    for subj in subj_labels:
+    lab = []
+    for subj in subjects_label:
         try:
-            subj_dic = dic[subj]
-            res.append(subj_dic[colname])
+            colvalue = typeUnknown(dic[subj][colname])
+            res.append(colvalue)
+            lab.append(subj)
         except KeyError:
             print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
             return
-    return res
+
+    if sort is True:
+        sort_schema = argsort(res)
+        res.sort()
+        lab = reorder_list(lab, sort_schema)
+
+    return res, lab
+
+# works with a "subj" dict
+# returns two vectors filtered by [subj labels] & value
+# - [values]
+# - [labels]
+def get_filtered_subj_dict_column_by_value(dic, colname, value, operation="=", subjects_label=None, sort=False):
+
+    res = []
+    lab = []
+    for subj in subjects_label:
+        try:
+            colvalue = typeUnknown(dic[subj][colname])
+            if operation == "=" or operation == "==" :
+                if colvalue == value:
+                    res.append(colvalue)
+                    lab.append(subj)
+            elif operation == ">":
+                if colvalue > value:
+                    res.append(colvalue)
+                    lab.append(subj)
+            elif operation == ">=":
+                if colvalue >= value:
+                    res.append(colvalue)
+                    lab.append(subj)
+            elif operation == "<":
+                if colvalue < value:
+                    res.append(colvalue)
+                    lab.append(subj)
+            elif operation == "<=":
+                if colvalue <= value:
+                    res.append(colvalue)
+                    lab.append(subj)
+
+        except KeyError:
+            print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+            return
+
+    if sort is True:
+        sort_schema = argsort(res)
+        res.sort()
+        lab = reorder_list(lab, sort_schema)
+
+    return res, lab
+
+# works with a "subj" dict
+# returns two vectors filtered by [subj labels] & whether value is within value1/2
+# - [values]
+# - [labels]
+def get_filtered_subj_dict_column_within_values(dic, colname, value1, value2, operation="<>", subjects_label=None, sort=False):
+
+    res = []
+    lab = []
+    for subj in subjects_label:
+        try:
+            colvalue = typeUnknown(dic[subj][colname])
+            if operation == "<>":
+                if value2 > colvalue > value1:
+                    res.append(colvalue)
+                    lab.append(subj)
+            elif operation == "<=>":
+                if value2 >= colvalue > value1:
+                    res.append(colvalue)
+                    lab.append(subj)
+            elif operation == "<=>=":
+                if value2 >= colvalue >= value1:
+                    res.append(colvalue)
+                    lab.append(subj)
+            elif operation == "<>=":
+                if value2 > colvalue >= value1:
+                    res.append(colvalue)
+                    lab.append(subj)
+
+        except KeyError:
+            print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+            return
+
+    if sort is True:
+        sort_schema = argsort(res)
+        res.sort()
+        lab = reorder_list(lab, sort_schema)
+
+    return res, lab
 
 # =====================================================================================
 # =====================================================================================

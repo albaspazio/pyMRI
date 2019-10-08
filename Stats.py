@@ -11,7 +11,7 @@ class Stats:
 
         cov = []
         for grp in groups_labels:
-            cov = cov + project.get_filtered_column(cov_name, grp, datafile)
+            cov = cov + project.get_filtered_column(cov_name, grp, datafile)[0]
         str_cov = "\n" + import_data_file.list2spm_text_column(cov) # ends with a "\n"
 
         cov_string = "matlabbatch{1}.spm.stats.factorial_design.cov.c = "

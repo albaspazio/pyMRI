@@ -6,7 +6,7 @@ import io
 
 
 # start a new matlab session (if no session are active) or connect to the first one available or return None.
-def start_matlab(paths2add, conn2first=True):
+def start_matlab(paths2add=[], conn2first=True):
 
     existing_sessions = matlab.engine.find_matlab()
 
@@ -16,6 +16,7 @@ def start_matlab(paths2add, conn2first=True):
         else:
             print("More than one matlab sessions are presently open...returning")
             return None
+
     else:
         print("opening matlab session")
         eng = matlab.engine.start_matlab()
@@ -26,7 +27,7 @@ def start_matlab(paths2add, conn2first=True):
     return eng
 
 
-def call_matlab_function(func, standard_paths, params="", logfile=None, endengine=True):
+def call_matlab_function(func, standard_paths=[], params="", logfile=None, endengine=True):
 
     engine = start_matlab(standard_paths)
     if engine is None:
@@ -46,7 +47,7 @@ def call_matlab_function(func, standard_paths, params="", logfile=None, endengin
     return [engine, res]
 
 
-def call_matlab_function_noret(func, standard_paths, params="", logfile=None, endengine=True):
+def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None, endengine=True):
 
     engine = start_matlab(standard_paths)
     if engine is None:
@@ -74,7 +75,7 @@ def call_matlab_function_noret(func, standard_paths, params="", logfile=None, en
 
 
 # subcase of call_matlab_function_noret: call a SPM batch file that does not return anything
-def call_matlab_spmbatch(func, standard_paths, logfile=None, endengine=True):
+def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True):
 
     batch_file = os.path.basename(os.path.splitext(func)[0])
     # err = io.StringIO

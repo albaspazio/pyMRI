@@ -8,18 +8,17 @@ from copy import deepcopy
 from utility.manage_images import imcp, imrm
 from utility.utilities import gunzip, compress
 from Subject import Subject
-from utility.import_data_file import tabbed_file_with_header2subj_dic, get_filtered_subj_dict_column
 from utility import import_data_file
 
 
 class Project:
 
-    def __init__(self, dir, globaldata, data="data.dat"):
+    def __init__(self, folder, globaldata, data="data.dat"):
 
-        if not os.path.exists(dir):
+        if not os.path.exists(folder):
             raise Exception("PROJECT_DIR not defined.....exiting")
 
-        self.dir                    = dir
+        self.dir                    = folder
         self.label                  = os.path.basename(self.dir)
 
         self.name                   = os.path.basename(self.dir)
@@ -48,7 +47,7 @@ class Project:
         # load data file if exist
         self.data_file              = os.path.join(self.script_dir, data)
         if os.path.exists(self.data_file) is True:
-            self.data = tabbed_file_with_header2subj_dic(self.data_file)
+            self.data = import_data_file.tabbed_file_with_header2subj_dic(self.data_file)
         else:
             self.data = []
 
@@ -56,19 +55,34 @@ class Project:
         with open(os.path.join(self.script_dir, "subjects_lists.json")) as json_file:
             self.subjects_lists = json.load(json_file)
 
-    # retrieve a specific list of subjects
-    def get_list_by_label(self, label):
-        for subj in self.subjects_lists["subjects"]:
-            if subj["label"] == label:
-                return subj["list"]
+    # ==================================================================================================================
+    # GET SUBJECTS FROM GROUP LABELS/LIST SUBJECT LABELS
+    # ==================================================================================================================
+    # retrieve a specific list of subjects' labels
+    def get_subjects_labels(self, label=None):
 
+        try:
+            if label is None:
+                return self.get_loaded_subjects_labels()
+            else:
+                if isinstance(label, list):
+                    return label
+                else:
+                    for subj in self.subjects_lists["subjects"]:
+                        if subj["label"] == label:
+                            return subj["list"]
+
+        except Exception as e:
+            print("Error in get_subjectlabels")
+            return []
+
+    # retrieve a specific list of subjects' instances
     def get_subjects(self, list_label, sess_id=1):
 
-        subjects = self.get_list_by_label(list_label)
+        subjects = self.get_subjects_labels(list_label)
         subjs = []
         for subj in subjects:
             subjs.append(Subject(subj, sess_id, self))
-
         return subjs
 
     # load a list of subjects
@@ -79,7 +93,7 @@ class Project:
         return self.subjects
 
     # get the list of loaded subjects' label
-    def get_subjects_labels(self):
+    def get_loaded_subjects_labels(self):
         subjs = []
         for subj in self.subjects:
             subjs.append(subj.label)
@@ -116,7 +130,7 @@ class Project:
 
         # check subjects
         if subj_labels is None:
-            subj_labels = self.get_subjects_labels()
+            subj_labels = self.get_loaded_subjects_labels()
         nsubj       = len(subj_labels)
         if nsubj == 0:
             print("ERROR in run_subjects_methods: subject list is empty")
@@ -201,18 +215,12 @@ class Project:
             else:
                 subjs = self.subjects
         else:
-            subjs = self.get_list_by_label(list_subj_label)
+            subjs = self.get_subjects_labels(list_subj_label)
 
         os.makedirs(tempdir,exist_ok=True)
 
         for subj in subjs:
             subj.mpr_compare_brain_extraction(tempdir)
-
-
-        # curr_dir = os.getcwd()
-        # os.chdir(tempdir)
-        # rrun("slicesdir *")
-        # os.chdir(curr_dir)
 
     def prepare_mpr_for_setorigin1(self, destdirname, group_label, sess_id, overwrite=False):
         subjects    = self.load_subjects(group_label, sess_id)
@@ -241,11 +249,14 @@ class Project:
                 os.makedirs(subj.t1_cat_dir, exist_ok=True)
                 imcp(src_image, os.path.join(subj.t1_cat_dir, "T1_" + subj.label + ".nii"))
 
+    # ==================================================================================================================
+    # GET SUBJECTS DATA
+    # ==================================================================================================================
     # returns a matrix (values x subjects) containing values of the requested columns of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_matrix(self, columns_list, subjects_label, data=None):
+    def get_filtered_matrix(self, columns_list, subjects_label, sort=False, data=None):
 
-        subj_list   = self.get_list_by_label(subjects_label)
+        subj_list   = self.get_subjects_labels(subjects_label)
         valid_data  = self.data
         if data is not None:
             if isinstance(data, dict):
@@ -257,12 +268,11 @@ class Project:
 
         return import_data_file.get_filtered_subj_dict_columns(valid_data, columns_list, subj_list)
 
-
     # returns a vector (nsubj) containing values of the requested column of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_column(self, column, subjects_label, data=None):
+    def get_filtered_column(self, column, subjects_label, sort=False, data=None):
 
-        subj_list   = self.get_list_by_label(subjects_label)
+        subj_list   = self.get_subjects_labels(subjects_label)
         valid_data  = self.data
         if data is not None:
             if isinstance(data, dict):
@@ -272,4 +282,40 @@ class Project:
                     if os.path.exists(data) is True:
                         valid_data = import_data_file.tabbed_file_with_header2subj_dic(data)
 
-        return import_data_file.get_filtered_subj_dict_column(valid_data, column, subj_list)
+        return import_data_file.get_filtered_subj_dict_column(valid_data, column, subj_list, sort)
+
+    # returns a vector (nsubj) containing values of the requested column of given subjects
+    # user can also pass a datafile path or a custom subj_dictionary
+    def get_filtered_column_by_value(self, column, value, operation="=", subjects_label=None, sort=False, data=None):
+
+        subj_list   = self.get_subjects_labels(subjects_label)
+        valid_data  = self.data
+        if data is not None:
+            if isinstance(data, dict):
+                valid_data = data
+            else:
+                if isinstance(data, str):
+                    if os.path.exists(data) is True:
+                        valid_data = import_data_file.tabbed_file_with_header2subj_dic(data)
+
+        return import_data_file.get_filtered_subj_dict_column_by_value(valid_data, column, value, operation, subj_list, sort)
+
+    # returns a vector (nsubj) containing values of the requested column of given subjects
+    # user can also pass a datafile path or a custom subj_dictionary
+    # def get_filtered_column_by_value(self, column, value, operation="=", subjects_label=None, data=None):
+    def get_filtered_subj_dict_column_within_values(self, column, value1, value2, operation="<>", subjects_label=None, sort=False, data=None):
+
+        subj_list   = self.get_subjects_labels(subjects_label)
+        valid_data  = self.data
+        if data is not None:
+            if isinstance(data, dict):
+                valid_data = data
+            else:
+                if isinstance(data, str):
+                    if os.path.exists(data) is True:
+                        valid_data = import_data_file.tabbed_file_with_header2subj_dic(data)
+
+        return import_data_file.get_filtered_subj_dict_column_within_values(valid_data, column, value1, value2, operation, subj_list, sort)
+
+    # ==================================================================================================================
+    # ==================================================================================================================

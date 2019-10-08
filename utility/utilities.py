@@ -39,3 +39,24 @@ def sed_inplace(filename, pattern, repl):
     # manner preserving file attributes (e.g., permissions).
     shutil.copystat(filename, tmp_file.name)
     shutil.move(tmp_file.name, filename)
+
+# get the sorting schema of a list(e.g [2,3,1,4,5] => [2,0,1,3,4]
+def argsort(seq):
+    #http://stackoverflow.com/questions/3382352/equivalent-of-numpy-argsort-in-basic-python/3382369#3382369
+    #by unutbu
+    return sorted(range(len(seq)), key=seq.__getitem__)
+
+# apply the given permutation to a list
+def reorder_list(list, neworder):
+    return  [list[i] for i in neworder]
+
+# transform properly a string containing a Int/Float/String
+def typeUnknown(s):
+    try:
+        ns = float(s)
+        if ns == round(ns):
+            return int(s)
+        else:
+            return ns
+    except ValueError:
+        return s

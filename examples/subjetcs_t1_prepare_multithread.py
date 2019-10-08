@@ -104,7 +104,7 @@ if __name__ == "__main__":
     coregistration_template = os.path.join(project.group_analysis_dir, "templates", "com", "mw_com_Template_1_Age_0070.nii")
     calc_surfaces           = 1
     subjects                = project.load_subjects(group_label, SESS_ID)
-    project.run_subjects_methods("mpr_cat_segment", [{"do_overwrite":True, "seg_templ":segmentation_template, "coreg_templ":coregistration_template, "calc_surfaces":calc_surfaces, "num_proc":1}], project.get_subjects_labels(), nthread=num_cpu)
+    project.run_subjects_methods("mpr_cat_segment", [{"do_overwrite":True, "seg_templ":segmentation_template, "coreg_templ":coregistration_template, "calc_surfaces":calc_surfaces, "num_proc":1}], project.get_loaded_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM TISSUE VOLUMES

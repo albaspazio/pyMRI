@@ -33,13 +33,13 @@ if __name__ == "__main__":
     # test getting filtered data columns
     data        = tabbed_file_with_header2dict_list(datafile)
     age         = get_dict_column(data, "age")
-    age         = get_filtered_dict_column(data, "age", "subj", project.get_list_by_label("test"))
+    age         = get_filtered_dict_column(data, "age", "subj", project.get_subjects_labels("test"))
     age         = get_filtered_dict_column(data, "age", "cat_dist", ['0'])
     str         = list2spm_text_column(age)
 
     # create a convenient dictionary with each (unique) subject label as key and a dictionary of scores as value
     data1       = tabbed_file_with_header2subj_dic(datafile)
-    matrix      = get_filtered_subj_dict_columns(data1, ["group", "age"], project.get_list_by_label("single"))
+    matrix      = get_filtered_subj_dict_columns(data1, ["group", "age"], project.get_subjects_labels("single"))
 
 
 
