@@ -40,8 +40,8 @@ class GroupAnalysis:
         in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
         in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
 
-        out_batch_start = os.path.join(out_batch_dir, "create_" + spm_template_name + "_start.m")
-        out_batch_job = os.path.join(out_batch_dir, "create_" + spm_template_name + "_job.m")
+        out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + ".m")
+        out_batch_job = os.path.join(out_batch_dir, spm_template_name + "_job.m")
 
         os.makedirs(out_batch_dir, exist_ok=True)
         #=======================================================
@@ -159,8 +159,8 @@ class GroupAnalysis:
             in_batch_start  = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
             in_batch_job    = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
 
-            out_batch_start = os.path.join(out_batch_dir, "create_" + spm_template_name + "_start.m")
-            out_batch_job   = os.path.join(out_batch_dir, "create_" + spm_template_name + "_job.m")
+            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + ".m")
+            out_batch_job   = os.path.join(out_batch_dir, spm_template_name + "_job.m")
 
             # compose images string
             cells_images = ""
@@ -236,8 +236,8 @@ class GroupAnalysis:
             in_batch_start  = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
             in_batch_job    = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
 
-            out_batch_start = os.path.join(out_batch_dir, "create_" + spm_template_name + "_start.m")
-            out_batch_job   = os.path.join(out_batch_dir, "create_" + spm_template_name + "_job.m")
+            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + ".m")
+            out_batch_job   = os.path.join(out_batch_dir, spm_template_name + "_job.m")
 
             # compose images string
             cells_images = ""
@@ -314,8 +314,8 @@ class GroupAnalysis:
             in_batch_start  = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
             in_batch_job    = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
 
-            out_batch_start = os.path.join(out_batch_dir, "create_" + spm_template_name + "_start.m")
-            out_batch_job   = os.path.join(out_batch_dir, "create_" + spm_template_name + "_job.m")
+            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + ".m")
+            out_batch_job   = os.path.join(out_batch_dir, spm_template_name + "_job.m")
 
             nfactors    = len(factors_labels)
             nlevels     = [len(cells), len(cells[0])]   # nlevels for each factor
@@ -392,8 +392,8 @@ class GroupAnalysis:
             in_batch_start          = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
             in_batch_job            = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
 
-            out_batch_start         = os.path.join(out_batch_dir, "create_" + spm_template_name + "_start.m")
-            out_batch_job           = os.path.join(out_batch_dir, "create_" + spm_template_name + "_job.m")
+            out_batch_start         = os.path.join(out_batch_dir, "start_" + spm_template_name + ".m")
+            out_batch_job           = os.path.join(out_batch_dir, spm_template_name + "_job.m")
 
             # get subjects lists
             if isinstance(grp1_label, str):
@@ -465,8 +465,8 @@ class GroupAnalysis:
             in_batch_start  = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
             in_batch_job    = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
 
-            out_batch_start = os.path.join(out_batch_dir, "create_" + spm_template_name + "_start.m")
-            out_batch_job   = os.path.join(out_batch_dir, "create_" + spm_template_name + "_job.m")
+            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + ".m")
+            out_batch_job   = os.path.join(out_batch_dir, spm_template_name + "_job.m")
 
             # set job file
             copyfile(in_batch_job, out_batch_job)

@@ -8,7 +8,7 @@ from numpy import arange, concatenate, array
 
 from utility.fslfun import run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img
 from utility.manage_images import imtest, immv, imcp, imrm, quick_smooth, remove_ext, mass_images_move, is_image, mysplittext, imgname
-from utility.utilities import sed_inplace, gunzip
+from utility.utilities import sed_inplace, gunzip, write_text_file
 from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
 from myfsl.utils.run import rrun
 from Stats import Stats
@@ -85,6 +85,7 @@ class Subject:
 
         self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
         self.t1_cat_resampled_surface   = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
+        self.t1_cat_resampled_surface_longitudinal   = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
 
         self.dti_image_label            = self.label + "- dti"
         self.dti_EC_image_label         = self.label + "-dti_ec"
@@ -279,7 +280,7 @@ class Subject:
                         odn=odn,
                         do_bet_overwrite=spm_seg_over_bet,
                         do_fs_overwrite=spm_seg_over_fs,
-                        spm_template_name="spm_segment_dartelimport_template_job.m")
+                        spm_template_name="spm_segment_dartelimport_template")
 
                 self.mpr_postbet(
                         odn=odn, imgtype=imgtype, smooth=smooth,
@@ -831,7 +832,7 @@ class Subject:
                         do_bet_overwrite=False,
                         add_bet_mask=True,
                         set_origin=False,
-                        spm_template_name="spm_segment_tissuevolume_job.m"
+                        spm_template_name="spm_segment_tissuevolume"
                         ):
 
         # define placeholder variables for input dir and image name
@@ -851,11 +852,11 @@ class Subject:
         # set dirs
         spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
         out_batch_dir           = os.path.join(spm_script_dir, "batch")
-        in_script_template      = os.path.join(self._global.spm_templates_dir, spm_template_name)
+        in_script_template      = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
         in_script_start         = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
 
-        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name)
-        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name)
+        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name + "_job.m")
+        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name + ".m")
 
         brain_mask              = os.path.join(self.t1_spm_dir, "brain_mask.nii.gz")
         skullstripped_mask      = os.path.join(self.t1_spm_dir, "skullstripped_mask.nii.gz")
@@ -971,7 +972,7 @@ class Subject:
                         calc_surfaces=0,
                         num_proc=1,
                         use_existing_nii=True,
-                        spm_template_name="cat_segment_customizedtemplate_tiv_smooth_job.m"
+                        spm_template_name="cat_segment_customizedtemplate_tiv_smooth"
                         ):
 
         # define placeholder variables for input dir and image name
@@ -1005,11 +1006,11 @@ class Subject:
         # set dirs
         spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
         out_batch_dir           = os.path.join(spm_script_dir, "batch")
-        in_script_template      = os.path.join(self._global.spm_templates_dir, spm_template_name)
+        in_script_template      = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
         in_script_start         = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
 
-        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name)
-        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name)
+        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name + "_job.m")
+        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name + ".m")
 
         brain_mask              = os.path.join(self.t1_cat_dir, "brain_mask.nii.gz")
 
@@ -1050,6 +1051,7 @@ class Subject:
             sed_inplace(output_template, "<TEMPLATE_COREGISTRATION>", coreg_templ)
             sed_inplace(output_template, "<CALC_SURFACES>", str(calc_surfaces))
             sed_inplace(output_template, "<TIV_FILE>", icv_file)
+            sed_inplace(output_template, "<N_PROC>", str(num_proc))
 
             resample_string = ""
             if calc_surfaces == 1:
@@ -1065,7 +1067,10 @@ class Subject:
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
             call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], log)
-            imrm([inputimage + ".nii"])
+
+            if use_existing_nii is False:
+                imrm([inputimage + ".nii"])
+
             log.close()
 
         except Exception as e:
@@ -1073,6 +1078,33 @@ class Subject:
             log.close()
             print(e)
 
+
+    def mpr_cat_segment_check(self,calc_surfaces=0):
+        icv_file                = os.path.join(self.t1_cat_dir, "tiv_" + self.label + ".txt")
+
+        if os.path.exists(os.path.join(self.t1_cat_dir, "report", "cat_T1_" + self.label + ".xml")) is False:
+            print("Error in mpr_cat_segment_check of subj " + self.label + ", CAT REPORT is missing")
+            return False
+
+        if os.path.exists(icv_file) is False:
+            print("Error in mpr_cat_segment_check of subj " + self.label + ", ICV_FILE is missing")
+            return False
+
+        if os.path.getsize(icv_file) == 0:
+            print("Error in mpr_cat_segment_check of subj " + self.label + ", ICV_FILE is empty")
+            return False
+
+        if calc_surfaces > 0:
+
+            if os.path.exists(os.path.join(self.t1_cat_surface_dir, "lh.thickness.T1_" + self.label)) is False:
+                print("Error in mpr_cat_segment_check of subj " + self.label + ", lh thickness is missing")
+                return False
+
+            if os.path.exists(self.t1_cat_resampled_surface) is False:
+                print("Error in mpr_cat_segment_check of subj " + self.label + ", RESAMPLED SURFACE is missing")
+                return False
+
+        return True
 
     # longitudinal segment T1 with CAT and create  WM+GM mask (CSF is not created)
     # add_bet_mask params is used to correct the presence of holes (only partially filled) in the WM+GM mask.
@@ -1090,7 +1122,7 @@ class Subject:
                         calc_surfaces=0,
                         num_proc=1,
                         use_existing_nii=True,
-                        spm_template_name="cat_segment_longitudinal_customizedtemplate_tiv_smooth_job.m"
+                        spm_template_name="cat_segment_longitudinal_customizedtemplate_tiv_smooth"
                         ):
 
         current_session = self.sessid
@@ -1113,11 +1145,11 @@ class Subject:
         # set dirs
         spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
         out_batch_dir           = os.path.join(spm_script_dir, "batch")
-        in_script_template      = os.path.join(self._global.spm_templates_dir, spm_template_name)
+        in_script_template      = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
         in_script_start         = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
 
-        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name)
-        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name)
+        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name + "_job.m")
+        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name + ".m")
 
         copyfile(in_script_template, output_template)
         copyfile(in_script_start, output_start)
@@ -1137,9 +1169,9 @@ class Subject:
 
             images_string       = ""
             images_list         = []
-            surfaces_list       = []
-            icv_files_list      = []
-            report_file_list    = []
+            # surfaces_list       = []
+            # icv_files_list      = []
+            # report_file_list    = []
 
             # create images list
             for sess in sessions:
@@ -1178,9 +1210,9 @@ class Subject:
 
                 images_string = images_string + "'" + inputimage + ".nii,1'\n"
                 images_list.append(inputimage + ".nii")
-                surfaces_list.append(os.path.join(subj.t1_cat_dir, "surf", "lh.thickness." + T1 + "_" + subj.label))
-                icv_files_list.append(os.path.join(subj.t1_cat_dir, "tiv_" + subj.label + ".txt"))
-                report_file_list.append(os.path.join(subj.t1_cat_dir, "report", "cat_rT1_" + subj.label + ".xml"))
+                # surfaces_list.append(os.path.join(subj.t1_cat_dir, "surf", "lh.thickness." + T1 + "_" + subj.label))
+                # icv_files_list.append(os.path.join(subj.t1_cat_dir, "tiv_" + subj.label + ".txt"))
+                # report_file_list.append(os.path.join(subj.t1_cat_dir, "report", "cat_rT1_" + subj.label + ".xml"))
 
 
             sed_inplace(output_template, "<T1_IMAGES>", images_string)
@@ -1189,34 +1221,39 @@ class Subject:
             sed_inplace(output_template, "<CALC_SURFACES>", str(calc_surfaces))
             sed_inplace(output_template, "<N_PROC>", str(num_proc))
 
-            resample_string = ""
-            icv_string      = ""
-            next_block_id   = 3  # id of the RESAMPLE
-
-            for s in range(len(sessions)):
-                if calc_surfaces == 1:
-                    resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.data_surf = {'" + surfaces_list[s] + "'};\n"
-                    resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
-                    resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
-                    resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.fwhm_surf = 15;\n"
-                    resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
-                    next_block_id = next_block_id + 1
-
-            for s in range(len(sessions)):
-
-                icv_string      = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.data_xml = {'" + report_file_list[s] + "'};\n"
-                icv_string      = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.calcvol_TIV = 1;\n"
-                icv_string      = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.calcvol_name = '" + icv_files_list[s] + "';\n"
-                next_block_id   = next_block_id + 1
-
-            sed_inplace(output_template, "<SURF_RESAMPLE>", resample_string)
-            sed_inplace(output_template, "<ICV_CALCULATION>", icv_string)
+            # resample_string = ""
+            # icv_string      = ""
+            # next_block_id   = 3  # id of the RESAMPLE
 
             sed_inplace(output_start, "X", "1")
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
-            call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], log)
-            imrm([images_list])
+            eng = call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], log, endengine=False)
+
+            if calc_surfaces == 1:
+                for sess in sessions:
+                    self.mpr_cat_surf_resample(sess, num_proc, isLong=True, endengine=False, eng=eng)
+                    # resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.data_surf = {'" + surfaces_list[s] + "'};\n"
+                    # resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
+                    # resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
+                    # resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.fwhm_surf = 15;\n"
+                    # resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
+                    # next_block_id = next_block_id + 1
+
+            for sess in sessions:
+                self.mpr_cat_tiv_calculation(sess, isLong=True, endengine=False, eng=eng)
+                # icv_string = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.data_xml = {'" + report_file_list[s] + "'};\n"
+                # icv_string = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.calcvol_TIV = 1;\n"
+                # icv_string = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.calcvol_name = '" + icv_files_list[s] + "';\n"
+                # next_block_id = next_block_id + 1
+
+            # sed_inplace(output_template, "<SURF_RESAMPLE>", resample_string)
+            # sed_inplace(output_template, "<ICV_CALCULATION>", icv_string)
+
+            if use_existing_nii is False:
+                imrm([images_list])
+
+            eng.quit()
             log.close()
 
             self.sessid = current_session
@@ -1226,8 +1263,110 @@ class Subject:
             log.close()
             print(e)
 
+    def mpr_cat_segment_longitudinal_check(self, sessions, calc_surfaces=0):
 
-    def mpr_spm_tissue_volumes(self, spm_template_name="spm_icv_template_job.m"):
+        err = ""
+
+        for sess in sessions:
+
+            subj        = self.get_sess_file_system(sess)
+
+            icv_file    = os.path.join(subj.t1_cat_dir, "tiv_r_" + subj.label + ".txt")
+            report_file = os.path.join(subj.t1_cat_dir, "report", "cat_rT1_" + subj.label + ".xml")
+
+            if os.path.exists(report_file) is False:
+                err     = err + "Error in mpr_cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", CAT REPORT is missing" + "\n"
+
+            if os.path.exists(icv_file) is False:
+                err     = err + "Error in mpr_cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", ICV_FILE is missing" + "\n"
+            else:
+                if os.path.getsize(icv_file) == 0:
+                    err     = err + "Error in mpr_cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", ICV_FILE is empty" + "\n"
+
+            if calc_surfaces > 0:
+
+                if os.path.exists(os.path.join(subj.t1_cat_surface_dir, "lh.thickness.rT1_" + subj.label)) is False:
+                    err     = err + "Error in mpr_cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", lh thickness is missing" + "\n"
+
+                if os.path.exists(subj.t1_cat_resampled_surface) is False:
+                    err     = err + "Error in mpr_cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", RESAMPLED SURFACE is missing" + "\n"
+
+        if err != "":
+            print(err)
+
+        return err
+
+    def mpr_cat_surf_resample(self, session=1, num_proc=1, isLong=False, mesh32k=1, endengine=True, eng=None):
+
+        spm_template_name       = "mpr_cat_surf_resample"
+        # set dirs
+        spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
+        out_batch_dir           = os.path.join(spm_script_dir, "batch")
+        in_script_start         = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+
+        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name + "_job.m")
+        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name + ".m")
+
+        copyfile(in_script_start, output_start)
+
+        subj = self.get_sess_file_system(session)
+
+        surf_prefix = "T1"
+        if isLong is True:
+            surf_prefix = "rT1"
+        surface = os.path.join(subj.t1_cat_dir, "surf", "lh.thickness." + surf_prefix + "_" + subj.label)
+
+        resample_string = ""
+        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.data_surf = {'" + surface + "'};\n"
+        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
+        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.mesh32k = " + str(mesh32k) + ";\n"
+        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.fwhm_surf = 15;\n"
+        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
+
+        write_text_file(output_template, resample_string)
+        sed_inplace(output_start, "X", "1")
+        sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
+
+        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], log, endengine=endengine, eng=eng)
+
+
+    def mpr_cat_tiv_calculation(self, session=1, isLong=False, endengine=True, eng=None):
+
+        spm_template_name       = "mpr_cat_tiv_calculation"
+        # set dirs
+        spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
+        out_batch_dir           = os.path.join(spm_script_dir, "batch")
+        in_script_start         = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+
+        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name + "_job.m")
+        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name + ".m")
+
+        copyfile(in_script_start, output_start)
+
+        subj = self.get_sess_file_system(session)
+
+        prefix = "T1"
+        prefix_tiv = "tiv_"
+        if isLong is True:
+            prefix = "rT1"
+            prefix_tiv = "tiv_r_"
+
+        report_file = os.path.join(subj.t1_cat_dir, "report", "cat_" + prefix + "_" + subj.label + ".xml")
+        tiv_file    = os.path.join(subj.t1_cat_dir, "report", prefix_tiv + subj.label + ".txt")
+
+        tiv_string = ""
+        tiv_string = tiv_string + "matlabbatch{1}.spm.tools.cat.tools.calcvol.data_xml = {'" + report_file + "'};\n"
+        tiv_string = tiv_string + "matlabbatch{1}.spm.tools.cat.tools.calcvol.calcvol_TIV = 1;\n"
+        tiv_string = tiv_string + "matlabbatch{1}.spm.tools.cat.tools.calcvol.calcvol_name = '" + tiv_file + "';\n"
+
+        write_text_file(output_template, tiv_string)
+        sed_inplace(output_start, "X", "1")
+        sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
+
+        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], log, endengine=endengine, eng=eng)
+
+
+    def mpr_spm_tissue_volumes(self, spm_template_name="spm_icv_template", endengine=True, eng=None):
 
         seg_mat                = os.path.join(self.t1_spm_dir, "T1_biascorr_" + self.label + "_seg8.mat")
         icv_file                = os.path.join(self.t1_spm_dir, "icv_" + self.label + ".dat")
@@ -1235,11 +1374,11 @@ class Subject:
         # set dirs
         spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
         out_batch_dir           = os.path.join(spm_script_dir, "batch")
-        in_script_template      = os.path.join(self._global.spm_templates_dir, spm_template_name)
+        in_script_template      = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
         in_script_start         = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
 
-        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name)
-        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name)
+        output_template         = os.path.join(out_batch_dir, self.label + "_" + spm_template_name + "_job.m")
+        output_start            = os.path.join(out_batch_dir, "start_" + self.label + "_" + spm_template_name + ".m")
 
         copyfile(in_script_template, output_template)
         copyfile(in_script_start, output_start)
@@ -1249,7 +1388,8 @@ class Subject:
         sed_inplace(output_start, "X", "1")
         sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
-        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir])
+        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], endengine=False, eng=eng)
+
 
     def mpr_postbet(self,
                     odn="anat", imgtype=1, smooth=10,
@@ -1435,18 +1575,18 @@ class Subject:
             print("******************************************************************", file=log)
 
             # os.chdir(anatdir)
-    
+
             run_notexisting_img(self.t1_data + "_orig", "immv " + self.t1_data + " " + self.t1_data + "_orig", logFile=log)
             run_notexisting_img(self.t1_data, "imcp " + T1 + "_biascorr " + self.t1_data, logFile=log)
             run_notexisting_img(self.t1_brain_data, "imcp " + T1 + "_biascorr_brain " + self.t1_brain_data, logFile=log)
             run_notexisting_img(self.t1_brain_data + "_mask", "imcp " + T1 + "_biascorr_brain_mask " + self.t1_brain_data + "_mask", logFile=log)
-    
+
             os.makedirs(self.fast_dir, exist_ok=True)
 
             mass_images_move(os.path.join(anatdir, "*fast*"), self.fast_dir, logFile=log)
 
             run_notexisting_img(T1 + "_fast_pve_1", "imcp " + os.path.join(self.fast_dir, T1_label + "_fast_pve_1 " + anatdir), logFile=log) # this file is tested by subject_t1_processing to skip the fast step. so by copying it back, I allow such skip.
-    
+
             run_notexisting_img(self.t1_segment_csf_path, "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_seg") + " -thr 1 -uthr 1 " + self.t1_segment_csf_path, logFile=log)
             run_notexisting_img(self.t1_segment_gm_path , "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_seg") + " -thr 2 -uthr 2 " + self.t1_segment_gm_path, logFile=log)
             run_notexisting_img(self.t1_segment_wm_path , "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_seg") + " -thr 3 " + self.t1_segment_wm_path, logFile=log)
@@ -1470,7 +1610,7 @@ class Subject:
             traceback.print_exc()
             log.close()
             print(e)
-            
+
     def mpr_first(self, structures="", t1_image="", odn=""):
 
         logfile     = os.path.join(self.t1_dir, "mpr_log.txt")
@@ -1758,8 +1898,8 @@ class Subject:
         in_batch_job    = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
 
         # 2.1' … and establish location of output spm template + output run file:
-        out_batch_start = os.path.join(out_batch_dir, spm_template_name + self.label + '_start.m')
         out_batch_job   = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
+        out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + self.label + '.m')
 
         os.makedirs(out_batch_dir, exist_ok=True)
 
@@ -1932,7 +2072,7 @@ class Subject:
         out_batch_dir = os.path.join(spm_script_dir, "batch")
 
         out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
-        out_batch_start = os.path.join(out_batch_dir, spm_template_name + self.label + '_start.m')
+        out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + self.label + '.m')
 
         #substitute for all the volumes + rest of params
         epi_nvols = int(rrun('fslnvols ' + self.epi_data + '.nii.gz'))
@@ -1981,7 +2121,7 @@ class Subject:
         out_batch_dir = os.path.join(spm_script_dir, "batch")
 
         out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
-        out_batch_start = os.path.join(out_batch_dir, spm_template_name + self.label + '_start.m')
+        out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + self.label + '.m')
 
         #substitute for all the volumes
         epi_nvols = int(rrun('fslnvols ' + self.epi_data + '.nii.gz'))

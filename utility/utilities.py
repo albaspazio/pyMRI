@@ -18,6 +18,11 @@ def compress(src, dest):
     fp.close()
 
 
+def write_text_file(path, text):
+    with open(path, "w") as f:
+        f.write(text)
+
+
 def sed_inplace(filename, pattern, repl):
     '''
     Perform the pure-Python equivalent of in-place `sed` substitution: e.g.,

@@ -28,5 +28,3 @@ matlabbatch{2}.spm.spatial.smooth.fwhm = [8 8 8];
 matlabbatch{2}.spm.spatial.smooth.dtype = 0;
 matlabbatch{2}.spm.spatial.smooth.im = 0;
 matlabbatch{2}.spm.spatial.smooth.prefix = 's';
-<SURF_RESAMPLE>
-<ICV_CALCULATION>

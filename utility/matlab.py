@@ -27,11 +27,14 @@ def start_matlab(paths2add=[], conn2first=True):
     return eng
 
 
-def call_matlab_function(func, standard_paths=[], params="", logfile=None, endengine=True):
+def call_matlab_function(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
 
-    engine = start_matlab(standard_paths)
-    if engine is None:
-        return
+    if eng is None:
+        engine = start_matlab(standard_paths)
+        if engine is None:
+            return
+    else:
+        engine = eng
 
     # add file path to matlab
     engine.addpath(os.path.dirname(func))
@@ -47,13 +50,14 @@ def call_matlab_function(func, standard_paths=[], params="", logfile=None, enden
     return [engine, res]
 
 
-def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None, endengine=True):
+def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
 
-    engine = start_matlab(standard_paths)
-    if engine is None:
-        return
-
-    batch_file = os.path.basename(os.path.splitext(func)[0])
+    if eng is None:
+        engine = start_matlab(standard_paths)
+        if engine is None:
+            return
+    else:
+        engine = eng
 
     if params == "":
         str_params = "(nargout=0)"
@@ -75,16 +79,18 @@ def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None,
 
 
 # subcase of call_matlab_function_noret: call a SPM batch file that does not return anything
-def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True):
+def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True, eng=None):
 
     batch_file = os.path.basename(os.path.splitext(func)[0])
     # err = io.StringIO
 
     try:
-
-        engine = start_matlab(standard_paths)
-        if engine is None:
-            return
+        if eng is None:
+            engine = start_matlab(standard_paths)
+            if engine is None:
+                return
+        else:
+            engine = eng
 
         # add file path to matlab
         engine.addpath(os.path.dirname(func))
