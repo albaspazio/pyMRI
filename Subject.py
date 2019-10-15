@@ -1847,7 +1847,7 @@ class Subject:
     # epi_spm_XXXXX are methods editing and lauching a SPM batch file
 
     # coregister epi (or a given image) to given volume of given image (usually the epi itself, the pepolar in case of distortion correction process)
-    def epi_spm_motioncorrection(self, ref_vol=1, ref_image=None, epi2correct=None, spm_template_name="spm_fmri_realign_estimate_to_given_vol"):
+    def epi_spm_motioncorrection(self, ref_vol=1, ref_image=None, epi2correct=None, spm_template_name="spm_fmri_realign_estimate_reslice_to_given_vol"):
 
         if ref_image is None:
             ref_image = self.epi_data
@@ -1931,7 +1931,7 @@ class Subject:
         imcp(ref_image_pe, temp_epi_pe)
         os.system('gzip -d -k ' + temp_epi_pe + '.nii.gz')
         os.system('gzip -d -k ' + temp_epi + '.nii.gz')
-        self.epi_spm_motioncorrection(ref_volume_pe, temp_epi_pe, temp_epi)
+        self.epi_spm_motioncorrection(ref_volume_pe, temp_epi_pe, temp_epi, spm_template_name="spm_fmri_realign_estimate_to_given_vol")
 
         # 3: call matlab function that calculates best volume:
         best_vol = call_matlab_function("least_mov", [self._global.spm_functions_dir], "\"" + os.path.join(self.epi_dir, "temp_distorsion_mc", 'rp_' + self.label + '-epi_pe.txt' + "\""))[1]
@@ -2030,6 +2030,27 @@ class Subject:
 
         rrun('fslmerge -t ' + self.epi_data + " " + seq_string)
 
+    def epi_split(self, subdirmame = ""):
+
+        currdir = os.getcwd()
+        outdir = os.path.join(self.epi_dir, subdirmame)
+        os.makedirs(outdir, exist_ok=True)
+        os.chdir(outdir)
+        rrun('fslsplit ' + self.epi_data + " " + self.epi_image_label + "_" + " -t")
+        os.chdir(currdir)
+
+    def prepare_for_spm(self, subdirmame = "temp_split"):
+
+        self.epi_split(subdirmame)
+        outdir = os.path.join(self.epi_dir, subdirmame)
+        os.chdir(outdir)
+        for f in os.scandir():
+            if f.is_file():
+                gunzip(f.name, os.path.join(outdir, remove_ext(f.name) + ".nii"), replace=True)
+
+
+
+    # def epi_spm_fmri_preprocessing(self , num_slices, TR , TA=-1 , acq_scheme=0, ref_slice = -1 , slice_timing = None, spm_template_name='spm_fmri_preprocessing_norealign'):
     def epi_spm_fmri_preprocessing(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice = -1, slice_timing = None, spm_template_name='spm_fmri_preprocessing'):
         #default params:
         #TA - if not otherwise indicated, it assumes the acquisition is continuous and TA = TR - (TR/num slices)
@@ -2042,9 +2063,12 @@ class Subject:
 
         #
         if slice_timing == None:
-            slice_timing = self.epi_get_slicetiming_params(num_slices,acq_scheme, slice_timing)
+            slice_timing = self.epi_get_slicetiming_params(num_slices, acq_scheme)
         else:
             slice_timing = [str(p) for p in slice_timing]
+
+        self.prepare_for_spm()
+
 
         #set dirs
         in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')

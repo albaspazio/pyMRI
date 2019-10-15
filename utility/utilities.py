@@ -1,14 +1,17 @@
 import gzip
 import re, shutil, tempfile
+import os
 
-
-def gunzip(src, dest):
+def gunzip(src, dest, replace=False):
 
     fp = open(dest, "wb")
     with gzip.open(src, "rb") as f:
         bindata = f.read()
     fp.write(bindata)
     fp.close()
+
+    if replace is True:
+        os.remove(src)
 
 def compress(src, dest):
 
