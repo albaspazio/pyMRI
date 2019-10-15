@@ -1044,8 +1044,14 @@ class Subject:
             # I may want to process with cat after having previously processed without having set image's origin.
             # thus I may have created a nii version in the cat_proc folder , with the origin properly set
             # unzip nii.gz -> nii in cat folder only if nii is absent or I want to overwrite it.
-            if os.path.exists(inputimage + ".nii") is False or use_existing_nii is False:
-                gunzip(srcinputimage + ".nii.gz", inputimage + ".nii")
+            if use_existing_nii is False:
+                if os.path.exists(srcinputimage + ".nii.gz") is True:
+                    gunzip(srcinputimage + ".nii.gz", inputimage + ".nii")
+                else:
+                    print("Error in subj: "+ self.label + ", method: mpr_cat_segment, biascorr image is absent")
+            else:
+                if os.path.exists(inputimage + ".nii") is False:
+                    print("Error in subj: "+ self.label + ", method: mpr_cat_segment, given image in cat folder is absent")
 
             # here I may stop script to allow resetting the nii origin. sometimes is necessary to perform the segmentation
             if set_origin is True:
@@ -1311,7 +1317,7 @@ class Subject:
         sed_inplace(output_start, "X", "1")
         sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
-        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], log, endengine=endengine, eng=eng)
+        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine, eng=eng)
 
 
     def mpr_cat_tiv_calculation(self, session=1, isLong=False, endengine=True, eng=None):
@@ -1347,7 +1353,7 @@ class Subject:
         sed_inplace(output_start, "X", "1")
         sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
-        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], log, endengine=endengine, eng=eng)
+        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine, eng=eng)
 
 
     def mpr_spm_tissue_volumes(self, spm_template_name="spm_icv_template", endengine=True, eng=None):
@@ -2102,7 +2108,7 @@ class Subject:
         sed_inplace(out_batch_start, 'X', '1')
         sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
 
-        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], log)
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
         # eng = matlab.engine.start_matlab()
         # print("running SPM batch template: " + out_batch_start)  # , file=log)
         # eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
