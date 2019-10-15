@@ -273,10 +273,6 @@ class GroupAnalysis:
             sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
 
             eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=False)
-            # eng = matlab.engine.start_matlab()
-            # eng.eval("dbstop in myMATLABscript if error")
-            # print("running SPM batch template: " + statsdir)
-            # eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
 
             # model estimate
             print("estimating surface model")
@@ -432,9 +428,7 @@ class GroupAnalysis:
             sed_inplace(out_batch_start, "X", "1")
             sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
 
-            eng = matlab.engine.start_matlab()
-            print("running SPM batch template: " + statsdir)
-            eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
+            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=False)
 
             # model estimate
             print("estimating surface model")
@@ -482,10 +476,7 @@ class GroupAnalysis:
             sed_inplace(out_batch_start, "X", "1")
             sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
 
-            eng = matlab.engine.start_matlab()
-            print("running SPM batch template: " + spmmat)
-            eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
-            eng.quit()
+            call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir])
 
         except Exception as e:
             traceback.print_exc()
@@ -523,13 +514,6 @@ class GroupAnalysis:
                 call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir])   # open a new session and then end it
             else:
                 call_matlab_spmbatch(out_batch_start, endengine=False)   # I assume that the caller will end the matlab session and def dir have been already specified
-
-
-            #     eng = matlab.engine.start_matlab()
-            #     matlab.start_matlab()
-            # print("running SPM batch template: " + spm_mat_path)
-            # eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
-            # eng.quit()
 
         except Exception as e:
             traceback.print_exc()

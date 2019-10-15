@@ -1224,6 +1224,7 @@ class Subject:
                 images_string = images_string + "'" + inputimage + ".nii,1'\n"
                 images_list.append(inputimage + ".nii")
 
+
             sed_inplace(output_template, "<T1_IMAGES>", images_string)
             sed_inplace(output_template, "<TEMPLATE_SEGMENTATION>", seg_templ)
             sed_inplace(output_template, "<TEMPLATE_COREGISTRATION>", coreg_templ)
@@ -1280,7 +1281,7 @@ class Subject:
                 if os.path.exists(os.path.join(subj.t1_cat_surface_dir, "lh.thickness.rT1_" + subj.label)) is False:
                     err     = err + "Error in mpr_cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", lh thickness is missing" + "\n"
 
-                if os.path.exists(subj.t1_cat_resampled_surface) is False:
+                if os.path.exists(subj.t1_cat_resampled_surface_longitudinal) is False:
                     err     = err + "Error in mpr_cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", RESAMPLED SURFACE is missing" + "\n"
 
         if err != "":
@@ -1337,14 +1338,14 @@ class Subject:
 
         subj = self.get_sess_file_system(session)
 
-        prefix = "T1"
+        prefix = "cat_T1_"
         prefix_tiv = "tiv_"
         if isLong is True:
-            prefix = "rT1"
+            prefix = "cat_rT1_"
             prefix_tiv = "tiv_r_"
 
-        report_file = os.path.join(subj.t1_cat_dir, "report", "cat_" + prefix + "_" + subj.label + ".xml")
-        tiv_file    = os.path.join(subj.t1_cat_dir, "report", prefix_tiv + subj.label + ".txt")
+        report_file = os.path.join(subj.t1_cat_dir, "report", prefix + subj.label + ".xml")
+        tiv_file    = os.path.join(subj.t1_cat_dir, prefix_tiv + subj.label + ".txt")
 
         tiv_string = ""
         tiv_string = tiv_string + "matlabbatch{1}.spm.tools.cat.tools.calcvol.data_xml = {'" + report_file + "'};\n"
