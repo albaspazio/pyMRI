@@ -832,6 +832,7 @@ class Subject:
                         do_bet_overwrite=False,
                         add_bet_mask=True,
                         set_origin=False,
+                        seg_templ="",
                         spm_template_name="spm_segment_tissuevolume"
                         ):
 
@@ -886,12 +887,19 @@ class Subject:
             if set_origin is True:
                 input("press keyboard when finished setting the origin for subj " + self.label + " :")
 
+            if seg_templ == "":
+                seg_templ = os.path.join(self._global.spm_dir, "tpm", "TPM.nii")
+            else:
+                if imtest(seg_templ) is False:
+                    print("Error in mpr_spm_segment: given tissues template image (" +  seg_templ + ") does not exist")
+
             copyfile(in_script_template , output_template)
             copyfile(in_script_start    , output_start)
 
             sed_inplace(output_template, "<T1_IMAGE>", inputimage + ".nii")
             sed_inplace(output_template, "<ICV_FILE>", icv_file)
             sed_inplace(output_template, '<SPM_DIR>', self._global.spm_dir)
+            sed_inplace(output_template, '<TEMPLATE_TISSUES>', seg_templ)
 
             sed_inplace(output_start, "X", "1")
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
@@ -1169,9 +1177,6 @@ class Subject:
 
             images_string       = ""
             images_list         = []
-            # surfaces_list       = []
-            # icv_files_list      = []
-            # report_file_list    = []
 
             # create images list
             for sess in sessions:
@@ -1210,20 +1215,12 @@ class Subject:
 
                 images_string = images_string + "'" + inputimage + ".nii,1'\n"
                 images_list.append(inputimage + ".nii")
-                # surfaces_list.append(os.path.join(subj.t1_cat_dir, "surf", "lh.thickness." + T1 + "_" + subj.label))
-                # icv_files_list.append(os.path.join(subj.t1_cat_dir, "tiv_" + subj.label + ".txt"))
-                # report_file_list.append(os.path.join(subj.t1_cat_dir, "report", "cat_rT1_" + subj.label + ".xml"))
-
 
             sed_inplace(output_template, "<T1_IMAGES>", images_string)
             sed_inplace(output_template, "<TEMPLATE_SEGMENTATION>", seg_templ)
             sed_inplace(output_template, "<TEMPLATE_COREGISTRATION>", coreg_templ)
             sed_inplace(output_template, "<CALC_SURFACES>", str(calc_surfaces))
             sed_inplace(output_template, "<N_PROC>", str(num_proc))
-
-            # resample_string = ""
-            # icv_string      = ""
-            # next_block_id   = 3  # id of the RESAMPLE
 
             sed_inplace(output_start, "X", "1")
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
@@ -1233,22 +1230,9 @@ class Subject:
             if calc_surfaces == 1:
                 for sess in sessions:
                     self.mpr_cat_surf_resample(sess, num_proc, isLong=True, endengine=False, eng=eng)
-                    # resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.data_surf = {'" + surfaces_list[s] + "'};\n"
-                    # resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
-                    # resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
-                    # resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.fwhm_surf = 15;\n"
-                    # resample_string = resample_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
-                    # next_block_id = next_block_id + 1
 
             for sess in sessions:
                 self.mpr_cat_tiv_calculation(sess, isLong=True, endengine=False, eng=eng)
-                # icv_string = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.data_xml = {'" + report_file_list[s] + "'};\n"
-                # icv_string = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.calcvol_TIV = 1;\n"
-                # icv_string = icv_string + "matlabbatch{" + str(next_block_id) + "}.spm.tools.cat.tools.calcvol.calcvol_name = '" + icv_files_list[s] + "';\n"
-                # next_block_id = next_block_id + 1
-
-            # sed_inplace(output_template, "<SURF_RESAMPLE>", resample_string)
-            # sed_inplace(output_template, "<ICV_CALCULATION>", icv_string)
 
             if use_existing_nii is False:
                 imrm([images_list])
@@ -1573,8 +1557,6 @@ class Subject:
             print("******************************************************************", file=log)
             print("starting t1_post_processing", file=log)
             print("******************************************************************", file=log)
-
-            # os.chdir(anatdir)
 
             run_notexisting_img(self.t1_data + "_orig", "immv " + self.t1_data + " " + self.t1_data + "_orig", logFile=log)
             run_notexisting_img(self.t1_data, "imcp " + T1 + "_biascorr " + self.t1_data, logFile=log)
