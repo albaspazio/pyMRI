@@ -2,6 +2,7 @@ import gzip
 import re, shutil, tempfile
 import os
 
+
 def gunzip(src, dest, replace=False):
 
     fp = open(dest, "wb")
@@ -13,12 +14,16 @@ def gunzip(src, dest, replace=False):
     if replace is True:
         os.remove(src)
 
-def compress(src, dest):
+
+def compress(src, dest, replace=False):
 
     fp = open(src, "rb")
     with gzip.open(dest, "wb") as f:
         f.write(fp.read())
     fp.close()
+
+    if replace is True:
+        os.remove(src)
 
 
 def write_text_file(path, text):

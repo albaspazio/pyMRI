@@ -8,7 +8,7 @@ from numpy import arange, concatenate, array
 
 from utility.fslfun import run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img
 from utility.manage_images import imtest, immv, imcp, imrm, quick_smooth, remove_ext, mass_images_move, is_image, mysplittext, imgname
-from utility.utilities import sed_inplace, gunzip, write_text_file
+from utility.utilities import sed_inplace, gunzip, write_text_file, compress
 from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
 from myfsl.utils.run import rrun
 from Stats import Stats
@@ -156,6 +156,8 @@ class Subject:
         self.epi_image_label         = self.label + "-epi"
         self.epi_dir                 = os.path.join(self.dir, "epi")
         self.epi_data                = os.path.join(self.epi_dir, self.epi_image_label)
+        self.epi_data_mc             = os.path.join(self.epi_dir, "r" + self.epi_image_label)
+
         self.epi_pe_data             = os.path.join(self.epi_dir, self.epi_image_label + "_pe")
         self.epi_acq_params          = os.path.join(self.epi_dir, "acqparams.txt")
 
@@ -1984,11 +1986,12 @@ class Subject:
 
         # 5 -motion correction using central_vol
         self.epi_spm_motioncorrection(central_vol)
-        os.remove(self.epi_data + ".nii.gz")            # remove old with-motion nii.gz
-        os.system('gzip ' + self.epi_data + ".nii")     # gzip the motion corrected file
+        os.remove(self.epi_data + ".nii")               # remove old with-motion SUBJ-epi.nii
+        os.remove(self.epi_data + ".nii.gz")            # remove old with-motion SUBJ-epi.nii.gz
+        compress(self.epi_data_mc + ".nii", self.epi_data_mc + ".nii.gz", replace=True)    # zip rSUBJ-epi.nii => rSUBJ-epi.nii.gz
 
         # 6 —again these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
-        rrun("applytopup --imain=" + self.epi_data + " --topup=" + self.epi_data + "_PE_ref_topup" + " --datain=" + self.epi_acq_params + " --inindex=1 --method=jac --interp=spline --out=" + self.epi_data)
+        rrun("applytopup --imain=" + self.epi_data_mc + " --topup=" + self.epi_data + "_PE_ref_topup" + " --datain=" + self.epi_acq_params + " --inindex=1 --method=jac --interp=spline --out=" + self.epi_data_mc)
 
     def epi_get_slicetiming_params(self, nslices, scheme = 1, params=None):
 
@@ -2054,11 +2057,20 @@ class Subject:
             if f.is_file():
                 gunzip(f.name, os.path.join(outdir, remove_ext(f.name) + ".nii"), replace=True)
 
+    def epi_spm_fmri_preprocessing_motioncorrected(self , num_slices, TR , TA=-1 , acq_scheme=0, ref_slice = -1 , slice_timing = None):
+        self.epi_spm_fmri_preprocessing(num_slices, TR, TA, acq_scheme, ref_slice, slice_timing, epi_image=self.epi_data_mc, spm_template_name='spm_fmri_preprocessing_norealign')
 
 
-    # def epi_spm_fmri_preprocessing(self , num_slices, TR , TA=-1 , acq_scheme=0, ref_slice = -1 , slice_timing = None, spm_template_name='spm_fmri_preprocessing_norealign'):
-    def epi_spm_fmri_preprocessing(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice = -1, slice_timing = None, spm_template_name='spm_fmri_preprocessing'):
+    def epi_spm_fmri_preprocessing(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice = -1, slice_timing = None, epi_image=None, spm_template_name='spm_fmri_preprocessing'):
+
         #default params:
+        if epi_image is None:
+            epi_image = self.epi_data
+        else:
+            if imtest(epi_image) is False:
+                print("Error in subj: " + self.label + " epi_spm_fmri_preprocessing")
+                return
+
         #TA - if not otherwise indicated, it assumes the acquisition is continuous and TA = TR - (TR/num slices)
         if TA == -1:
             TA = TR - (TR/num_slices)
@@ -2073,9 +2085,6 @@ class Subject:
         else:
             slice_timing = [str(p) for p in slice_timing]
 
-        self.prepare_for_spm()
-
-
         #set dirs
         in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
         in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
@@ -2087,12 +2096,17 @@ class Subject:
         out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + self.label + '.m')
 
         #substitute for all the volumes + rest of params
-        epi_nvols = int(rrun('fslnvols ' + self.epi_data + '.nii.gz'))
-        epi_path_name = self.epi_data + '.nii'
+        epi_nvols = int(rrun('fslnvols ' + epi_image + '.nii.gz'))
+        epi_path_name = epi_image + '.nii'
+
+        gunzip(epi_image + '.nii.gz', epi_path_name, replace=False)
+
         epi_all_volumes = ''
         for i in range(1, epi_nvols + 1):
             epi_volume = epi_path_name + ',' + str(i) + "'"
             epi_all_volumes = epi_all_volumes + epi_volume + '\n' + "'"
+
+        mean_image = os.path.join(self.epi_dir, "mean" + self.epi_image_label + ".nii")
 
         copyfile(in_batch_job, out_batch_job)
         sed_inplace(out_batch_job, '<FMRI_IMAGES>', epi_all_volumes)
@@ -2101,6 +2115,7 @@ class Subject:
         sed_inplace(out_batch_job, '<TA_VALUE>', str(TA))
         sed_inplace(out_batch_job, '<SLICETIMING_PARAMS>', ' '.join(slice_timing))
         sed_inplace(out_batch_job, '<REF_SLICE>', str(ref_slice))
+        sed_inplace(out_batch_job, '<RESLICE_MEANIMAGE>', mean_image)
         sed_inplace(out_batch_job, '<T1_IMAGE>', self.t1_data + '.nii,1')
         sed_inplace(out_batch_job, '<SPM_DIR>', self._global.spm_dir)
 
@@ -2116,6 +2131,7 @@ class Subject:
 
     # conditions_lists[{"name", "onsets", "duration"}, ....]
     def epi_spm_fmri_1st_level_analysis(self, analysis_name, TR, num_slices, conditions_lists, events_unit="secs", spm_template_name='spm_fmri_stats_1st_level', rp_filemame=""):
+
         #default params:
         stats_dir = os.path.join(self.epi_dir, "stats", analysis_name)
         os.makedirs(stats_dir, exist_ok=True)
