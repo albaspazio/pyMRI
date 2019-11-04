@@ -96,3 +96,11 @@ class Global:
             if os.path.isdir(self.autoptx_script_dir) is False:
                 raise Exception("Error: DATA AUTOPTX folder is not present")
 
+        if os.path.isdir(os.path.join(self.spm_dir, "toolbox", "marsbar")) is False:
+            self.marsbar_dir        = ""
+            self.marsbar_spm_dir    = ""
+            raise Exception("Error: CAT is not present")
+        else:
+            self.marsbar_dir        = os.path.join(self.spm_dir, "toolbox", "marsbar")
+            self.marsbar_spm_dir    = os.path.join(self.spm_dir, "toolbox", "marsbar", "spm5")
+

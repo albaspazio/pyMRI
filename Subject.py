@@ -1213,9 +1213,15 @@ class Subject:
 
                 # I may want to process with cat after having previously processed without having set image's origin.
                 # thus I may have created a nii version in the cat_proc folder , with the origin properly set
-                # unzip nii.gz -> nii in cat folder only if nii is absent or I want to overwrite it.
-                if os.path.exists(inputimage + ".nii") is False or use_existing_nii is False:
-                    gunzip(srcinputimage + ".nii.gz", inputimage + ".nii")
+                # unzip T1_biascorr.nii.gz -> nii in cat folder only if nii is absent or I want to overwrite it.
+                if use_existing_nii is False:
+                    if os.path.exists(srcinputimage + ".nii.gz") is True:
+                        gunzip(srcinputimage + ".nii.gz", inputimage + ".nii")
+                    else:
+                        print("Error in subj: " + self.label + ", method: mpr_cat_segment, biascorr image is absent")
+                else:
+                    if os.path.exists(inputimage + ".nii") is False:
+                        print("Error in subj: " + self.label + ", method: mpr_cat_segment, given image in cat folder is absent")
 
                 # here I may stop script to allow resetting the nii origin. sometimes is necessary to perform the segmentation
                 if set_origin is True:
@@ -1254,6 +1260,20 @@ class Subject:
         except Exception as e:
             traceback.print_exc()
             log.close()
+            print(e)
+
+    # the above scripts often fails after having correctly segmented the image and calculated the lh.thickness.rT1_XXXX image
+    def mpr_cat_surfaces_complete_longitudinal(self, sessions, num_proc=1):
+
+        try:
+            for sess in sessions:
+                self.mpr_cat_surf_resample(sess, num_proc, isLong=True, endengine=False)
+
+            for sess in sessions:
+                self.mpr_cat_tiv_calculation(sess, isLong=True)
+
+        except Exception as e:
+            traceback.print_exc()
             print(e)
 
     def mpr_cat_segment_longitudinal_check(self, sessions, calc_surfaces=0):
@@ -1383,6 +1403,26 @@ class Subject:
 
         call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], endengine=False, eng=eng)
 
+
+    def mpr_surf_resampled_longitudinal_diff(self, sessions, outdir="", matlab_func="subtract_gifti"):
+
+        if len(sessions) is not 2:
+            print("Error in mpr_surf_resampled_longitudinal_diff...given sessions are not 2")
+            return
+
+        if outdir == "":
+            outdir = self.t1_cat_surface_dir
+
+        out_str = ""
+        surfaces = []
+        for sess in sessions:
+            subj        = self.get_sess_file_system(sess)
+            out_str     = out_str + str(sess) + "_"
+            surfaces.append(subj.t1_cat_resampled_surface_longitudinal)
+
+        res_surf = os.path.join(outdir, "surf_resampled_sess_" + out_str + self.label + ".gii")
+
+        call_matlab_function_noret(matlab_func, [self._global.spm_functions_dir], "\"" + surfaces[1] + "\",  \"" + surfaces[0] + "\", \"" + res_surf + "\"")
 
     def mpr_postbet(self,
                     odn="anat", imgtype=1, smooth=10,

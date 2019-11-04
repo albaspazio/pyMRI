@@ -1,8 +1,10 @@
 import csv
+import ntpath
 
+from utility.manage_images import imtest
 from utility.utilities import sed_inplace
 from utility import import_data_file
-
+from utility.matlab import call_matlab_function_noret
 
 class Stats:
 
@@ -65,8 +67,24 @@ class Stats:
                     clusters[curr_cluster].add_peak(Peak(float(data_row[6]),float(data_row[7]),float(data_row[8]),float(data_row[9]),float(data_row[10]),
                                                  int(data_row[11]),int(data_row[12]),int(data_row[13])))
 
-
         return clusters
+
+
+    # create a gifti image with ones in correspondence of each vmask voxel
+    @staticmethod
+    def create_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths, distance=8):
+
+        if imtest(vmask) is False:
+            print("Error in create_surface_mask_from_volume_mask: input vmask does not exist")
+            return
+
+        if imtest(ref_surf) is False:
+            print("Error in create_surface_mask_from_volume_mask: input ref_surf does not exist")
+            return
+
+        call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths, "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
+
+
 
 
 class Peak:
