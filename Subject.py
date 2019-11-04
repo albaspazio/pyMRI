@@ -53,6 +53,9 @@ class Subject:
         self.roi_standard4_dir      = os.path.join(self.roi_dir, "reg_standard4")
         self.roi_t1_dir             = os.path.join(self.roi_dir, "reg_t1")
 
+        # ------------------------------------------------------------------------------------------------------------------------
+        # T1/MPR
+        # ------------------------------------------------------------------------------------------------------------------------
         self.t1_dir                 = os.path.join(self.dir, "mpr")
         self.t1_anat_dir            = os.path.join(self.t1_dir, "anat")
         self.fast_dir               = os.path.join(self.t1_dir, "fast")
@@ -62,7 +65,6 @@ class Subject:
         self.t1_fs_mri_dir          = os.path.join(self.t1_fs_dir, "mri")
         self.t1_spm_dir             = os.path.join(self.t1_anat_dir, "spm_proc")
         self.t1_cat_dir             = os.path.join(self.t1_anat_dir, "cat_proc")
-
 
         self.t1_image_label         = self.label + "-t1"
         self.t1_data                = os.path.join(self.t1_dir, self.t1_image_label)
@@ -74,8 +76,6 @@ class Subject:
         self.first_all_none_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_none_origsegs")
         self.first_all_fast_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_fast_origsegs")
 
-        #if [ ! -d $SUBJECT_DIR]; then print( "ERROR: subject dir ($SUBJECT_DIR) not present !!!.....exiting"; exit; fi
-        
         self.t1_segment_gm_path         = os.path.join(self.roi_t1_dir, "mask_t1_gm")
         self.t1_segment_wm_path         = os.path.join(self.roi_t1_dir, "mask_t1_wm")
         self.t1_segment_csf_path        = os.path.join(self.roi_t1_dir, "mask_t1_csf")
@@ -87,22 +87,36 @@ class Subject:
         self.t1_cat_resampled_surface   = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
         self.t1_cat_resampled_surface_longitudinal   = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
 
-        self.dti_image_label            = self.label + "- dti"
-        self.dti_EC_image_label         = self.label + "-dti_ec"
-        self.dti_rotated_bvec           = self.label + "-dti_rotated.bvec"
-        
-        self.dti_bvec                   = self.label + "-dti.bvec"
-        self.dti_bval                   = self.label + "-dti.bval"
-        
+        # ------------------------------------------------------------------------------------------------------------------------
+        # DTI
+        # ------------------------------------------------------------------------------------------------------------------------
         self.dti_dir                    = os.path.join(self.dir, "dti")
-        self.dti_data                   = os.path.join(self.dti_dir,  self.dti_image_label)
-        self.dti_fit_label              = self.dti_image_label + "_fit"
         self.bedpost_X_dir              = os.path.join(self.dti_dir, "bedpostx")
         self.probtrackx_dir             = os.path.join(self.dti_dir, "probtrackx")
         self.trackvis_dir               = os.path.join(self.dti_dir, "trackvis")
         self.tv_matrices_dir            = os.path.join(self.dti_dir, "tv_matrices")
-        self.trackvis_transposed_bvecs = "bvec_vert.txt"
 
+        self.dti_image_label            = self.label + "-dti"
+        self.dti_ec_image_label         = self.dti_image_label + "_ec"
+        self.dti_fit_label              = self.dti_image_label + "_fit"
+
+        self.dti_bval_label             = os.path.join(self.dti_dir, self.label + "-dti.bval")
+        self.dti_bvec_label             = os.path.join(self.dti_dir, self.label + "-dti.bvec")
+        self.dti_rotated_bvec_label     = os.path.join(self.dti_dir, self.label + "-dti_rotated.bvec")
+
+        self.dti_data                   = os.path.join(self.dti_dir,  self.dti_image_label)
+        self.dti_ec_data                = os.path.join(self.dti_dir,  self.dti_ec_image_label)
+        self.dti_fit_data               = os.path.join(self.dti_dir,  self.dti_fit_label)
+
+        self.dti_nodiff_data            = os.path.join(self.dti_dir, "nodif")
+        self.dti_nodiff_brain_data      = os.path.join(self.dti_dir, "nodif_brain")
+        self.dti_nodiff_brainmask_data  = os.path.join(self.dti_dir, "nodif_brain_mask")
+
+        self.trackvis_transposed_bvecs  = "bvec_vert.txt"
+
+        # ------------------------------------------------------------------------------------------------------------------------
+        # RS
+        # ------------------------------------------------------------------------------------------------------------------------
         self.rs_image_label             = "resting"
         self.rs_dir                     = os.path.join(self.dir, "resting")
         self.rs_data                    = os.path.join(self.rs_dir, self.rs_image_label)
@@ -128,14 +142,18 @@ class Subject:
         self.rs_regstd_denoise_dir      = os.path.join(self.rs_dir, "resting.ica", "reg_standard_denoised")
         self.rs_regstd_denoise_image    = os.path.join(self.rs_regstd_denoise_dir, "filtered_func_data")
 
-        self.rs_aroma_dir           = os.path.join(self.rs_dir, "ica_aroma")
-        self.rs_aroma_image         = os.path.join(self.rs_aroma_dir, "denoised_func_data_nonaggr")
-        self.rs_regstd_aroma_dir    = os.path.join(self.rs_aroma_dir, "reg_standard")
-        self.rs_regstd_aroma_image  = os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data")
+        self.rs_aroma_dir               = os.path.join(self.rs_dir, "ica_aroma")
+        self.rs_aroma_image             = os.path.join(self.rs_aroma_dir, "denoised_func_data_nonaggr")
+        self.rs_regstd_aroma_dir        = os.path.join(self.rs_aroma_dir, "reg_standard")
+        self.rs_regstd_aroma_image      = os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data")
 
         self.mc_params_dir  = os.path.join(self.rs_dir, self.rs_image_label + ".ica", "mc")
         self.mc_abs_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_abs_mean.rms")
         self.mc_rel_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_rel_mean.rms")
+
+        # ------------------------------------------------------------------------------------------------------------------------
+        # OTHER (DE/T2/WB/PE)
+        # ------------------------------------------------------------------------------------------------------------------------
 
         self.de_dir         = os.path.join(self.dir, "t2")
         self.de_image_label = "de"
@@ -1873,7 +1891,23 @@ class Subject:
     # ==================================================================================================================================================
 
     def dti_ec_fit(self):
-        pass
+
+        if os.path.exist(self.dti_data) is False:
+            return
+
+        rrun("fslroi " + os.path.join(self.dti_data) + " " + self.dti_nodiff_data + " 0 1")
+        rrun("bet " + self.dti_nodiff_data + " " + self.dti_nodiff_brain_data + " -m -f 0.3")   # also creates dti_nodiff_brain_mask_data
+
+        if imtest(self.dti_ec_image) is False:
+            print("starting eddy_correct on " + self.label)
+            rrun("eddy_correct " + self.dti_data + " " + self.dti_ec_image + " 0")
+
+        if os.path.exist(self.dti_rotated_bvec) is False:
+            rrun("fdt_rotate_bvecs " + self.dti_bvec + " " + self.dti_rotated_bvec + " " + self.dti_data + ".ecclog")
+
+        if imtest(self.dti_fit_data) is False:
+            print("starting DTI fit on " + self.label)
+            rrun("dtifit --sse -k " + self.dti_ec_data + " -o " + self.dti_fit_data + " -m " + self.dti_nodiff_brainmask_data + " -r " + self.dti_rotated_bvec + " -b " + self.dti_bval)
 
     def dti_probtrackx(self):
         pass
@@ -1953,7 +1987,6 @@ class Subject:
         sed_inplace(out_batch_start, 'X', '1')
         sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir], endengine=False)
-
 
     def epi_get_closest_volume(self, ref_image_pe="", ref_volume_pe=-1):
         # will calculate the closest vol from self.epi_data to ref_image
@@ -2101,7 +2134,6 @@ class Subject:
     def epi_spm_fmri_preprocessing_motioncorrected(self , num_slices, TR , TA=-1 , acq_scheme=0, ref_slice = -1 , slice_timing = None):
         self.epi_spm_fmri_preprocessing(num_slices, TR, TA, acq_scheme, ref_slice, slice_timing, epi_image=self.epi_data_mc, spm_template_name='spm_fmri_preprocessing_norealign')
 
-
     def epi_spm_fmri_preprocessing(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice = -1, slice_timing = None, epi_image=None, spm_template_name='spm_fmri_preprocessing'):
 
         #default params:
@@ -2220,7 +2252,6 @@ class Subject:
         # print("running SPM batch template: " + out_batch_start)  # , file=log)
         # eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
         # eng.quit()
-
 
     def epi_resting_nuisance(self, hpfsec=100):
         pass

@@ -15,7 +15,6 @@ function create_surface_mask_from_volume_mask(ref_surface, vmask, out_surf)
     mask_surf.cdata = zeros(nvertex,1);
     dispstat('','init')
     for v=1:nvertex
-        v
         for r=1:ncoord
             d = sqrt(sum((xyzCoordinates(:,r) - surf.vertices(v,:)') .^ 2));
             if(d < dist)    
