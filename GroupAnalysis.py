@@ -86,8 +86,8 @@ class GroupAnalysis:
         stats_dir   = os.path.join(vbmfsl_folder, "stats")
         struct_dir  = os.path.join(vbmfsl_folder, "struct")
 
-        os.makedirs(stats_dir, exist_ok="True")
-        os.makedirs(struct_dir, exist_ok="True")
+        os.makedirs(stats_dir, exist_ok=True)
+        os.makedirs(struct_dir, exist_ok=True)
 
         for subj in subjs:
             imcp(os.path.join(smw_folder, "smwc1T1_biascorr_" + subj.label), os.path.join(struct_dir, "smwc1T1_biascorr_" + subj.label))
@@ -225,7 +225,7 @@ class GroupAnalysis:
     #                                                                               'yyy'
     #                                                                            };
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
-    def create_cat_thickness_stats_1Wanova(self, statsdir, groups_labels, cov_name, cov_interaction=1, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_1Wanova_onlydesign", spm_contrasts_template_name=""):
+    def create_cat_thickness_stats_1Wanova(self, statsdir, groups_labels, cov_name="", cov_interaction=1, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_1Wanova_onlydesign", spm_contrasts_template_name=""):
 
         try:
             os.makedirs(statsdir, exist_ok=True)

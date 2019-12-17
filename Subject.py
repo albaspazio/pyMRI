@@ -7,7 +7,7 @@ from shutil import copyfile, move, rmtree
 from numpy import arange, concatenate, array
 
 from utility.fslfun import run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img
-from utility.manage_images import imtest, immv, imcp, imrm, quick_smooth, remove_ext, mass_images_move, is_image, mysplittext, imgname
+from utility.manage_images import imtest, immv, imcp, imrm, quick_smooth, remove_ext, mass_images_move, is_image, mysplittext, imgname, imgparts
 from utility.utilities import sed_inplace, gunzip, write_text_file, compress
 from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
 from myfsl.utils.run import rrun
@@ -100,9 +100,12 @@ class Subject:
         self.dti_ec_image_label         = self.dti_image_label + "_ec"
         self.dti_fit_label              = self.dti_image_label + "_fit"
 
-        self.dti_bval_label             = os.path.join(self.dti_dir, self.label + "-dti.bval")
-        self.dti_bvec_label             = os.path.join(self.dti_dir, self.label + "-dti.bvec")
-        self.dti_rotated_bvec_label     = os.path.join(self.dti_dir, self.label + "-dti_rotated.bvec")
+        self.dti_bval_label             = self.label + "-dti.bval"
+        self.dti_bvec_label             = self.label + "-dti.bvec"
+        self.dti_rotated_bvec_label     = self.label + "-dti_rotated.bvec"
+        self.dti_rotated_bvec           = os.path.join(self.dti_dir, self.dti_rotated_bvec_label)
+        self.dti_bvec                   = os.path.join(self.dti_dir, self.dti_bvec_label)
+        self.dti_bval                   = os.path.join(self.dti_dir, self.dti_bval_label)
 
         self.dti_data                   = os.path.join(self.dti_dir,  self.dti_image_label)
         self.dti_ec_data                = os.path.join(self.dti_dir,  self.dti_ec_image_label)
@@ -122,7 +125,7 @@ class Subject:
         self.rs_data                    = os.path.join(self.rs_dir, self.rs_image_label)
         self.sbfc_dir                   = os.path.join(self.rs_dir, "sbfc")
         self.rs_series_dir              = os.path.join(self.sbfc_dir, "series")
-        self.rs_examplefunc             = os.path.join(self.roi_epi_dir, "example_func")
+        self.rs_examplefunc             = os.path.join(self.rs_dir, "example_func")
 
         self.rs_series_csf              = os.path.join(self.rs_series_dir, "csf_ts")
         self.rs_series_wm               = os.path.join(self.rs_series_dir, "wm_ts")
@@ -152,6 +155,22 @@ class Subject:
         self.mc_rel_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_rel_mean.rms")
 
         # ------------------------------------------------------------------------------------------------------------------------
+        # EPI
+        # ------------------------------------------------------------------------------------------------------------------------
+        self.epi_image_label    = self.label + "-epi"
+        self.epi_dir            = os.path.join(self.dir, "epi")
+        self.epi_data           = os.path.join(self.epi_dir, self.epi_image_label)
+        self.epi_data_mc        = os.path.join(self.epi_dir, "r" + self.epi_image_label)
+        self.epi_data_mc_st     = os.path.join(self.epi_dir, "ar" + self.epi_image_label)
+        self.epi_data_mc_st_n   = os.path.join(self.epi_dir, "war" + self.epi_image_label)
+        self.epi_data_mc_st_n_s = os.path.join(self.epi_dir, "swar" + self.epi_image_label)
+
+        self.epi_examplefunc    = os.path.join(self.roi_epi_dir, "example_func")
+
+        self.epi_pe_data        = os.path.join(self.epi_dir, self.epi_image_label + "_pe")
+        self.epi_acq_params     = os.path.join(self.epi_dir, "acqparams.txt")
+
+        # ------------------------------------------------------------------------------------------------------------------------
         # OTHER (DE/T2/WB/PE)
         # ------------------------------------------------------------------------------------------------------------------------
 
@@ -171,13 +190,6 @@ class Subject:
         self.wb_data        = os.path.join(self.wb_dir, self.wb_image_label)
         self.wb_brain_data  = os.path.join(self.wb_dir, self.wb_image_label + "_brain")
 
-        self.epi_image_label         = self.label + "-epi"
-        self.epi_dir                 = os.path.join(self.dir, "epi")
-        self.epi_data                = os.path.join(self.epi_dir, self.epi_image_label)
-        self.epi_data_mc             = os.path.join(self.epi_dir, "r" + self.epi_image_label)
-
-        self.epi_pe_data             = os.path.join(self.epi_dir, self.epi_image_label + "_pe")
-        self.epi_acq_params          = os.path.join(self.epi_dir, "acqparams.txt")
 
         self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
 
@@ -227,21 +239,29 @@ class Subject:
 
         return missing_images
 
-    def reslice_image(self, dir):
+    def reslice_image(self, dir, img=None):
 
         if dir == "sag->axial":
-            bckfilename = self.t1_image_label + "_sag"
             conversion_str = " -z -x y "
         else:
             print("invalid conversion")
             return
+        
+        if img is None:
+            img         = self.t1_data 
+            bckfilename = self.t1_image_label + "_sag"
+            bckfilepath = os.path.join(self.t1_dir, bckfilename)
+        else:
+            parts = imgparts(img)
+            
+            bckfilename = parts[1] + "_sag"
+            bckfilepath = os.path.join(parts[0], bckfilename)
 
-        bckfilepath = os.path.join(self.t1_dir, bckfilename)
         if imtest(bckfilepath):
             return
 
-        imcp(self.t1_data, bckfilepath)          # create backup copy
-        rrun("fslswapdim " + self.t1_data + conversion_str + self.t1_data)   # run reslicing
+        imcp(img, bckfilepath)          # create backup copy
+        rrun("fslswapdim " + img + conversion_str + img)   # run reslicing
 
     # ==================================================================================================================================================
     # WELCOME
@@ -1892,18 +1912,18 @@ class Subject:
 
     def dti_ec_fit(self):
 
-        if os.path.exist(self.dti_data) is False:
+        if imtest(self.dti_data) is False:
             return
 
         rrun("fslroi " + os.path.join(self.dti_data) + " " + self.dti_nodiff_data + " 0 1")
         rrun("bet " + self.dti_nodiff_data + " " + self.dti_nodiff_brain_data + " -m -f 0.3")   # also creates dti_nodiff_brain_mask_data
 
-        if imtest(self.dti_ec_image) is False:
+        if imtest(self.dti_ec_data) is False:
             print("starting eddy_correct on " + self.label)
-            rrun("eddy_correct " + self.dti_data + " " + self.dti_ec_image + " 0")
+            rrun("eddy_correct " + self.dti_data + " " + self.dti_ec_data + " 0")
 
-        if os.path.exist(self.dti_rotated_bvec) is False:
-            rrun("fdt_rotate_bvecs " + self.dti_bvec + " " + self.dti_rotated_bvec + " " + self.dti_data + ".ecclog")
+        if os.path.exists(self.dti_rotated_bvec) is False:
+            rrun("fdt_rotate_bvecs " + self.dti_bvec + " " + self.dti_rotated_bvec + " " + self.dti_data + "_ec.ecclog")
 
         if imtest(self.dti_fit_data) is False:
             print("starting DTI fit on " + self.label)
@@ -2256,10 +2276,82 @@ class Subject:
     def epi_resting_nuisance(self, hpfsec=100):
         pass
 
-    def epi_feat(self, do_initreg=False, std_image=""):
+    def epi_feat(self, do_initreg=False, std_image="", INPUT_FILE_NAME="resting", INPUT_FOLDER_NAME= "resting", INPUT_FEAT_FSF="", OUTPUT_FEAT_NAME = "resting.feat",
+                 SET_TR=0, SET_TE=0):
 
         if std_image == "":
             std_image = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
+
+        # default
+        STANDARD_IMAGE      = os.path.join(self._global.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
+        print(self.label + ": FEAT with model: " + INPUT_FEAT_FSF + ".fsf")
+
+        # ===================================================================================
+        # CHECK FILE EXISTENCE
+        INPUT_EPI_PATH = os.path.join(self.dir, INPUT_FOLDER_NAME)
+        if os.path.isdir(INPUT_EPI_PATH) is False:
+            print("error: you specified an incorrect folder name (" + INPUT_EPI_PATH + ")......exiting")
+            return
+
+        INPUT_EPI_DATA_PATH = os.path.join(INPUT_EPI_PATH, INPUT_FILE_NAME)
+        if imtest(INPUT_EPI_DATA_PATH) is False:
+            print("error: input rs file (" + INPUT_EPI_DATA_PATH + ".nii.gz) do not exist......exiting")
+            return
+
+        if imtest(STANDARD_IMAGE) is False:
+            print("error: template file (" + STANDARD_IMAGE + ".nii.gz) do not exist......exiting")
+            return
+
+        if os.path.exists(INPUT_FEAT_FSF + ".fsf"):
+            print("error: design file (" + INPUT_FEAT_FSF + ".fsf) do not exist......exiting")
+            return
+
+        # ===================================================================================
+
+        TOT_VOL_NUM = rrun("fslnvols " + INPUT_EPI_DATA_PATH)
+
+        # FEAT output folder full path
+        OUTPUT_FEAT_PATH = os.path.join(INPUT_EPI_PATH, OUTPUT_FEAT_NAME)
+
+        # final FEAT exploration fsf
+        os.makedirs(os.path.join(INPUT_EPI_PATH, "model"), exist_ok=True)
+
+        OUTPUT_FEAT_FSF= os.path.join(INPUT_EPI_PATH, "model", "FEAT")
+        rrun("cp " + INPUT_FEAT_FSF + ".fsf " + OUTPUT_FEAT_FSF + ".fsf")
+
+        # FEAT fsf -------------------------------------------------------------------------------------------------------------------------
+        with open(OUTPUT_FEAT_FSF + ".fsf", "a") as fsf_file:
+            fsf_file.write("################################################################")
+            fsf_file.write("# overriding parameters")
+            fsf_file.write("################################################################")
+            fsf_file.write("set fmri(npts) " + str(TOT_VOL_NUM))
+            fsf_file.write("set feat_files(1) " + INPUT_EPI_DATA_PATH)
+            fsf_file.write("set highres_files(1) " + T1_BRAIN_DATA)
+            if imtest(WB_BRAIN_DATA) is True and DO_INIT_REG == 1:
+                fsf_file.write("set fmri(reginitial_highres_yn) 1")
+                fsf_file.write("set initial_highres_files(1) " + WB_BRAIN_DATA)
+            else:
+                fsf_file.write("set fmri(reginitial_highres_yn) 0")
+
+            fsf_file.write("set fmri(outputdir) " + OUTPUT_FEAT_PATH)
+            fsf_file.write("set fmri(regstandard) " + STANDARD_IMAGE)
+
+            if SET_TR > 0:
+                fsf_file.write("set fmri(tr) " + str(SET_TR))
+            if SET_TE > 0:
+                fsf_file.write("set fmri(te) " + str(SET_TE))
+
+
+        #--------------------------------------------------------------------------------------------------------------------------------------
+        rrun(os.path.join(self._global.fsl_bin, "feat") + " " + OUTPUT_FEAT_FSF + ".fsf")		# execute  FEAT
+
+        # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_epi folder
+        if os.path.isdir(os.path.join(OUTPUT_FEAT_PATH, "reg")) is True:
+            rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + OUTPUT_FEAT_PATH)
+            self.subject_epi_reg_copy_feat(odp=OUTPUT_FEAT_PATH) #equals to : -idn $INPUT_FOLDER_NAME -idn2 $OUTPUT_FEAT_NAME
+
+
+    def epi_reg_copy_feat(self, odp):
         pass
 
     def epi_aroma(self):
@@ -2795,7 +2887,7 @@ class Subject:
 
     #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def transform_epi(self, do_bbr=True, std_img_label="standard", std_img="", std_img_head="", std_img_mask_dil="", wmseg=""):
+    def transform_epi(self, do_bbr=True, is_rs=True, std_img_label="standard", std_img="", std_img_head="", std_img_mask_dil="", wmseg="", epi_img="", overwrite=False):
         
         if std_img == "":
             std_img             = self._global.fsl_standard_mni_2mm
@@ -2809,6 +2901,16 @@ class Subject:
         if wmseg == "":
             wmseg = self.t1_segment_wm_bbr_path
 
+        if is_rs:
+            examplefunc = self.rs_examplefunc
+            data_img    = self.rs_data
+        else:
+            examplefunc = self.epi_examplefunc
+            data_img    = self.epi_data
+
+        if epi_img != "":
+            data_img    = epi_img
+
         os.makedirs(self.roi_epi_dir, exist_ok=True)
         os.makedirs(os.path.join(self.roi_dir, "reg_" + std_img_label), exist_ok=True)
 
@@ -2820,10 +2922,10 @@ class Subject:
         if imtest(std_img) is False:
             print("standard image (" + std_img + " not present....exiting")
 
-        if imtest(self.rs_examplefunc) is False:
-            rrun("fslmaths " + self.rs_data + " " + os.path.join(self.roi_epi_dir, "prefiltered_func_data") + " -odt float")
-            rrun("fslroi " + os.path.join(self.roi_epi_dir, "prefiltered_func_data") + " " + self.rs_examplefunc + " 100 1")
-            rrun("bet2 " + self.rs_examplefunc + " " + self.rs_examplefunc + " -f 0.3")
+        if imtest(examplefunc) is False:
+            rrun("fslmaths " + data_img + " " + os.path.join(self.roi_epi_dir, "prefiltered_func_data") + " -odt float")
+            rrun("fslroi " + os.path.join(self.roi_epi_dir, "prefiltered_func_data") + " " + examplefunc + " 100 1")
+            rrun("bet2 " + examplefunc + " " + examplefunc + " -f 0.3")
 
             rrun("imrm " + os.path.join(self.roi_epi_dir, "prefiltered_func_data*"))
 
@@ -2833,30 +2935,30 @@ class Subject:
 
         if do_bbr is True:
             # BBR (taken from $FSLDIR/bin/epi_reg.sh)
-            rrun("flirt -ref " + self.t1_brain_data + " -in " + self.rs_examplefunc + " -dof 6 -omat " + epi2highres + "_init.mat")
+            rrun("flirt -ref " + self.t1_brain_data + " -in " + examplefunc + " -dof 12 -omat " + epi2highres + "_init.mat")
             
             if imtest(self.t1_segment_wm_bbr_path) is False:
                     print("Running FAST segmentation for subj " + self.label)
                     temp_dir = os.path.join(self.roi_t1_dir, "temp")
                     os.makedirs(temp_dir, exist_ok=True)
-                    rrun("fast -o " + os.path.join(temp_dir, "temp_" + self.t1_brain_data))
+                    rrun("fast -o " + os.path.join(temp_dir, "temp") + " " + self.t1_brain_data)
                     rrun("fslmaths " + os.path.join(temp_dir, "temp_pve_2") + " -thr 0.5 -bin " + self.t1_segment_wm_bbr_path)
                     runsystem("rm -rf " + temp_dir)
 
             # => epi2highres.mat
             if os.path.isfile(epi2highres + ".mat") is False:
-                rrun("flirt -ref " + self.t1_data + " -in " + self.rs_examplefunc + " -dof 6 -cost bbr -wmseg " + self.t1_segment_wm_bbr_path +
+                rrun("flirt -ref " + self.t1_data + " -in " + examplefunc + " -dof 6 -cost bbr -wmseg " + self.t1_segment_wm_bbr_path +
                      " -init " + epi2highres + "_init.mat" + " -omat " + epi2highres + ".mat" + " -out " + epi2highres + " -schedule " + os.path.join(self.fsl_dir, "etc", "flirtsch", "bbr.sch"))
 
             # => epi2highres.nii.gz
             if imtest(epi2highres) is False:
-                rrun("applywarp -i " + self.rs_examplefunc + " -r " + self.t1_data + " -o " + epi2highres + "--premat=" + epi2highres + ".mat" + " --interp=spline")
+                rrun("applywarp -i " + examplefunc + " -r " + self.t1_data + " -o " + epi2highres + "--premat=" + epi2highres + ".mat" + " --interp=spline")
 
             runsystem("rm " + epi2highres + "_init.mat")
         else:
             # NOT BBR
             if os.path.isfile(epi2highres + ".mat") is False:
-                rrun("flirt -in " + self.rs_examplefunc + " -ref " + self.t1_brain_data + " -out " + epi2highres + " -omat " + epi2highres + ".mat" + " -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+                rrun("flirt -in " + examplefunc + " -ref " + self.t1_brain_data + " -out " + epi2highres + " -omat " + epi2highres + ".mat" + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
         highres2epi = os.path.join(self.roi_epi_dir, "highres2epi.mat")
         if os.path.isfile(highres2epi) is False:
@@ -2868,25 +2970,25 @@ class Subject:
 
         # => epi2standard.mat (as concat)
         if os.path.isfile(epi2standard + ".mat") is False:
-            rrun("convert_xfm -omat " + epi2standard + ".mat" + " -concat " + os.path.join(self.roi_dir, "reg_" + std_img_label, "highres2standard.mat") + epi2highres + ".mat")
+            rrun("convert_xfm -omat " + epi2standard + ".mat" + " -concat " + os.path.join(self.roi_dir, "reg_" + std_img_label, "highres2standard.mat") + " " + epi2highres + ".mat")
 
         # => standard2epi.mat
         standard2epi = os.path.join(self.roi_epi_dir, std_img_label + "2epi")
-        if os.path.exist(standard2epi + ".mat") is False:
+        if os.path.exists(standard2epi + ".mat") is False:
             rrun("convert_xfm -inverse -omat " + standard2epi + ".mat " + epi2standard + ".mat")
 
         # => $ROI_DIR/reg_${std_img_label}/epi2standard.nii.gz
         if imtest(epi2standard) is False:
-            rrun("flirt -ref " + std_img + " -in " + self.rs_examplefunc + " -out " + epi2standard + " -applyxfm -init " + epi2standard + ".mat" + " -interp trilinear")
+            rrun("flirt -ref " + std_img + " -in " + examplefunc + " -out " + epi2standard + " -applyxfm -init " + epi2standard + ".mat" + " -interp trilinear")
 
         #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # epi -> highres -> standard
-        if imtest(epi2standard + "_warp") is False:
-            rrun("convertwarp --ref=" + std_img + " --premat=" + epi2highres + ".mat" + " --warp1=" + os.path.join(self.roi_dir, "reg_" + std_img_label, "highres2standard_warp") + " --out=" + epi2standard + "_warp")
-
-        # invwarp: standard -> highres -> epi
-        if imtest(standard2epi + "_warp") is False:
-            rrun("invwarp -r " + os.path.join(self.roi_epi_dir, "example_func") + " -w " + os.path.join(self.roi_dir, "reg_" + std_img_label, "epi2standard_warp") + " -o " + standard2epi + "_warp")
+        # # epi -> highres -> standard
+        # if imtest(epi2standard + "_warp") is False:
+        #     rrun("convertwarp --ref=" + std_img + " --premat=" + epi2highres + ".mat" + " --warp1=" + os.path.join(self.roi_dir, "reg_" + std_img_label, "highres2standard_warp") + " --out=" + epi2standard + "_warp")
+        #
+        # # invwarp: standard -> highres -> epi
+        # if imtest(standard2epi + "_warp") is False:
+        #     rrun("invwarp -r " + os.path.join(self.roi_epi_dir, "example_func") + " -w " + os.path.join(self.roi_dir, "reg_" + std_img_label, "epi2standard_warp") + " -o " + standard2epi + "_warp")
 
     def transform_dti_t2(self):
         pass
@@ -2981,7 +3083,7 @@ class Subject:
         # => highres2standard.mat
         highres2standard = os.path.join(self.roi_dir, "reg_" + std_img_label, "highres2standard")
         if imtest(highres2standard + ".mat") is False:
-            rrun("flirt -in " + self.t1_brain_data + " -ref " + std_img_label + " -out " + highres2standard + " -omat " + highres2standard + ".mat -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+            rrun("flirt -in " + self.t1_brain_data + " -ref " + std_img + " -out " + highres2standard + " -omat " + highres2standard + ".mat -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
         # # => standard2highres.mat
         standard2highres = os.path.join(self.roi_t1_dir, std_img_label + "2highres")
@@ -2992,7 +3094,7 @@ class Subject:
         # => highres2standard_warp
         highres2standard_warp = os.path.join(self.roi_dir, "reg_" + std_img_label, "highres2standard_warp")
         if imtest(highres2standard_warp) is False:
-            rrun("fnirt -- in =" + self.t1_brain_data + " --aff = " + highres2standard + ".mat --cout =" + highres2standard_warp + " --iout =" + highres2standard + "--jout =" + os.path.join(self.roi_t1_dir, "highres2highres_jac") + " --config = T1_2_MNI152_2mm --ref =" + std_img + " --refmask =" + std_img_mask_dil + "--warpres = 10, 10, 10")
+            rrun("fnirt --in=" + self.t1_brain_data + " --aff=" + highres2standard + ".mat --cout=" + highres2standard_warp + " --iout=" + highres2standard + " --jout=" + os.path.join(self.roi_t1_dir, "highres2highres_jac") + " --config=T1_2_MNI152_2mm --ref=" + std_img + " --refmask=" + std_img_mask_dil + " --warpres=10,10,10")
 
         # => standard2highres_warp
         standard_warp2highres = os.path.join(self.roi_t1_dir, std_img_label + "2highres_warp")
@@ -3015,7 +3117,7 @@ class Subject:
         if os.path.isfile(highres2standard4 + ".mat") is False:
             rrun("flirt -in " + self.t1_brain_data + " -ref " + self._global.fsl_standard_mni_4mm + " -omat " + highres2standard4 + ".mat")
 
-        if os.path.isfile(standard42highres + ".mat") is False:
+        if os.path.isfile(standard42highres + ".mat") is False and os.path.isfile(highres2standard4 + ".mat") is True:
             rrun("convert_xfm -omat " + standard42highres + ".mat" + " -inverse " + highres2standard4 + ".mat")
 
         # if imtest(hr2std4_warp) is False:
