@@ -46,6 +46,7 @@ class Subject:
         self.dir                    = os.path.join(self.project.subjects_dir, self.label, "s" + str(sess))
 
         self.roi_dir                = os.path.join(self.dir, "roi")
+        self.roi_resting_dir        = os.path.join(self.roi_dir, "reg_resting")
         self.roi_epi_dir            = os.path.join(self.roi_dir, "reg_epi")
         self.roi_dti_dir            = os.path.join(self.roi_dir, "reg_dti")
         self.roi_t2_dir             = os.path.join(self.roi_dir, "reg_t2")
@@ -125,7 +126,7 @@ class Subject:
         self.rs_data                    = os.path.join(self.rs_dir, self.rs_image_label)
         self.sbfc_dir                   = os.path.join(self.rs_dir, "sbfc")
         self.rs_series_dir              = os.path.join(self.sbfc_dir, "series")
-        self.rs_examplefunc             = os.path.join(self.rs_dir, "example_func")
+        self.rs_examplefunc             = os.path.join(self.roi_resting_dir, "example_func")
 
         self.rs_series_csf              = os.path.join(self.rs_series_dir, "csf_ts")
         self.rs_series_wm               = os.path.join(self.rs_series_dir, "wm_ts")
@@ -2125,6 +2126,23 @@ class Subject:
         # rrun('fslroi ' + self.epi_data + " " + self.epi_data + " -1 -1  1 35")
         rrun('fslroi ' + self.epi_data + " " + self.epi_data + " -1 -1  0 34")
 
+    def epi_remove_volumes(self, finalvols, ifp="", backup_postfix="_fullvol"):
+
+        if ifp == "":
+            ifp = self.rs_data
+
+        if imtest(ifp) is False:
+            print("Error in epi_remove_volumes: input image (" + ifp + ") is missing...exiting" )
+            return
+
+        curr_vols = rrun("fslnvols " + ifp)
+        numvol2remove = curr_vols - finalvols
+
+        if numvol2remove > 0:
+            backup_ifp = mysplittext(ifp)[0] + backup_postfix + ".nii.gz"
+            immv(ifp, backup_ifp)
+            rrun(os.path.join(self._global.fsl_bin, "fslroi") + " " + backup_ifp + " " + str(numvol2remove) + " " + str(finalvols))
+
     def epi_merge(self, premerge_labels):
 
         seq_string = " "
@@ -2276,86 +2294,170 @@ class Subject:
     def epi_resting_nuisance(self, hpfsec=100):
         pass
 
-    def epi_feat(self, do_initreg=False, std_image="", INPUT_FILE_NAME="resting", INPUT_FOLDER_NAME= "resting", INPUT_FEAT_FSF="", OUTPUT_FEAT_NAME = "resting.feat",
-                 SET_TR=0, SET_TE=0):
+    def resting_feat(self, ifeat_fsf, do_initreg=False, std_img="", ifn="resting", idn="resting", odn="resting.feat", tr=0, te=0):
+        # input
+        idp = os.path.join(self.dir, idn)
+        if os.path.isdir(idp) is False:
+            print("error: you specified an incorrect folder name (" + idp + ")......exiting")
+            return
+        ifp = os.path.join(idp, ifn)
+
+        # output
+        if odn == "":
+            odn = ifn + ".feat"
+        odp = os.path.join(ifp, odn)
+
+        self.feat(ifeat_fsf, ifp, odp, do_initreg, std_img, tr, te)
+
+    def epi_feat(self, ifeat_fsf, do_initreg=False, std_img="", ifn="epi", idn="epi", odn="epi.feat", tr=0, te=0):
+        # input
+        idp = os.path.join(self.dir, idn)
+        if os.path.isdir(idp) is False:
+            print("error: you specified an incorrect folder name (" + idp + ")......exiting")
+            return
+        ifp = os.path.join(idp, ifn)
+
+        # output
+        if odn == "":
+            odn = ifn + ".feat"
+        odp = os.path.join(ifp, odn)
+
+        self.feat(ifeat_fsf, ifp, odp, do_initreg, std_img, tr, te)
+
+
+    def feat(self, ifeatfsf_noext, ifp, odp, do_initreg=False, std_img="", tr=0, te=0):
+
+        # ===================================================================================
+        # PARAMS SANITY CHECK
+        if imtest(ifp) is False:
+            print("error: input file path (" + ifp + ".nii.gz) do not exist......exiting")
+            return
 
         if std_image == "":
-            std_image = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
+            std_img      = os.path.join(self._global.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
+        else:
+            if imtest(std_img) is False:
+                print("Error in epi_feat: std_img (" + std_img + ") does not exist...exiting" )
+                return
 
-        # default
-        STANDARD_IMAGE      = os.path.join(self._global.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
-        print(self.label + ": FEAT with model: " + INPUT_FEAT_FSF + ".fsf")
+        if os.path.exists(ifeatfsf_noext + ".fsf"):
+            print("error: design file (" + ifeatfsf_noext + ".fsf) do not exist......exiting")
+            return
 
+        idp = imgparts(ifp)[0]
+        if os.path.isdir(idp) is False:
+            print("error: input folder (" + idp + ".nii.gz) do not exist......exiting")
+            return
         # ===================================================================================
-        # CHECK FILE EXISTENCE
-        INPUT_EPI_PATH = os.path.join(self.dir, INPUT_FOLDER_NAME)
-        if os.path.isdir(INPUT_EPI_PATH) is False:
-            print("error: you specified an incorrect folder name (" + INPUT_EPI_PATH + ")......exiting")
-            return
+        print(self.label + ": FEAT with model: " + ifeatfsf_noext + ".fsf")
 
-        INPUT_EPI_DATA_PATH = os.path.join(INPUT_EPI_PATH, INPUT_FILE_NAME)
-        if imtest(INPUT_EPI_DATA_PATH) is False:
-            print("error: input rs file (" + INPUT_EPI_DATA_PATH + ".nii.gz) do not exist......exiting")
-            return
-
-        if imtest(STANDARD_IMAGE) is False:
-            print("error: template file (" + STANDARD_IMAGE + ".nii.gz) do not exist......exiting")
-            return
-
-        if os.path.exists(INPUT_FEAT_FSF + ".fsf"):
-            print("error: design file (" + INPUT_FEAT_FSF + ".fsf) do not exist......exiting")
-            return
-
-        # ===================================================================================
-
-        TOT_VOL_NUM = rrun("fslnvols " + INPUT_EPI_DATA_PATH)
-
-        # FEAT output folder full path
-        OUTPUT_FEAT_PATH = os.path.join(INPUT_EPI_PATH, OUTPUT_FEAT_NAME)
+        TOT_VOL_NUM = rrun("fslnvols " + ifp)
 
         # final FEAT exploration fsf
-        os.makedirs(os.path.join(INPUT_EPI_PATH, "model"), exist_ok=True)
+        os.makedirs(os.path.join(idp, "model"), exist_ok=True)
 
-        OUTPUT_FEAT_FSF= os.path.join(INPUT_EPI_PATH, "model", "FEAT")
-        rrun("cp " + INPUT_FEAT_FSF + ".fsf " + OUTPUT_FEAT_FSF + ".fsf")
+        ofeatfsf_noext = os.path.join(idp, "model", "feat")
+        rrun("cp " + ifeatfsf_noext + ".fsf " + ofeatfsf_noext + ".fsf")
 
         # FEAT fsf -------------------------------------------------------------------------------------------------------------------------
-        with open(OUTPUT_FEAT_FSF + ".fsf", "a") as fsf_file:
+        with open(ofeatfsf_noext + ".fsf", "a") as fsf_file:
             fsf_file.write("################################################################")
             fsf_file.write("# overriding parameters")
             fsf_file.write("################################################################")
             fsf_file.write("set fmri(npts) " + str(TOT_VOL_NUM))
-            fsf_file.write("set feat_files(1) " + INPUT_EPI_DATA_PATH)
-            fsf_file.write("set highres_files(1) " + T1_BRAIN_DATA)
-            if imtest(WB_BRAIN_DATA) is True and DO_INIT_REG == 1:
+            fsf_file.write("set feat_files(1) " + ifp)
+            fsf_file.write("set highres_files(1) " + self.t1_brain_data)
+            if imtest(self.wb_brain_data) is True and do_initreg == 1:
                 fsf_file.write("set fmri(reginitial_highres_yn) 1")
-                fsf_file.write("set initial_highres_files(1) " + WB_BRAIN_DATA)
+                fsf_file.write("set initial_highres_files(1) " + self.wb_brain_data)
             else:
                 fsf_file.write("set fmri(reginitial_highres_yn) 0")
 
-            fsf_file.write("set fmri(outputdir) " + OUTPUT_FEAT_PATH)
-            fsf_file.write("set fmri(regstandard) " + STANDARD_IMAGE)
+            fsf_file.write("set fmri(outputdir) " + odp)
+            fsf_file.write("set fmri(regstandard) " + std_img)
 
-            if SET_TR > 0:
-                fsf_file.write("set fmri(tr) " + str(SET_TR))
-            if SET_TE > 0:
-                fsf_file.write("set fmri(te) " + str(SET_TE))
+            if tr > 0:
+                fsf_file.write("set fmri(tr) " + str(tr))
+            if te > 0:
+                fsf_file.write("set fmri(te) " + str(te))
 
 
         #--------------------------------------------------------------------------------------------------------------------------------------
-        rrun(os.path.join(self._global.fsl_bin, "feat") + " " + OUTPUT_FEAT_FSF + ".fsf")		# execute  FEAT
+        rrun(os.path.join(self._global.fsl_bin, "feat") + " " + ofeatfsf_noext + ".fsf")		# execute  FEAT
 
         # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_epi folder
-        if os.path.isdir(os.path.join(OUTPUT_FEAT_PATH, "reg")) is True:
-            rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + OUTPUT_FEAT_PATH)
-            self.subject_epi_reg_copy_feat(odp=OUTPUT_FEAT_PATH) #equals to : -idn $INPUT_FOLDER_NAME -idn2 $OUTPUT_FEAT_NAME
+        if os.path.isdir(os.path.join(ofp, "reg")) is True:
+            rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + ofp)
+            self.subject_epi_reg_copy_feat(odp=ofp) #equals to : -idn $idn -idn2 $odn
 
 
-    def epi_reg_copy_feat(self, odp):
-        pass
+    def epi_reg_copy_feat(self, idp="", idn="resting", idn2="resting.feat", std_img=""):
 
-    def epi_aroma(self):
-        pass
+        if std_image == "":
+            std_img = os.path.join(self._global.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
+        else:
+            if imtest(std_img) is False:
+                print("Error in epi_feat: std_img (" + std_img + ") does not exist...exiting")
+                return
+
+        if idp == "":
+            idp = os.path.join(self.dir, idn, idn2)
+
+        if os.path.isdir(idp) is False:
+            print("Error in epi_reg_copy_feat: feat dir (" + idp + ") not present....exiting")
+            return
+
+        #==============================================================================================
+        imcp(os.path.join(idp, "reg", "example_func"), self.rs_examplefunc)
+
+        copyfile(os.path.join(idp, "reg", "example_func2highres.mat"), os.path.join(self.roi_t1_dir, "epi2highres.mat"))
+        copyfile(os.path.join(idp, "reg", "highres2example_func.mat"), os.path.join(self.roi_epi_dir, "highres2epi.mat"))
+
+        copyfile(os.path.join(idp, "reg", "standard2highres.mat"), os.path.join(self.roi_t1_dir, "standard2highres.mat"))
+        copyfile(os.path.join(idp, "reg", "highres2standard.mat"), os.path.join(self.roi_standard_dir, "highres2standard.mat"))
+
+        copyfile(os.path.join(idp, "reg", "standard2example_func.mat"), os.path.join(self.roi_epi_dir, "standard2epi.mat"))
+        copyfile(os.path.join(idp, "reg", "example_func2standard.mat"), os.path.join(self.roi_standard_dir, "epi2standard.mat"))
+
+        run_notexisting_img(os.path.join(idp, "reg", "highres2standard_warp"), "cp " + os.path.join(idp, "reg", "highres2standard_warp.nii.gz") + " " + os.path.join(self.roi_standard_dir, "highres2standard_warp.nii.gz"))
+        run_notexisting_img(os.path.join(self.roi_t1_dir, "standard2highres_warp"), os.path.join(self._global.fsl_bin, "invwarp") + " -w " + os.path.join(self.roi_standard_dir, "highres2standard_warp.nii.gz") + " -o " + os.path.join(self.roi_t1_dir, "standard2highres_warp.nii.gz") + " -r " + self.t1_brain_data)
+
+        # epi -> highres -> standard
+        run_notexisting_img(os.path.join(self.roi_standard_dir, "epi2standard_warp"), os.path.join(self._global.fsl_bin, "convertwarp") + " --ref=" + self._global.fsl_standard_mni_2mm + " --premat=" + os.path.join(self.roi_t1_dir, "epi2highres.mat") + " --warp1=" + os.path.join(self.roi_standard_dir, "highres2standard_warp") + " --out=" + os.path.join(self.roi_standard_dir, "epi2standard_warp"))
+
+        # invwarp: standard -> highres -> epi
+        run_notexisting_img(os.path.join(self.roi_epi_dir, "standard2epi_warp"), os.path.join(self._global.fsl_bin, "invwarp") + " -r " + self.rs_examplefunc + " -w " + os.path.join(self.roi_standard_dir, "epi2standard_warp") + " -o " + os.path.join(self.roi_epi_dir, "standard2epi_warp"))
+
+    def epi_aroma(self, idn="resting.feat", odn="ica_aroma", upsampling=0):
+
+        # ===================================================================================
+        # CHECK FILE EXISTENCE #.feat
+        idp = os.path.join(self.rs_dir, idn)
+
+        if os.path.isdir(idp) is False:
+            print("Error in epi_aroma: you specified an incorrect folder name (" + idp + ")......exiting")
+            return
+
+        #
+        # # ===================================================================================
+        # print("execute_subject_aroma of " + self.label)
+        # run python2.7 $ICA_AROMA_SCRIPT_PATH -feat $input_feat_dir -out $RS_DIR/$OUTPUT_FEAT_DIR_NAME
+        #
+        # if [ $UPSAMPLING_FACTOR -gt 0 ]; then
+        #
+        #     run mkdir -p $RS_REGSTD_AROMA_DIR
+        #
+        #     # problems with non linear registration....use linear one.
+        #     #	cp $input_feat_dir/design.fsf $RS_AROMA_DIR
+        #     #	cp $input_feat_dir/reg $RS_AROMA_DIR
+        #     #	$FSLDIR/bin/featregapply $RS_AROMA_DIR
+        #
+        #     # upsampling of standard
+        #     run ${FSLDIR}/bin/flirt -ref $input_feat_dir/reg/standard -in $input_feat_dir/reg/standard -out $RS_REGSTD_AROMA_DIR/standard -applyisoxfm $UPSAMPLING_FACTOR  #4
+        #     run ${FSLDIR}/bin/flirt -ref $RS_REGSTD_AROMA_DIR/standard -in $input_feat_dir/reg/highres -out $RS_REGSTD_AROMA_DIR/bg_image -applyxfm -init $input_feat_dir/reg/highres2standard.mat -interp sinc -datatype float
+        #     run ${FSLDIR}/bin/flirt -ref $RS_REGSTD_AROMA_DIR/standard -in $RS_AROMA_DIR/denoised_func_data_nonaggr -out $RS_REGSTD_AROMA_DIR/filtered_func_data -applyxfm -init $input_feat_dir/reg/example_func2standard.mat -interp trilinear -datatype float
+        #     run ${FSLDIR}/bin/fslmaths $RS_REGSTD_AROMA_DIR/filtered_func_data -Tstd -bin $RS_REGSTD_AROMA_DIR/mask -odt char
+        # fi
 
     def epi_sbfc_1multiroi_feat(self):
         pass
@@ -2663,11 +2765,8 @@ class Subject:
         if imtest(input_roi) is False:
             print("error......input_roi (" + input_roi + ") is missing....exiting")
 
-        rrun("flirt -in " + input_roi + " -ref " + std_img + " -out " + os.path.join(self.roi_epi_dir,
-                                                                                     roi_name + "_standard") + " -applyisoxfm 2")
-        rrun("applywarp -i " + os.path.join(self.roi_epi_dir,
-                                            roi_name + "_standard") + "-r " + self.rs_examplefunc + " -o " + os.path.join(
-            self.roi_epi_dir, roi_name + "_epi") + " --warp=" + os.path.join(self.roi_epi_dir, "standard2epi_warp"))
+        rrun("flirt -in " + input_roi + " -ref " + std_img + " -out " + os.path.join(self.roi_epi_dir, roi_name + "_standard") + " -applyisoxfm 2")
+        rrun("applywarp -i " + os.path.join(self.roi_epi_dir, roi_name + "_standard") + "-r " + self.rs_examplefunc + " -o " + os.path.join(self.roi_epi_dir, roi_name + "_epi") + " --warp=" + os.path.join(self.roi_epi_dir, "standard2epi_warp"))
         imrm(os.path.join(self.roi_epi_dir, roi_name + "_standard"))
 
     def transform_nl_hr2epi(self, path_type, roi_name, roi, std_img):
