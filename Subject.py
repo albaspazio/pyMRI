@@ -5,6 +5,7 @@ import os
 from copy import deepcopy
 from shutil import copyfile, move, rmtree
 from numpy import arange, concatenate, array
+import ntpath
 
 from utility.fslfun import run, runpipe, run_notexisting_img, runsystem, run_move_notexisting_img
 from utility.manage_images import imtest, immv, imcp, imrm, quick_smooth, remove_ext, mass_images_move, is_image, mysplittext, imgname, imgparts
@@ -191,6 +192,15 @@ class Subject:
         self.wb_data        = os.path.join(self.wb_dir, self.wb_image_label)
         self.wb_brain_data  = os.path.join(self.wb_dir, self.wb_image_label + "_brain")
 
+        self.epi_image_label         = self.label + "-epi"
+        self.epi_dir                 = os.path.join(self.dir, "epi")
+        self.epi_data                = os.path.join(self.epi_dir, self.epi_image_label)
+        self.epi_data_mc             = os.path.join(self.epi_dir, "r" + self.epi_image_label)
+
+        self.epi_data_swar           = os.path.join(self.epi_dir, "swar" + self.epi_image_label)
+
+        self.epi_pe_data             = os.path.join(self.epi_dir, self.epi_image_label + "_pe")
+        self.epi_acq_params          = os.path.join(self.epi_dir, "acqparams.txt")
 
         self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
 
@@ -2118,13 +2128,21 @@ class Subject:
 
     def epi_remove_slices(self, numslice2remove=1, whichslices2remove="updown", remove_dimension="axial"):
 
-        # dim_str = ""
-        # if remove_dimension == "axial":
-        #     dim_str = " -1 -1 "
-        nslices = 36
-        imcp(self.epi_data, self.epi_data + "full")
-        # rrun('fslroi ' + self.epi_data + " " + self.epi_data + " -1 -1  1 35")
-        rrun('fslroi ' + self.epi_data + " " + self.epi_data + " -1 -1  0 34")
+        nslices = int(rrun("fslval " + self.epi_data + " dim3"))
+
+        dim_str = ""
+        if remove_dimension == "axial":
+            if whichslices2remove == "updown":
+                dim_str = " 0 -1 0 -1 " + str(numslice2remove) + " " + str(nslices-2*numslice2remove)
+
+
+        imcp(self.epi_data, self.epi_data + "_full")
+        rrun('fslroi ' + self.epi_data + " " + self.epi_data + dim_str)
+
+        #lo faccio anche per pepolar
+        imcp(self.epi_pe_data, self.epi_pe_data + "_full")
+        rrun('fslroi ' + self.epi_pe_data + " " + self.epi_pe_data + dim_str)
+
 
     def epi_remove_volumes(self, finalvols, ifp="", backup_postfix="_fullvol"):
 
@@ -2211,6 +2229,7 @@ class Subject:
         epi_path_name = epi_image + '.nii'
 
         gunzip(epi_image + '.nii.gz', epi_path_name, replace=False)
+        gunzip(self.t1_data + '.nii.gz', self.t1_data +  '.nii', replace=False)
 
         epi_all_volumes = ''
         for i in range(1, epi_nvols + 1):
@@ -2239,9 +2258,10 @@ class Subject:
         # print("running SPM batch template: " + out_batch_start)  # , file=log)
         # eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
         # eng.quit()
+        imrm([self.t1_data +  '.nii'])
 
     # conditions_lists[{"name", "onsets", "duration"}, ....]
-    def epi_spm_fmri_1st_level_analysis(self, analysis_name, TR, num_slices, conditions_lists, events_unit="secs", spm_template_name='spm_fmri_stats_1st_level', rp_filemame=""):
+    def epi_spm_fmri_1st_level_analysis(self, analysis_name, TR, num_slices, conditions_lists=[], events_unit="secs", spm_template_name='spm_fmri_stats_1st_level', rp_filemame="", onsets=[]):
 
         #default params:
         stats_dir = os.path.join(self.epi_dir, "stats", analysis_name)
@@ -2252,19 +2272,30 @@ class Subject:
         if rp_filemame == "":
             rp_filemame = os.path.join(self.epi_dir, "rp_" + self.epi_image_label + ".txt")
 
-        #set dirs
-        in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
-        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-
         spm_script_dir = os.path.join(self.project.script_dir, "epi", "spm")
         out_batch_dir = os.path.join(spm_script_dir, "batch")
 
-        out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
-        out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + self.label + '.m')
+
+        if os.path.isfile(spm_template_name):
+            in_batch_job = spm_template_name
+
+            fne = ntpath.splitext(spm_template_name)
+            file_name = os.path.basename(fne[0])
+
+            out_batch_job = os.path.join(out_batch_dir, file_name + self.label + '_job.m')
+            out_batch_start = os.path.join(out_batch_dir, "start_" + file_name + self.label + '.m')
+        else:
+            in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
+            out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
+            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + self.label + '.m')
+
+        #set dirs
+        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+
 
         #substitute for all the volumes
-        epi_nvols = int(rrun('fslnvols ' + self.epi_data + '.nii.gz'))
-        epi_path_name = os.path.join(self.epi_dir, "swar" + self.epi_image_label + '.nii')
+        epi_nvols = int(rrun('fslnvols ' + self.epi_data_swar + '.nii'))
+        epi_path_name = self.epi_data_swar + '.nii'
         epi_all_volumes = ""
         for i in range(1, epi_nvols + 1):
             epi_volume = "'" + epi_path_name + ',' + str(i) + "'"
@@ -2279,7 +2310,14 @@ class Subject:
         sed_inplace(out_batch_job, '<SMOOTHED_VOLS>', epi_all_volumes)
         sed_inplace(out_batch_job, '<MOTION_PARAMS>', rp_filemame)
 
-        Stats.spm_stats_add_conditions(out_batch_job, conditions_lists)
+        if in_batch_job == spm_template_name:
+            if len(onsets) == 0:
+                print("ERROR")
+                return
+
+            Stats.spm_stats_add_conditions_onsets(out_batch_job, onsets)
+        else:
+            Stats.spm_stats_add_conditions(out_batch_job, conditions_lists)
 
         copyfile(in_batch_start, out_batch_start)
         sed_inplace(out_batch_start, 'X', '1')
