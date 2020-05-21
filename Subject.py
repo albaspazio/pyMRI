@@ -12,7 +12,7 @@ from utility.utilities import sed_inplace, gunzip, write_text_file, compress
 from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
 from myfsl.utils.run import rrun
 from Stats import Stats
-
+from utility.MatlabManager import MatlabManager
 
 class Subject:
 
@@ -861,6 +861,29 @@ class Subject:
             log.close()
             print(e)
 
+    def mpr_spm_setorigin(self, odn="anat", imgtype=1, use_orig=True, do_overwrite=False):
+
+        # define placeholder variables for input dir and image name
+        if imgtype == 1:
+            anatdir = os.path.join(self.t1_dir, odn)
+            T1 = "T1"
+        elif imgtype == 2:
+            anatdir = os.path.join(self.t2_dir, odn)
+            T1 = "T2"
+        else:
+            print("ERROR: PD input format is not supported")
+            return False
+
+        if use_orig is True:
+            srcinputimage = self.t1_data
+        else:
+            srcinputimage = os.path.join(anatdir, T1 + "_biascorr")
+
+        gunzip(srcinputimage + ".nii.gz", srcinputimage + ".nii")
+        MatlabManager.call_matlab_function_noret("spm_display_image", [self._global.spm_functions_dir], "\"" + srcinputimage + ".nii" + "\"", endengine=False)
+        input("press keyboard when finished setting the origin for subj " + self.label + " :")
+
+        compress(srcinputimage + ".nii", srcinputimage + ".nii.gz", replace=True)
 
     # segment T1 with SPM and create  WM+GM and WM+GM+CSF masks
     # add_bet_mask params is used to correct the presence of holes (only partially filled) in the WM+GM mask.
@@ -874,6 +897,8 @@ class Subject:
                         add_bet_mask=True,
                         set_origin=False,
                         seg_templ="",
+                        use_orig=False,
+                        use_modulated=False,
                         spm_template_name="spm_segment_tissuevolume"
                         ):
 
@@ -888,8 +913,12 @@ class Subject:
             print("ERROR: PD input format is not supported")
             return False
 
-        srcinputimage           = os.path.join(anatdir, T1 + "_biascorr")
-        inputimage              = os.path.join(self.t1_spm_dir, T1 + "_" + self.label)
+        if use_orig is True:
+            srcinputimage = self.t1_data
+        else:
+            srcinputimage = os.path.join(anatdir, T1 + "_biascorr")
+
+        inputimage = os.path.join(self.t1_spm_dir, T1 + "_" + self.label)
 
         # set dirs
         spm_script_dir          = os.path.join(self.project.script_dir, "mpr", "spm")
@@ -918,6 +947,9 @@ class Subject:
                 print(" ", file=text_file)
 
             log = open(logfile, "a")
+
+            # create processing dir (if non existent) and cd to it
+            os.makedirs(anatdir, exist_ok=True)
 
             os.makedirs(out_batch_dir   , exist_ok = True)
             os.makedirs(self.t1_spm_dir   , exist_ok = True)
@@ -976,6 +1008,25 @@ class Subject:
                 # copy SPM mask and use it to mask T1_biascorr
                 imcp(brain_mask, self.t1_brain_data_mask, logFile=log)
                 rrun("fslmaths " + inputimage + " -mas " + brain_mask + " " + self.t1_brain_data, logFile=log)
+
+            mt1 = os.path.join(anatdir, "spm_proc", "mT1_" + self.label)
+
+            if use_modulated is True:
+
+                compress(mt1 + ".nii", mt1 + ".nii.gz", replace=True)    # zip & delete original
+
+                if use_orig is True:
+                    immv(self.t1_data, self.t1_data + "_unmodulated", logFile=log)
+                    immv(mt1 + ".nii.gz", self.t1_data, logFile=log)
+                    rrun("fslmaths " + self.t1_data + " " + self.t1_data + " -odt short")
+
+                else:
+                    immv(srcinputimage, srcinputimage + "_unmodulated", logFile=log)
+                    immv(mt1 + "nii.gz", srcinputimage, logFile=log)
+                    rrun("fslmaths " + srcinputimage + " " + srcinputimage + " -odt short")
+            else:
+                imrm(mt1)
+
 
             imrm([inputimage + ".nii"])
             # if do_fs_overwrite is True:
@@ -1655,15 +1706,15 @@ class Subject:
 
             mass_images_move(os.path.join(anatdir, "*fast*"), self.fast_dir, logFile=log)
 
-            run_notexisting_img(T1 + "_fast_pve_1", "imcp " + os.path.join(self.fast_dir, T1_label + "_fast_pve_1 " + anatdir), logFile=log) # this file is tested by subject_t1_processing to skip the fast step. so by copying it back, I allow such skip.
+            # run_notexisting_img(T1 + "_fast_pve_1", "imcp " + os.path.join(self.fast_dir, T1_label + "_fast_pve_1 " + anatdir), logFile=log) # this file is tested by subject_t1_processing to skip the fast step. so by copying it back, I allow such skip.
 
             run_notexisting_img(self.t1_segment_csf_path, "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_seg") + " -thr 1 -uthr 1 " + self.t1_segment_csf_path, logFile=log)
             run_notexisting_img(self.t1_segment_gm_path , "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_seg") + " -thr 2 -uthr 2 " + self.t1_segment_gm_path, logFile=log)
             run_notexisting_img(self.t1_segment_wm_path , "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_seg") + " -thr 3 " + self.t1_segment_wm_path, logFile=log)
 
-            run_notexisting_img(self.t1_segment_csf_ero_path, "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_pve_0 -thr 1 -uthr 1 " + self.t1_segment_csf_ero_path), logFile=log)
-            run_notexisting_img(self.t1_segment_wm_bbr_path , "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_pve_2 -thr 0.5 -bin " + self.t1_segment_wm_bbr_path), logFile=log)
-            run_notexisting_img(self.t1_segment_wm_ero_path , "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_pve_2 -ero " + self.t1_segment_wm_ero_path), logFile=log)
+            # run_notexisting_img(self.t1_segment_csf_ero_path, "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_pve_0 -thr 1 -uthr 1 " + self.t1_segment_csf_ero_path), logFile=log)
+            # run_notexisting_img(self.t1_segment_wm_bbr_path , "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_pve_2 -thr 0.5 -bin " + self.t1_segment_wm_bbr_path), logFile=log)
+            # run_notexisting_img(self.t1_segment_wm_ero_path , "fslmaths " + os.path.join(self.fast_dir, T1_label + "_fast_pve_2 -ero " + self.t1_segment_wm_ero_path), logFile=log)
 
             mass_images_move(os.path.join(anatdir, "*_to_MNI*"), self.roi_standard_dir, logFile=log)
             mass_images_move(os.path.join(anatdir, "*_to_T1*"), self.roi_t1_dir, logFile=log)
@@ -1775,12 +1826,17 @@ class Subject:
 
             curdir = os.getcwd()
 
-            rrun("mri_convert " + self.t1_data + ".nii.gz " + self.t1_data + ".mgz", logFile=log)
+            # rrun("mri_convert " + self.t1_data + ".nii.gz " + self.t1_data + ".mgz", logFile=log)
+            try:
+                os.environ['OLD_SUBJECTS_DIR'] = os.environ['SUBJECTS_DIR']
+            except Exception as e:
+                os.environ['SUBJECTS_DIR'] = ""
+                os.environ['OLD_SUBJECTS_DIR'] = ""
 
-            os.environ['OLD_SUBJECTS_DIR'] = os.environ['SUBJECTS_DIR']
             os.environ['SUBJECTS_DIR'] = self.t1_dir
+            os.environ['FREESURFER_HOME'] = "/usr/local/freesurfer"
 
-            rrun("recon-all -subject freesurfer" + " -i " + self.t1_data + ".mgz " + step, logFile=log)
+            rrun("/usr/local/freesurfer/bin/recon-all -subject freesurfer" + " -i " + self.t1_data + ".mgz " + step, logFile=log)
 
             # calculate linear trasf to move coronal-conformed T1 back to original reference (specified by backtransfparams)
             # I convert T1.mgz => nii.gz, then I swapdim to axial and coregister to t1_data
@@ -2169,8 +2225,8 @@ class Subject:
             if f.is_file():
                 gunzip(f.name, os.path.join(outdir, remove_ext(f.name) + ".nii"), replace=True)
 
-    def epi_spm_fmri_preprocessing_motioncorrected(self , num_slices, TR , TA=-1 , acq_scheme=0, ref_slice = -1 , slice_timing = None):
-        self.epi_spm_fmri_preprocessing(num_slices, TR, TA, acq_scheme, ref_slice, slice_timing, epi_image=self.epi_data_mc, spm_template_name='spm_fmri_preprocessing_norealign')
+    def epi_spm_fmri_preprocessing_motioncorrected(self , num_slices, TR , TA=-1 , acq_scheme=0, ref_slice = -1 , slice_timing = None, spm_template_name='spm_fmri_preprocessing_norealign'):
+        self.epi_spm_fmri_preprocessing(num_slices, TR, TA, acq_scheme, ref_slice, slice_timing, epi_image=self.epi_data_mc, spm_template_name=spm_template_name)
 
     def epi_spm_fmri_preprocessing(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice = -1, slice_timing = None, epi_image=None, spm_template_name='spm_fmri_preprocessing'):
 

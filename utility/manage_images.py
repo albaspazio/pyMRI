@@ -128,22 +128,22 @@ def imrm(filelist, logFile=None):
 
 def immv(src, dest, logFile=None):
 
-    filename_src, file_extension_src = os.path.splitext(src)
-    filename_dst, file_extension_dst = os.path.splitext(dest)
+    fileparts_src = mysplittext(src)
+    fileparts_dst = mysplittext(dest)
 
     ext = ""
-    if os.path.isfile(filename_src + ".nii"):
+    if os.path.isfile(fileparts_src[0] + ".nii"):
         ext = ".nii"
-    elif os.path.isfile(filename_src + ".nii.gz"):
+    elif os.path.isfile(fileparts_src[0] + ".nii.gz"):
         ext = ".nii.gz"
 
     if ext == "":
         return False
 
-    move(filename_src + ext, filename_dst + ext)
+    move(fileparts_src[0] + ext, fileparts_dst[0] + ext)
 
     if logFile is not None:
-        print("mv " + filename_src + ext + " " + filename_dst + ext, file=logFile)
+        print("mv " + fileparts_src[0] + ext + " " + fileparts_dst[0] + ext, file=logFile)
 
     return True
 

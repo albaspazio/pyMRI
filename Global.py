@@ -86,20 +86,20 @@ class Global:
         # accessory elements. do not warn if they are not specified
         if len(self.global_data_templates) > 0:
             if os.path.isdir(self.global_data_templates) is False:
-                raise Exception("Error: DATA TEMPLATES folder is not present")
+                print("Error: DATA TEMPLATES folder is not present")
 
         if len(self.trackvis_bin) > 0:
             if os.path.isdir(self.trackvis_bin) is False:
-                raise Exception("Error: TRACKVIS BIN folder is not present")
+                print("Error: TRACKVIS BIN folder is not present")
 
         if len(self.autoptx_script_dir) > 0:
             if os.path.isdir(self.autoptx_script_dir) is False:
-                raise Exception("Error: DATA AUTOPTX folder is not present")
+                print("Error: DATA AUTOPTX folder is not present")
 
         if os.path.isdir(os.path.join(self.spm_dir, "toolbox", "marsbar")) is False:
             self.marsbar_dir        = ""
             self.marsbar_spm_dir    = ""
-            raise Exception("Error: CAT is not present")
+            print("Error: marsbar is not present")
         else:
             self.marsbar_dir        = os.path.join(self.spm_dir, "toolbox", "marsbar")
             self.marsbar_spm_dir    = os.path.join(self.spm_dir, "toolbox", "marsbar", "spm5")
