@@ -41,6 +41,13 @@ class Stats:
 
         sed_inplace(out_batch_job,"<CONDITION_STRING>", conditions_string)
 
+    @staticmethod
+    def spm_stats_add_conditions_onsets(out_batch_job, onsets):
+        for c in range(1, len(onsets)+1):
+            str_onsets = import_data_file.list2spm_text_column(onsets[c-1])  # ends with a "\n"
+            sed_inplace(out_batch_job, "<COND" + str(c) + "_ONSETS>", str_onsets)
+
+
     # parse a series of spm-output csv files and report info of those voxels/cluster associated to the given cluster
     #set    set cluster         cluster         cluster cluster peak            peak            peak    peak    peak
     #p      c   p(FWE - corr)   p(FDR - corr)   equivk  p(unc)  p(FWE - corr)   p(FDR - corr)   T       equivZ  p(unc) x  y  z {mm}

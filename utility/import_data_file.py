@@ -216,7 +216,7 @@ def get_filtered_dict_column(dic, colname, filt_col="", filter=None):
         return get_dict_column(dic, colname)
 
 # get a data list and return a \n separated string
-def list2spm_text_column(datalist):
+def list2spm_text_column(datalist, ndecimals=3):
     datastr = ""
 
     for r in datalist:
