@@ -163,12 +163,14 @@ class Subject:
         self.epi_dir            = os.path.join(self.dir, "epi")
         self.epi_data           = os.path.join(self.epi_dir, self.epi_image_label)
         self.epi_data_mc        = os.path.join(self.epi_dir, "r" + self.epi_image_label)
-        self.epi_data_mc_st     = os.path.join(self.epi_dir, "ar" + self.epi_image_label)
-        self.epi_data_mc_st_n   = os.path.join(self.epi_dir, "war" + self.epi_image_label)
-        self.epi_data_mc_st_n_s = os.path.join(self.epi_dir, "swar" + self.epi_image_label)
+        self.epi_data_ar        = os.path.join(self.epi_dir, "ar" + self.epi_image_label)
+        self.epi_data_war       = os.path.join(self.epi_dir, "war" + self.epi_image_label)
+        self.epi_data_swar      = os.path.join(self.epi_dir, "swar" + self.epi_image_label)
+        self.epi_data_sar       = os.path.join(self.epi_dir, "sar" + self.epi_image_label)
 
         self.epi_examplefunc    = os.path.join(self.roi_epi_dir, "example_func")
 
+        self.mean_image         = os.path.join(self.epi_dir, "mean" + self.epi_image_label)
         self.epi_pe_data        = os.path.join(self.epi_dir, self.epi_image_label + "_pe")
         self.epi_acq_params     = os.path.join(self.epi_dir, "acqparams.txt")
 
@@ -192,12 +194,7 @@ class Subject:
         self.wb_data        = os.path.join(self.wb_dir, self.wb_image_label)
         self.wb_brain_data  = os.path.join(self.wb_dir, self.wb_image_label + "_brain")
 
-        self.epi_image_label         = self.label + "-epi"
-        self.epi_dir                 = os.path.join(self.dir, "epi")
-        self.epi_data                = os.path.join(self.epi_dir, self.epi_image_label)
-        self.epi_data_mc             = os.path.join(self.epi_dir, "r" + self.epi_image_label)
 
-        self.epi_data_swar           = os.path.join(self.epi_dir, "swar" + self.epi_image_label)
 
         self.epi_pe_data             = os.path.join(self.epi_dir, self.epi_image_label + "_pe")
         self.epi_acq_params          = os.path.join(self.epi_dir, "acqparams.txt")
@@ -254,6 +251,8 @@ class Subject:
 
         if dir == "sag->axial":
             conversion_str = " -z -x y "
+        elif dir == "cor->axial":
+            conversion_str = " x z -y "
         else:
             print("invalid conversion")
             return
@@ -2153,6 +2152,10 @@ class Subject:
 
         # 6 —again these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
         rrun("applytopup --imain=" + self.epi_data_mc + " --topup=" + self.epi_data + "_PE_ref_topup" + " --datain=" + self.epi_acq_params + " --inindex=1 --method=jac --interp=spline --out=" + self.epi_data_mc)
+        rrun("applytopup --imain=" + self.mean_image + " --topup=" + self.epi_data + "_PE_ref_topup" + " --datain=" + self.epi_acq_params + " --inindex=1 --method=jac --interp=spline --out=" + self.mean_image)
+        os.remove(self.mean_image + ".nii")     # remove distorted mean_image.
+        gunzip(self.mean_image + ".nii.gz", self.mean_image + ".nii")
+
 
     def epi_get_slicetiming_params(self, nslices, scheme = 1, params=None):
 
@@ -2292,8 +2295,6 @@ class Subject:
             epi_volume = epi_path_name + ',' + str(i) + "'"
             epi_all_volumes = epi_all_volumes + epi_volume + '\n' + "'"
 
-        mean_image = os.path.join(self.epi_dir, "mean" + self.epi_image_label + ".nii")
-
         copyfile(in_batch_job, out_batch_job)
         sed_inplace(out_batch_job, '<FMRI_IMAGES>', epi_all_volumes)
         sed_inplace(out_batch_job, '<NUM_SLICES>', str(num_slices))
@@ -2301,7 +2302,7 @@ class Subject:
         sed_inplace(out_batch_job, '<TA_VALUE>', str(TA))
         sed_inplace(out_batch_job, '<SLICETIMING_PARAMS>', ' '.join(slice_timing))
         sed_inplace(out_batch_job, '<REF_SLICE>', str(ref_slice))
-        sed_inplace(out_batch_job, '<RESLICE_MEANIMAGE>', mean_image)
+        sed_inplace(out_batch_job, '<RESLICE_MEANIMAGE>', self.mean_image + ".nii")
         sed_inplace(out_batch_job, '<T1_IMAGE>', self.t1_data + '.nii,1')
         sed_inplace(out_batch_job, '<SPM_DIR>', self._global.spm_dir)
 
@@ -2316,8 +2317,109 @@ class Subject:
         # eng.quit()
         imrm([self.t1_data +  '.nii'])
 
+    def epi_fsl2standard_smooth(self, epi_image="", std_img="", spm_template_name='spm_smooth'):
+
+        if epi_image == "":
+            epi_image = self.epi_data_ar
+        else:
+            if imtest(epi_image) is False:
+                print("Error in subj: " + self.label + " epi_fsl2standard_smooth")
+                return
+
+        if std_img != "":
+            if imtest(std_img) is False:
+                print( "ERROR: given standard image file (" + std_img + ") does not exist......exiting")
+                return
+        else:
+            std_img = self._global.fsl_standard_mni_2mm
+
+        rrun("flirt -in " + epi_image + " -ref " + std_img + " -out " + self.epi_data_war + " -applyxfm -init " + os.path.join(self.roi_standard_dir, "epi2standard.mat") + " -interp trilinear")
+
+        gunzip(self.epi_data_war + ".nii.gz", self.epi_data_war + ".nii", replace=True)
+
+        spm_script_dir = os.path.join(self.project.script_dir, "epi", "spm")
+        out_batch_dir = os.path.join(spm_script_dir, "batch")
+
+        if os.path.isfile(spm_template_name):
+            in_batch_job = spm_template_name
+
+            fne = ntpath.splitext(spm_template_name)
+            file_name = os.path.basename(fne[0])
+
+            out_batch_job = os.path.join(out_batch_dir, file_name + self.label + '_job.m')
+            out_batch_start = os.path.join(out_batch_dir, "start_" + file_name + self.label + '.m')
+        else:
+            in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
+            out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
+            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + self.label + '.m')
+
+        copyfile(in_batch_job, out_batch_job)
+        sed_inplace(out_batch_job, '<IMAGE>', self.epi_data_war + ".nii")
+
+
+        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+        copyfile(in_batch_start, out_batch_start)
+
+        sed_inplace(out_batch_start, 'X', '1')
+        sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
+
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
+
+    def epi_smooth(self, epi_image="", fwhm=8, spm_template_name='spm_smooth'):
+
+        # determine which image use
+        if epi_image == "AR":
+            epi_path_name = self.epi_data_ar
+        elif epi_image == "WAR":
+            epi_path_name = self.epi_data_war
+        elif epi_image == "SWAR":
+            epi_path_name = self.epi_data_swar
+        elif epi_image == "SAR":
+            epi_path_name = self.epi_data_sar
+        else:
+            if imtest(epi_image) is False:
+                print("Error in subj: " + self.label + " epi_smooth")
+                return
+            else:
+                epi_path_name = epi_image
+
+        # TODO : check whether an image exist as nii.gz and not as nii. if yes, gunzip it
+        #  (self.epi_data_war + ".nii.gz", self.epi_data_war + ".nii", replace=True)
+
+        spm_script_dir = os.path.join(self.project.script_dir, "epi", "spm")
+        out_batch_dir = os.path.join(spm_script_dir, "batch")
+
+        if os.path.isfile(spm_template_name):
+            in_batch_job = spm_template_name
+
+            fne = ntpath.splitext(spm_template_name)
+            file_name = os.path.basename(fne[0])
+
+            out_batch_job = os.path.join(out_batch_dir, file_name + self.label + '_job.m')
+            out_batch_start = os.path.join(out_batch_dir, "start_" + file_name + self.label + '.m')
+        else:
+            in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
+            out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.label + '_job.m')
+            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + self.label + '.m')
+
+        fwhm_str = str(fwhm) + " " + str(fwhm) + " " + str(fwhm)
+
+        copyfile(in_batch_job, out_batch_job)
+        sed_inplace(out_batch_job, '<IMAGE>', epi_path_name + ".nii")
+        sed_inplace(out_batch_job, '<FWHM>', fwhm_str)
+
+
+        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+        copyfile(in_batch_start, out_batch_start)
+
+        sed_inplace(out_batch_start, 'X', '1')
+        sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
+
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
+
+
     # conditions_lists[{"name", "onsets", "duration"}, ....]
-    def epi_spm_fmri_1st_level_analysis(self, analysis_name, TR, num_slices, conditions_lists=[], events_unit="secs", spm_template_name='spm_fmri_stats_1st_level', rp_filemame="", onsets=[]):
+    def epi_spm_fmri_1st_level_analysis(self, analysis_name, TR, num_slices, conditions_lists=[], events_unit="secs", spm_template_name='spm_fmri_stats_1st_level', rp_filemame="", onsets=[], input_images="SWAR"):
 
         #default params:
         stats_dir = os.path.join(self.epi_dir, "stats", analysis_name)
@@ -2350,8 +2452,20 @@ class Subject:
 
 
         #substitute for all the volumes
-        epi_nvols = int(rrun('fslnvols ' + self.epi_data_swar + '.nii'))
-        epi_path_name = self.epi_data_swar + '.nii'
+        # determine which image use
+        if input_images == "AR":
+            epi_nvols = int(rrun('fslnvols ' + self.epi_data_ar + '.nii'))
+            epi_path_name = self.epi_data_ar + '.nii'
+        elif input_images == "WAR":
+            epi_nvols = int(rrun('fslnvols ' + self.epi_data_war + '.nii'))
+            epi_path_name = self.epi_data_war + '.nii'
+        elif input_images == "SWAR":
+            epi_nvols = int(rrun('fslnvols ' + self.epi_data_swar + '.nii'))
+            epi_path_name = self.epi_data_swar + '.nii'
+        elif input_images == "SAR":
+            epi_nvols = int(rrun('fslnvols ' + self.epi_data_sar + '.nii'))
+            epi_path_name = self.epi_data_sar + '.nii'
+
         epi_all_volumes = ""
         for i in range(1, epi_nvols + 1):
             epi_volume = "'" + epi_path_name + ',' + str(i) + "'"

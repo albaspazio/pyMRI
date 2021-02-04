@@ -72,7 +72,7 @@ matlabbatch{4}.spm.spatial.normalise.write.woptions.interp = 4;
 matlabbatch{4}.spm.spatial.normalise.write.woptions.prefix = 'w';
 
 matlabbatch{5}.spm.spatial.smooth.data(1) = cfg_dep('Normalise: Write: Normalised Images (Subj 1)', substruct('.','val', '{}',{4}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('()',{1}, '.','files'));
-matlabbatch{5}.spm.spatial.smooth.fwhm = [8 8 8];
+matlabbatch{5}.spm.spatial.smooth.fwhm = [3 3 3];
 matlabbatch{5}.spm.spatial.smooth.dtype = 0;
 matlabbatch{5}.spm.spatial.smooth.im = 0;
 matlabbatch{5}.spm.spatial.smooth.prefix = 's';
