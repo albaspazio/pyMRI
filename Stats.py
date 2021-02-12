@@ -27,7 +27,7 @@ class Stats:
 
 
     @staticmethod
-    def spm_stats_add_conditions(out_batch_job, conditions):
+    def spm_stats_replace_conditions_string(out_batch_job, conditions):
 
         conditions_string = ""
         for c in range(1, len(conditions)+1):
@@ -40,6 +40,33 @@ class Stats:
             conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond("+ str(c) + ").orth = 1;\n"
 
         sed_inplace(out_batch_job,"<CONDITION_STRING>", conditions_string)
+
+
+    # replace CAT results trasformation string
+    # mult_corr = "FWE" | "FDR" | "none"
+    # cluster_extend = "none" | "en_corr" | "en_nocorr"
+    @staticmethod
+    def cat_replace_trasformation_string(out_batch_job, cmd_id=3, mult_corr="FWE", pvalue=0.05, cluster_extend="none"):
+
+        if mult_corr == "FWE":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";")
+        elif mult_corr == "FDR":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fdr.thresh05 = " + str(pvalue) + ";")
+        elif mult_corr == "none":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.uncorr.thresh001 = " + str(pvalue) + ";")
+        else:
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";")
+
+        if cluster_extend == "none":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;")
+        elif mult_corr == "en_corr":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 1;")
+        elif mult_corr == "en_nocorr":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 0;")
+        else:
+            print("warning in cat_replace_trasformation_string...unrecognized cluster_extend in Tsurf transf")
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;")
+
 
     # parse a series of spm-output csv files and report info of those voxels/cluster associated to the given cluster
     #set    set cluster         cluster         cluster cluster peak            peak            peak    peak    peak
@@ -72,7 +99,7 @@ class Stats:
 
     # create a gifti image with ones in correspondence of each vmask voxel
     @staticmethod
-    def create_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths, distance=8):
+    def spm_stats_replace_conditions_string(vmask, ref_surf, out_surf, matlab_paths, distance=8):
 
         if imtest(vmask) is False:
             print("Error in create_surface_mask_from_volume_mask: input vmask does not exist")
@@ -83,8 +110,6 @@ class Stats:
             return
 
         call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths, "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
-
-
 
 
 class Peak:

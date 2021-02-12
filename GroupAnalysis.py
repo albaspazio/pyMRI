@@ -274,9 +274,10 @@ class GroupAnalysis:
 
             eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=False)
 
-            # model estimate
-            print("estimating surface model")
-            eng.pymri_cat_surfaces_stat_spm(statsdir, nargout=0)
+            if self._global.cat_version == "cat12.6":
+                # model estimate
+                print("estimating surface model")
+                eng.pymri_cat_surfaces_stat_spm(statsdir, nargout=0)
 
             # check whether running a given contrasts batch. script must only modify SPM.mat file
             if spm_contrasts_template_name is not "":
@@ -449,7 +450,8 @@ class GroupAnalysis:
     # ---------------------------------------------------
 
     # calculate contrasts and report their results on a given, already estimated, SPM.mat
-    def create_spm_stats_2samplesttest_contrasts_results(self, spmmat, c1_name="A>B", c2_name="B>A", spm_template_name="spm_stats_2samplesttest_contrasts_results", mult_corr="FWE", pvalue=0.05, cluster_extend=0):
+    # cluster_extend = "none" | "en_corr" | "en_nocorr"
+    def create_spm_stats_2samplesttest_contrasts_results(self, spmmat, c1_name="A>B", c2_name="B>A", spm_template_name="spm_stats_2samplesttest_contrasts_results", mult_corr="FWE", pvalue=0.05, cluster_extend="none"):
 
         try:
             # set dirs
@@ -465,11 +467,14 @@ class GroupAnalysis:
             # set job file
             copyfile(in_batch_job, out_batch_job)
             sed_inplace(out_batch_job, "<SPM_MAT>", spmmat)
+            sed_inplace(out_batch_job, "<STATS_DIR>", ntpath.dirname(spmmat))
             sed_inplace(out_batch_job, "<C1_NAME>", c1_name)
             sed_inplace(out_batch_job, "<C2_NAME>", c2_name)
             sed_inplace(out_batch_job, "<MULT_CORR>", mult_corr)
             sed_inplace(out_batch_job, "<PVALUE>", str(pvalue))
             sed_inplace(out_batch_job, "<CLUSTER_EXTEND>", str(cluster_extend))
+
+            Stats.cat_replace_trasformation_string(out_batch_job, 3, mult_corr, pvalue, cluster_extend)
 
             # set start file
             copyfile(in_batch_start, out_batch_start)

@@ -22,17 +22,20 @@ class Global:
         # check its presence
         if os.path.isfile(local_settings) is False:
             raise Exception("ERROR. the file \"local.settings\" must be present in the framework root folder (" + self.framework_dir + ")\n" +
-                            "copy and rename the file " + os.path.join(self.framework_dir, "examples", "local.settings.example") + " there and modify its content according to your local settings")
+                            "copy and rename the file " + os.path.join(self.framework_dir, "examples", "local.settings") + " there and modify its content according to your local settings")
 
 
         local_settings_data = import_data_file.read_varlist_file(local_settings)
 
         self.spm_dir                        = local_settings_data["spm_dir"]
         self.cat_version                    = local_settings_data["cat_version"]
+        self.marsbar                        = local_settings_data["marsbar"]
         self.global_data_templates          = local_settings_data["global_data_templates"]
         self.ica_aroma_script               = local_settings_data["ica_aroma_script"]
         self.trackvis_bin                   = local_settings_data["trackvis_bin"]
         self.autoptx_script_dir             = local_settings_data["autoptx_script_dir"]
+
+        self.cat_foldername                 = self.cat_version.split('.')[0]
 
         self.check_paths()
         # --------------------------------------------------------------------------------------------------------
@@ -46,7 +49,7 @@ class Global:
             print("FSLDIR is undefined")
             return
 
-        self.cat_dartel_template            = os.path.join(self.spm_dir,"toolbox", self.cat_version, "templates_1.50mm", "Template_1_IXI555_MNI152.nii")
+        self.cat_dartel_template            = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_1.50mm", "Template_1_IXI555_MNI152.nii")
         self.spm_tissue_map                 = os.path.join(self.spm_dir, "tpm", "TPM.nii")
 
         self.fsl_bin                        = os.path.join(self.fsl_dir, "bin")
@@ -70,7 +73,7 @@ class Global:
                 print("Warning: SPM has not been specified")
 
         if len(self.cat_version) > 0:
-            if os.path.isdir(os.path.join(self.spm_dir, "toolbox", self.cat_version)) is False:
+            if os.path.isdir(os.path.join(self.spm_dir, "toolbox", self.cat_foldername)) is False:
                 raise Exception("Error: CAT is not present")
         else:
             if not self.ignore_warnings:
@@ -96,11 +99,12 @@ class Global:
             if os.path.isdir(self.autoptx_script_dir) is False:
                 raise Exception("Error: DATA AUTOPTX folder is not present")
 
-        if os.path.isdir(os.path.join(self.spm_dir, "toolbox", "marsbar")) is False:
-            self.marsbar_dir        = ""
-            self.marsbar_spm_dir    = ""
-            raise Exception("Error: CAT is not present")
-        else:
-            self.marsbar_dir        = os.path.join(self.spm_dir, "toolbox", "marsbar")
-            self.marsbar_spm_dir    = os.path.join(self.spm_dir, "toolbox", "marsbar", "spm5")
+        if len(self.marsbar) > 0:
+            if os.path.isdir(os.path.join(self.spm_dir, "toolbox", "marsbar")) is False:
+                self.marsbar_dir        = ""
+                self.marsbar_spm_dir    = ""
+                raise Exception("Error: marsbar is not present")
+            else:
+                self.marsbar_dir        = os.path.join(self.spm_dir, "toolbox", "marsbar")
+                self.marsbar_spm_dir    = os.path.join(self.spm_dir, "toolbox", "marsbar", "spm5")
 
