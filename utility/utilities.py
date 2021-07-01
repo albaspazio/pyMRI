@@ -1,6 +1,8 @@
 import gzip
-import re, shutil, tempfile
 import os
+import re
+import shutil
+import tempfile
 
 
 def gunzip(src, dest, replace=False):
@@ -53,15 +55,18 @@ def sed_inplace(filename, pattern, repl):
     shutil.copystat(filename, tmp_file.name)
     shutil.move(tmp_file.name, filename)
 
+
 # get the sorting schema of a list(e.g [2,3,1,4,5] => [2,0,1,3,4]
 def argsort(seq):
     #http://stackoverflow.com/questions/3382352/equivalent-of-numpy-argsort-in-basic-python/3382369#3382369
     #by unutbu
     return sorted(range(len(seq)), key=seq.__getitem__)
 
+
 # apply the given permutation to a list
 def reorder_list(list, neworder):
-    return  [list[i] for i in neworder]
+    return [list[i] for i in neworder]
+
 
 # transform properly a string containing a Int/Float/String
 def typeUnknown(s):
@@ -73,3 +78,17 @@ def typeUnknown(s):
             return ns
     except ValueError:
         return s
+
+
+def get_filename(fullpath):
+    return os.path.splitext(os.path.basename(fullpath))[0]
+
+
+def copytree(src, dst, symlinks=False, ignore=None):
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            shutil.copytree(s, d, symlinks, ignore)
+        else:
+            shutil.copy2(s, d)

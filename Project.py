@@ -6,6 +6,7 @@ from inspect import signature
 from copy import deepcopy
 
 from utility.manage_images import imcp, imrm
+from utility.matlab import call_matlab_function_noret
 from utility.utilities import gunzip, compress
 from Subject import Subject
 from utility import import_data_file
@@ -26,8 +27,10 @@ class Project:
         self.group_analysis_dir     = os.path.join(self.dir, "group_analysis")
         self.script_dir             = os.path.join(self.dir, "script")
 
-        self.melodic_templates_dir  = os.path.join(self.group_analysis_dir, "melodic", "group_templates")
-        self.melodic_dr_dir         = os.path.join(self.group_analysis_dir, "melodic", "dr")
+        self.glm_template_dir       = os.path.join(self.script_dir, "glm", "templates")
+
+        self.melodic_templates_dir  = os.path.join(self.group_analysis_dir, "resting", "group_templates")
+        self.melodic_dr_dir         = os.path.join(self.group_analysis_dir, "resting", "dr")
 
         self.sbfc_dir               = os.path.join(self.group_analysis_dir, "sbfc")
         self.mpr_dir                = os.path.join(self.group_analysis_dir, "mpr")
@@ -146,7 +149,7 @@ class Project:
                 nparams = nparams - 1       # this param has a default value
 
         # if no params are given, create a nsubj list of None
-        if len(kwparams) is 0:
+        if len(kwparams) == 0:
             if nparams > 0:
                 print("ERROR in run_subjects_methods: given params list is empty, while method needs " + str(nparams) + " params" )
                 return
@@ -222,32 +225,50 @@ class Project:
         for subj in subjs:
             subj.mpr_compare_brain_extraction(tempdir)
 
-    def prepare_mpr_for_setorigin1(self, destdirname, group_label, sess_id, overwrite=False):
+    # prepare_mpr_for_setorigin1 and prepare_mpr_for_setorigin2 are to be used in conjunction
+    # the former make a backup and unzip the original file,
+    # the latter zip and clean up
+    def prepare_mpr_for_setorigin1(self, group_label, sess_id=1, replaceOrig=False):
         subjects    = self.load_subjects(group_label, sess_id)
-        tempdir     = os.path.join(self.dir, destdirname)
-        os.makedirs(tempdir, exist_ok=True)
         for subj in subjects:
-            niifile = os.path.join(tempdir, subj.t1_image_label + "_" + str(sess_id) + ".nii")
 
-            if overwrite is True or os.path.exists(niifile) is False:
-                gunzip(subj.t1_data + ".nii.gz", niifile)
-            # call_matlab_function_noret("spm_display_image", [self._global.spm_functions_dir], "\'" + niifile + "\'", endengine=False)
-            # input("press any key to continue")
+            if replaceOrig is False:
+                imcp(subj.t1_data, subj.t1_data + "_old_origin")
 
-    # copy from temp to :
+            niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
+            gunzip(subj.t1_data + ".nii.gz", niifile)
+            print("unzipped " + subj.label + " mri")
+
+    def prepare_mpr_for_setorigin2(self, group_label, sess_id=1):
+
+        subjects    = self.load_subjects(group_label, sess_id)
+        for subj in subjects:
+
+            niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
+            imrm([subj.t1_data + ".nii.gz"])
+            compress(niifile, subj.t1_data + ".nii.gz")
+            imrm([niifile])
+            print("zipped " + subj.label + " mri")
+
+    # works with already converted and renames images
     # - subj.t1_data
     # - t1_cat_dir
-    def prepare_mpr_for_setorigin2(self, destdirname, group_label, sess_id, replaceOrig=False):
+    def mpr_setorigin(self, group_label, sess_id=1, replaceOrig=False):
         subjects    = self.load_subjects(group_label, sess_id)
-        tempdir     = os.path.join(self.dir, destdirname)
         for subj in subjects:
-            src_image = os.path.join(tempdir, subj.t1_image_label + "_" + str(sess_id) + ".nii")
-            if replaceOrig is True:
-                imrm([subj.t1_data])
-                compress(src_image, subj.t1_data)
-            else:
-                os.makedirs(subj.t1_cat_dir, exist_ok=True)
-                imcp(src_image, os.path.join(subj.t1_cat_dir, "T1_" + subj.label + ".nii"))
+
+            if replaceOrig is False:
+                imcp(subj.t1_data, subj.t1_data + "_old_origin")
+
+            niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
+            gunzip(subj.t1_data + ".nii.gz", niifile)
+
+            # call_matlab_function_noret("spm_display_image", [self._global.spm_functions_dir], "\'" + niifile + "\'", endengine=False)
+            input("press any key to continue")
+
+            imrm([subj.t1_data + ".nii.gz"])
+            compress(niifile, subj.t1_data + ".nii.gz")
+            imrm([niifile])
 
     # ==================================================================================================================
     # GET SUBJECTS DATA

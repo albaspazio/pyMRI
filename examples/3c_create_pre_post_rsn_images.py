@@ -72,7 +72,7 @@ if __name__ == "__main__":
         subjects            = project.get_loaded_subjects_labels()
         NUM_SUBJ            = len(subjects)
 
-        # load melodic template
+        # load resting template
         with open(template_file_name + ".json") as templfile:
             melodic_template = json.load(templfile)
 

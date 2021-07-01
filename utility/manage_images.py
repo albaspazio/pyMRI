@@ -6,24 +6,22 @@ import xml.etree.ElementTree as ET
 
 from myfsl.utils.run import rrun
 
-IMAGE_FORMATS = [".nii", ".nii.gz", ".mnc", ".mnc.gz", ".hdr", ".hdr.gz", ".img", ".img.gz", ".mgz"]
+IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".img", ".nii", ".mgz"]
 #===============================================================================================================================
 # FOLDERS, NAME, EXTENSIONS,
 #===============================================================================================================================
 
+
 # get the whole extension  (e.g. abc.nii.gz => nii.gz )
-def mysplittext(img):
+def img_split_ext(img, img_formats=IMAGE_FORMATS):
 
-    filepath = ntpath.dirname(img)
-    filename = ntpath.basename(img)
-
-    filename, fext = os.path.splitext(filename)
-
-    fullext = fext
-    while "." in filename:
-        filename, fext = os.path.splitext(filename)
-        fullext = fext + fullext
-    return [os.path.join(filepath, filename), fullext]
+    fullext = ""
+    for imgext in img_formats:
+        if img.endswith(imgext):
+            fullext = imgext #[1:]
+            break
+    filename = img.replace(fullext, '')
+    return [filename, fullext]
 
 
 def imgparts(img):
@@ -31,25 +29,25 @@ def imgparts(img):
     if os.path.isdir(img):
         return [img, "", ""]
 
-    parts = mysplittext(img)
+    parts = img_split_ext(img)
     return [ntpath.dirname(parts[0]), ntpath.basename(parts[0]), parts[1]]
 
 
 def imgname(img):
 
-    namepath = mysplittext(img)[0]
+    namepath = img_split_ext(img)[0]
     return ntpath.basename(namepath)
 
 
 def imgdir(img):
 
-    namepath = mysplittext(img)[0]
+    namepath = img_split_ext(img)[0]
     return ntpath.dirname(namepath)
 
 
 # return basename of given image (useful to return "image" from "image.nii.gz")
 def remove_ext(img):
-    return mysplittext(img)[0]
+    return img_split_ext(img)[0]
 
 # ===========================================================================================================
 # EXIST, COPY, REMOVE, MOVE, MASS MOVE
@@ -61,7 +59,7 @@ def imtest(image_path):
     if image_path == "":
         return False
 
-    fileparts = mysplittext(image_path)
+    fileparts = img_split_ext(image_path)
 
     if os.path.isfile(fileparts[0] + ".nii") or os.path.isfile(fileparts[0] + ".nii.gz") or os.path.isfile(fileparts[0] + ".mgz"):
         return True
@@ -83,13 +81,13 @@ def imtest(image_path):
 
 def imcp(src, dest, logFile=None):
 
-    fileparts_src = mysplittext(src)
-    fileparts_dst = mysplittext(dest)
+    fileparts_src = img_split_ext(src)
+    fileparts_dst = img_split_ext(dest)
 
     if os.path.isdir(dest) is True:
         fileparts_dst[0] = os.path.join(dest, imgname(fileparts_src[0]))    # dest dir + source filename
     else:
-        fileparts_dst = mysplittext(dest)
+        fileparts_dst = img_split_ext(dest)
 
     ext = ""
     if os.path.isfile(fileparts_src[0] + ".nii"):
@@ -107,10 +105,16 @@ def imcp(src, dest, logFile=None):
         print("cp " + fileparts_src[0] + ext + " " + fileparts_dst[0] + dest_ext, file=logFile)
 
 
+def imcp_notexisting(src, dest, logFile=None):
+
+    if imtest(dest) is False:
+        imcp(src, dest, logFile)
+
+
 def imrm(filelist, logFile=None):
 
     for file in filelist:
-        fileparts = mysplittext(file)
+        fileparts = img_split_ext(file)
 
         ext = ""
         if os.path.isfile(fileparts[0] + ".nii"):
@@ -168,6 +172,7 @@ def mass_images_move(wildcardsource, destdir, logFile=None):
 # utilities
 #===============================================================================================================================
 
+
 def quick_smooth(inimg, outimg, logFile=None):
 
     currpath    = os.path.dirname(inimg)
@@ -179,19 +184,26 @@ def quick_smooth(inimg, outimg, logFile=None):
     imrm([vol16])
 
 
+# TODO: patched to deal with X dots + .nii.gz...fix it definitively !!
 def is_image(file, img_formats=IMAGE_FORMATS):
 
-    file_extension = mysplittext(file)[1]
+    # preserve only the last two dots (those relating to ".nii.gz")
+    num_dot = file.count(".")
+    if num_dot > 2:
+        file = file.replace(".", "", num_dot-2)
+    file_extension = img_split_ext(file, img_formats)[1]
 
     if file_extension in img_formats:
         return True
     else:
         return False
 
+
 # read header and calculate a dimension number hdr["nx"] * hdr["ny"] * hdr["nz"] * hdr["dx"] * hdr["dy"] * hdr["dz"]
 def get_image_dimension(file):
     hdr = read_header(file)
     return int(hdr["nx"]) * int(hdr["ny"]) * int(hdr["nz"]) * float(hdr["dx"]) * float(hdr["dy"]) * float(hdr["dz"])
+
 
 # extract header in xml format and returns it as a (possibly filtered by list_field) dictionary
 def read_header(file, list_field=None):

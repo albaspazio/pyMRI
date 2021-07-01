@@ -18,6 +18,16 @@ class FslSwitcher:
         self.fsl_ver = "5.0.9"
         return self.fsl_ver
 
+    def ver_511(self):
+        self.dir = "/usr/local/fsl-5.0.11"
+        self.fsl_ver = "5.0.11"
+        return self.fsl_ver
+
+    def ver_604(self):
+        self.dir = "/usr/local/fsl-6.0.4"
+        self.fsl_ver = "6.0.4"
+        return self.fsl_ver
+
     def ver_600(self):
         self.dir = "/usr/local/fsl-6.0"
         self.fsl_ver = "6.0.0"
@@ -26,11 +36,6 @@ class FslSwitcher:
     def ver_601(self):
         self.dir = "/usr/local/fsl-6.0.1"
         self.fsl_ver = "6.0.1"
-        return self.fsl_ver
-
-    def ver_511(self):
-        self.dir = "/usr/local/fsl-5.0.11"
-        self.fsl_ver = "5.0.11"
         return self.fsl_ver
 
     def unknown_version(self):

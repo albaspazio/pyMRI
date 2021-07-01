@@ -244,9 +244,9 @@ def rrun(*args, **kwargs):
     stdout, stderr, exitcode = _realrun(
         tee, logStdout, logStderr, logCmd, *args)
 
-    if not returnExitcode and (exitcode != 0):
+    if not returnExitcode and (exitcode != 0 or len(stderr)):
 
-        str = '{} returned non-zero exit code: {}\nmessage: {}\nfull command: {}'.format(args[0], exitcode, stderr, " ".join(args))
+        str = '{} returned non-zero exit code or error: {}\nmessage: {}\nfull command: {}'.format(args[0], exitcode, stderr, " ".join(args))
         if logFile is not None:
             print(str, file=logFile)
 

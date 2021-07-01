@@ -49,19 +49,26 @@ class Global:
             print("FSLDIR is undefined")
             return
 
-        self.cat_dartel_template            = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_1.50mm", "Template_1_IXI555_MNI152.nii")
+        if self.cat_version.startswith("cat12.7"):
+            # cat 12.7
+            self.cat_dartel_template            = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_1.50mm", "Template_1_IXI555_MNI152.nii")
+        else:
+            # cat 12.8
+            self.cat_dartel_template            = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_1_Dartel.nii")
+            self.cat_shooting_template          = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_0_GS.nii")
+
         self.spm_tissue_map                 = os.path.join(self.spm_dir, "tpm", "TPM.nii")
 
         self.fsl_bin                        = os.path.join(self.fsl_dir, "bin")
-        self.fsl_data_standard_dir          = os.path.join(self.fsl_dir, "data", "standard")
-        self.fsl_standard_mni_2mm_head      = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm")
-        self.fsl_standard_mni_2mm           = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
-        self.fsl_standard_mni_2mm_mask      = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain_mask")
-        self.fsl_standard_mni_2mm_mask_dil  = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_2mm_brain_mask_dil")
-        self.fsl_standard_mni_4mm           = os.path.join(self.fsl_data_standard_dir, "MNI152_T1_4mm_brain")
-        self.fsl_standard_mni_2mm_cnf       = os.path.join(self.fsl_dir, "etc", "flirtsch", "T1_2_MNI152_2mm.cnf")
+        self.fsl_data_std_dir          = os.path.join(self.fsl_dir, "data", "standard")
+        self.fsl_std_mni_2mm_head      = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm")
+        self.fsl_std_mni_2mm           = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain")
+        self.fsl_std_mni_2mm_mask      = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask")
+        self.fsl_std_mni_2mm_mask_dil  = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask_dil")
+        self.fsl_std_mni_4mm           = os.path.join(self.fsl_data_std_dir, "MNI152_T1_4mm_brain")
+        self.fsl_std_mni_2mm_cnf       = os.path.join(self.fsl_dir, "etc", "flirtsch", "T1_2_MNI152_2mm.cnf")
 
-        self.standard_aal_atlas_2mm         = os.path.join(self.global_data_templates, "mpr", "aal_262_standard")
+        self.std_aal_atlas_2mm         = os.path.join(self.global_data_templates, "mpr", "aal_262_standard")
 
     def check_paths(self):
 
@@ -87,24 +94,24 @@ class Global:
                 print("Warning: ICA-AROMA has not been specified")
 
         # accessory elements. do not warn if they are not specified
-        if len(self.global_data_templates) > 0:
-            if os.path.isdir(self.global_data_templates) is False:
-                raise Exception("Error: DATA TEMPLATES folder is not present")
-
-        if len(self.trackvis_bin) > 0:
-            if os.path.isdir(self.trackvis_bin) is False:
-                raise Exception("Error: TRACKVIS BIN folder is not present")
-
-        if len(self.autoptx_script_dir) > 0:
-            if os.path.isdir(self.autoptx_script_dir) is False:
-                raise Exception("Error: DATA AUTOPTX folder is not present")
-
-        if len(self.marsbar) > 0:
-            if os.path.isdir(os.path.join(self.spm_dir, "toolbox", "marsbar")) is False:
-                self.marsbar_dir        = ""
-                self.marsbar_spm_dir    = ""
-                raise Exception("Error: marsbar is not present")
-            else:
-                self.marsbar_dir        = os.path.join(self.spm_dir, "toolbox", "marsbar")
-                self.marsbar_spm_dir    = os.path.join(self.spm_dir, "toolbox", "marsbar", "spm5")
+        # if len(self.global_data_templates) > 0:
+        #     if os.path.isdir(self.global_data_templates) is False:
+        #         raise Exception("Error: DATA TEMPLATES folder is not present")
+        #
+        # if len(self.trackvis_bin) > 0:
+        #     if os.path.isdir(self.trackvis_bin) is False:
+        #         raise Exception("Error: TRACKVIS BIN folder is not present")
+        #
+        # if len(self.autoptx_script_dir) > 0:
+        #     if os.path.isdir(self.autoptx_script_dir) is False:
+        #         raise Exception("Error: DATA AUTOPTX folder is not present")
+        #
+        # if len(self.marsbar) > 0:
+        #     if os.path.isdir(os.path.join(self.spm_dir, "toolbox", "marsbar")) is False:
+        #         self.marsbar_dir        = ""
+        #         self.marsbar_spm_dir    = ""
+        #         raise Exception("Error: marsbar is not present")
+        #     else:
+        #         self.marsbar_dir        = os.path.join(self.spm_dir, "toolbox", "marsbar")
+        #         self.marsbar_spm_dir    = os.path.join(self.spm_dir, "toolbox", "marsbar", "spm5")
 

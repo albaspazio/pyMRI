@@ -72,7 +72,7 @@ if __name__ == "__main__":
         subjects            = project.get_loaded_subjects_labels()
         NUM_SUBJ            = len(subjects)
 
-        # load melodic template
+        # load resting template
         with open(template_file_name + ".json") as templfile:
             melodic_template = json.load(templfile)
 
@@ -121,7 +121,7 @@ if __name__ == "__main__":
                 cnt = cnt+1
 
             # -----------------------------------------------------
-            # transform melodic results from 4mm to 2mm
+            # transform resting results from 4mm to 2mm
             # -----------------------------------------------------
             for foldimg in arr_images_names:
                 img             = os.path.basename(foldimg)
@@ -142,7 +142,7 @@ if __name__ == "__main__":
                 # $FSLDIR/bin/fslmaths $dest_res_file -thr $PTHRESH $dest_res_file
 
         # -----------------------------------------------------
-        # extracting PE from melodic analysis (dr_stage2_000X_diff)
+        # extracting PE from resting analysis (dr_stage2_000X_diff)
         # -----------------------------------------------------
         if DO_MELODIC_RES is True:
             for roi in arr_roi_2_extract_melodic:

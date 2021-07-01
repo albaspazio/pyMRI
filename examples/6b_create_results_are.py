@@ -72,7 +72,7 @@ if __name__ == "__main__":
         subjects            = project.get_loaded_subjects_labels()
         NUM_SUBJ            = len(subjects)
 
-        # load melodic template
+        # load resting template
         with open(template_file_name + ".json") as templfile:
             melodic_template = json.load(templfile)
 
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         DR_DIR                  = os.path.join(project.melodic_dr_dir, "templ_" + template_file_name, population_name)
         RESULTS2_OUT_DIR        = os.path.join(DR_DIR, "results", "standard2")
         RESULTS4_OUT_DIR        = os.path.join(DR_DIR, "results", "standard4")
-        standard_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
+        std_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_std_dir, "MNI152_T1_2mm_brain")
 
         subjects_data           = import_data_file.tabbed_file_with_header2dict_list(os.path.join(project.dir, subjects_data_file))
 
@@ -101,9 +101,9 @@ if __name__ == "__main__":
 
             # calculate tranform from bgimage(4mm) to standard(2mm)
             # => /dr/templ_subjects_2x56_melodic_ST/subjects_2x56/results/standard2/bg_image_standard.nii.gz
-            templ2standard_mat = os.path.join(TEMPL_STATS_DIR, "bg2standard.mat")
-            bg_image_standard = os.path.join(RESULTS2_OUT_DIR, "bg_image_standard.nii.gz")
-            run_notexisting_img(bg_image_standard, "flirt -in " + melodic_template["TEMPLATE_BG_IMAGE"] + " -ref " + os.path.join(globaldata.fsl_data_standard_dir, "MNI152_T1_2mm_brain") + " -out " + bg_image_standard + " -omat " + templ2standard_mat)
+            templ2std_mat = os.path.join(TEMPL_STATS_DIR, "bg2std.mat")
+            bg_image_std = os.path.join(RESULTS2_OUT_DIR, "bg_image_std.nii.gz")
+            run_notexisting_img(bg_image_std, "flirt -in " + melodic_template["TEMPLATE_BG_IMAGE"] + " -ref " + os.path.join(globaldata.fsl_data_std_dir, "MNI152_T1_2mm_brain") + " -out " + bg_image_standard + " -omat " + templ2standard_mat)
 
             # -----------------------------------------------------
             # transform RSN image to standard(4mm) to standard(2mm)
@@ -121,7 +121,7 @@ if __name__ == "__main__":
                 cnt = cnt+1
 
             # -----------------------------------------------------
-            # transform melodic results from 4mm to 2mm
+            # transform resting results from 4mm to 2mm
             # -----------------------------------------------------
             for foldimg in arr_images_names:
                 img             = os.path.basename(foldimg)
@@ -142,7 +142,7 @@ if __name__ == "__main__":
                 # $FSLDIR/bin/fslmaths $dest_res_file -thr $PTHRESH $dest_res_file
 
         # -----------------------------------------------------
-        # extracting PE from melodic analysis (dr_stage2_000X_diff)
+        # extracting PE from resting analysis (dr_stage2_000X_diff)
         # -----------------------------------------------------
         if DO_MELODIC_RES is True:
             for roi in arr_roi_2_extract_melodic:
