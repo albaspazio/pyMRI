@@ -8,7 +8,7 @@ from shutil import copyfile, move
 
 from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
 from myfsl.utils.run import rrun
-from utility.manage_images import imcp
+from utility.manage_images import imcp, imtest
 from utility.utilities import sed_inplace
 from utility import import_data_file
 from Stats import Stats
@@ -525,3 +525,64 @@ class GroupAnalysis:
             print(e)
 
     # ---------------------------------------------------
+    def group_melodic(self, out_dir_name, subjects, tr):
+
+        if os.path.exists(out_dir_name):
+            os.removedirs(out_dir_name)
+
+        os.makedirs(out_dir_name)
+
+        subjs       = ""
+        bg_images   = ""
+        masks       = ""
+
+        missing_data = ""
+
+        for s in subjects:
+
+            if imtest(s.rs_final_regstd_image) is True and imtest(s.rs_final_regstd_bgimage) and imtest(s.rs_final_regstd_bgimage):
+                subjs       = subjs + " " + s.rs_final_regstd_image
+                bgimages    = subjs + " " + s.rs_final_regstd_bgimage
+                masks       = masks + " " + s.rs_final_regstd_mask
+            else:
+                missing_data = missing_data + s.label + " "
+
+        if len(missing_data) > 0:
+            print("group melodic failed. the following subjects does not have all the needed images:")
+            print(missing_data)
+            return
+
+        print("creating merged background image")
+
+        rrun("fslmerge -t " + os.path.join(out_dir_name, "bg_image") + " " + bgimages)
+
+        # echo "merging background image"
+        # $FSLDIR/bin/fslmerge -t $OUTPUT_DIR/bg_image $bglist
+        # $FSLDIR/bin/fslmaths $OUTPUT_DIR/bg_image -inm 1000 -Tmean $OUTPUT_DIR/bg_image -odt float
+        # echo "merging mask image"
+        # $FSLDIR/bin/fslmerge -t $OUTPUT_DIR/mask $masklist
+        #
+        # echo "start group melodic !!"
+        # $FSLDIR/bin/melodic -i $filelist -o $OUTPUT_DIR -v --nobet --bgthreshold=10 --tr=$TR_VALUE --report --guireport=$OUTPUT_DIR/report.html --bgimage=$OUTPUT_DIR/bg_image -d 0 --mmthresh=0.5 --Ostats -a concat
+        #
+        # echo "creating template description file"
+        # template_file=$GLOBAL_SCRIPT_DIR/melodic_templates/$template_name.sh
+        #
+        # echo "template_name=$template_name" > $template_file
+        # echo "TEMPLATE_MELODIC_IC=$OUTPUT_DIR/melodic_IC.nii.gz" >> $template_file
+        # echo "TEMPLATE_MASK_IMAGE=$OUTPUT_DIR/mask.nii.gz" >> $template_file
+        # echo "TEMPLATE_BG_IMAGE=$OUTPUT_DIR/bg_image.nii.gz" >> $template_file
+        # echo "TEMPLATE_STATS_FOLDER=$OUTPUT_DIR/stats" >> $template_file
+        # echo "TEMPLATE_MASK_FOLDER=$OUTPUT_DIR/stats" >> $template_file
+        # echo "str_pruning_ic_id=() # valid RSN: you must set their id values removing 1: if in the html is the 6th RSN, you must write 5!!!!!!" >> $template_file
+        # echo "str_arr_IC_labels=()" >> $template_file
+        # echo "declare -a arr_IC_labels=()" >> $template_file
+        # echo "declare -a arr_pruning_ic_id=()" >> $template_file
+        #
+        pass
+
+
+
+
+
+

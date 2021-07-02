@@ -88,7 +88,7 @@ class Project:
             subjs.append(Subject(subj, sess_id, self))
         return subjs
 
-    # load a list of subjects
+    # returns a list of subjects instances
     def load_subjects(self, list_label, sess_id=1):
 
         self.subjects   = self.get_subjects(list_label, sess_id)

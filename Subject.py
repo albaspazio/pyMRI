@@ -53,50 +53,48 @@ class Subject:
 
         self.dir = os.path.join(self.project.subjects_dir, self.label, "s" + str(sess))
 
-        self.roi_dir = os.path.join(self.dir, "roi")
-        self.roi_rs_dir = os.path.join(self.roi_dir, "reg_rs")
-        self.roi_fmri_dir = os.path.join(self.roi_dir, "reg_fmri")
-        self.roi_dti_dir = os.path.join(self.roi_dir, "reg_dti")
-        self.roi_t2_dir = os.path.join(self.roi_dir, "reg_t2")
-        self.roi_std_dir = os.path.join(self.roi_dir, "reg_standard")
-        self.roi_std4_dir = os.path.join(self.roi_dir, "reg_standard4")
-        self.roi_t1_dir = os.path.join(self.roi_dir, "reg_t1")
+        self.roi_dir        = os.path.join(self.dir, "roi")
+        self.roi_rs_dir     = os.path.join(self.roi_dir, "reg_rs")
+        self.roi_fmri_dir   = os.path.join(self.roi_dir, "reg_fmri")
+        self.roi_dti_dir    = os.path.join(self.roi_dir, "reg_dti")
+        self.roi_t2_dir     = os.path.join(self.roi_dir, "reg_t2")
+        self.roi_std_dir    = os.path.join(self.roi_dir, "reg_std")
+        self.roi_std4_dir   = os.path.join(self.roi_dir, "reg_std4")
+        self.roi_t1_dir     = os.path.join(self.roi_dir, "reg_t1")
 
         # ------------------------------------------------------------------------------------------------------------------------
         # T1/MPR
         # ------------------------------------------------------------------------------------------------------------------------
-        self.t1_dir = os.path.join(self.dir, "mpr")
-        self.t1_anat_dir = os.path.join(self.t1_dir, "anat")
-        self.fast_dir = os.path.join(self.t1_dir, "fast")
-        self.first_dir = os.path.join(self.t1_dir, "first")
-        self.sienax_dir = os.path.join(self.t1_dir, "sienax")
-        self.t1_fs_dir = os.path.join(self.t1_dir, "freesurfer")
-        self.t1_fs_mri_dir = os.path.join(self.t1_fs_dir, "mri")
-        self.t1_spm_dir = os.path.join(self.t1_anat_dir, "spm_proc")
-        self.t1_cat_dir = os.path.join(self.t1_anat_dir, "cat_proc")
+        self.t1_dir         = os.path.join(self.dir, "mpr")
+        self.t1_anat_dir    = os.path.join(self.t1_dir, "anat")
+        self.fast_dir       = os.path.join(self.t1_dir, "fast")
+        self.first_dir      = os.path.join(self.t1_dir, "first")
+        self.sienax_dir     = os.path.join(self.t1_dir, "sienax")
+        self.t1_fs_dir      = os.path.join(self.t1_dir, "freesurfer")
+        self.t1_fs_mri_dir  = os.path.join(self.t1_fs_dir, "mri")
+        self.t1_spm_dir     = os.path.join(self.t1_anat_dir, "spm_proc")
+        self.t1_cat_dir     = os.path.join(self.t1_anat_dir, "cat_proc")
 
-        self.t1_image_label = self.label + "-t1"
-        self.t1_data = os.path.join(self.t1_dir, self.t1_image_label)
-        self.t1_brain_data = os.path.join(self.t1_dir, self.t1_image_label + "_brain")
-        self.t1_brain_data_mask = os.path.join(self.t1_dir, self.t1_image_label + "_brain_mask")
-        self.t1_fs_brainmask_data = os.path.join(self.t1_fs_dir, "mri", "brainmask")
-        self.t1_fs_data = os.path.join(self.t1_fs_dir, "mri", "T1")  # T1 coronal [1x1x1] after conform
+        self.t1_image_label         = self.label + "-t1"
+        self.t1_data                = os.path.join(self.t1_dir, self.t1_image_label)
+        self.t1_brain_data          = os.path.join(self.t1_dir, self.t1_image_label + "_brain")
+        self.t1_brain_data_mask     = os.path.join(self.t1_dir, self.t1_image_label + "_brain_mask")
+        self.t1_fs_brainmask_data   = os.path.join(self.t1_fs_dir, "mri", "brainmask")
+        self.t1_fs_data             = os.path.join(self.t1_fs_dir, "mri", "T1")  # T1 coronal [1x1x1] after conform
 
         self.first_all_none_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_none_origsegs")
         self.first_all_fast_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_fast_origsegs")
 
-        self.t1_segment_gm_path = os.path.join(self.roi_t1_dir, "mask_t1_gm")
-        self.t1_segment_wm_path = os.path.join(self.roi_t1_dir, "mask_t1_wm")
-        self.t1_segment_csf_path = os.path.join(self.roi_t1_dir, "mask_t1_csf")
-        self.t1_segment_wm_bbr_path = os.path.join(self.roi_t1_dir, "wmseg4bbr")
-        self.t1_segment_wm_ero_path = os.path.join(self.roi_t1_dir, "mask_t1_wmseg4Nuisance")
-        self.t1_segment_csf_ero_path = os.path.join(self.roi_t1_dir, "mask_t1_csfseg4Nuisance")
+        self.t1_segment_gm_path         = os.path.join(self.roi_t1_dir, "mask_t1_gm")
+        self.t1_segment_wm_path         = os.path.join(self.roi_t1_dir, "mask_t1_wm")
+        self.t1_segment_csf_path        = os.path.join(self.roi_t1_dir, "mask_t1_csf")
+        self.t1_segment_wm_bbr_path     = os.path.join(self.roi_t1_dir, "wmseg4bbr")
+        self.t1_segment_wm_ero_path     = os.path.join(self.roi_t1_dir, "mask_t1_wmseg4Nuisance")
+        self.t1_segment_csf_ero_path    = os.path.join(self.roi_t1_dir, "mask_t1_csfseg4Nuisance")
 
-        self.t1_cat_surface_dir = os.path.join(self.t1_cat_dir, "surf")
-        self.t1_cat_resampled_surface = os.path.join(self.t1_cat_surface_dir,
-                                                     "s15.mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
-        self.t1_cat_resampled_surface_longitudinal = os.path.join(self.t1_cat_surface_dir,
-                                                                  "s15.mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
+        self.t1_cat_surface_dir                     = os.path.join(self.t1_cat_dir, "surf")
+        self.t1_cat_resampled_surface               = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
+        self.t1_cat_resampled_surface_longitudinal  = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
 
         self.hr2std_warp  = os.path.join(self.roi_std_dir, "hr2std_warp")
         self.std2hr_warp  = os.path.join(self.roi_t1_dir, "std2hr_warp")
@@ -108,27 +106,27 @@ class Subject:
         # ------------------------------------------------------------------------------------------------------------------------
         # DTI
         # ------------------------------------------------------------------------------------------------------------------------
-        self.dti_dir = os.path.join(self.dir, "dti")
-        self.bedpost_X_dir = os.path.join(self.dti_dir, "bedpostx")
-        self.probtrackx_dir = os.path.join(self.dti_dir, "probtrackx")
-        self.trackvis_dir = os.path.join(self.dti_dir, "trackvis")
-        self.tv_matrices_dir = os.path.join(self.dti_dir, "tv_matrices")
+        self.dti_dir            = os.path.join(self.dir, "dti")
+        self.bedpost_X_dir      = os.path.join(self.dti_dir, "bedpostx")
+        self.probtrackx_dir     = os.path.join(self.dti_dir, "probtrackx")
+        self.trackvis_dir       = os.path.join(self.dti_dir, "trackvis")
+        self.tv_matrices_dir    = os.path.join(self.dti_dir, "tv_matrices")
 
-        self.dti_image_label = self.label + "-dti"
+        self.dti_image_label    = self.label + "-dti"
         self.dti_ec_image_label = self.dti_image_label + "_ec"
-        self.dti_fit_label = self.dti_image_label + "_fit"
+        self.dti_fit_label      = self.dti_image_label + "_fit"
 
-        self.dti_bval_label = os.path.join(self.dti_dir, self.label + "-dti.bval")
-        self.dti_bvec_label = os.path.join(self.dti_dir, self.label + "-dti.bvec")
+        self.dti_bval_label         = os.path.join(self.dti_dir, self.label + "-dti.bval")
+        self.dti_bvec_label         = os.path.join(self.dti_dir, self.label + "-dti.bvec")
         self.dti_rotated_bvec_label = os.path.join(self.dti_dir, self.label + "-dti_rotated.bvec")
 
-        self.dti_data = os.path.join(self.dti_dir, self.dti_image_label)
-        self.dti_ec_data = os.path.join(self.dti_dir, self.dti_ec_image_label)
-        self.dti_fit_data = os.path.join(self.dti_dir, self.dti_fit_label)
+        self.dti_data       = os.path.join(self.dti_dir, self.dti_image_label)
+        self.dti_ec_data    = os.path.join(self.dti_dir, self.dti_ec_image_label)
+        self.dti_fit_data   = os.path.join(self.dti_dir, self.dti_fit_label)
 
-        self.dti_nodiff_data = os.path.join(self.dti_dir, "nodif")
-        self.dti_nodiff_brain_data = os.path.join(self.dti_dir, "nodif_brain")
-        self.dti_nodiff_brainmask_data = os.path.join(self.dti_dir, "nodif_brain_mask")
+        self.dti_nodiff_data            = os.path.join(self.dti_dir, "nodif")
+        self.dti_nodiff_brain_data      = os.path.join(self.dti_dir, "nodif_brain")
+        self.dti_nodiff_brainmask_data  = os.path.join(self.dti_dir, "nodif_brain_mask")
 
         self.trackvis_transposed_bvecs = "bvec_vert.txt"
 
@@ -145,8 +143,8 @@ class Subject:
         self.rs_series_csf  = os.path.join(self.rs_series_dir, "csf_ts")
         self.rs_series_wm   = os.path.join(self.rs_series_dir, "wm_ts")
 
-        self.rs_final_regstd_dir    = os.path.join(self.rs_dir, "reg_standard")
-        self.rs_final_regstd_image  = os.path.join(self.rs_final_regstd_dir, "filtered_func_data")
+        self.rs_final_regstd_dir    = os.path.join(self.rs_dir, "reg_std")
+        self.rs_final_regstd_image  = os.path.join(self.rs_final_regstd_dir, "filtered_func_data")  # image after first preprocessing, aroma and nuisance regression.
 
         self.rs_post_preprocess_image_label             = self.rs_image_label + "_preproc"
         self.rs_post_aroma_image_label                  = self.rs_image_label + "_preproc_aroma"
@@ -155,9 +153,9 @@ class Subject:
         self.rs_post_nuisance_std_image_label           = self.rs_image_label + "_preproc_aroma_nuisance_std"
         self.rs_post_nuisance_melodic_std_image_label   = self.rs_image_label + "_preproc_aroma_nuisance_melodic_resting"
 
-        self.rs_regstd_dir              = os.path.join(self.rs_dir, "resting.ica", "reg_standard")
+        self.rs_regstd_dir              = os.path.join(self.rs_dir, "resting.ica", "reg_std")
         self.rs_regstd_image            = os.path.join(self.rs_regstd_dir, "filtered_func_data")
-        self.rs_regstd_denoise_dir      = os.path.join(self.rs_dir, "resting.ica", "reg_standard_denoised")
+        self.rs_regstd_denoise_dir      = os.path.join(self.rs_dir, "resting.ica", "reg_std_denoised")
         self.rs_regstd_denoise_image    = os.path.join(self.rs_regstd_denoise_dir, "filtered_func_data")
 
         self.rs_aroma_dir           = os.path.join(self.rs_dir, "ica_aroma")
@@ -165,8 +163,8 @@ class Subject:
         self.rs_regstd_aroma_dir    = os.path.join(self.rs_aroma_dir, "reg_standard")
         self.rs_regstd_aroma_image  = os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data")
 
-        self.rs_mask_t1_wmseg4nuis_epi  = os.path.join(self.roi_dir, "reg_epi", "mask_t1_wmseg4Nuisance_epi")
-        self.rs_mask_t1_csfseg4nuis_epi = os.path.join(self.roi_dir, "reg_epi", "mask_t1_csfseg4Nuisance_epi")
+        self.rs_mask_t1_wmseg4nuis_epi  = os.path.join(self.roi_dir, "reg_rs", "mask_t1_wmseg4Nuisance_epi")
+        self.rs_mask_t1_csfseg4nuis_epi = os.path.join(self.roi_dir, "reg_rs", "mask_t1_csfseg4Nuisance_epi")
 
         self.mc_params_dir  = os.path.join(self.rs_dir, self.rs_image_label + ".ica", "mc")
         self.mc_abs_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_abs_mean.rms")
@@ -225,7 +223,6 @@ class Subject:
         self.wb_brain_data  = os.path.join(self.wb_dir, self.wb_image_label + "_brain")
 
         self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
-
 
         self_copy = deepcopy(self)
         if rollback is True:
@@ -401,7 +398,7 @@ class Subject:
 
                 os.makedirs(os.path.join(self.project.group_analysis_dir, "resting", "dr"), exist_ok=True)
                 os.makedirs(os.path.join(self.project.group_analysis_dir, "resting", "group_templates"), exist_ok=True)
-                os.makedirs(self.rs_regstd_dir, exist_ok=True)
+                os.makedirs(self.rs_final_regstd_dir, exist_ok=True)
 
                 if do_epirm2vol > 0:
                     # check if I have to remove the first (TOT_VOL-DO_RMVOL_TO_NUM) volumes
@@ -421,15 +418,15 @@ class Subject:
 
 
                 # FEAT PRE PROCESSING
-                preproc_img     = os.path.join(self.rs_dir, self.rs_post_preprocess_image_label)
+                preproc_img     = os.path.join(self.rs_dir, self.rs_post_preprocess_image_label)        # output image of first preproc resting.featfeat
                 filtfuncdata    = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "filtered_func_data")
-                preproc_feat_dir= os.path.join(self.rs_dir, feat_preproc_odn + ".feat")
+                preproc_feat_dir= os.path.join(self.rs_dir, feat_preproc_odn + ".feat")     # /s1/resting/resting.feat
                 if imtest(preproc_img) is False:
                     if os.path.isfile(feat_preproc_model + ".fsf") is False:
                         print("===========>>>> FEAT_PREPROC template file (" + self.label + " " + feat_preproc_model + ".fsf) is missing...skipping feat preprocessing")
                     else:
                         if os.path.isdir(preproc_feat_dir) is False:
-                            self.epi_fsl_feat("rs", feat_preproc_model, do_initreg=do_featinitreg, std_image=std_image)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $FEAT_PREPROC_MODEL -odn $FEAT_PREPROC_OUTPUT_DIR_NAME.feat -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG
+                            self.epi_fsl_feat("rs", self.rs_image_label, "resting.feat", feat_preproc_model, do_initreg=do_featinitreg, std_image=std_image)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $FEAT_PREPROC_MODEL -odn $FEAT_PREPROC_OUTPUT_DIR_NAME.feat -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG
                             imcp(filtfuncdata, preproc_img, logFile=log)
                         else:
                             if imtest(filtfuncdata) is True:
@@ -439,59 +436,58 @@ class Subject:
                                 return
 
                 # do AROMA processing
-                preproc_aroma_img = os.path.join(self.rs_dir, self.rs_post_aroma_image_label)
+                preproc_aroma_img = os.path.join(self.rs_dir, self.rs_post_aroma_image_label)    # output image of aroma processing
                 if do_aroma is True and imtest(preproc_aroma_img) is False:
-                    self.epi_aroma("rs", preproc_feat_dir)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_aroma.sh $SUBJ_NAME $PROJ_DIR -idn $FEAT_PREPROC_OUTPUT_DIR_NAME.feat  # do not register to standard
+                    self.epi_aroma("rs", preproc_feat_dir)  # do not register to standard
                     imcp(self.rs_aroma_image, os.path.join(self.rs_dir, self.rs_post_aroma_image_label))
 
                 # do nuisance removal (WM, CSF & highpass temporal filtering)....create the following file: $RS_IMAGE_LABEL"_preproc_aroma_nuisance"
-                if do_nuisance is True and imtest(os.path.join(self.rs_dir, self.rs_post_nuisance_image_label)) is False:
+                if do_nuisance is True and imtest(self.rs_final_regstd_image) is False:
                     self.epi_resting_nuisance(self.rs_post_aroma_image_label, hpfsec=hpfsec)
-                    self.transform_roi("epi2std4", "abs", thresh=0, rois=[os.path.join(self.rs_dir, self.rs_post_nuisance_image_label)])  # run . $GLOBAL_SCRIPT_DIR/process_subject/subject_transforms_roi.sh $SUBJ_NAME $PROJ_DIR -thresh 0 -regtype epi2std4 -pathtype abs $RS_DIR/$RS_POST_NUISANCE_IMAGE_LABEL
+                    self.transform_roi("epi2std4", "abs", thresh=0, rois=[os.path.join(self.rs_dir, self.rs_post_nuisance_image_label)])
                     immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_std_image_label), self.rs_final_regstd_image, logFile=log)
 
-                imcp(os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "reg_standard", "bg_image"), os.path.join(self.rs_final_regstd_dir, "bg_image"), logFile=log)
+                # imcp(os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "reg_standard", "bg_image"), os.path.join(self.rs_final_regstd_dir, "bg_image"), logFile=log)
                 imcp(os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "reg_standard", "mask"), os.path.join(self.rs_final_regstd_dir, "mask"), logFile=log)
 
                 # NOW reg_standard contains a denoised file with its mask and background image. nevertheless, we also do a resting to check the output,
                 # doing another MC and HPF results seems to improve...although they should not...something that should be investigated....
 
                 # MELODIC
-
-                if os.path.isdir(os.path.join(self.rs_dir, mel_odn + ".ica") is False and do_melodic is True):
-                    if os.path.isfile(melodic_model + ".fsf"):
+                mel_out_dir = os.path.join(self.rs_dir, mel_odn + ".ica")
+                post_mel_file = os.path.join(self.rs_dir, self.rs_post_nuisance_melodic_image_label)
+                if os.path.isdir(mel_out_dir) is False and do_melodic is True:
+                    if os.path.isfile(melodic_model + ".fsf") is False:
                         print("===========>>>> resting template file (" + self.label + " " + melodic_model + ".fsf) is missing...skipping 1st level resting")
                     else:
-                        if os.path.isdir(os.path.join(self.rs_dir, mel_odn + ".ica")) is False:
-                            self.epi_fsl_feat(do_initreg=do_melinitreg, std_image=std_image)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
+                        self.epi_fsl_feat("rs",  self.rs_post_nuisance_image_label, mel_odn + ".ica", melodic_model, do_initreg=do_melinitreg, std_image=std_image)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
 
-                            if imtest(os.path.join(self.rs_dir, mel_odn + ".ica", "reg_standard", "filtered_func_data")) is True:
-                                imcp(os.path.join(self.rs_dir, melodic_model + ".ica", "reg_standard", "filtered_func_data"), os.path.join(self.rs_final_regstd_dir, self.rs_post_nuisance_melodic_image_label + "_" + mel_odn), logFile=log)
+                        if imtest(os.path.join(mel_out_dir, "reg_standard", "filtered_func_data")) is True:
+                            # imcp(os.path.join(mel_out_dir, "reg_standard", "filtered_func_data"), os.path.join(self.rs_final_regstd_dir, self.rs_post_nuisance_melodic_image_label + "_" + mel_odn), logFile=log)
+                            imcp(os.path.join(mel_out_dir, "reg_standard", "filtered_func_data"), post_mel_file, logFile=log)
 
                 # calculate the remaining transformations   .....3/4/2017 si blocca qui...devo commentarlo per andare avanti !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-                self.transform_epi()  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_transforms_calculate_epi.sh $SUBJ_NAME $PROJ_DIR
+                self.transform_epi("rs")  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_transforms_calculate_epi.sh $SUBJ_NAME $PROJ_DIR
 
                 # coregister fast-highres to epi
-                print(self.label + ": coregister fast-highres to epi")
+                if imtest(os.path.join(self.roi_rs_dir, "t1_wm_rs")) is False:
+                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, "mask_t1_wm") + " -ref " + os.path.join(self.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_rs_dir, "hr2rs.mat") + " -out " + os.path.join(self.roi_rs_dir, "t1_wm_rs"))
 
-                if imtest(os.path.join(self.roi_rs_dir, "t1_wm_epi")) is False:
-                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, "mask_t1_wm") + " -ref " + os.path.join(self.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_rs_dir, "hr2epi.mat") + " -out " + os.path.join(self.roi_rs_dir, "t1_wm_epi"))
+                if imtest(os.path.join(self.roi_rs_dir, "t1_csf_rs")) is False:
+                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, "mask_t1_csf") + " -ref " + os.path.join(self.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_rs_dir, "hr2rs.mat") + " -out " + os.path.join(self.roi_rs_dir, "t1_csf_rs"))
 
-                if imtest(os.path.join(self.roi_rs_dir, "t1_csf_epi")) is False:
-                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, "mask_t1_csf") + " -ref " + os.path.join(self.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_rs_dir, "hr2epi.mat") + " -out " + os.path.join(self.roi_rs_dir, "t1_csf_epi"))
+                if imtest(os.path.join(self.roi_rs_dir, "t1_gm_rs")) is False:
+                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, "mask_t1_gm") + " -ref " + os.path.join(self.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_rs_dir, "hr2rs.mat") + " -out " + os.path.join(self.roi_rs_dir, "t1_gm_rs"))
 
-                if imtest(os.path.join(self.roi_rs_dir, "t1_gm_epi")) is False:
-                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, "mask_t1_gm") + " -ref " + os.path.join(self.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_rs_dir, "hr2epi.mat") + " -out " + os.path.join(self.roi_rs_dir, "t1_gm_epi"))
-
-                if imtest(os.path.join(self.roi_rs_dir, "t1_brain_epi")) is False:
-                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, self.t1_brain_data) + " -ref " + os.path.join(self.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_rs_dir, "hr2epi.mat") + " -out " + os.path.join(self.roi_rs_dir, "t1_brain_epi"))
+                if imtest(os.path.join(self.roi_rs_dir, "t1_brain_rs")) is False:
+                    rrun("flirt -in " + os.path.join(self.roi_t1_dir, self.t1_brain_data) + " -ref " + os.path.join(self.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.roi_rs_dir, "hr2rs.mat") + " -out " + os.path.join(self.roi_rs_dir, "t1_brain_rs"))
 
                 # mask & binarize
-                rrun("fslmaths " + os.path.join(self.roi_rs_dir, "t1_gm_epi.nii.gz") + " -thr 0.2 -bin " + os.path.join(self.roi_rs_dir, "mask_t1_gm_epi.nii.gz"), logFile=log)
-                rrun("fslmaths " + os.path.join(self.roi_rs_dir, "t1_wm_epi.nii.gz") + " -thr 0.2 -bin " + os.path.join(self.roi_rs_dir, "mask_t1_wm_epi.nii.gz"), logFile=log)
-                rrun("fslmaths " + os.path.join(self.roi_rs_dir, "t1_csf_epi.nii.gz") + " -thr 0.2 -bin " + os.path.join(self.roi_rs_dir, "mask_t1_csf_epi.nii.gz"), logFile=log)
-                rrun("fslmaths " + os.path.join(self.roi_rs_dir, "t1_brain_epi.nii.gz") + " -thr 0.2 -bin " + os.path.join(self.roi_rs_dir, "mask_t1_brain_epi.nii.gz"), logFile=log)
+                rrun("fslmaths " + os.path.join(self.roi_rs_dir, "t1_gm_rs.nii.gz") + " -thr 0.2 -bin " + os.path.join(self.roi_rs_dir, "mask_t1_gm_rs.nii.gz"), logFile=log)
+                rrun("fslmaths " + os.path.join(self.roi_rs_dir, "t1_wm_rs.nii.gz") + " -thr 0.2 -bin " + os.path.join(self.roi_rs_dir, "mask_t1_wm_rs.nii.gz"), logFile=log)
+                rrun("fslmaths " + os.path.join(self.roi_rs_dir, "t1_csf_rs.nii.gz") + " -thr 0.2 -bin " + os.path.join(self.roi_rs_dir, "mask_t1_csf_rs.nii.gz"), logFile=log)
+                rrun("fslmaths " + os.path.join(self.roi_rs_dir, "t1_brain_rs.nii.gz") + " -thr 0.2 -bin " + os.path.join(self.roi_rs_dir, "mask_t1_brain_rs.nii.gz"), logFile=log)
 
                 log.close()
 
@@ -510,11 +506,11 @@ class Subject:
         # ==============================================================================================================================================================
         # DTI data
         # ==============================================================================================================================================================
-        if os.path.isdir(self.dti_dir) is True:
+        if os.path.isdir(self.dti_dir) is True and do_dtifit is True:
             log_file = os.path.join(self.dti_dir, "log_dti_processing.txt")
             log = open(log_file, "a")
 
-            if do_dtifit is True and imtest(os.path.join(self.dti_dir, self.dti_fit_label + "_FA")) is False:
+            if imtest(os.path.join(self.dti_dir, self.dti_fit_label + "_FA")) is False:
                 print("===========>>>> " + self.label + " : dtifit")
                 self.dti_ec_fit()  # run .	$GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_ec_fit.sh $SUBJ_NAME $PROJ_DIR
                 rrun("fslmaths " + os.path.join(self.dti_dir, self.dti_fit_label) + "_L2 -add " + os.path.join(self.dti_dir, self.dti_fit_label + "_L3") + " -div 2 " + os.path.join(self.dti_dir, self.dti_fit_label + "_L23"), logFile=log)
@@ -585,12 +581,12 @@ class Subject:
 
         # check original image presence, otherwise exit
         if imtest(inputimage) is False:
-            print("ERROR: input anatomical image is missing....exiting")
+            print("ERROR: (" + self.label + ") input anatomical image is missing....exiting")
             return False
 
         # check given lesionmask presence, otherwise exit
         if use_lesionmask is True and imtest(lesionmask) is False:
-            print("ERROR: given Lesion mask is missing....exiting")
+            print("ERROR: (" + self.label + ") given Lesion mask is missing....exiting")
             return False
 
         # I CAN START PROCESSING !
@@ -2097,8 +2093,7 @@ class Subject:
             return
 
         rrun("fslroi " + os.path.join(self.dti_data) + " " + self.dti_nodiff_data + " 0 1")
-        rrun(
-            "bet " + self.dti_nodiff_data + " " + self.dti_nodiff_brain_data + " -m -f 0.3")  # also creates dti_nodiff_brain_mask_data
+        rrun("bet " + self.dti_nodiff_data + " " + self.dti_nodiff_brain_data + " -m -f 0.3")  # also creates dti_nodiff_brain_mask_data
 
         if imtest(self.dti_ec_image) is False:
             print("starting eddy_correct on " + self.label)
@@ -2521,7 +2516,10 @@ class Subject:
         rrun("fslmeants -i " + in_img + " -o " + series_wm + " -m " + self.rs_mask_t1_wmseg4nuis_epi + " --no_bin")
         rrun("fslmeants -i " + in_img + " -o " + series_csf + " -m " + self.rs_mask_t1_csfseg4nuis_epi + " --no_bin")
 
-        rrun("paste " + series_wm + " " + series_csf)
+        if os.path.isfile(series_csf) and os.path.isfile(series_wm):
+            os.system("paste " + series_wm + " " + series_csf + " > " + output_series)
+            # rrun("paste " + series_wm + " " + series_csf + " > " + output_series) # ISSUE: doesn't work. don't know why
+
 
         tempMean = os.path.join(self.rs_dir, "tempMean.nii.gz")
         residual = os.path.join(self.rs_dir, "residual.nii.gz")
@@ -2557,16 +2555,15 @@ class Subject:
 
     # ===================================================================================
     # model can be:  a fullpath, a filename (string) located in project's glm_template_dir
-    def epi_fsl_feat(self, epi_label, model, do_initreg=False, std_image="", tr="", te=""):
+    def epi_fsl_feat(self, epi_label, in_file_name, out_dir_name, model, do_initreg=False, std_image="", tr="", te=""):
 
         if epi_label == "rs":
-            epi_image   = self.rs_data
             epi_dir     = self.rs_dir
-            out_dir     = os.path.join(epi_dir, "resting.feat")
         elif epi_label.startswith("fmri"):
-            epi_image   = os.path.join(self.fmri_dir, self.label + "-" + epi_label)
             epi_dir     = self.fmri_dir
-            out_dir     = os.path.join(epi_dir, epi_label + ".feat")
+
+        out_dir     = os.path.join(epi_dir, out_dir_name)
+        epi_image   = os.path.join(epi_dir, in_file_name)
 
         # default params:
         if imtest(epi_image) is False:
@@ -2626,13 +2623,12 @@ class Subject:
             sys.stdout = original_stdout  # Reset the standard output to its original value
 
             # --------------------------------------------------------------------------------------------------------------------------------------
-        #rrun(os.path.join(self._global.fsl_bin, "feat") + " " + OUTPUT_FEAT_FSF + ".fsf")  # execute  FEAT
+        rrun(os.path.join(self._global.fsl_bin, "feat") + " " + OUTPUT_FEAT_FSF + ".fsf")  # execute  FEAT
 
-        # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_epi folder
-        if os.path.exists(os.path.join(out_dir, "reg")) is False:
+        # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_rs/fmri folder
+        if os.path.exists(os.path.join(out_dir, "reg")) is True:
             rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + out_dir)
-
-        self.epi_reg_copy_feat(epi_label, std_image)
+            self.epi_reg_copy_feat(epi_label, std_image)
 
     def epi_reg_copy_feat(self, epi_label, std_image=""):
 
@@ -2746,6 +2742,17 @@ class Subject:
             rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join(aroma_dir, "denoised_func_data_nonaggr") + " -out " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -applyxfm -init " + os.path.join(input_dir, "reg", "example_func2standard.mat") + " -interp trilinear -datatype float")
             # 		                    run ${FSLDIR}/bin/fslmaths                 $RS_REGSTD_AROMA_DIR/filtered_func_data       -Tstd -bin                $RS_REGSTD_AROMA_DIR/mask       -odt char
             rrun(os.path.join(self._global.fsl_bin, "fslmaths") + " " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -Tstd -bin " + os.path.join(regstd_aroma_dir, "mask") + " -odt char")
+
+    def rs_cleanup(self):
+
+        os.remove(os.path.join(self.rs_dir, self.rs_post_preprocess_image_label))
+        os.remove(os.path.join(self.rs_dir, self.rs_post_aroma_image_label))
+        os.remove(os.path.join(self.rs_dir, self.rs_post_nuisance_image_label))
+        os.remove(os.path.join(self.rs_dir, self.rs_post_nuisance_std_image_label))
+
+        os.removedirs(self.rs_aroma_dir)
+        os.removedirs(os.path.join(self.rs_dir, "resting.feat"))
+        #os.removedirs(os.path.join(self.rs_dir, "resting.ica"))
 
 
     def epi_sbfc_1multiroi_feat(self):
@@ -3326,9 +3333,11 @@ class Subject:
         if epi_label == "rs":
             roi_epi_dir = self.roi_rs_dir
             examplefunc = self.rs_examplefunc
+            epi2std_mat = os.path.join(self.roi_std_dir, "rs2std.mat")
         elif epi_label.startsWith("fmri"):
             roi_epi_dir = self.roi_fmri_dir
             examplefunc = self.fmri_examplefunc
+            epi2std_mat = os.path.join(self.roi_std_dir, "fmri2std.mat")
 
         output_roi = os.path.join(self.roi_std4_dir, roi_name + "_std")
         if path_type == "abs":
@@ -3341,9 +3350,9 @@ class Subject:
         if imtest(input_roi) is False:
             print("error......input_roi (" + input_roi + ") is missing....exiting")
 
-        rrun("flirt -in " + input_roi + " -ref " + self.rs_examplefunc + " -out " + os.path.join(self.roi_std4_dir, roi_name + "_std2") + " -applyxfm -init " + os.path.join(self.roi_std_dir, "epi2std.mat") + " -interp trilinear")
+        rrun("flirt -in " + input_roi + " -ref " + examplefunc + " -out " + os.path.join(self.roi_std4_dir, roi_name + "_std2") + " -applyxfm -init " + epi2std_mat + " -interp trilinear")
         rrun("flirt -in " + os.path.join(self.roi_std4_dir, roi_name + "_std2") + " -ref " + std_img + " -out " + output_roi + " -applyisoxfm 4")
-        imrm(os.path.join(self.roi_std4_dir, roi_name + "_std2"))
+        imrm([os.path.join(self.roi_std4_dir, roi_name + "_std2")])
 
     def transform_nl_epi2std4(self, path_type, roi_name, roi, std_img, epi_label="rs"):
 
@@ -3459,8 +3468,7 @@ class Subject:
             self.roi_dti_dir, roi_name + "_dti") + " --warp=" + os.path.join(self.roi_dti_dir, "std2dti_warp"))
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    def transform_epi(self, type='fmri', do_bbr=True, std_img_label="standard", std_img="", std_img_head="",
+    def transform_epi(self, type='fmri', do_bbr=True, std_img_label="std", std_img="", std_img_head="",
                       std_img_mask_dil="", wmseg=""):
 
         if type == 'fmri':
@@ -3554,7 +3562,7 @@ class Subject:
             rrun("convert_xfm -omat " + epi2std + ".mat" + " -concat " + os.path.join(self.roi_dir, "reg_" + std_img_label, "hr2std.mat") + " " + epi2hr + ".mat")
 
         # => std2epi.mat
-        if os.path.exist(std2epi + ".mat") is False:
+        if os.path.exists(std2epi + ".mat") is False:
             rrun("convert_xfm -inverse -omat " + std2epi + ".mat " + epi2std + ".mat")
 
         # => $ROI_DIR/reg_${std_img_label}/epi2std.nii.gz
@@ -3634,7 +3642,7 @@ class Subject:
         # 2: concat: standard -> highres -> dti
         # $FSLDIR/bin/convertwarp --ref=os.path.join(self.roi_dti_dir, nodif_brain --warp1=os.path.join(self.roi_t1_dir,standard2hr_warp --postmat=os.path.join(self.roi_dti_dir, hr2dti --out=os.path.join(self.roi_dti_dir, standard2dti_warp
 
-    def transforms_mpr(self, std_img="", std_img_mask_dil="", std_img_label="standard"):
+    def transforms_mpr(self, std_img="", std_img_mask_dil="", std_img_label="std"):
 
         if std_img == "":
             std_img = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain")

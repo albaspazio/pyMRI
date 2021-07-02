@@ -78,9 +78,9 @@ if __name__ == "__main__":
 
         TEMPL_STATS_DIR         = os.path.join(project.melodic_templates_dir, template_file_name, "stats")
         DR_DIR                  = os.path.join(project.melodic_dr_dir, "templ_" + template_file_name, population_name)
-        RESULTS2_OUT_DIR        = os.path.join(DR_DIR, "results", "standard2")
-        RESULTS4_OUT_DIR        = os.path.join(DR_DIR, "results", "standard4")
-        standard_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
+        RESULTS2_OUT_DIR        = os.path.join(DR_DIR, "results", "std2")
+        RESULTS4_OUT_DIR        = os.path.join(DR_DIR, "results", "std4")
+        standard_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_std_dir, "MNI152_T1_2mm_brain")
 
         subjects_data           = import_data_file.tabbed_file_with_header2dict_list(os.path.join(project.dir, "data_2x56.txt"))
 
