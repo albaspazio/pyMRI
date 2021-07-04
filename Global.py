@@ -60,13 +60,15 @@ class Global:
         self.spm_tissue_map                 = os.path.join(self.spm_dir, "tpm", "TPM.nii")
 
         self.fsl_bin                        = os.path.join(self.fsl_dir, "bin")
-        self.fsl_data_std_dir          = os.path.join(self.fsl_dir, "data", "standard")
-        self.fsl_std_mni_2mm_head      = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm")
-        self.fsl_std_mni_2mm           = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain")
-        self.fsl_std_mni_2mm_mask      = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask")
-        self.fsl_std_mni_2mm_mask_dil  = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask_dil")
-        self.fsl_std_mni_4mm           = os.path.join(self.fsl_data_std_dir, "MNI152_T1_4mm_brain")
-        self.fsl_std_mni_2mm_cnf       = os.path.join(self.fsl_dir, "etc", "flirtsch", "T1_2_MNI152_2mm.cnf")
+        self.fsl_data_std_dir               = os.path.join(self.fsl_dir, "data", "standard")
+        self.fsl_std_mni_2mm_head           = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm")
+        self.fsl_std_mni_2mm_brain          = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain")
+        self.fsl_std_mni_2mm_brain_mask     = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask")
+        self.fsl_std_mni_2mm_brain_mask_dil = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask_dil")
+        self.fsl_std_mni_2mm_cnf            = os.path.join(self.fsl_dir, "etc", "flirtsch", "T1_2_MNI152_2mm.cnf")
+
+        self.fsl_std_mni_4mm_brain          = os.path.join(self.self.framework_dir, "templates", "MNI152_T1_4mm_brain")
+        self.fsl_std_mni_4mm_head           = os.path.join(self.self.framework_dir, "templates", "MNI152_T1_4mm")
 
         self.std_aal_atlas_2mm         = os.path.join(self.global_data_templates, "mpr", "aal_262_standard")
 
