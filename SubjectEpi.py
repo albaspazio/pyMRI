@@ -4,7 +4,7 @@ from numpy import arange, concatenate, array
 from shutil import copyfile, move, rmtree
 
 from myfsl.utils.run import rrun
-from utility.manage_images import imtest, imcp, is_image, remove_ext, imcp_notexisting, imgparts
+from utility.manage_images import imtest, imcp, is_image, remove_ext, imcp_notexisting, imgparts, immv
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
 from utility.utilities import sed_inplace, gunzip, compress, copytree, get_filename
 from Stats import Stats
@@ -556,7 +556,6 @@ class SubjectEpi:
         if imtest(std2epi_warp) is False:
             rrun(os.path.join(self._global.fsl_bin, "invwarp") + " -w " + epi2std_warp + " -o " + std2epi_warp + " -r " + exfun)
 
-
     def aroma(self, epi_label, input_dir, ofn="ica_aroma", upsampling=0):
 
         if epi_label == "rs":
@@ -594,18 +593,41 @@ class SubjectEpi:
             # 		                    run ${FSLDIR}/bin/fslmaths                 $RS_REGSTD_AROMA_DIR/filtered_func_data       -Tstd -bin                $RS_REGSTD_AROMA_DIR/mask       -odt char
             rrun(os.path.join(self._global.fsl_bin, "fslmaths") + " " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -Tstd -bin " + os.path.join(regstd_aroma_dir, "mask") + " -odt char")
 
-
     def rs_cleanup(self):
 
         os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_preprocess_image_label))
         os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_aroma_image_label))
         os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_image_label))
-        os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_std_image_label))
+        os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_std4_image_label))
 
         os.removedirs(self.subject.rs_aroma_dir)
         os.removedirs(os.path.join(self.subject.rs_dir, "resting.feat"))
         os.removedirs(os.path.join(self.subject.rs_dir, "resting.ica"))
 
+    # take a preproc step, convert to std4 and copy to resting/reg_std folder
+    def adopt_rs_preproc_step(self, step_label):
+
+        in_img  = os.path.join(self.subject.rs_dir, step_label)
+        in_img4 = os.path.join(self.subject.roi_std4_dir, step_label + "_std4")
+        self.subject.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[in_img])  # add _std4 to roi name)
+        immv(in_img4, self.subject.rs_final_regstd_image)
+
+    # take the reg_standard output of feat/melodic, convert to std4 and copy to resting/reg_std folder
+    def adopt_rs_preproc_folderoutput(self, proc_folder):
+
+        in_img      = os.path.join(proc_folder, "reg_standard", "filtered_func_data")
+        in_mask     = os.path.join(proc_folder, "reg_standard", "mask")
+        in_bgimage  = os.path.join(proc_folder, "reg_standard", "bg_image")
+
+        self.subject.transform.transform_roi("std22std4", "abs", thresh=0, rois=[in_img, in_mask, in_bgimage])
+
+        in_img4     = os.path.join(self.subject.roi_std4_dir, "filtered_func_data_std4")
+        in_mask4    = os.path.join(self.subject.roi_std4_dir, "mask_std4")
+        in_bgimage4 = os.path.join(self.subject.roi_std4_dir, "bg_image_std4")
+
+        immv(in_img4    , self.subject.rs_final_regstd_image)
+        immv(in_mask4   , self.subject.rs_final_regstd_mask)
+        immv(in_bgimage4, self.subject.rs_final_regstd_bgimage)
 
     def sbfc_1multiroi_feat(self):
         pass

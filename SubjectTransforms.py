@@ -12,7 +12,6 @@ class SubjectTransforms:
         self.subject = subject
         self._global = _global
         
-
     def fnirt(self, ref, ofn="", odp="", refmask="", inimg="t1_brain"):
 
         if inimg == "t1_brain":
@@ -227,7 +226,6 @@ class SubjectTransforms:
 
         rrun("applywarp -i " + input_roi + " -r " + self.subject.t1_brain_data + " -o " + output_roi + " --warp=" + epi2hr_warp)
 
-
     def transform_l_epi2hr(self, path_type, roi_name, roi, std_img, epi_label="rs"):
 
         if epi_label == "rs":
@@ -250,7 +248,6 @@ class SubjectTransforms:
             print("error......input_roi (" + input_roi + ") is missing....exiting")
 
         rrun("flirt -in " + input_roi + " -ref " + self.subject.t1_brain_data + " -out " + os.path.join(self.subject.roi_t1_dir, roi_name + "_hr") + " -applyxfm -init " + epi2hr_mat + " -interp trilinear")
-
 
     def transform_nl_dti2hr(self, path_type, roi_name, roi, std_img):
         output_roi = os.path.join(self.subject.roi_dti_dir, roi + "_dti")
@@ -552,7 +549,6 @@ class SubjectTransforms:
 
         rrun("flirt -in " + input_roi + " -ref " + std_img + " -out " + output_roi + " -applyisoxfm 4")
 
-
     def transform_l_epi2std4(self, path_type, roi_name, roi, std_img, epi_label="rs"):
 
         if epi_label == "rs":
@@ -564,7 +560,8 @@ class SubjectTransforms:
             examplefunc = self.subject.fmri_examplefunc
             epi2std_mat = os.path.join(self.subject.roi_std_dir, "fmri2std.mat")
 
-        output_roi = os.path.join(self.subject.roi_std4_dir, roi_name + "_std")
+        output_roi = os.path.join(self.subject.roi_std4_dir, roi_name + "_std4")
+
         if path_type == "abs":
             input_roi = roi
         elif path_type == "rel":
@@ -759,9 +756,7 @@ class SubjectTransforms:
         if imtest(std42hr_warp) is False:
             rrun("inwarp -w " + hr2std4_warp + " -o " + std42hr_warp + " -r " + self.subject.t1_brain_data)
 
-
-    def transform_epi(self, type='fmri', do_bbr=True, std_img_label="std", std_img="", std_img_head="",
-                          std_img_mask_dil="", wmseg=""):
+    def transform_epi(self, type='fmri', do_bbr=True, std_img_label="std", std_img="", std_img_head="", std_img_mask_dil="", wmseg=""):
 
         if type == 'fmri':
             data        = self.subject.fmri_data
@@ -869,10 +864,8 @@ class SubjectTransforms:
         if imtest(std2epi + "_warp") is False:
             rrun("invwarp -r " + examplefunc + " -w " + os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "epi2std_warp") + " -o " + std2epi + "_warp")
 
-
     def transform_dti_t2(self):
         pass
-
 
     def transform_dti(self, std_img=""):
 
