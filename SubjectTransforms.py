@@ -57,6 +57,12 @@ class SubjectTransforms:
         rrun("fnirt --iout= " + os.path.join(odp, ofn) + " --in=" + inimg + " --aff=" + os.path.join(odp, ofn + ".mat") + " --ref=" + ref + REF_STRING)
 
 
+    # ==================================================================================================================================================
+    # TRANSFORMS
+    # ==================================================================================================================================================
+    # path_type =   "standard"      : a roi name, located in the default folder (subjectXX/s1/roi/reg_YYY/INPUTPATH),
+    #	            "rel"			: a path relative to SUBJECT_DIR (subjectXX/s1/INPUTPATH)
+    #               "abs"			: a full path (INPUTPATH)
     def transform_roi(self, regtype, pathtype="standard", mask="", orf="", thresh=0.2, islin=True, std_img="", rois=[]):
 
         if std_img != "":
@@ -675,8 +681,87 @@ class SubjectTransforms:
         rrun("applywarp -i " + input_roi + " -r " + os.path.join(self.subject.roi_dti_dir, "nodif_brain") + " -o " + os.path.join(self.subject.roi_dti_dir, roi_name + "_dti") + " --warp=" + os.path.join(self.subject.roi_dti_dir, "std2dti_warp"))
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def transform_mpr(self, std_img="", std_img_mask_dil="", std_img_label="std"):
+
+        if std_img == "":
+            std_img = os.path.join(self.subject.fsl_data_std_dir, "MNI152_T1_2mm_brain")
+
+        if std_img_mask_dil == "":
+            std_img_mask_dil = os.path.join(self.subject.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask_dil")
+
+        if imtest(std_img) is False:
+            print("file std_img: " + std_img + ".nii.gz is not present...skipping transforms_mpr")
+            return
+
+        if imtest(std_img_mask_dil) is False:
+            print("file STD_IMAGE_MASK: " + std_img_mask_dil + ".nii.gz is not present...skipping transforms_mpr")
+            return
+
+        if imtest(self.subject.t1_brain_data) is False:
+            print("file T1_BRAIN_DATA: " + self.subject.t1_brain_data + ".nii.gz is not present...skipping transforms_mpr")
+            return
+
+        print(self.subject.label + " :STARTED : nonlin t1-standard coregistration")
+
+        # hr <--> std
+
+        os.makedirs(os.path.join(self.subject.roi_dir, "reg_" + std_img_label), exist_ok=True)
+        os.makedirs(os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4"), exist_ok=True)
+        os.makedirs(self.subject.roi_t1_dir, exist_ok=True)
+
+        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # ---- HIGHRES <--------> STANDARD
+        # => hr2std.mat
+        hr2std = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hr2std")
+        if os.path.isfile(hr2std + ".mat") is False:
+            rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + std_img + " -out " + hr2std + " -omat " + hr2std + ".mat -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+
+        # # => std2hr.mat
+        std2hr = os.path.join(self.subject.roi_t1_dir, std_img_label + "2hr")
+        if os.path.isfile(std2hr + ".mat") is False:
+            rrun("convert_xfm -inverse -omat " + std2hr + ".mat " + hr2std + ".mat")
+
+        # NON LINEAR
+        # => hr2std_warp
+        hr2std_warp = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hr2std_warp")
+        if imtest(hr2std_warp) is False:
+            rrun("fnirt --in=" + self.subject.t1_brain_data + " --aff= " + hr2std + ".mat --cout=" + hr2std_warp + " --iout=" + hr2std + " --jout=" + os.path.join(self.subject.roi_t1_dir, "hr2hr_jac") + " --config=T1_2_MNI152_2mm --ref=" + std_img + " --refmask=" + std_img_mask_dil + "--warpres=10,10,10")
+
+        # => std2hr_warp
+        std_warp2hr = os.path.join(self.subject.roi_t1_dir, std_img_label + "2hr_warp")
+        if imtest(std_warp2hr) is False:
+            rrun("invwarp -r " + self.subject.t1_brain_data + " -w " + hr2std_warp + " -o " + std_warp2hr)
+
+        ## => hr2${std_img_label}.nii.gz
+        # [ `$FSLDIR/bin/imtest $ROI_DIR/reg_${std_img_label}/hr2std` = 0 ] && rrun("applywarp -i " + T1_BRAIN_DATA -r $STD_IMAGE -o $ROI_DIR/reg_${std_img_label}/hr2std -w $ROI_DIR/reg_${std_img_label}/hr2std_warp
+
+        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # hr <--> std4
+        os.makedirs(os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4"), exist_ok=True)
+
+        hr2std4 = os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4", "hr2std")
+        std42hr = os.path.join(self.subject.roi_t1_dir, std_img_label + "42hr")
+        hr2std4_warp = os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4", "hr2std_warp.nii.gz")
+        std42hr_warp = os.path.join(self.subject.roi_t1_dir, std_img_label + "42hr_warp.nii.gz")
+
+        if os.path.isfile(hr2std4 + ".mat") is False:
+            rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + self._global.fsl_std_mni_4mm_brain + " -omat " + hr2std4 + ".mat")
+
+        if os.path.isfile(std42hr + ".mat") is False:
+            rrun("convert_xfm -omat " + std42hr + ".mat" + " -inverse " + hr2std4 + ".mat")
+
+        if imtest(hr2std4_warp) is False:
+            rrun("fnirt --in " + self.subject.t1_data + " --aff=" + hr2std4 + ".mat" + " --cout=" + hr2std4_warp + " --iout=" + hr2std4 +
+                 " --jout=" + hr2std4 + "_jac" + " --config=" + self._global.fsl_std_mni_4mm_brain_conf +
+                 " --ref=" + self._global.fsl_std_mni_4mm + " --refmask=" + self._global.fsl_std_mni_4mm + "_mask_dil" + " --warpres=10,10,10")
+
+        if imtest(std42hr_warp) is False:
+            rrun("inwarp -w " + hr2std4_warp + " -o " + std42hr_warp + " -r " + self.subject.t1_brain_data)
+
+
     def transform_epi(self, type='fmri', do_bbr=True, std_img_label="std", std_img="", std_img_head="",
-                      std_img_mask_dil="", wmseg=""):
+                          std_img_mask_dil="", wmseg=""):
 
         if type == 'fmri':
             data        = self.subject.fmri_data
@@ -699,7 +784,6 @@ class SubjectTransforms:
             hr2epi_mat  = self.subject.hr2rs_mat
             epi2std     = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "rs2std")
             std2epi     = os.path.join(self.subject.roi_rs_dir, std_img_label + "2rs")
-
 
         if std_img == "":
             std_img = self._global.fsl_std_mni_2mm_brain
@@ -789,6 +873,7 @@ class SubjectTransforms:
     def transform_dti_t2(self):
         pass
 
+
     def transform_dti(self, std_img=""):
 
         if std_img == "":
@@ -850,81 +935,5 @@ class SubjectTransforms:
         # 2: concat: standard -> highres -> dti
         # $FSLDIR/bin/convertwarp --ref=os.path.join(self.subject.roi_dti_dir, nodif_brain --warp1=os.path.join(self.subject.roi_t1_dir,standard2hr_warp --postmat=os.path.join(self.subject.roi_dti_dir, hr2dti --out=os.path.join(self.subject.roi_dti_dir, standard2dti_warp
 
-    def transform_mpr(self, std_img="", std_img_mask_dil="", std_img_label="std"):
-
-        if std_img == "":
-            std_img = os.path.join(self.subject.fsl_data_std_dir, "MNI152_T1_2mm_brain")
-
-        if std_img_mask_dil == "":
-            std_img_mask_dil = os.path.join(self.subject.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask_dil")
-
-        if imtest(std_img) is False:
-            print("file std_img: " + std_img + ".nii.gz is not present...skipping transforms_mpr")
-            return
-
-        if imtest(std_img_mask_dil) is False:
-            print("file STD_IMAGE_MASK: " + std_img_mask_dil + ".nii.gz is not present...skipping transforms_mpr")
-            return
-
-        if imtest(self.subject.t1_brain_data) is False:
-            print("file T1_BRAIN_DATA: " + self.subject.t1_brain_data + ".nii.gz is not present...skipping transforms_mpr")
-            return
-
-        print(self.subject.label + " :STARTED : nonlin t1-standard coregistration")
-
-        # hr <--> std
-
-        os.makedirs(os.path.join(self.subject.roi_dir, "reg_" + std_img_label), exist_ok=True)
-        os.makedirs(os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4"), exist_ok=True)
-        os.makedirs(self.subject.roi_t1_dir, exist_ok=True)
-
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # ---- HIGHRES <--------> STANDARD
-        # => hr2std.mat
-        hr2std = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hr2std")
-        if os.path.isfile(hr2std + ".mat") is False:
-            rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + std_img + " -out " + hr2std + " -omat " + hr2std + ".mat -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
-
-        # # => std2hr.mat
-        std2hr = os.path.join(self.subject.roi_t1_dir, std_img_label + "2hr")
-        if os.path.isfile(std2hr + ".mat") is False:
-            rrun("convert_xfm -inverse -omat " + std2hr + ".mat " + hr2std + ".mat")
-
-        # NON LINEAR
-        # => hr2std_warp
-        hr2std_warp = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hr2std_warp")
-        if imtest(hr2std_warp) is False:
-            rrun("fnirt --in=" + self.subject.t1_brain_data + " --aff= " + hr2std + ".mat --cout=" + hr2std_warp + " --iout=" + hr2std + " --jout=" + os.path.join(self.subject.roi_t1_dir, "hr2hr_jac") + " --config=T1_2_MNI152_2mm --ref=" + std_img + " --refmask=" + std_img_mask_dil + "--warpres=10,10,10")
-
-        # => std2hr_warp
-        std_warp2hr = os.path.join(self.subject.roi_t1_dir, std_img_label + "2hr_warp")
-        if imtest(std_warp2hr) is False:
-            rrun("invwarp -r " + self.subject.t1_brain_data + " -w " + hr2std_warp + " -o " + std_warp2hr)
-
-        ## => hr2${std_img_label}.nii.gz
-        # [ `$FSLDIR/bin/imtest $ROI_DIR/reg_${std_img_label}/hr2std` = 0 ] && rrun("applywarp -i " + T1_BRAIN_DATA -r $STD_IMAGE -o $ROI_DIR/reg_${std_img_label}/hr2std -w $ROI_DIR/reg_${std_img_label}/hr2std_warp
-
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # hr <--> std4
-        os.makedirs(os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4"), exist_ok=True)
-
-        hr2std4 = os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4", "hr2std")
-        std42hr = os.path.join(self.subject.roi_t1_dir, std_img_label + "42hr")
-        hr2std4_warp = os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4", "hr2std_warp.nii.gz")
-        std42hr_warp = os.path.join(self.subject.roi_t1_dir, std_img_label + "42hr_warp.nii.gz")
-
-        if os.path.isfile(hr2std4 + ".mat") is False:
-            rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + self._global.fsl_std_mni_4mm_brain + " -omat " + hr2std4 + ".mat")
-
-        if os.path.isfile(std42hr + ".mat") is False:
-            rrun("convert_xfm -omat " + std42hr + ".mat" + " -inverse " + hr2std4 + ".mat")
-
-        if imtest(hr2std4_warp) is False:
-            rrun("fnirt --in " + self.subject.t1_data + " --aff=" + hr2std4 + ".mat" + " --cout=" + hr2std4_warp + " --iout=" + hr2std4 +
-                 " --jout=" + hr2std4 + "_jac" + " --config=" + os.path.join(self._global.global_data_templates, "gray_matter", "T1_2_MNI152_4mm") +
-                 " --ref=" + self._global.fsl_std_mni_4mm + " --refmask=" + self._global.fsl_std_mni_4mm + "_mask_dil" + " --warpres=10,10,10")
-
-        if imtest(std42hr_warp) is False:
-            rrun("inwarp -w " + hr2std4_warp + " -o " + std42hr_warp + " -r " + self.subject.t1_brain_data)
-        # ==================================================================================================================================================
+    # ==================================================================================================================================================
 

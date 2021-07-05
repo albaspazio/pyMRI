@@ -79,7 +79,14 @@ def imtest(image_path):
     return True
 
 
-def imcp(src, dest, logFile=None):
+def imcp(src, dest, error_src_not_exist=True, logFile=None):
+
+    if imtest(src) is False:
+        if error_src_not_exist is True:
+            print("ERROR in imcp. src image (" + src + ") does not exist")
+            return
+        else:
+            print("WARNING in imcp. src image (" + src + ") does not exist, skip copy and continue")
 
     fileparts_src = img_split_ext(src)
     fileparts_dst = img_split_ext(dest)
@@ -105,7 +112,14 @@ def imcp(src, dest, logFile=None):
         print("cp " + fileparts_src[0] + ext + " " + fileparts_dst[0] + dest_ext, file=logFile)
 
 
-def imcp_notexisting(src, dest, logFile=None):
+def imcp_notexisting(src, dest, error_src_not_exist=False, logFile=None):
+
+    if imtest(src) is False:
+        if error_src_not_exist is True:
+            print("ERROR in imcp_notexisting. src image (" + src + ") does not exist")
+            return
+        else:
+            print("WARNING in imcp_notexisting. src image (" + src + ") does not exist, skip copy and continue")
 
     if imtest(dest) is False:
         imcp(src, dest, logFile)
@@ -114,6 +128,10 @@ def imcp_notexisting(src, dest, logFile=None):
 def imrm(filelist, logFile=None):
 
     for file in filelist:
+
+        if imtest(file) is False:
+            continue
+
         fileparts = img_split_ext(file)
 
         ext = ""
@@ -130,7 +148,14 @@ def imrm(filelist, logFile=None):
             print("rm " + fileparts[0] + ext, file=logFile)
 
 
-def immv(src, dest, logFile=None):
+def immv(src, dest, error_src_not_exist=False, logFile=None):
+
+    if imtest(src) is False:
+        if error_src_not_exist is True:
+            print("ERROR in immv. src image (" + src + ") does not exist")
+            return
+        else:
+            print("WARNING in immv. src image (" + src + ") does not exist, skip copy and continue")
 
     filename_src, file_extension_src = os.path.splitext(src)
     filename_dst, file_extension_dst = os.path.splitext(dest)
@@ -160,7 +185,8 @@ def mass_images_move(wildcardsource, destdir, logFile=None):
     images = []
     for f in files:
         if is_image(f) is True:
-            images.append(f)
+            if imtest(f) is True:
+                images.append(f)
 
     for img in images:
         dest_file = os.path.join(destdir, os.path.basename(img))
