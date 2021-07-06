@@ -10,7 +10,7 @@ from SubjectEpi import SubjectEpi
 from SubjectMpr import SubjectMpr
 from SubjectTransforms import SubjectTransforms
 from utility.fslfun import runsystem
-from utility.manage_images import imtest, immv, imcp, is_image, img_split_ext
+from utility.images import imtest, immv, imcp, is_image, img_split_ext
 from myfsl.utils.run import rrun
 
 

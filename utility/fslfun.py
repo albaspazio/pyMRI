@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 from myfsl.utils.run import rrun
-from utility.manage_images import imtest
+from utility.images import imtest
 
 #===============================================================================================================================
 # some run functions

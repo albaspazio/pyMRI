@@ -198,6 +198,25 @@ def mass_images_move(wildcardsource, destdir, logFile=None):
 # utilities
 #===============================================================================================================================
 
+def immerge(out_img, premerge_labels):
+
+    seq_string = " "
+    for seq in premerge_labels:
+        seq_string = seq_string + out_img + "_" + seq + " "
+
+    rrun('fslmerge -t ' + out_img + " " + seq_string)
+
+def imsplit(in_img, subdirmame=""):
+
+    folder  = os.path.dirname(in_img)
+    label   = imgparts(in_img)[1]
+
+    currdir = os.getcwd()
+    outdir  = os.path.join(folder, subdirmame)
+    os.makedirs(outdir, exist_ok=True)
+    os.chdir(outdir)
+    rrun('fslsplit ' + in_img + " " + label + "_" + " -t")
+    os.chdir(currdir)
 
 def quick_smooth(inimg, outimg, logFile=None):
 
@@ -246,3 +265,13 @@ def read_header(file, list_field=None):
     else:
         return attribs_dict
 
+
+def remove_slices(self, numslice2remove=1, whichslices2remove="updown", remove_dimension="axial"):
+
+    # dim_str = ""
+    # if remove_dimension == "axial":
+    #     dim_str = " -1 -1 "
+    nslices = 36
+    imcp(self.subject.fmri_data, self.subject.fmri_data + "full")
+    # rrun('fslroi ' + self.subject.epi_data + " " + self.subject.epi_data + " -1 -1  1 35")
+    rrun('fslroi ' + self.subject.fmri_data + " " + self.subject.fmri_data + " -1 -1  0 34")

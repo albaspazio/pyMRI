@@ -5,7 +5,7 @@ from shutil import copyfile
 
 from myfsl.utils.run import rrun
 from utility.fslfun import run, run_notexisting_img, runpipe, run_move_notexisting_img
-from utility.manage_images import imtest, immv, mass_images_move, imrm, imcp, quick_smooth, remove_ext
+from utility.images import imtest, immv, mass_images_move, imrm, imcp, quick_smooth, remove_ext
 from utility.matlab import call_matlab_spmbatch, call_matlab_function_noret
 from utility.utilities import sed_inplace, gunzip, write_text_file
 

@@ -2,7 +2,7 @@ import os
 
 from myfsl.utils.run import rrun
 from utility.fslfun import runsystem
-from utility.manage_images import imtest, imrm, imcp, imgname
+from utility.images import imtest, imrm, imcp, imgname
 
 
 class SubjectTransforms:

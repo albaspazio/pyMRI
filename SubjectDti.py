@@ -1,7 +1,7 @@
 import os
 
 from myfsl.utils.run import rrun
-from utility.manage_images import imtest
+from utility.images import imtest
 
 
 class SubjectDti:

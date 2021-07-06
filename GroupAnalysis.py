@@ -8,7 +8,7 @@ from shutil import copyfile, move
 
 from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
 from myfsl.utils.run import rrun
-from utility.manage_images import imcp, imtest
+from utility.images import imcp, imtest
 from utility.utilities import sed_inplace
 from utility import import_data_file
 from Stats import Stats

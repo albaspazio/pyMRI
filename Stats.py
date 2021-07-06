@@ -1,7 +1,7 @@
 import csv
 import ntpath
 
-from utility.manage_images import imtest
+from utility.images import imtest
 from utility.utilities import sed_inplace
 from utility import import_data_file
 from utility.matlab import call_matlab_function_noret
