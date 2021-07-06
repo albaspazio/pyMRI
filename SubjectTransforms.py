@@ -88,41 +88,41 @@ class SubjectTransforms:
             self.subject.has_T2 = True
 
         linear_registration_type = {
-            "std2hr": self.subject.transform_l_std2hr,
-            "std42hr": self.subject.transform_l_std42hr,
-            "epi2hr": self.subject.transform_l_epi2hr,
-            "dti2hr": self.subject.transform_l_dti2hr,
-            "std2epi": self.subject.transform_l_std2epi,
-            "std42epi": self.subject.transform_l_std42epi,
-            "hr2epi": self.subject.transform_l_hr2epi,
-            "dti2epi": self.subject.transform_l_dti2epi,
-            "hr2std": self.subject.transform_l_hr2std,
-            "epi2std": self.subject.transform_l_epi2std,
-            "dti2std": self.subject.transform_l_dti2std,
-            "std2std4": self.subject.transform_l_std2std4,
-            "epi2std4": self.subject.transform_l_epi2std4,
-            "hr2dti": self.subject.transform_l_hr2dti,
-            "epi2dti": self.subject.transform_l_epi2dti,
-            "std2dti": self.subject.transform_l_std2dti
+            "std2hr": self.transform_l_std2hr,
+            "std42hr": self.transform_l_std42hr,
+            "epi2hr": self.transform_l_epi2hr,
+            "dti2hr": self.transform_l_dti2hr,
+            "std2epi": self.transform_l_std2epi,
+            "std42epi": self.transform_l_std42epi,
+            "hr2epi": self.transform_l_hr2epi,
+            "dti2epi": self.transform_l_dti2epi,
+            "hr2std": self.transform_l_hr2std,
+            "epi2std": self.transform_l_epi2std,
+            "dti2std": self.transform_l_dti2std,
+            "std2std4": self.transform_l_std2std4,
+            "epi2std4": self.transform_l_epi2std4,
+            "hr2dti": self.transform_l_hr2dti,
+            "epi2dti": self.transform_l_epi2dti,
+            "std2dti": self.transform_l_std2dti
         }
 
         non_linear_registration_type = {
-            "std2hr": self.subject.transform_nl_std2hr,
-            "std42hr": self.subject.transform_nl_std42hr,
-            "epi2hr": self.subject.transform_nl_epi2hr,
-            "dti2hr": self.subject.transform_nl_dti2hr,
-            "std2epi": self.subject.transform_nl_std2epi,
-            "std42epi": self.subject.transform_nl_std42epi,
-            "hr2epi": self.subject.transform_nl_hr2epi,
-            "dti2epi": self.subject.transform_nl_dti2epi,
-            "hr2std": self.subject.transform_nl_hr2std,
-            "epi2std": self.subject.transform_nl_epi2std,
-            "dti2std": self.subject.transform_nl_dti2std,
-            "std2std4": self.subject.transform_nl_std2std4,
-            "epi2std4": self.subject.transform_nl_epi2std4,
-            "hr2dti": self.subject.transform_nl_hr2dti,
-            "epi2dti": self.subject.transform_nl_epi2dti,
-            "std2dti": self.subject.transform_nl_std2dti,
+            "std2hr": self.transform_nl_std2hr,
+            "std42hr": self.transform_nl_std42hr,
+            "epi2hr": self.transform_nl_epi2hr,
+            "dti2hr": self.transform_nl_dti2hr,
+            "std2epi": self.transform_nl_std2epi,
+            "std42epi": self.transform_nl_std42epi,
+            "hr2epi": self.transform_nl_hr2epi,
+            "dti2epi": self.transform_nl_dti2epi,
+            "hr2std": self.transform_nl_hr2std,
+            "epi2std": self.transform_nl_epi2std,
+            "dti2std": self.transform_nl_dti2std,
+            "std2std4": self.transform_nl_std2std4,
+            "epi2std4": self.transform_nl_epi2std4,
+            "hr2dti": self.transform_nl_hr2dti,
+            "epi2dti": self.transform_nl_epi2dti,
+            "std2dti": self.transform_nl_std2dti,
         }
 
         for roi in rois:
@@ -130,11 +130,11 @@ class SubjectTransforms:
             roi_name = os.path.basename(roi)
             print("converting " + roi_name)
 
-            if islin is False:
+            if islin:
+                output_roi = linear_registration_type[regtype](pathtype, roi_name, roi, std_img)
+            else:
                 # is non linear
                 output_roi = non_linear_registration_type[regtype](pathtype, roi_name, roi, std_img)
-            else:
-                output_roi = linear_registration_type[regtype](pathtype, roi_name, roi, std_img)
 
             if thresh > 0:
                 output_roi_name     = os.path.basename(output_roi)
@@ -598,7 +598,7 @@ class SubjectTransforms:
         imrm(os.path.join(self.subject.roi_std4_dir, roi_name + "_std2"))
 
     def transform_l_std2std4(self, path_type, roi_name, roi, std_img):
-        output_roi = os.path.join(self.subject.roi_std4_dir, roi_name + "_std")
+        output_roi = os.path.join(self.subject.roi_std4_dir, roi_name + "_std4")
         if path_type == "abs":
             input_roi = roi
         elif path_type == "rel":
@@ -749,12 +749,12 @@ class SubjectTransforms:
             rrun("convert_xfm -omat " + std42hr + ".mat" + " -inverse " + hr2std4 + ".mat")
 
         if imtest(hr2std4_warp) is False:
-            rrun("fnirt --in " + self.subject.t1_data + " --aff=" + hr2std4 + ".mat" + " --cout=" + hr2std4_warp + " --iout=" + hr2std4 +
+            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hr2std4 + ".mat" + " --cout=" + hr2std4_warp + " --iout=" + hr2std4 +
                  " --jout=" + hr2std4 + "_jac" + " --config=" + self._global.fsl_std_mni_4mm_brain_conf +
-                 " --ref=" + self._global.fsl_std_mni_4mm + " --refmask=" + self._global.fsl_std_mni_4mm + "_mask_dil" + " --warpres=10,10,10")
+                 " --ref=" + self._global.fsl_std_mni_4mm_head + " --refmask=" + self._global.fsl_std_mni_4mm_brain + "_mask_dil" + " --warpres=10,10,10")
 
         if imtest(std42hr_warp) is False:
-            rrun("inwarp -w " + hr2std4_warp + " -o " + std42hr_warp + " -r " + self.subject.t1_brain_data)
+            rrun("invwarp -w " + hr2std4_warp + " -o " + std42hr_warp + " -r " + self.subject.t1_brain_data)
 
     def transform_epi(self, type='fmri', do_bbr=True, std_img_label="std", std_img="", std_img_head="", std_img_mask_dil="", wmseg=""):
 

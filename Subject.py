@@ -320,10 +320,10 @@ class Subject:
                  do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0,
                  std_image=""):
 
-        self.has_T2 = 0
-        BET_F_VALUE_T2 = "0.5"
-        feat_preproc_model = os.path.join(self.project.script_dir, "glm", "templates", feat_preproc_model)
-        melodic_model = os.path.join(self.project.script_dir, "glm", "templates", mel_preproc_model)
+        self.has_T2         = 0
+        BET_F_VALUE_T2      = "0.5"
+        feat_preproc_model  = os.path.join(self.project.script_dir, "glm", "templates", feat_preproc_model)
+        melodic_model       = os.path.join(self.project.script_dir, "glm", "templates", mel_preproc_model)
 
         # ==============================================================================================================================================================
         #  T1 data
@@ -412,7 +412,6 @@ class Subject:
                     vol2remove = tot_vol_num - do_epirm2vol
 
                     if vol2remove > 0:
-
                         try:
                             immv(self.rs_data, self.rs_data + "_fullvol", logFile=log)
                             rrun("fslroi " + self.rs_data + "_fullvol " + self.rs_data + " " + str(vol2remove) + " -1", logFile=log)
@@ -420,7 +419,6 @@ class Subject:
                             print("UNRECOVERABLE ERROR: " + e)
                             immv(self.rs_data + "_fullvol", self.rs_data, logFile=log)
                             return
-
 
                 # FEAT PRE PROCESSING
                 preproc_img     = os.path.join(self.rs_dir, self.rs_post_preprocess_image_label)        # output image of first preproc resting.featfeat
@@ -431,7 +429,14 @@ class Subject:
                         print("===========>>>> FEAT_PREPROC template file (" + self.label + " " + feat_preproc_model + ".fsf) is missing...skipping feat preprocessing")
                     else:
                         if os.path.isdir(preproc_feat_dir) is False:
-                            self.epi.fsl_feat("rs", self.rs_image_label, "resting.feat", feat_preproc_model, do_initreg=do_featinitreg, std_image=std_image)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $FEAT_PREPROC_MODEL -odn $FEAT_PREPROC_OUTPUT_DIR_NAME.feat -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG
+                            self.epi.fsl_feat("rs", self.rs_image_label, "resting.feat", feat_preproc_model, do_initreg=do_featinitreg, std_image=std_image)
+
+                            # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_rs-fmri folder
+                            out_dir = os.path.join(self.rs_dir, "resting.feat")
+                            if os.path.exists(os.path.join(out_dir, "reg")) is True:
+                                rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + out_dir)
+                                self.subject.epi.reg_copy_feat("rs", std_image)
+
                             imcp(filtfuncdata, preproc_img, logFile=log)
                         else:
                             if imtest(filtfuncdata) is True:
@@ -443,9 +448,12 @@ class Subject:
                 # do AROMA processing
                 preproc_aroma_img = os.path.join(self.rs_dir, self.rs_post_aroma_image_label)    # output image of aroma processing
                 try:
-                    if do_aroma is True and imtest(preproc_aroma_img) is False:
-                        self.epi_aroma("rs", preproc_feat_dir)  # do not register to standard
-                        imcp(self.rs_aroma_image, os.path.join(self.rs_dir, self.rs_post_aroma_image_label))
+                    if do_aroma is True:
+                        if imtest(preproc_aroma_img) is False:
+                            self.epi.aroma("rs", preproc_feat_dir)  # do not register to standard
+                            imcp(self.rs_aroma_image, os.path.join(self.rs_dir, self.rs_post_aroma_image_label))
+                    else:
+                        imcp(preproc_img, os.path.join(self.rs_dir, self.rs_post_aroma_image_label))
 
                 except Exception as e:
                     print("UNRECOVERABLE ERROR: " + str(e))
@@ -485,6 +493,12 @@ class Subject:
                         print("===========>>>> resting template file (" + self.label + " " + melodic_model + ".fsf) is missing...skipping 1st level resting")
                     else:
                         self.epi.fsl_feat("rs",  self.rs_post_nuisance_image_label, mel_odn + ".ica", melodic_model, do_initreg=do_melinitreg, std_image=std_image)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
+
+                        # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_rs-fmri folder
+                        out_dir = os.path.join(self.rs_dir, mel_odn + ".ica")
+                        if os.path.exists(os.path.join(out_dir, "reg")) is True:
+                            rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + out_dir)
+                            self.epi.reg_copy_feat("rs", std_image)
 
                         if imtest(os.path.join(mel_out_dir, "reg_standard", "filtered_func_data")) is True :
                             imcp(os.path.join(mel_out_dir, "reg_standard", "filtered_func_data"), exfun, logFile=log)

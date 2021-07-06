@@ -137,11 +137,6 @@ class SubjectEpi:
             # --------------------------------------------------------------------------------------------------------------------------------------
         rrun(os.path.join(self._global.fsl_bin, "feat") + " " + OUTPUT_FEAT_FSF + ".fsf")  # execute  FEAT
 
-        # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_rs/fmri folder
-        if os.path.exists(os.path.join(out_dir, "reg")) is True:
-            rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + out_dir)
-            self.subject.epi_reg_copy_feat(epi_label, std_image)
-
     def aroma(self, epi_label, input_dir, ofn="ica_aroma", upsampling=0):
 
         if epi_label == "rs":
@@ -513,7 +508,9 @@ class SubjectEpi:
     def adopt_rs_preproc_step(self, step_label):
 
         in_img  = os.path.join(self.subject.rs_dir, step_label)
-        self.subject.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[in_img])  # add _std4 to roi name)
+        self.subject.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[
+
+        ])  # add _std4 to roi name)
         in_img4 = os.path.join(self.subject.roi_std4_dir, step_label + "_std4")
         immv(in_img4, self.subject.rs_final_regstd_image)
 
@@ -524,7 +521,7 @@ class SubjectEpi:
         in_mask     = os.path.join(proc_folder, "reg_standard", "mask")
         in_bgimage  = os.path.join(proc_folder, "reg_standard", "bg_image")
 
-        self.subject.transform.transform_roi("std22std4", "abs", thresh=0, rois=[in_img, in_mask, in_bgimage])
+        self.subject.transform.transform_roi("std2std4", "abs", thresh=0, rois=[in_img, in_mask, in_bgimage])
 
         in_img4     = os.path.join(self.subject.roi_std4_dir, "filtered_func_data_std4")
         in_mask4    = os.path.join(self.subject.roi_std4_dir, "mask_std4")

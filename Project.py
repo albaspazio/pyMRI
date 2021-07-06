@@ -129,7 +129,7 @@ class Project:
 
     # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subj_labels) > 1 ...pass that same kwparams[0] to all subjects
     # if subj_labels is not given...use the loaded subjects
-    def run_subjects_methods(self, method_name, kwparams, subj_labels=None, nthread=1):
+    def run_subjects_methods(self, method_type, method_name, kwparams, subj_labels=None, nthread=1):
 
         # check subjects
         if subj_labels is None:
@@ -141,7 +141,12 @@ class Project:
 
         # check number of NECESSARY (without a default value) method params
         subj    = self.get_subject_by_label(subj_labels[0])
-        method  = eval("subj." + method_name)
+
+        if method_type == "":
+            method = eval("subj." + method_name)
+        else:
+            method = eval("subj." + method_type + "." + method_name)
+
         sig     = signature(method)
         nparams = len(sig.parameters)       # parameters that need a value
         for p in sig.parameters:
@@ -167,7 +172,7 @@ class Project:
                 return
         # here nparams is surely == nsubj
 
-        numblocks   = math.ceil(nprocesses/nthread)     # num of provessing blocks (threads)
+        numblocks   = math.ceil(nprocesses/nthread)     # num of processing blocks (threads)
 
         subjects    = []
         processes   = []
@@ -197,7 +202,12 @@ class Project:
                 subj = self.get_subject_by_label(subjects[bl][s])
 
                 if subj is not None:
-                    method  = eval("subj." + method_name)
+
+                    if method_type == "":
+                        method = eval("subj." + method_name)
+                    else:
+                        method = eval("subj." + method_type + "." + method_name)
+
                     process = Thread(target=method, kwargs=processes[bl][s])
                     process.start()
                     threads.append(process)
@@ -220,10 +230,10 @@ class Project:
         else:
             subjs = self.get_subjects_labels(list_subj_label)
 
-        os.makedirs(tempdir,exist_ok=True)
+        os.makedirs(tempdir, exist_ok=True)
 
         for subj in subjs:
-            subj.mpr_compare_brain_extraction(tempdir)
+            subj.compare_brain_extraction(tempdir)
 
     # prepare_mpr_for_setorigin1 and prepare_mpr_for_setorigin2 are to be used in conjunction
     # the former make a backup and unzip the original file,

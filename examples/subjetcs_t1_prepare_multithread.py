@@ -61,20 +61,20 @@ if __name__ == "__main__":
     # PRE BET
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("mpr_prebet", [], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("prebet", [], project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # FREESURFER 1: autorecon1
     # ---------------------------------------------------------------------------------------------------------------------
     # talairach transf, conforming, skull-stripping
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("mpr_fs_reconall", [{"step":"-autorecon1"}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("fs_reconall", [{"step":"-autorecon1"}], project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # BET
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("mpr_bet", [{"do_reg":True, "betfparam":[0.5]}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("bet", [{"do_reg":True, "betfparam":[0.5]}], project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM SEGMENTATION
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     # the proj_script/mpr/spm/batch folder must be already in the matlab path
     # it may over-ride both BET and FS skull-stripping results
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("mpr_spm_segment", [{"do_overwrite":True, "do_bet_overwrite":True}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("spm_segment", [{"do_overwrite":True, "do_bet_overwrite":True}], project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM SEGMENTATION INTERACTIVE (SET ORIGIN BEFORE)
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     # the proj_script/mpr/spm/batch folder must be already in the matlab path
     # it may over-ride both BET and FS skull-stripping results
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("mpr_spm_segment", [{"do_overwrite":True, "do_bet_overwrite":False, "set_origin":True}], project.get_subjects_labels(), nthread=1)
+    # project.run_subjects_methods("spm_segment", [{"do_overwrite":True, "do_bet_overwrite":False, "set_origin":True}], project.get_subjects_labels(), nthread=1)
 
 
     # ---------------------------------------------------------------------------------------------------------------------
@@ -104,13 +104,13 @@ if __name__ == "__main__":
     coregistration_template = os.path.join(project.group_analysis_dir, "templates", "com", "mw_com_Template_1_Age_0070.nii")
     calc_surfaces           = 1
     subjects                = project.load_subjects(group_label, SESS_ID)
-    project.run_subjects_methods("mpr_cat_segment", [{"do_overwrite":True, "seg_templ":segmentation_template, "coreg_templ":coregistration_template, "calc_surfaces":calc_surfaces, "num_proc":1}], project.get_loaded_subjects_labels(), nthread=num_cpu)
+    project.run_subjects_methods("cat_segment", [{"do_overwrite":True, "seg_templ":segmentation_template, "coreg_templ":coregistration_template, "calc_surfaces":calc_surfaces, "num_proc":1}], project.get_loaded_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM TISSUE VOLUMES
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("mpr_spm_tissue_volumes", [], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("spm_tissue_volumes", [], project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # COMPARE BRAIN EXTRACTION
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     # INTERACTIVE FREESURFER BRAIN SELECTION (check whether using freesurfer brainmask in place of BET one)
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("mpr_use_fs_brainmask", [{"do_clean":True}], project.get_subjects_labels(), nthread=1)
+    # project.run_subjects_methods("use_fs_brainmask", [{"do_clean":True}], project.get_subjects_labels(), nthread=1)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # POST BET
@@ -131,12 +131,12 @@ if __name__ == "__main__":
     # kwparams    = []
     # for s in range(len(subjects)):
     #     kwparams.append({"do_nonlinreg":True, "betfparam":0.5, "do_overwrite":True})
-    # project.run_subjects_methods("mpr_postbet", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("postbet", kwparams, project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # POST ANATOMICAL PROCESSING
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("mpr_finalize", [], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("finalize", [], project.get_subjects_labels(), nthread=num_cpu)
 
 
