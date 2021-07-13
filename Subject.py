@@ -405,6 +405,8 @@ class Subject:
                 os.makedirs(os.path.join(self.project.group_analysis_dir, "resting", "group_templates"), exist_ok=True)
                 os.makedirs(self.rs_final_regstd_dir, exist_ok=True)
 
+                # ------------------------------------------------------------------------------------------------------
+                # remove first volumes ?
                 if do_epirm2vol > 0:
                     # check if I have to remove the first (TOT_VOL-DO_RMVOL_TO_NUM) volumes
                     tot_vol_num = int(rrun("fslnvols " + self.rs_data, logFile=log).split('\n')[0])
@@ -420,6 +422,7 @@ class Subject:
                             immv(self.rs_data + "_fullvol", self.rs_data, logFile=log)
                             return
 
+                # ------------------------------------------------------------------------------------------------------
                 # FEAT PRE PROCESSING
                 preproc_img     = os.path.join(self.rs_dir, self.rs_post_preprocess_image_label)        # output image of first preproc resting.featfeat
                 filtfuncdata    = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "filtered_func_data")
@@ -445,6 +448,7 @@ class Subject:
                                 print("ERROR in wellcome of subject " + self.label + ". resting preprocessing...preproc feat corrupted")
                                 return
 
+                # ------------------------------------------------------------------------------------------------------
                 # do AROMA processing
                 preproc_aroma_img = os.path.join(self.rs_dir, self.rs_post_aroma_image_label)    # output image of aroma processing
                 try:
@@ -459,6 +463,7 @@ class Subject:
                     print("UNRECOVERABLE ERROR: " + str(e))
                     return
 
+                # ------------------------------------------------------------------------------------------------------
                 # do nuisance removal (WM, CSF & highpass temporal filtering)....create the following file: $RS_IMAGE_LABEL"_preproc_aroma_nuisance"
                 if do_nuisance is True and imtest(self.rs_final_regstd_image) is False:
 
@@ -477,6 +482,7 @@ class Subject:
                 # NOW reg_standard contains a denoised file with its mask and background image. nevertheless, we also do a resting to check the output,
                 # doing another MC and HPF results seems to improve...although they should not...something that should be investigated....
 
+                # ------------------------------------------------------------------------------------------------------
                 # MELODIC
                 mel_out_dir     = os.path.join(self.rs_dir, mel_odn + ".ica")
 
@@ -493,6 +499,7 @@ class Subject:
                         print("===========>>>> resting template file (" + self.label + " " + melodic_model + ".fsf) is missing...skipping 1st level resting")
                     else:
                         self.epi.fsl_feat("rs",  self.rs_post_nuisance_image_label, mel_odn + ".ica", melodic_model, do_initreg=do_melinitreg, std_image=std_image)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
+                        imcp(os.path.join(mel_out_dir, "filtered_func_data"), exfun)
 
                         # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_rs-fmri folder
                         out_dir = os.path.join(self.rs_dir, mel_odn + ".ica")
@@ -501,13 +508,11 @@ class Subject:
                             self.epi.reg_copy_feat("rs", std_image)
 
                         if imtest(os.path.join(mel_out_dir, "reg_standard", "filtered_func_data")) is True :
-                            imcp(os.path.join(mel_out_dir, "reg_standard", "filtered_func_data"), exfun, logFile=log)
                             self.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[bg_image])  # add _std4 to roi name
                             imcp(bg_image4, self.rs_final_regstd_bgimage)
 
                         if replace_std_filtfun is True:
                             self.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[exfun, mask])  # add _std4 to roi name
-
                             imcp(mask4, self.rs_final_regstd_mask)
                             immv(exfun4, self.rs_final_regstd_image)
 

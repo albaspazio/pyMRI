@@ -376,10 +376,7 @@ class SubjectMpr:
                         if use_lesionmask is True:
                             flirtargs = flirtargs + " -inweight " + lesionmaskinv
 
-                        rrun("flirt -interp spline -dof 12 -in " + T1 + "_biascorr -ref " + os.path.join(
-                            self.subject.fsl_data_std_dir,
-                            "MNI152_T1_2mm") + " -dof 12 -omat " + T1 + "_to_MNI_lin.mat -out " + T1 + "_to_MNI_lin " + flirtargs,
-                             logFile=log)
+                        rrun("flirt -interp spline -dof 12 -in " + T1 + "_biascorr -ref " + os.path.join(self.subject.fsl_data_std_dir, "MNI152_T1_2mm") + " -dof 12 -omat " + T1 + "_to_MNI_lin.mat -out " + T1 + "_to_MNI_lin " + flirtargs, logFile=log)
 
                         if do_nonlinreg is True:
                             # nnlin co-reg T1 to standard
@@ -396,12 +393,19 @@ class SubjectMpr:
                             print(self.subject.label + " :Performing brain extraction (using FNIRT)")
                             rrun("invwarp --ref=" + T1 + "_biascorr -w " + T1 + "_to_MNI_nonlin_coeff -o " + os.path.join(anatdir, "MNI_to_T1_nonlin_field"), logFile=log)
                             rrun("applywarp --interp=nn --in=" + self._global.fsl_std_mni_2mm_brain_mask + " --ref=" + T1 + "_biascorr -w " + os.path.join(anatdir, "MNI_to_T1_nonlin_field") + " -o " + T1 + "_biascorr_brain_mask", logFile=log)
-                            rrun("fslmaths " + T1 + "_biascorr_brain_mask -fillh " + T1 + "_biascorr_brain_mask",
-                                 logFile=log)
-                            rrun(
-                                "fslmaths " + T1 + "_biascorr -mas " + T1 + "_biascorr_brain_mask " + T1 + "_biascorr_brain",
-                                logFile=log)
-                        ## In the future, could check the initial ROI extraction here
+                            rrun("fslmaths " + T1 + "_biascorr_brain_mask -fillh " + T1 + "_biascorr_brain_mask", logFile=log)
+                            rrun("fslmaths " + T1 + "_biascorr -mas " + T1 + "_biascorr_brain_mask " + T1 + "_biascorr_brain", logFile=log)
+                            ## In the future, could check the initial ROI extraction here
+                        else:
+                            for i in range(len(list_bet_fparams)):
+                                betopts = bettypeparam + " -f " + str(list_bet_fparams[i])
+                                fp = "_" + str(list_bet_fparams[i]).replace(".", "")
+                                print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                                print(self.subject.label + " :Performing brain extraction (using BET)")
+                                rrun("bet " + T1 + "_biascorr " + T1 + "_biascorr_brain" + fp + " -m " + betopts, logFile=log)  ## results sensitive to the f parameter
+
+                            imcp(T1 + "_biascorr_brain" + fp, T1 + "_biascorr_brain")
+                            imcp(T1 + "_biascorr_brain" + fp + "_mask", T1 + "_biascorr_brain_mask")
                 else:
                     if do_bet is True:
 
@@ -412,8 +416,7 @@ class SubjectMpr:
 
                             print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                             print(self.subject.label + " :Performing brain extraction (using BET)")
-                            rrun("bet " + T1 + "_biascorr " + T1 + "_biascorr_brain" + fp + " -m " + betopts,
-                                 logFile=log)  ## results sensitive to the f parameter
+                            rrun("bet " + T1 + "_biascorr " + T1 + "_biascorr_brain" + fp + " -m " + betopts, logFile=log)  ## results sensitive to the f parameter
 
                         imcp(T1 + "_biascorr_brain" + fp, T1 + "_biascorr_brain")
                         imcp(T1 + "_biascorr_brain" + fp + "_mask", T1 + "_biascorr_brain_mask")

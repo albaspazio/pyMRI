@@ -505,14 +505,12 @@ class SubjectEpi:
         os.removedirs(os.path.join(self.subject.rs_dir, "resting.ica"))
 
     # take a preproc step in the individual space (epi), convert to std4 and copy to resting/reg_std folder
-    def adopt_rs_preproc_step(self, step_label):
+    def adopt_rs_preproc_step(self, step_label, outsuffix=""):
 
         in_img  = os.path.join(self.subject.rs_dir, step_label)
-        self.subject.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[
-
-        ])  # add _std4 to roi name)
+        self.subject.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[in_img])  # add _std4 to roi name)
         in_img4 = os.path.join(self.subject.roi_std4_dir, step_label + "_std4")
-        immv(in_img4, self.subject.rs_final_regstd_image)
+        immv(in_img4, self.subject.rs_final_regstd_image + outsuffix)
 
     # take the reg_standard output of feat/melodic, convert to std4 and copy to resting/reg_std folder
     def adopt_rs_preproc_folderoutput(self, proc_folder):

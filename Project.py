@@ -208,9 +208,12 @@ class Project:
                     else:
                         method = eval("subj." + method_type + "." + method_name)
 
-                    process = Thread(target=method, kwargs=processes[bl][s])
-                    process.start()
-                    threads.append(process)
+                    try:
+                        process = Thread(target=method, kwargs=processes[bl][s])
+                        process.start()
+                        threads.append(process)
+                    except Exception as e:
+                        print(e)
 
             for process in threads:
                 process.join()

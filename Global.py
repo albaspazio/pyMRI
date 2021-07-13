@@ -24,7 +24,6 @@ class Global:
             raise Exception("ERROR. the file \"local.settings\" must be present in the framework root folder (" + self.framework_dir + ")\n" +
                             "copy and rename the file " + os.path.join(self.framework_dir, "examples", "local.settings") + " there and modify its content according to your local settings")
 
-
         local_settings_data = import_data_file.read_varlist_file(local_settings)
 
         self.spm_dir                        = local_settings_data["spm_dir"]
@@ -51,11 +50,11 @@ class Global:
 
         if self.cat_version.startswith("cat12.7"):
             # cat 12.7
-            self.cat_dartel_template            = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_1.50mm", "Template_1_IXI555_MNI152.nii")
+            self.cat_dartel_template        = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_1.50mm", "Template_1_IXI555_MNI152.nii")
         else:
             # cat 12.8
-            self.cat_dartel_template            = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_1_Dartel.nii")
-            self.cat_shooting_template          = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_0_GS.nii")
+            self.cat_dartel_template        = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_1_Dartel.nii")
+            self.cat_shooting_template      = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_0_GS.nii")
 
         self.spm_tissue_map                 = os.path.join(self.spm_dir, "tpm", "TPM.nii")
 
