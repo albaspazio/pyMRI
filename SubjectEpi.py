@@ -137,7 +137,7 @@ class SubjectEpi:
             # --------------------------------------------------------------------------------------------------------------------------------------
         rrun(os.path.join(self._global.fsl_bin, "feat") + " " + OUTPUT_FEAT_FSF + ".fsf")  # execute  FEAT
 
-    def aroma(self, epi_label, input_dir, ofn="ica_aroma", upsampling=0):
+    def aroma(self, epi_label, input_dir, md="", mc="", aff="", warp="", ofn="ica_aroma", upsampling=0):
 
         if epi_label == "rs":
             aroma_dir           = self.subject.rs_aroma_dir
@@ -146,6 +146,14 @@ class SubjectEpi:
         elif epi_label.startswith("fmri"):
             aroma_dir           = self.subject.fmri_aroma_dir
             regstd_aroma_dir    = self.subject.fmri_regstd_aroma_dir
+        else:
+            print("ERROR in epi.aroma epi_label was not recognized")
+            return
+
+        input_reg = os.path.join(input_dir, "reg")
+        os.makedirs(input_reg, exist_ok=True)
+        imcp(warp, os.path.join(input_reg, "highres2standard_warp"))
+        copyfile(aff, os.path.join(input_reg, "example_func2highres.mat"))
 
         # CHECK FILE EXISTENCE #.feat
         if os.path.isdir(input_dir) is False:
@@ -153,7 +161,6 @@ class SubjectEpi:
             return
 
         print("running AROMA for subject " + self.subject.label)
-
         rrun("python2.7 " + self._global.ica_aroma_script + " -feat " + input_dir + " -out " + aroma_dir)
 
         if upsampling > 0:
@@ -210,7 +217,6 @@ class SubjectEpi:
         if os.path.isfile(series_csf) and os.path.isfile(series_wm):
             os.system("paste " + series_wm + " " + series_csf + " > " + output_series)
             # rrun("paste " + series_wm + " " + series_csf + " > " + output_series) # ISSUE: doesn't work. don't know why
-
 
         tempMean = os.path.join(self.subject.rs_dir, "tempMean.nii.gz")
         residual = os.path.join(self.subject.rs_dir, "residual.nii.gz")

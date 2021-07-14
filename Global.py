@@ -41,7 +41,8 @@ class Global:
 
         self.data_templates_dir             = os.path.join(self.framework_dir, "templates")
         self.spm_templates_dir              = os.path.join(self.framework_dir, "templates", "spm")
-        self.spm_functions_dir              = os.path.join(self.framework_dir, "matlab")
+        self.spm_functions_dir              = os.path.join(self.framework_dir, "external", "matlab")
+        self.ica_aroma_script               = os.path.join(self.framework_dir, "external", "ica_aroma", "ICA_AROMA.py")
 
         self.fsl_dir                        = os.getenv('FSLDIR')
         if self.fsl_dir is None:
@@ -51,10 +52,12 @@ class Global:
         if self.cat_version.startswith("cat12.7"):
             # cat 12.7
             self.cat_dartel_template        = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_1.50mm", "Template_1_IXI555_MNI152.nii")
+            self.cat_template_name          = "cat27_segment_customizedtemplate_tiv_smooth"
         else:
             # cat 12.8
             self.cat_dartel_template        = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_1_Dartel.nii")
             self.cat_shooting_template      = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_0_GS.nii")
+            self.cat_template_name          = "cat28_segment_shooting_tiv_smooth"
 
         self.spm_tissue_map                 = os.path.join(self.spm_dir, "tpm", "TPM.nii")
 
@@ -64,7 +67,7 @@ class Global:
         self.fsl_std_mni_2mm_brain          = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain")
         self.fsl_std_mni_2mm_brain_mask     = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask")
         self.fsl_std_mni_2mm_brain_mask_dil = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask_dil")
-        self.fsl_std_mni_2mm_cnf            = os.path.join(self.fsl_dir, "etc", "flirtsch", "T1_2_MNI152_4mm.cnf")
+        self.fsl_std_mni_2mm_cnf            = os.path.join(self.fsl_dir, "etc", "flirtsch", "T1_2_MNI152_2mm.cnf")
 
         # useful for melodic analysis
         self.fsl_std_mni_4mm_brain          = os.path.join(self.framework_dir, "templates", "MNI152_T1_4mm_brain")

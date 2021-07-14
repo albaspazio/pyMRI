@@ -184,8 +184,8 @@ class SubjectMpr:
             # required input: " + T1 + "
             # output: " + T1 + "_biascorr  [ other intermediates to be cleaned up ]
             if imtest(T1 + "_biascorr") is False or do_overwrite is True:
-                if biascorr_type > self.subject.BIAS_TYPE_NO:
-                    if biascorr_type == self.subject.BIAS_TYPE_STRONG:
+                if biascorr_type > self.BIAS_TYPE_NO:
+                    if biascorr_type == self.BIAS_TYPE_STRONG:
                         print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         print(self.subject.label + " :Estimating and removing field (stage 1 -large-scale fields)")
                         # for the first step (very gross bias field) don't worry about the lesionmask
@@ -200,38 +200,26 @@ class SubjectMpr:
                             rrun("fslmaths " + T1 + "_hpf " + T1 + "_hpf_brain", logFile=log)
                             rrun("fslmaths " + T1 + "_hpf_brain -bin " + T1 + "_hpf_brain_mask", logFile=log)
 
-                        rrun("fslmaths " + T1 + "_hpf_brain_mask -mas " + lesionmaskinv + " " + T1 + "_hpf_brain_mask",
-                             logFile=log)
+                        rrun("fslmaths " + T1 + "_hpf_brain_mask -mas " + lesionmaskinv + " " + T1 + "_hpf_brain_mask", logFile=log)
                         # get a smoothed version without the edge effects
                         rrun("fslmaths " + T1 + " -mas " + T1 + "_hpf_brain_mask " + T1 + "_hpf_s20", logFile=log)
                         quick_smooth(T1 + "_hpf_s20", T1 + "_hpf_s20", logFile=log)
                         quick_smooth(T1 + "_hpf_brain_mask", T1 + "_initmask_s20", logFile=log)
-                        rrun(
-                            "fslmaths " + T1 + "_hpf_s20 -div " + T1 + "_initmask_s20 -mas " + T1 + "_hpf_brain_mask " + T1 + "_hpf2_s20",
-                            logFile=log)
-                        rrun(
-                            "fslmaths " + T1 + " -mas " + T1 + "_hpf_brain_mask -div " + T1 + "_hpf2_s20 " + T1 + "_hpf2_brain",
-                            logFile=log)
+                        rrun("fslmaths " + T1 + "_hpf_s20 -div " + T1 + "_initmask_s20 -mas " + T1 + "_hpf_brain_mask " + T1 + "_hpf2_s20", logFile=log)
+                        rrun("fslmaths " + T1 + " -mas " + T1 + "_hpf_brain_mask -div " + T1 + "_hpf2_s20 " + T1 + "_hpf2_brain", logFile=log)
                         # make sure the overall scaling doesn't change (equate medians)
                         med0 = rrun("fslstats " + T1 + " -k " + T1 + "_hpf_brain_mask -P 50", logFile=log)
-                        med1 = rrun("fslstats " + T1 + " -k " + T1 + "_hpf2_brain -k " + T1 + "_hpf_brain_mask -P 50",
-                                    logFile=log)
+                        med1 = rrun("fslstats " + T1 + " -k " + T1 + "_hpf2_brain -k " + T1 + "_hpf_brain_mask -P 50", logFile=log)
                         rrun("fslmaths " + T1 + "_hpf2_brain -div " + str(
                             med1) + " -mul " + med0 + " " + T1 + "_hpf2_brain", logFile=log)
 
                         print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         print(self.subject.label + " :Estimating and removing bias field (stage 2 - detailed fields)")
-                        rrun("fslmaths " + T1 + "_hpf2_brain -mas " + lesionmaskinv + " " + T1 + "_hpf2_maskedbrain",
-                             logFile=log)
+                        rrun("fslmaths " + T1 + "_hpf2_brain -mas " + lesionmaskinv + " " + T1 + "_hpf2_maskedbrain", logFile=log)
                         rrun("fast -o " + T1 + "_initfast -l " + str(smooth) + " -b -B -t " + str(
-                            imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_hpf2_maskedbrain",
-                             logFile=log)
-                        rrun(
-                            "fslmaths " + T1 + "_initfast_restore -mas " + lesionmaskinv + " " + T1 + "_initfast_maskedrestore",
-                            logFile=log)
-                        rrun("fast -o " + T1 + "_initfast2 -l " + str(smooth) + " -b -B -t " + str(
-                            imgtype) + " --iter=" + str(
-                            niter) + " --nopve --fixed=0 -v " + T1 + "_initfast_maskedrestore", logFile=log)
+                            imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_hpf2_maskedbrain", logFile=log)
+                        rrun("fslmaths " + T1 + "_initfast_restore -mas " + lesionmaskinv + " " + T1 + "_initfast_maskedrestore", logFile=log)
+                        rrun("fast -o " + T1 + "_initfast2 -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_initfast_maskedrestore", logFile=log)
                         rrun("fslmaths " + T1 + "_hpf_brain_mask " + T1 + "_initfast2_brain_mask", logFile=log)
                     else:
                         # weak bias
@@ -240,30 +228,20 @@ class SubjectMpr:
                             rrun("bet " + T1 + " " + T1 + "_initfast2_brain -m -f 0.1", logFile=log)
                         else:
                             rrun("fslmaths " + T1 + " " + T1 + "_initfast2_brain", logFile=log)
-                            rrun("fslmaths " + T1 + "_initfast2_brain -bin " + T1 + "_initfast2_brain_mask",
-                                 logFile=log)
+                            rrun("fslmaths " + T1 + "_initfast2_brain -bin " + T1 + "_initfast2_brain_mask", logFile=log)
 
                         rrun("fslmaths " + T1 + "_initfast2_brain " + T1 + "_initfast2_restore", logFile=log)
 
                     # redo fast again to try and improve bias field
-                    rrun(
-                        "fslmaths " + T1 + "_initfast2_restore -mas " + lesionmaskinv + " " + T1 + "_initfast2_maskedrestore",
-                        logFile=log)
-                    rrun("fast -o " + T1 + "_fast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(
-                        niter) + " --nopve --fixed=0 -v " + T1 + "_initfast2_maskedrestore", logFile=log)
+                    rrun("fslmaths " + T1 + "_initfast2_restore -mas " + lesionmaskinv + " " + T1 + "_initfast2_maskedrestore", logFile=log)
+                    rrun("fast -o " + T1 + "_fast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_initfast2_maskedrestore", logFile=log)
                     print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                     print(self.subject.label + " :Extrapolating bias field from central region")
                     # use the latest fast output
-                    rrun(
-                        "fslmaths " + T1 + " -div " + T1 + "_fast_restore -mas " + T1 + "_initfast2_brain_mask " + T1 + "_fast_totbias",
-                        logFile=log)
-                    rrun(
-                        "fslmaths " + T1 + "_initfast2_brain_mask -ero -ero -ero -ero -mas " + lesionmaskinv + " " + T1 + "_initfast2_brain_mask2",
-                        logFile=log)
+                    rrun("fslmaths " + T1 + " -div " + T1 + "_fast_restore -mas " + T1 + "_initfast2_brain_mask " + T1 + "_fast_totbias", logFile=log)
+                    rrun("fslmaths " + T1 + "_initfast2_brain_mask -ero -ero -ero -ero -mas " + lesionmaskinv + " " + T1 + "_initfast2_brain_mask2", logFile=log)
                     rrun("fslmaths " + T1 + "_fast_totbias -sub 1 " + T1 + "_fast_totbias", logFile=log)
-                    rrun(
-                        "fslsmoothfill -i " + T1 + "_fast_totbias -m " + T1 + "_initfast2_brain_mask2 -o " + T1 + "_fast_bias",
-                        logFile=log)
+                    rrun("fslsmoothfill -i " + T1 + "_fast_totbias -m " + T1 + "_initfast2_brain_mask2 -o " + T1 + "_fast_bias", logFile=log)
                     rrun("fslmaths " + T1 + "_fast_bias -add 1 " + T1 + "_fast_bias", logFile=log)
                     rrun("fslmaths " + T1 + "_fast_totbias -add 1 " + T1 + "_fast_totbias", logFile=log)
                     # run $FSLDIR/bin/fslmaths " + T1 + "_fast_totbias -sub 1 -mas " + T1 + "_initfast2_brain_mask -dilall -add 1 " + T1 + "_fast_bias  # alternative to fslsmoothfill
@@ -463,16 +441,16 @@ class SubjectMpr:
         inputimage = os.path.join(self.subject.t1_spm_dir, T1 + "_" + self.subject.label)
 
         # set dirs
-        spm_script_dir = os.path.join(self.subject.project.script_dir, "mpr", "spm")
-        out_batch_dir = os.path.join(spm_script_dir, "batch")
-        in_script_template = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
-        in_script_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+        spm_script_dir      = os.path.join(self.subject.project.script_dir, "mpr", "spm")
+        out_batch_dir       = os.path.join(spm_script_dir, "batch")
+        in_script_template  = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
+        in_script_start     = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
 
-        output_template = os.path.join(out_batch_dir, self.subject.label + "_" + spm_template_name + "_job.m")
-        output_start = os.path.join(out_batch_dir, "start_" + self.subject.label + "_" + spm_template_name + ".m")
+        output_template     = os.path.join(out_batch_dir, self.subject.label + "_" + spm_template_name + "_job.m")
+        output_start        = os.path.join(out_batch_dir, "start_" + self.subject.label + "_" + spm_template_name + ".m")
 
-        brain_mask = os.path.join(self.subject.t1_spm_dir, "brain_mask.nii.gz")
-        skullstripped_mask = os.path.join(self.subject.t1_spm_dir, "skullstripped_mask.nii.gz")
+        brain_mask          = os.path.join(self.subject.t1_spm_dir, "brain_mask.nii.gz")
+        skullstripped_mask  = os.path.join(self.subject.t1_spm_dir, "skullstripped_mask.nii.gz")
 
         icv_file = os.path.join(self.subject.t1_spm_dir, "icv_" + self.subject.label + ".dat")
 
@@ -532,8 +510,7 @@ class SubjectMpr:
             #    otherwise it fails some operations like fnirt as it sees the mask and the brain data of different dimensions
             # 2) changing image origin in spm, changes how fsleyes display the image. while, masking in this ways, everything goes right
             rrun("fslmaths " + srcinputimage + ".nii.gz" + " -mas " + brain_mask + " -bin " + brain_mask)
-            rrun(
-                "fslmaths " + srcinputimage + ".nii.gz" + " -mas " + skullstripped_mask + " -bin " + skullstripped_mask)
+            rrun("fslmaths " + srcinputimage + ".nii.gz" + " -mas " + skullstripped_mask + " -bin " + skullstripped_mask)
 
             if add_bet_mask is True:
 
@@ -710,7 +687,7 @@ class SubjectMpr:
             log.close()
             print(e)
 
-    def cat_segment_check(self, calc_surfaces=0):
+    def cat_segment_check(self, calc_surfaces=True):
         icv_file = os.path.join(self.subject.t1_cat_dir, "tiv_" + self.subject.label + ".txt")
 
         if os.path.exists(os.path.join(self.subject.t1_cat_dir, "report", "cat_T1_" + self.subject.label + ".xml")) is False:
@@ -725,7 +702,7 @@ class SubjectMpr:
             print("Error in cat_segment_check of subj " + self.subject.label + ", ICV_FILE is empty")
             return False
 
-        if calc_surfaces > 0:
+        if calc_surfaces is True:
 
             if os.path.exists(os.path.join(self.subject.t1_cat_surface_dir, "lh.thickness.T1_" + self.subject.label)) is False:
                 print("Error in cat_segment_check of subj " + self.subject.label + ", lh thickness is missing")

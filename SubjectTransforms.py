@@ -555,11 +555,11 @@ class SubjectTransforms:
         if epi_label == "rs":
             roi_epi_dir = self.subject.roi_rs_dir
             examplefunc = self.subject.rs_examplefunc
-            epi2std_mat = os.path.join(self.subject.roi_std_dir, "rs2std.mat")
+            epi2std_mat = self.subject.rs2std_mat
         elif epi_label.startsWith("fmri"):
             roi_epi_dir = self.subject.roi_fmri_dir
             examplefunc = self.subject.fmri_examplefunc
-            epi2std_mat = os.path.join(self.subject.roi_std_dir, "fmri2std.mat")
+            epi2std_mat = self.subject.fmri2std_mat
 
         output_roi = os.path.join(self.subject.roi_std4_dir, roi_name + "_std4")
 
@@ -723,7 +723,7 @@ class SubjectTransforms:
         # => hrhead2std.mat
         hrhead2std = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hrhead2std")
         if os.path.isfile(hrhead2std + ".mat") is False:
-            rrun("flirt -in " + self.subject.t1_data + " -ref " + std_head_img + " -out " + hrhead2std + " -omat " + hr2std + ".mat -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+            rrun("flirt -in " + self.subject.t1_data + " -ref " + std_head_img + " -out " + hrhead2std + " -omat " + hrhead2std + ".mat -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
         # # => std2hr.mat
         std2hr = os.path.join(self.subject.roi_t1_dir, std_img_label + "2hr")
@@ -734,7 +734,7 @@ class SubjectTransforms:
         # => hr2std_warp
         hr2std_warp = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hr2std_warp")
         if imtest(hr2std_warp) is False:
-            rrun("fnirt --in=" + self.subject.t1_data + " --aff= " + hrhead2std + ".mat --cout=" + hr2std_warp + " --iout=" + hr2std + " --jout=" + os.path.join(self.subject.roi_t1_dir, "hr2hr_jac") + " --config=T1_2_MNI152_2mm --ref=" + std_head_img + " --refmask=" + std_img_mask_dil + "--warpres=10,10,10")
+            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + ".mat --cout=" + hr2std_warp + " --iout=" + hr2std + " --jout=" + os.path.join(self.subject.roi_t1_dir, "hr2hr_jac") + " --config=T1_2_MNI152_2mm --ref=" + std_head_img + " --refmask=" + std_img_mask_dil + " --warpres=10,10,10")
 
         # => std2hr_warp
         std_warp2hr = os.path.join(self.subject.roi_t1_dir, std_img_label + "2hr_warp")
@@ -773,7 +773,7 @@ class SubjectTransforms:
             rrun("invwarp -w " + hr2std4_warp + " -o " + std42hr_warp + " -r " + self.subject.t1_data)
 
 
-    def transform_epi(self, type='fmri', do_bbr=True, std_img_label="std", std_img="", std_img_head="", std_img_mask_dil="", wmseg=""):
+    def transform_epi(self, type='fmri', do_bbr=False, std_img_label="std", std_img="", std_img_head="", std_img_mask_dil="", wmseg="", logFile=""):
 
         if type == 'fmri':
             data        = self.subject.fmri_data
@@ -787,7 +787,7 @@ class SubjectTransforms:
             std2epi     = os.path.join(self.subject.roi_fmri_dir, std_img_label + "2fmri")
 
         else:
-            data        = self.subject.rs_data
+            data        = os.path.join(self.subject.rs_dir, self.subject.rs_post_preprocess_image_label)
             folder      = self.subject.rs_dir
             label       = self.subject.rs_image_label
             examplefunc = self.subject.rs_examplefunc
@@ -883,7 +883,7 @@ class SubjectTransforms:
 
         # invwarp: standard -> highres -> epi
         if imtest(std2epi + "_warp") is False:
-            rrun("invwarp -r " + examplefunc + " -w " + os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "epi2std_warp") + " -o " + std2epi + "_warp")
+            rrun("invwarp -r " + examplefunc + " -w " + epi2std + "_warp" + " -o " + std2epi + "_warp")
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # epi <-> standard4    (epi2hr + hr2std4_warp)
@@ -891,14 +891,38 @@ class SubjectTransforms:
         if type == "rs":
             hr2std4_warp = os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4", "hr2std_warp.nii.gz")
             if imtest(self.subject.rs2std4_warp) is False:
-                rrun("convertwarp --refvol=" + self._global.fsl_std_mni_4mm_head + " --premat=" + epi2hr + ".mat" + " --warp1=" + hr2std4_warp + " --out=" + self.subject.rs2std4_warp)
+                rrun("convertwarp --ref=" + self._global.fsl_std_mni_4mm_head + " --premat=" + epi2hr + ".mat" + " --warp1=" + hr2std4_warp + " --out=" + self.subject.rs2std4_warp)
 
             if imtest(self.subject.std42rs_warp) is False:
                 rrun("invwarp -r " + examplefunc + " -w " + self.subject.rs2std4_warp + " -o " + self.subject.std42rs_warp)
 
+            # ------------------------------------------------------------------------------------------------------
+            # various co-registration
+            # ------------------------------------------------------------------------------------------------------
+            # coregister fast-highres to epi
+            if imtest(os.path.join(self.subject.roi_rs_dir, "t1_wm_rs")) is False:
+                rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, "mask_t1_wm") + " -ref " + os.path.join(self.subject.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.subject.roi_rs_dir, "hr2rs.mat") + " -out " + os.path.join(self.subject.roi_rs_dir, "t1_wm_rs"))
+
+            if imtest(os.path.join(self.subject.roi_rs_dir, "t1_csf_rs")) is False:
+                rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, "mask_t1_csf") + " -ref " + os.path.join(self.subject.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.subject.roi_rs_dir, "hr2rs.mat") + " -out " + os.path.join(self.subject.roi_rs_dir, "t1_csf_rs"))
+
+            if imtest(os.path.join(self.subject.roi_rs_dir, "t1_gm_rs")) is False:
+                rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, "mask_t1_gm") + " -ref " + os.path.join(self.subject.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.subject.roi_rs_dir, "hr2rs.mat") + " -out " + os.path.join(self.subject.roi_rs_dir, "t1_gm_rs"))
+
+            if imtest(os.path.join(self.subject.roi_rs_dir, "t1_brain_rs")) is False:
+                rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, self.subject.t1_brain_data) + " -ref " + os.path.join(self.subject.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.subject.roi_rs_dir, "hr2rs.mat") + " -out " + os.path.join(self.subject.roi_rs_dir, "t1_brain_rs"))
+
+            if imtest(os.path.join(self.subject.roi_rs_dir, "t1_brain_mask_rs")) is False:
+                rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, self.subject.t1_brain_data_mask) + " -ref " + os.path.join(self.subject.roi_rs_dir, "example_func") + " -applyxfm -init " + os.path.join(self.subject.roi_rs_dir, "hr2rs.mat") + " -out " + os.path.join(self.subject.roi_rs_dir, "t1_brain_mask_rs"))
+
+            # mask & binarize
+            rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_gm_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_gm_rs"), logFile=logFile)
+            rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_wm_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_wm_rs"), logFile=logFile)
+            rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_csf_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_csf_rs"), logFile=logFile)
+            rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_brain_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_brain_rs"), logFile=logFile)
+            rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_brain_mask_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_brain_rs"), logFile=logFile)
+
             # self.subject.t1_brain_data_mask + " -o " + self.subject.rs_final_regstd_mask + "_std2" + " -r " + refvol + " -w " + os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hr2std_warp"))
-
-
 
     def transform_dti_t2(self):
         pass
