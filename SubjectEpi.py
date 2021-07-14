@@ -529,6 +529,7 @@ class SubjectEpi:
         imcp(in_mask4   , self.subject.rs_final_regstd_mask)
         imcp(in_bgimage4, self.subject.rs_final_regstd_bgimage)
 
+
     def reg_copy_feat(self, epi_label, std_image=""):
 
         if epi_label == "rs":
@@ -544,8 +545,8 @@ class SubjectEpi:
             std2epi_mat     = self.subject.std2rs_mat
             epi2std_mat     = self.subject.rs2std_mat
 
-            epi2hr_mat = self.subject.rs2hr_mat
-            hr2epi_mat = self.subject.hr2rs_mat
+            epi2hr_mat      = self.subject.rs2hr_mat
+            hr2epi_mat      = self.subject.hr2rs_mat
 
         elif epi_label.startswith("fmri"):
             epi_image       = os.path.join(self.subject.fmri_dir, self.subject.label + "-" + epi_label)

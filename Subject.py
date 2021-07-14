@@ -176,6 +176,9 @@ class Subject:
         self.rs2std_warp    = os.path.join(self.roi_std_dir, "rs2std_warp")
         self.std2rs_warp    = os.path.join(self.roi_rs_dir, "std2rs_warp")
 
+        self.rs2std4_warp   = os.path.join(self.roi_std_dir, "rs2std4_warp")
+        self.std42rs_warp   = os.path.join(self.roi_rs_dir, "std42rs_warp")
+
         self.rs2std_mat     = os.path.join(self.roi_std_dir, "rs2std.mat")
         self.std2rs_mat     = os.path.join(self.roi_rs_dir, "std2rs.mat")
 
@@ -423,7 +426,7 @@ class Subject:
                             return
 
                 # ------------------------------------------------------------------------------------------------------
-                # FEAT PRE PROCESSING
+                # FEAT PRE PROCESSING  (hp filt, mcflirt, spatial smoothing)
                 preproc_img     = os.path.join(self.rs_dir, self.rs_post_preprocess_image_label)        # output image of first preproc resting.featfeat
                 filtfuncdata    = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "filtered_func_data")
                 preproc_feat_dir= os.path.join(self.rs_dir, feat_preproc_odn + ".feat")     # /s1/resting/resting.feat
@@ -431,22 +434,20 @@ class Subject:
                     if os.path.isfile(feat_preproc_model + ".fsf") is False:
                         print("===========>>>> FEAT_PREPROC template file (" + self.label + " " + feat_preproc_model + ".fsf) is missing...skipping feat preprocessing")
                     else:
-                        if os.path.isdir(preproc_feat_dir) is False:
-                            self.epi.fsl_feat("rs", self.rs_image_label, "resting.feat", feat_preproc_model, do_initreg=do_featinitreg, std_image=std_image)
+                        if os.path.isdir(preproc_feat_dir) is True:
+                            shutil.rmtree(preproc_feat_dir, ignore_errors=True)
 
-                            # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_rs-fmri folder
-                            out_dir = os.path.join(self.rs_dir, "resting.feat")
-                            if os.path.exists(os.path.join(out_dir, "reg")) is True:
-                                rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + out_dir)
-                                self.subject.epi.reg_copy_feat("rs", std_image)
+                        self.epi.fsl_feat("rs", self.rs_image_label, "resting.feat", feat_preproc_model, do_initreg=do_featinitreg, std_image=std_image)
+                        imcp(filtfuncdata, preproc_img, logFile=log)
 
-                            imcp(filtfuncdata, preproc_img, logFile=log)
-                        else:
-                            if imtest(filtfuncdata) is True:
-                                imcp(filtfuncdata, preproc_img, logFile=log)
-                            else:
-                                print("ERROR in wellcome of subject " + self.label + ". resting preprocessing...preproc feat corrupted")
-                                return
+                        # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_rs-fmri folder
+                        # out_dir = os.path.join(self.rs_dir, "resting.feat")
+                        # if os.path.exists(os.path.join(out_dir, "reg")) is True:
+                        #     rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + out_dir)
+                        #     self.subject.epi.reg_copy_feat("rs", std_image)
+
+                # calculate all trasformations once
+                self.transform.transform_epi("rs")  # create self.subject.rs_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
 
                 # ------------------------------------------------------------------------------------------------------
                 # do AROMA processing
@@ -503,9 +504,9 @@ class Subject:
 
                         # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_rs-fmri folder
                         out_dir = os.path.join(self.rs_dir, mel_odn + ".ica")
-                        if os.path.exists(os.path.join(out_dir, "reg")) is True:
-                            rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + out_dir)
-                            self.epi.reg_copy_feat("rs", std_image)
+                        # if os.path.exists(os.path.join(out_dir, "reg")) is True:
+                        #     rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + out_dir)
+                        #     self.epi.reg_copy_feat("rs", std_image)
 
                         if imtest(os.path.join(mel_out_dir, "reg_standard", "filtered_func_data")) is True :
                             self.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[bg_image])  # add _std4 to roi name
@@ -518,8 +519,6 @@ class Subject:
 
 
                 # calculate the remaining transformations   .....3/4/2017 si blocca qui...devo commentarlo per andare avanti !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-                self.transform.transform_epi("rs")  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_transforms_calculate_epi.sh $SUBJ_NAME $PROJ_DIR
 
                 # coregister fast-highres to epi
                 if imtest(os.path.join(self.roi_rs_dir, "t1_wm_rs")) is False:

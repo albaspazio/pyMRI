@@ -244,6 +244,22 @@ def is_image(file, img_formats=IMAGE_FORMATS):
         return False
 
 
+def get_head_from_brain(img, checkexist=True):
+    if imtest(img) is False:
+        err = "Error in get_head_from_brain: given img is not an image"
+        print(err)
+        raise Exception(err)
+
+    headimg = img.replace("_brain", "")
+    if imtest(headimg) is False and checkexist is True:
+        err = "Error in get_head_from_brain: head image is not present"
+        print(err)
+        raise Exception(err)
+    else:
+        return headimg
+
+
+
 # read header and calculate a dimension number hdr["nx"] * hdr["ny"] * hdr["nz"] * hdr["dx"] * hdr["dy"] * hdr["dz"]
 def get_image_dimension(file):
     hdr = read_header(file)
