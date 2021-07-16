@@ -3,7 +3,7 @@ import glob
 import os
 
 from copy import deepcopy
-from shutil import move
+from shutil import move, rmtree
 
 from SubjectDti import SubjectDti
 from SubjectEpi import SubjectEpi
@@ -139,6 +139,7 @@ class Subject:
         self.sbfc_dir       = os.path.join(self.rs_dir, "sbfc")
         self.rs_series_dir  = os.path.join(self.sbfc_dir, "series")
         self.rs_examplefunc = os.path.join(self.roi_rs_dir, "example_func")
+        self.rs_examplefunc_mask = os.path.join(self.roi_rs_dir, "mask_example_func")
 
         self.rs_series_csf  = os.path.join(self.rs_series_dir, "csf_ts")
         self.rs_series_wm   = os.path.join(self.rs_series_dir, "wm_ts")
@@ -197,6 +198,7 @@ class Subject:
         self.fmri_data          = os.path.join(self.fmri_dir, self.fmri_image_label)
         self.fmri_data_mc       = os.path.join(self.fmri_dir, "r" + self.fmri_image_label)
         self.fmri_examplefunc   = os.path.join(self.fmri_dir, "example_func")
+        self.fmri_examplefunc_mask  = os.path.join(self.fmri_dir, "mask_example_func")
 
         self.fmri_pe_data       = os.path.join(self.fmri_dir, self.fmri_image_label + "_pe")
         self.fmri_acq_params    = os.path.join(self.fmri_dir, "acqparams.txt")
@@ -453,7 +455,7 @@ class Subject:
                         print("===========>>>> FEAT_PREPROC template file (" + self.label + " " + feat_preproc_model + ".fsf) is missing...skipping feat preprocessing")
                     else:
                         if os.path.isdir(preproc_feat_dir) is True:
-                            shutil.rmtree(preproc_feat_dir, ignore_errors=True)
+                            rmtree(preproc_feat_dir, ignore_errors=True)
 
                         self.epi.fsl_feat("rs", self.rs_image_label, "resting.feat", feat_preproc_model, do_initreg=do_featinitreg, std_image=std_image)
                         imcp(filtfuncdata, preproc_img, logFile=log)
@@ -464,7 +466,7 @@ class Subject:
                         #     rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + out_dir)
                         #     self.subject.epi.reg_copy_feat("rs", std_image)
 
-                # calculate all trasformations once
+                # calculate all trasformations once (I do it here after MCFLIRT acted on images)
                 self.transform.transform_epi("rs", logFile=log)  # create self.subject.rs_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
 
                 # ------------------------------------------------------------------------------------------------------
@@ -478,6 +480,9 @@ class Subject:
                 try:
                     if do_aroma is True:
                         if imtest(preproc_aroma_img) is False:
+                            if os.path.isdir(self.rs_aroma_dir) is True:
+                                rmtree(self.rs_aroma_dir, ignore_errors=True)
+
                             self.epi.aroma("rs", preproc_feat_dir, preproc_feat_dir_melodic, preproc_feat_dir_mc, self.rs2hr_mat, self.hr2std_warp)
                             imcp(self.rs_aroma_image, os.path.join(self.rs_dir, self.rs_post_aroma_image_label))
                     else:
@@ -490,15 +495,15 @@ class Subject:
                 # ------------------------------------------------------------------------------------------------------
                 # do nuisance removal (WM, CSF & highpass temporal filtering)....create the following file: $RS_IMAGE_LABEL"_preproc_aroma_nuisance"
                 # ------------------------------------------------------------------------------------------------------
-                if do_nuisance is True and imtest(self.rs_final_regstd_image) is False:
+                postnuisance   = os.path.join(self.rs_dir, self.rs_post_nuisance_image_label)
+                if do_nuisance is True and imtest(postnuisance) is False:
 
-                    # exfun   = os.path.join(self.rs_dir, self.rs_post_nuisance_image_label)
                     # mask    = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "reg_standard", "mask")
 
                     # exfun4  = os.path.join(self.roi_std4_dir, self.rs_post_nuisance_std4_image_label)
                     # mask4   = os.path.join(self.roi_std4_dir, "mask_std4")
 
-                    self.epi.remove_nuisance(self.rs_post_aroma_image_label, hpfsec=hpfsec)
+                    self.epi.remove_nuisance(self.rs_post_aroma_image_label, self.rs_post_nuisance_image_label, hpfsec=hpfsec)
                     # self.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[exfun, mask])   # add _std4 to roi name
                     #
                     # immv(exfun4, self.rs_final_regstd_image, logFile=log)
@@ -511,21 +516,23 @@ class Subject:
                 # MELODIC
                 # ------------------------------------------------------------------------------------------------------
                 mel_out_dir     = os.path.join(self.rs_dir, mel_odn + ".ica")
-
                 exfun           = os.path.join(self.rs_dir, self.rs_post_nuisance_melodic_image_label)
-                mask            = os.path.join(self.rs_dir, mel_odn + ".ica", "reg_standard", "mask")
-                bg_image        = os.path.join(self.rs_dir, mel_odn + ".ica", "reg_standard", "bg_image")
+                # mask            = os.path.join(self.rs_dir, mel_odn + ".ica", "reg_standard", "mask")
+                # bg_image        = os.path.join(self.rs_dir, mel_odn + ".ica", "reg_standard", "bg_image")
 
-                exfun4          = os.path.join(self.roi_std4_dir, self.rs_post_nuisance_melodic_std4_image_label)
-                mask4           = os.path.join(self.roi_std4_dir, "mask_std4")
-                bg_image4       = os.path.join(self.roi_std4_dir, "bg_image_std4")
+                # exfun4          = os.path.join(self.roi_std4_dir, self.rs_post_nuisance_melodic_std4_image_label)
+                # mask4           = os.path.join(self.roi_std4_dir, "mask_std4")
+                # bg_image4       = os.path.join(self.roi_std4_dir, "bg_image_std4")
 
-                if os.path.isdir(mel_out_dir) is False and do_melodic is True:
+                if imtest(exfun) is False and do_melodic is True:
                     if os.path.isfile(melodic_model + ".fsf") is False:
                         print("===========>>>> resting template file (" + self.label + " " + melodic_model + ".fsf) is missing...skipping 1st level resting")
                     else:
+                        if os.path.isdir(mel_out_dir) is True:
+                            rmtree(mel_out_dir, ignore_errors=True)
+
                         self.epi.fsl_feat("rs",  self.rs_post_nuisance_image_label, mel_odn + ".ica", melodic_model, do_initreg=do_melinitreg, std_image=std_image)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
-                        # imcp(os.path.join(mel_out_dir, "filtered_func_data"), exfun)
+                        imcp(os.path.join(mel_out_dir, "filtered_func_data"), exfun)
 
                         # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_rs-fmri folder
                         # out_dir = os.path.join(self.rs_dir, mel_odn + ".ica")
@@ -541,6 +548,27 @@ class Subject:
                         #     self.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[exfun, mask])  # add _std4 to roi name
                         #     imcp(mask4, self.rs_final_regstd_mask)
                         #     immv(exfun4, self.rs_final_regstd_image)
+
+
+                # ------------------------------------------------------------------------------------------------------
+                # create standard4 images
+                # ------------------------------------------------------------------------------------------------------
+                # mask from preproc feat
+                mask = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "mask")
+                self.transform.transform_roi("epi2std4", "abs", std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[mask])
+                imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask")
+
+                # mask from example_function (the one used to calculate all the co-registrations)
+                self.transform.transform_roi("epi2std4", "abs", std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.rs_examplefunc_mask])
+                imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask)
+
+                # brain
+                self.transform.transform_roi("hr2std4", "abs" , std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.t1_data])
+                imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage)
+
+                # functional data
+                self.transform.transform_roi("epi2std4", "abs", std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[postnuisance])
+                immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image)
 
                 log.close()
 

@@ -181,11 +181,11 @@ class SubjectEpi:
             # 		                    run ${FSLDIR}/bin/fslmaths                 $RS_REGSTD_AROMA_DIR/filtered_func_data       -Tstd -bin                $RS_REGSTD_AROMA_DIR/mask       -odt char
             rrun(os.path.join(self._global.fsl_bin, "fslmaths") + " " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -Tstd -bin " + os.path.join(regstd_aroma_dir, "mask") + " -odt char")
 
-
-    def remove_nuisance(self, in_img_name, epi_label="rs", ospn="", hpfsec=100):
+    def remove_nuisance(self, in_img_name, out_img_name, epi_label="rs", ospn="", hpfsec=100):
 
         if epi_label == "rs":
             in_img          = os.path.join(self.subject.rs_dir, in_img_name)
+            out_img         = os.path.join(self.subject.rs_dir, out_img_name)
             series_wm       = self.subject.rs_series_wm + ospn + ".txt"
             series_csf      = self.subject.rs_series_csf + ospn + ".txt"
             output_series   = os.path.join(self.subject.rs_series_dir, "nuisance_timeseries" + ospn + ".txt")
@@ -196,7 +196,7 @@ class SubjectEpi:
 
         tr = float(rrun('fslval '  + in_img + ' pixdim4'))
         hpf_sigma = hpfsec/(2*tr)
-        print("execute_subject_resting_nuisance of $SUBJ_NAME")
+        print("execute_subject_resting_nuisance of " + self.subject.label)
 
         os.makedirs(self.subject.sbfc_dir, exist_ok=True)
         os.makedirs(self.subject.rs_series_dir, exist_ok=True)
@@ -225,11 +225,10 @@ class SubjectEpi:
         rrun("fsl_glm -i " + in_img + " -d " + output_series + " --demean --out_res=" + residual)
 
         rrun("fslcpgeom " + in_img + ".nii.gz " + residual)  # solves a bug in fsl_glm which writes TR=1 in residual.
-        rrun("fslmaths " + residual + " -bptf " + str(hpf_sigma) + " -1 -add " + tempMean + " " + in_img + "_nuisance")
+        rrun("fslmaths " + residual + " -bptf " + str(hpf_sigma) + " -1 -add " + tempMean + " " + out_img)
 
         os.remove(residual)
         os.remove(tempMean)
-
 
     def get_slicetiming_params(self, nslices, scheme=1, params=None):
 
@@ -323,7 +322,6 @@ class SubjectEpi:
         sed_inplace(out_batch_start, 'X', '1')
         sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir], endengine=False)
-
 
     def get_closest_volume(self, ref_image_pe="", ref_volume_pe=-1):
         # will calculate the closest vol from self.subject.epi_data to ref_image
@@ -534,7 +532,6 @@ class SubjectEpi:
         immv(in_img4    , self.subject.rs_final_regstd_image)
         imcp(in_mask4   , self.subject.rs_final_regstd_mask)
         imcp(in_bgimage4, self.subject.rs_final_regstd_bgimage)
-
 
     def reg_copy_feat(self, epi_label, std_image=""):
 
