@@ -22,6 +22,10 @@ class Subject:
     TYPE_DTI = 4
     TYPE_T2 = 5
 
+    CLEANUP_LVL_MIN = 0
+    CLEANUP_LVL_MED = 1
+    CLEANUP_LVL_HI  = 1
+
     def __init__(self, label, sessid, project):
 
         self.label = label
@@ -72,8 +76,8 @@ class Subject:
         self.sienax_dir     = os.path.join(self.t1_dir, "sienax")
         self.t1_fs_dir      = os.path.join(self.t1_dir, "freesurfer")
         self.t1_fs_mri_dir  = os.path.join(self.t1_fs_dir, "mri")
-        self.t1_spm_dir     = os.path.join(self.t1_anat_dir, "spm_proc")
-        self.t1_cat_dir     = os.path.join(self.t1_anat_dir, "cat_proc")
+        self.t1_spm_dir     = os.path.join(self.t1_dir, "spm_proc")
+        self.t1_cat_dir     = os.path.join(self.t1_dir, "cat_proc")
 
         self.t1_image_label         = self.label + "-t1"
         self.t1_data                = os.path.join(self.t1_dir, self.t1_image_label)
@@ -102,6 +106,11 @@ class Subject:
         self.hr2std_mat  = os.path.join(self.roi_std_dir, "hr2std.mat")
         self.std2hr_mat  = os.path.join(self.roi_t1_dir, "std2hr.mat")
 
+        self.hr2std4_mat = os.path.join(self.roi_std4_dir, "hr2std4.mat")
+        self.std42hr_mat = os.path.join(self.roi_t1_dir, "std42hr.mat")
+
+        self.hr2std4_warp = os.path.join(self.roi_std4_dir, "hr2std4_warp")
+        self.std42hr_warp = os.path.join(self.roi_t1_dir, "std42hr_warp")
 
         # ------------------------------------------------------------------------------------------------------------------------
         # DTI
@@ -138,8 +147,11 @@ class Subject:
         self.rs_data        = os.path.join(self.rs_dir, self.rs_image_label)
         self.sbfc_dir       = os.path.join(self.rs_dir, "sbfc")
         self.rs_series_dir  = os.path.join(self.sbfc_dir, "series")
-        self.rs_examplefunc = os.path.join(self.roi_rs_dir, "example_func")
-        self.rs_examplefunc_mask = os.path.join(self.roi_rs_dir, "mask_example_func")
+        self.rs_melic_dir   = os.path.join(self.rs_dir, "melic")
+        self.rs_default_mel_dir  = os.path.join(self.rs_dir, "postmel.ica")
+
+        self.rs_examplefunc         = os.path.join(self.roi_rs_dir, "example_func")
+        self.rs_examplefunc_mask    = os.path.join(self.roi_rs_dir, "mask_example_func")
 
         self.rs_series_csf  = os.path.join(self.rs_series_dir, "csf_ts")
         self.rs_series_wm   = os.path.join(self.rs_series_dir, "wm_ts")
@@ -150,17 +162,10 @@ class Subject:
         self.rs_final_regstd_mask   = os.path.join(self.rs_final_regstd_dir, "mask")  # image after first preprocessing, aroma and nuisance regression.
         self.rs_final_regstd_bgimage= os.path.join(self.rs_final_regstd_dir, "bg_image")  # image after first preprocessing, aroma and nuisance regression.
 
-        self.rs_post_preprocess_image_label             = self.rs_image_label + "_preproc"
-        self.rs_post_aroma_image_label                  = self.rs_image_label + "_preproc_aroma"
-        self.rs_post_nuisance_image_label               = self.rs_image_label + "_preproc_aroma_nuisance"
-        self.rs_post_nuisance_melodic_image_label       = self.rs_image_label + "_preproc_aroma_nuisance_melodic"
-        self.rs_post_nuisance_std4_image_label          = self.rs_image_label + "_preproc_aroma_nuisance_std4"
-        self.rs_post_nuisance_melodic_std4_image_label  = self.rs_image_label + "_preproc_aroma_nuisance_melodic_std4"
-
-        self.rs_regstd_dir              = os.path.join(self.rs_dir, "resting.ica", "reg_std")
-        self.rs_regstd_image            = os.path.join(self.rs_regstd_dir, "filtered_func_data")
-        self.rs_regstd_denoise_dir      = os.path.join(self.rs_dir, "resting.ica", "reg_std_denoised")
-        self.rs_regstd_denoise_image    = os.path.join(self.rs_regstd_denoise_dir, "filtered_func_data")
+        self.rs_post_preprocess_image_label         = self.rs_image_label + "_preproc"
+        self.rs_post_aroma_image_label              = self.rs_image_label + "_preproc_aroma"
+        self.rs_post_nuisance_image_label           = self.rs_image_label + "_preproc_aroma_nuisance"
+        self.rs_post_nuisance_melodic_image_label   = self.rs_image_label + "_preproc_aroma_nuisance_melodic"
 
         self.rs_aroma_dir           = os.path.join(self.rs_dir, "ica_aroma")
         self.rs_aroma_image         = os.path.join(self.rs_aroma_dir, "denoised_func_data_nonaggr")
@@ -169,10 +174,6 @@ class Subject:
 
         self.rs_mask_t1_wmseg4nuis_epi  = os.path.join(self.roi_dir, "reg_rs", "mask_t1_wmseg4Nuisance_epi")
         self.rs_mask_t1_csfseg4nuis_epi = os.path.join(self.roi_dir, "reg_rs", "mask_t1_csfseg4Nuisance_epi")
-
-        self.mc_params_dir  = os.path.join(self.rs_dir, self.rs_image_label + ".ica", "mc")
-        self.mc_abs_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_abs_mean.rms")
-        self.mc_rel_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_rel_mean.rms")
 
         self.rs2std_warp    = os.path.join(self.roi_std_dir, "rs2std_warp")
         self.std2rs_warp    = os.path.join(self.roi_rs_dir, "std2rs_warp")
@@ -189,6 +190,16 @@ class Subject:
         self.rs2hr_mat       = os.path.join(self.roi_t1_dir, "rs2hr.mat")
         self.hr2rs_mat       = os.path.join(self.roi_rs_dir, "hr2rs.mat")
 
+        # self.rs_post_nuisance_std4_image_label          = self.rs_image_label + "_preproc_aroma_nuisance_std4"
+        # self.rs_post_nuisance_melodic_std4_image_label  = self.rs_image_label + "_preproc_aroma_nuisance_melodic_std4"
+        # self.rs_regstd_dir              = os.path.join(self.rs_dir, "resting.ica", "reg_std")
+        # self.rs_regstd_image            = os.path.join(self.rs_regstd_dir, "filtered_func_data")
+        # self.rs_regstd_denoise_dir      = os.path.join(self.rs_dir, "resting.ica", "reg_std_denoised")
+        # self.rs_regstd_denoise_image    = os.path.join(self.rs_regstd_denoise_dir, "filtered_func_data")
+
+        # self.mc_params_dir  = os.path.join(self.rs_dir, self.rs_image_label + ".ica", "mc")
+        # self.mc_abs_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_abs_mean.rms")
+        # self.mc_rel_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_rel_mean.rms")
 
         # ------------------------------------------------------------------------------------------------------------------------
         # fMRI
@@ -412,7 +423,7 @@ class Subject:
         # RS data
         # ==============================================================================================================================================================
         # preprocessing step considered valid (filtered_func_data, bg_image and mask)
-        # is stored in resting/reg_standard with a resolution of 4mm to be used for melodic group analysis
+        # is stored in resting/reg_std with a resolution of 4mm to be used for melodic group analysis
         if os.path.exists(self.rs_dir):
             os.makedirs(self.roi_rs_dir, exist_ok=True)
 
@@ -460,17 +471,11 @@ class Subject:
                         self.epi.fsl_feat("rs", self.rs_image_label, "resting.feat", feat_preproc_model, do_initreg=do_featinitreg, std_image=std_image)
                         imcp(filtfuncdata, preproc_img, logFile=log)
 
-                        # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_rs-fmri folder
-                        # out_dir = os.path.join(self.rs_dir, "resting.feat")
-                        # if os.path.exists(os.path.join(out_dir, "reg")) is True:
-                        #     rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + out_dir)
-                        #     self.subject.epi.reg_copy_feat("rs", std_image)
-
                 # calculate all trasformations once (I do it here after MCFLIRT acted on images)
                 self.transform.transform_epi("rs", logFile=log)  # create self.subject.rs_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
 
                 # ------------------------------------------------------------------------------------------------------
-                # do AROMA processing
+                # AROMA processing
                 # ------------------------------------------------------------------------------------------------------
                 preproc_aroma_img           = os.path.join(self.rs_dir, self.rs_post_aroma_image_label)    # output image of aroma processing
                 preproc_feat_dir_melodic    = os.path.join(preproc_feat_dir, "filtered_func_data.ica")
@@ -484,9 +489,9 @@ class Subject:
                                 rmtree(self.rs_aroma_dir, ignore_errors=True)
 
                             self.epi.aroma("rs", preproc_feat_dir, preproc_feat_dir_melodic, preproc_feat_dir_mc, self.rs2hr_mat, self.hr2std_warp)
-                            imcp(self.rs_aroma_image, os.path.join(self.rs_dir, self.rs_post_aroma_image_label))
+                            imcp(self.rs_aroma_image, os.path.join(self.rs_dir, self.rs_post_aroma_image_label), logFile=log)
                     else:
-                        imcp(preproc_img, os.path.join(self.rs_dir, self.rs_post_aroma_image_label))
+                        imcp(preproc_img, preproc_aroma_img, logFile=log)
 
                 except Exception as e:
                     print("UNRECOVERABLE ERROR: " + str(e))
@@ -497,34 +502,15 @@ class Subject:
                 # ------------------------------------------------------------------------------------------------------
                 postnuisance   = os.path.join(self.rs_dir, self.rs_post_nuisance_image_label)
                 if do_nuisance is True and imtest(postnuisance) is False:
-
-                    # mask    = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "reg_standard", "mask")
-
-                    # exfun4  = os.path.join(self.roi_std4_dir, self.rs_post_nuisance_std4_image_label)
-                    # mask4   = os.path.join(self.roi_std4_dir, "mask_std4")
-
                     self.epi.remove_nuisance(self.rs_post_aroma_image_label, self.rs_post_nuisance_image_label, hpfsec=hpfsec)
-                    # self.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[exfun, mask])   # add _std4 to roi name
-                    #
-                    # immv(exfun4, self.rs_final_regstd_image, logFile=log)
-                    # imcp(mask4,  self.rs_final_regstd_mask,  logFile=log)
-
-                # NOW reg_standard contains a denoised file with its mask and background image. nevertheless, we also do a resting to check the output,
-                # doing another MC and HPF results seems to improve...although they should not...something that should be investigated....
 
                 # ------------------------------------------------------------------------------------------------------
-                # MELODIC
+                # MELODIC (ONLY new melodic exploration, NO : reg, hpf, smooth) .....doing another MC and HPF results seemed to improve...although they should not...something that should be investigated....
                 # ------------------------------------------------------------------------------------------------------
                 mel_out_dir     = os.path.join(self.rs_dir, mel_odn + ".ica")
-                exfun           = os.path.join(self.rs_dir, self.rs_post_nuisance_melodic_image_label)
-                # mask            = os.path.join(self.rs_dir, mel_odn + ".ica", "reg_standard", "mask")
-                # bg_image        = os.path.join(self.rs_dir, mel_odn + ".ica", "reg_standard", "bg_image")
+                postmel_img     = os.path.join(self.rs_dir, self.rs_post_nuisance_melodic_image_label)
 
-                # exfun4          = os.path.join(self.roi_std4_dir, self.rs_post_nuisance_melodic_std4_image_label)
-                # mask4           = os.path.join(self.roi_std4_dir, "mask_std4")
-                # bg_image4       = os.path.join(self.roi_std4_dir, "bg_image_std4")
-
-                if imtest(exfun) is False and do_melodic is True:
+                if imtest(postmel_img) is False and do_melodic is True:
                     if os.path.isfile(melodic_model + ".fsf") is False:
                         print("===========>>>> resting template file (" + self.label + " " + melodic_model + ".fsf) is missing...skipping 1st level resting")
                     else:
@@ -532,43 +518,27 @@ class Subject:
                             rmtree(mel_out_dir, ignore_errors=True)
 
                         self.epi.fsl_feat("rs",  self.rs_post_nuisance_image_label, mel_odn + ".ica", melodic_model, do_initreg=do_melinitreg, std_image=std_image)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
-                        imcp(os.path.join(mel_out_dir, "filtered_func_data"), exfun)
-
-                        # if func_data were coregistered, then calculate reg_standard and copy files to roi/reg_rs-fmri folder
-                        # out_dir = os.path.join(self.rs_dir, mel_odn + ".ica")
-                        # if os.path.exists(os.path.join(out_dir, "reg")) is True:
-                        #     rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + out_dir)
-                        #     self.epi.reg_copy_feat("rs", std_image)
-
-                        # if imtest(os.path.join(mel_out_dir, "reg_standard", "filtered_func_data")) is True :
-                        #     self.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[bg_image])  # add _std4 to roi name
-                        #     imcp(bg_image4, self.rs_final_regstd_bgimage)
-                        #
-                        # if replace_std_filtfun is True:
-                        #     self.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[exfun, mask])  # add _std4 to roi name
-                        #     imcp(mask4, self.rs_final_regstd_mask)
-                        #     immv(exfun4, self.rs_final_regstd_image)
-
+                        imcp(os.path.join(mel_out_dir, "filtered_func_data"), postmel_img, logFile=log)
 
                 # ------------------------------------------------------------------------------------------------------
-                # create standard4 images
+                # CREATE STANDARD 4MM IMAGES FOR MELODIC
                 # ------------------------------------------------------------------------------------------------------
                 # mask from preproc feat
                 mask = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "mask")
                 self.transform.transform_roi("epi2std4", "abs", std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[mask])
-                imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask")
+                imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask", logFile=log)
 
                 # mask from example_function (the one used to calculate all the co-registrations)
                 self.transform.transform_roi("epi2std4", "abs", std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.rs_examplefunc_mask])
-                imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask)
+                imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask, logFile=log)
 
                 # brain
                 self.transform.transform_roi("hr2std4", "abs" , std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.t1_data])
-                imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage)
+                imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage, logFile=log)
 
                 # functional data
                 self.transform.transform_roi("epi2std4", "abs", std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[postnuisance])
-                immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image)
+                immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image, logFile=log)
 
                 log.close()
 

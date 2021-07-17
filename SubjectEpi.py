@@ -1,8 +1,10 @@
 import os
+import shutil
 import sys
 from numpy import arange, concatenate, array
 from shutil import copyfile, move, rmtree
 
+from Subject import Subject
 from myfsl.utils.run import rrun
 from utility.images import imtest, imcp, is_image, remove_ext, imcp_notexisting, imgparts, immv
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
@@ -495,18 +497,29 @@ class SubjectEpi:
         # eng.quit()
 
     # ===============================================================================
-    # FRAMEWORK (copy data across relevant folders)
+    # FRAMEWORK (copy data across relevant folders, clean up)
     # ===============================================================================
-    def rs_cleanup(self):
+    def cleanup(self, lvl=Subject.CLEANUP_LVL_MIN):
 
         os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_preprocess_image_label))
         os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_aroma_image_label))
-        os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_image_label))
-        os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_std4_image_label))
-
-        os.removedirs(self.subject.rs_aroma_dir)
         os.removedirs(os.path.join(self.subject.rs_dir, "resting.feat"))
-        os.removedirs(os.path.join(self.subject.rs_dir, "resting.ica"))
+        os.removedirs(self.subject.rs_aroma_dir)
+
+        if lvl == Subject.CLEANUP_LVL_MED:
+            # copy melodic report i
+            os.makedirs(self.subject.rs_melic_dir)
+            rrun("mv " + self.subject.rs_default_mel_dir + "/filtered_func_data_ica.ica/report" + " " + self.subject.rs_melic_dir)
+
+            rrun("rm -rf " + self.subject.rs_default_mel_dir)
+            os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_melodic_image_label))
+
+        elif lvl == Subject.CLEANUP_LVL_HI:
+
+            os.removedirs(self.subject.rs_melic_dir)
+
+            rrun("rm -rf " + self.subject.rs_default_mel_dir)
+            os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_melodic_image_label))
 
     # take a preproc step in the individual space (epi), convert to std4 and copy to resting/reg_std folder
     def adopt_rs_preproc_step(self, step_label, outsuffix=""):

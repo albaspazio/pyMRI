@@ -3,6 +3,7 @@ import traceback
 import datetime
 from shutil import copyfile
 
+from Subject import Subject
 from myfsl.utils.run import rrun
 from utility.fslfun import run, run_notexisting_img, runpipe, run_move_notexisting_img
 from utility.images import imtest, immv, mass_images_move, imrm, imcp, quick_smooth, remove_ext
@@ -23,8 +24,6 @@ class SubjectMpr:
     def __init__(self, subject, _global):
         self.subject = subject
         self._global = _global
-
-
 
     # pre-processing:
     #   FIXING NEGATIVE RANGE
@@ -1479,3 +1478,15 @@ class SubjectMpr:
             # rrun("fslmaths " + os.path.join(betdir, "T1_biascorr_brain") + " -mas " + os.path.join(tempdir, subj.label + "_brainmask.nii.gz") + " " + os.path.join(tempdir, subj.label + "_brainmask.nii.gz"))
         else:
             print("subject " + self.subject.label + " freesurfer's brainmask is not present")
+
+    def cleanup(self, lvl=Subject.CLEANUP_LVL_MIN):
+
+        os.removedirs(self.subject.t1_anat_dir)
+
+        if lvl == Subject.CLEANUP_LVL_MED:
+            pass
+        elif lvl == Subject.CLEANUP_LVL_HI:
+
+            os.removedirs(self.subject.first_dir)
+            os.removedirs(self.subject.fast_dir)
+            rrun("mv " + self.subject.t1_cat_surface_dir + " " + self.subject.t1_dir)
