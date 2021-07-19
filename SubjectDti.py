@@ -32,8 +32,7 @@ class SubjectDti:
 
         if imtest(self.subject.dti_fit_data) is False:
             print("starting DTI fit on " + self.subject.label)
-            rrun(
-                "dtifit --sse -k " + self.subject.dti_ec_data + " -o " + self.subject.dti_fit_data + " -m " + self.subject.dti_nodiff_brainmask_data + " -r " + self.subject.dti_rotated_bvec + " -b " + self.subject.dti_bval)
+            rrun("dtifit --sse -k " + self.subject.dti_ec_data + " -o " + self.subject.dti_fit_data + " -m " + self.subject.dti_nodiff_brainmask_data + " -r " + self.subject.dti_rotated_bvec + " -b " + self.subject.dti_bval)
 
 
     def probtrackx(self):

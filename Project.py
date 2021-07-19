@@ -5,10 +5,9 @@ from threading import Thread
 from inspect import signature
 from copy import deepcopy
 
-from utility.images import imcp, imrm
-from utility.matlab import call_matlab_function_noret
-from utility.utilities import gunzip, compress
 from Subject import Subject
+from utility.images import imcp, imrm
+from utility.utilities import gunzip, compress
 from utility import import_data_file
 
 

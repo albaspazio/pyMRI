@@ -5,6 +5,12 @@ from utility import fsl_switcher, import_data_file
 
 class Global:
 
+
+    CLEANUP_LVL_MIN = 0
+    CLEANUP_LVL_MED = 1
+    CLEANUP_LVL_HI  = 1
+
+
     def __init__(self, fsl_ver, ignore_warnings=True):
 
         fslswitch = fsl_switcher.FslSwitcher()

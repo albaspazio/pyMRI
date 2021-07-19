@@ -22,10 +22,6 @@ class Subject:
     TYPE_DTI = 4
     TYPE_T2 = 5
 
-    CLEANUP_LVL_MIN = 0
-    CLEANUP_LVL_MED = 1
-    CLEANUP_LVL_HI  = 1
-
     def __init__(self, label, sessid, project):
 
         self.label = label
@@ -138,6 +134,21 @@ class Subject:
         self.dti_nodiff_brainmask_data  = os.path.join(self.dti_dir, "nodif_brain_mask")
 
         self.trackvis_transposed_bvecs = "bvec_vert.txt"
+
+        self.dti2hr_mat       = os.path.join(self.roi_t1_dir, "dti2hr.mat")
+        self.hr2dti_mat       = os.path.join(self.roi_dti_dir, "hr2dti.mat")
+        self.dti2hr_warp      = os.path.join(self.roi_t1_dir, "dti2hr_warp")
+        self.hr2dti_warp      = os.path.join(self.roi_dti_dir, "hr2dti_warp")
+
+        self.dti2t2_mat       = os.path.join(self.roi_t2_dir, "dti2t2.mat")
+        self.t22dti_mat       = os.path.join(self.roi_dti_dir, "t22dti.mat")
+        self.dti2t2_warp      = os.path.join(self.roi_t2_dir, "dti2t2_warp")
+        self.t22dti_warp      = os.path.join(self.roi_dti_dir, "t22dti_warp")
+
+        self.dti2std_mat      = os.path.join(self.roi_std_dir, "dti2std.mat")
+        self.std2dti_mat      = os.path.join(self.roi_dti_dir, "std2dti.mat")
+        self.dti2std_warp     = os.path.join(self.roi_std_dir, "dti2std_warp")
+        self.std2dti_warp     = os.path.join(self.roi_dti_dir, "std2dti_warp")
 
         # ------------------------------------------------------------------------------------------------------------------------
         # RS
