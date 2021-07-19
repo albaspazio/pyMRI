@@ -269,7 +269,7 @@ def get_image_dimension(file):
 # extract header in xml format and returns it as a (possibly filtered by list_field) dictionary
 def read_header(file, list_field=None):
 
-    res             = rrun("fslhd -x " +  file)
+    res             = rrun("fslhd -x " + file)
     root            = ET.fromstring(res)
     attribs_dict    = root.attrib
 

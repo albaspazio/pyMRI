@@ -139,7 +139,7 @@ class SubjectEpi:
             # --------------------------------------------------------------------------------------------------------------------------------------
         rrun(os.path.join(self._global.fsl_bin, "feat") + " " + OUTPUT_FEAT_FSF + ".fsf")  # execute  FEAT
 
-    def aroma(self, epi_label, input_dir, md="", mc="", aff="", warp="", ofn="ica_aroma", upsampling=0):
+    def aroma(self, epi_label, input_dir, md="", mc="", aff="", warp="", ofn="ica_aroma", upsampling=0, logFile=None):
 
         if epi_label == "rs":
             aroma_dir           = self.subject.rs_aroma_dir
@@ -154,7 +154,7 @@ class SubjectEpi:
 
         input_reg = os.path.join(input_dir, "reg")
         os.makedirs(input_reg, exist_ok=True)
-        imcp(warp, os.path.join(input_reg, "highres2standard_warp"))
+        imcp(warp, os.path.join(input_reg, "highres2standard_warp"), logFile=logFile)
         copyfile(aff, os.path.join(input_reg, "example_func2highres.mat"))
 
         # CHECK FILE EXISTENCE #.feat
@@ -163,7 +163,7 @@ class SubjectEpi:
             return
 
         print("running AROMA for subject " + self.subject.label)
-        rrun("python2.7 " + self._global.ica_aroma_script + " -feat " + input_dir + " -out " + aroma_dir)
+        rrun("python2.7 " + self._global.ica_aroma_script + " -feat " + input_dir + " -out " + aroma_dir, logFile=logFile)
 
         if upsampling > 0:
 
@@ -171,17 +171,17 @@ class SubjectEpi:
             # problems with non linear registration....use linear one.
             copyfile(os.path.join(input_dir, "design.fsf"), os.path.join(aroma_dir, "design.fsf"))
             copytree(os.path.join(input_dir, "reg"), aroma_dir)
-            rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + aroma_dir)
+            rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + aroma_dir, logFile=logFile)
 
             # upsampling of standard
             # 		                    run ${FSLDIR}/bin/flirt  -ref                   $input_feat_dir/reg/standard     -in                 $input_feat_dir/reg/standard       -out $RS_REGSTD_AROMA_DIR/standard                      -applyisoxfm $UPSAMPLING_FACTOR  #4
-            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(input_dir, "reg", "standard") + " -in " + os.path.join(input_dir, "reg", "standard") + " -out " + os.path.join(regstd_aroma_dir, "standard") + " -applyisoxfm " + str(upsampling))
+            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(input_dir, "reg", "standard") + " -in " + os.path.join(input_dir, "reg", "standard") + " -out " + os.path.join(regstd_aroma_dir, "standard") + " -applyisoxfm " + str(upsampling), logFile=logFile)
             # 		                    run ${FSLDIR}/bin/flirt  -ref                $RS_REGSTD_AROMA_DIR/standard       -in                  $input_feat_dir/reg/highres       -out $RS_REGSTD_AROMA_DIR/bg_image                     -applyxfm -init $input_feat_dir/reg/highres2standard.mat                       -interp sinc -datatype float
-            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join(input_dir, "reg", "highres") + " -out " + os.path.join(regstd_aroma_dir, "bg_image") + " -applyxfm -init " + os.path.join(input_dir, "reg", "highres2standard.mat") + " -interp sinc -datatype float")
+            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join(input_dir, "reg", "highres") + " -out " + os.path.join(regstd_aroma_dir, "bg_image") + " -applyxfm -init " + os.path.join(input_dir, "reg", "highres2standard.mat") + " -interp sinc -datatype float", logFile=logFile)
             # 		                    run ${FSLDIR}/bin/flirt  -ref               $RS_REGSTD_AROMA_DIR/standard        -in                $RS_AROMA_DIR/denoised_func_data_nonaggr       -out                $RS_REGSTD_AROMA_DIR/filtered_func_data       -applyxfm -init                 $input_feat_dir/reg/example_func2standard.mat       -interp trilinear -datatype float
-            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join(aroma_dir, "denoised_func_data_nonaggr") + " -out " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -applyxfm -init " + os.path.join(input_dir, "reg", "example_func2standard.mat") + " -interp trilinear -datatype float")
+            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join(aroma_dir, "denoised_func_data_nonaggr") + " -out " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -applyxfm -init " + os.path.join(input_dir, "reg", "example_func2standard.mat") + " -interp trilinear -datatype float", logFile=logFile)
             # 		                    run ${FSLDIR}/bin/fslmaths                 $RS_REGSTD_AROMA_DIR/filtered_func_data       -Tstd -bin                $RS_REGSTD_AROMA_DIR/mask       -odt char
-            rrun(os.path.join(self._global.fsl_bin, "fslmaths") + " " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -Tstd -bin " + os.path.join(regstd_aroma_dir, "mask") + " -odt char")
+            rrun(os.path.join(self._global.fsl_bin, "fslmaths") + " " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -Tstd -bin " + os.path.join(regstd_aroma_dir, "mask") + " -odt char", logFile=logFile)
 
     def remove_nuisance(self, in_img_name, out_img_name, epi_label="rs", ospn="", hpfsec=100):
 

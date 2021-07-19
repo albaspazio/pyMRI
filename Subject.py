@@ -121,9 +121,9 @@ class Subject:
         self.dti_ec_image_label = self.dti_image_label + "_ec"
         self.dti_fit_label      = self.dti_image_label + "_fit"
 
-        self.dti_bval_label         = os.path.join(self.dti_dir, self.label + "-dti.bval")
-        self.dti_bvec_label         = os.path.join(self.dti_dir, self.label + "-dti.bvec")
-        self.dti_rotated_bvec_label = os.path.join(self.dti_dir, self.label + "-dti_rotated.bvec")
+        self.dti_bval           = os.path.join(self.dti_dir, self.label + "-dti.bval")
+        self.dti_bvec           = os.path.join(self.dti_dir, self.label + "-dti.bvec")
+        self.dti_rotated_bvec   = os.path.join(self.dti_dir, self.label + "-dti_rotated.bvec")
 
         self.dti_data       = os.path.join(self.dti_dir, self.dti_image_label)
         self.dti_ec_data    = os.path.join(self.dti_dir, self.dti_ec_image_label)
@@ -536,19 +536,19 @@ class Subject:
                 # ------------------------------------------------------------------------------------------------------
                 # mask from preproc feat
                 mask = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "mask")
-                self.transform.transform_roi("epi2std4", "abs", std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[mask])
+                self.transform.transform_roi("epi2std4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[mask])
                 imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask", logFile=log)
 
                 # mask from example_function (the one used to calculate all the co-registrations)
-                self.transform.transform_roi("epi2std4", "abs", std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.rs_examplefunc_mask])
+                self.transform.transform_roi("epi2std4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.rs_examplefunc_mask])
                 imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask, logFile=log)
 
                 # brain
-                self.transform.transform_roi("hr2std4", "abs" , std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.t1_data])
+                self.transform.transform_roi("hr2std4", "abs" , stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.t1_brain_data])
                 imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage, logFile=log)
 
                 # functional data
-                self.transform.transform_roi("epi2std4", "abs", std_img=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[postnuisance])
+                self.transform.transform_roi("epi2std4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[postnuisance])
                 immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image, logFile=log)
 
                 log.close()
@@ -556,7 +556,7 @@ class Subject:
         # ==============================================================================================================================================================
         # T2 data
         # ==============================================================================================================================================================
-        if os.path.isdir(self.de_dir) is False:
+        if os.path.isdir(self.de_dir) is True:
             if imtest(self.t2_data) is True:
                 self.has_T2 = True
                 os.makedirs(os.path.join(self.roi_dir, "reg_t2"), exist_ok=True)
@@ -577,7 +577,7 @@ class Subject:
                 self.dti.ec_fit()  # run .	$GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_ec_fit.sh $SUBJ_NAME $PROJ_DIR
                 rrun("fslmaths " + os.path.join(self.dti_dir, self.dti_fit_label) + "_L2 -add " + os.path.join(self.dti_dir, self.dti_fit_label + "_L3") + " -div 2 " + os.path.join(self.dti_dir, self.dti_fit_label + "_L23"), logFile=log)
 
-                self.dti_autoptx_tractography()
+                self.dti.autoptx_tractography()
 
             os.makedirs(self.roi_dti_dir, exist_ok=True)
 
@@ -748,6 +748,5 @@ class Subject:
 
         rrun("fslmerge " + dimension + " " + outputname + " " + " ".join(input_files))
         os.chdir(cur_dir)
-
     # ==================================================================================================================================================
 

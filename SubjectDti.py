@@ -17,18 +17,18 @@ class SubjectDti:
 
     def ec_fit(self):
 
-        if os.path.exist(self.subject.dti_data) is False:
+        if imtest(self.subject.dti_data) is False:
             return
 
         rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1")
         rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3")  # also creates dti_nodiff_brain_mask_data
 
-        if imtest(self.subject.dti_ec_image) is False:
+        if imtest(self.subject.dti_ec_data) is False:
             print("starting eddy_correct on " + self.subject.label)
-            rrun("eddy_correct " + self.subject.dti_data + " " + self.subject.dti_ec_image + " 0")
+            rrun("eddy_correct " + self.subject.dti_data + " " + self.subject.dti_ec_data + " 0")
 
-        if os.path.exist(self.subject.dti_rotated_bvec) is False:
-            rrun("fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_data + ".ecclog")
+        if os.path.exists(self.subject.dti_rotated_bvec) is False:
+            rrun("fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_ec_data + ".ecclog")
 
         if imtest(self.subject.dti_fit_data) is False:
             print("starting DTI fit on " + self.subject.label)
