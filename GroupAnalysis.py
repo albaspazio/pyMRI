@@ -581,8 +581,41 @@ class GroupAnalysis:
         #
         pass
 
+    # modalities = ["FA", "MD", "L1", ....]
+    def run_tbss(self, group_label, modalities, odn, sessid=1, prepare=True, proc=True):
 
+        root_analysis_folder = os.path.join(self.project.tbss_dir, odn)
 
+        os.makedirs(root_analysis_folder, exist_ok=True)
+        os.makedirs(os.path.join(root_analysis_folder, "design"), exist_ok=True)
 
+        # copy DTIFIT IMAGES to MAIN_ANALYSIS_FOLDER
+        if prepare is True:
+            print("copy subjects' corresponding dtifit_FA images to analysis folder")
+            # copy all T1 to VBM/struc folder and generate template_list file
 
+            subjects = self.project.get_subjects(group_label, sessid)
+            for subj in subjects:
 
+                for mod in modalities:
+                    dest_img    = os.path.join(root_analysis_folder, mod, subj.dti_fit_label + "_" + mod)
+                    src_img     = os.path.join(subj.dti_dir, subj.dti_fit_label + "_" + mod)
+                    imcp(src_img, dest_img)
+
+        if proc is True:
+
+            curr_dir = os.getcwd()
+
+            for mod in modalities:
+                mod_dir = os.path.join(root_analysis_folder, mod)
+                os.chdir(mod_dir)
+
+                print("preprocessing dtifit_" + mod + " images")
+                rrun("tbss_1_preproc *.nii.gz")
+                print("co-registrating images to MNI template")
+                rrun("tbss_2_reg - T")
+                print("postreg")
+                rrun("tbss_3_postreg - S")
+                rrun("tbss_4_prestats 0.2")
+
+                os.chdir(curr_dir)

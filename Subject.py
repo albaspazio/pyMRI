@@ -73,7 +73,7 @@ class Subject:
         self.t1_fs_dir      = os.path.join(self.t1_dir, "freesurfer")
         self.t1_fs_mri_dir  = os.path.join(self.t1_fs_dir, "mri")
         self.t1_spm_dir     = os.path.join(self.t1_dir, "spm_proc")
-        self.t1_cat_dir     = os.path.join(self.t1_dir, "cat_proc")
+        self.t1_cat_dir     = os.path.join(self.t1_dir, "cat")
 
         self.t1_image_label         = self.label + "-t1"
         self.t1_data                = os.path.join(self.t1_dir, self.t1_image_label)
@@ -341,7 +341,7 @@ class Subject:
                  do_sienax=False, bet_sienax_param_string="-SNB -f 0.2",
                  do_reg=True, do_nonlinreg=True,
                  do_seg=True, do_spm_seg=False, spm_seg_over_bet=False, spm_seg_over_fs=False,  # over-ride bet an
-                 do_cat_seg=False, cat_seg_over_bet=False, cat_seg_over_fs=False, cat_use_dartel=False,  # over-ride bet an
+                 do_cat_seg=False, cat_seg_over_bet=False, cat_seg_over_fs=False, cat_use_dartel=False, do_cat_surf=True, # over-ride bet an
                  do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
                  use_lesionmask=False, lesionmask="lesionmask",
                  do_freesurfer=False,
@@ -396,7 +396,8 @@ class Subject:
                         do_bet_overwrite=cat_seg_over_bet,
                         do_overwrite=do_overwrite,
                         spm_template_name=self._global.cat_template_name,
-                        use_dartel=cat_use_dartel)
+                        use_dartel=cat_use_dartel,
+                        calc_surfaces=do_cat_surf)
 
                 self.mpr.postbet(
                     odn=odn, imgtype=imgtype, smooth=smooth,

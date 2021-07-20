@@ -36,6 +36,8 @@ class Project:
 
         self.vbm_dir                = os.path.join(self.mpr_dir, "vbm")
 
+        self.tbss_dir               = os.path.join(self.group_analysis_dir, "tbss")
+
         self._global                = globaldata
 
         self.subjects               = []
@@ -218,6 +220,99 @@ class Project:
                 process.join()
 
             print("completed block " + str(bl) + " with processes: " + str(subjects[bl]))
+
+    # # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subj_labels) > 1 ...pass that same kwparams[0] to all subjects
+    # # if subj_labels is not given...use the loaded subjects
+    # def run_groupanalysis(self, analysis_type, analysis_name, kwparams, subj_labels=None, nthread=1):
+    #
+    #     # check subjects
+    #     if subj_labels is None:
+    #         subj_labels = self.get_loaded_subjects_labels()
+    #     nsubj       = len(subj_labels)
+    #     if nsubj == 0:
+    #         print("ERROR in run_subjects_methods: subject list is empty")
+    #         return
+    #
+    #     # check number of NECESSARY (without a default value) method params
+    #     subj    = self.get_subject_by_label(subj_labels[0])
+    #
+    #     if analysis_type == "":
+    #         method = eval("subj." + analysis_name)
+    #     else:
+    #         method = eval("subj." + analysis_type + "." + analysis_name)
+    #
+    #     sig     = signature(method)
+    #     nparams = len(sig.parameters)       # parameters that need a value
+    #     for p in sig.parameters:
+    #         if sig.parameters[p].default is not None:
+    #             nparams = nparams - 1       # this param has a default value
+    #
+    #     # if no params are given, create a nsubj list of None
+    #     if len(kwparams) == 0:
+    #         if nparams > 0:
+    #             print("ERROR in run_subjects_methods: given params list is empty, while method needs " + str(nparams) + " params")
+    #             return
+    #         else:
+    #             kwparams = [None] * nsubj
+    #
+    #     nprocesses  = len(kwparams)
+    #
+    #     if nsubj > 1 and nprocesses == 1:
+    #         kwparams    = [kwparams[0]] * nsubj        # duplicate the first kwparams up to given subj number
+    #         nprocesses  = nsubj
+    #     else:
+    #         if nprocesses != nsubj:
+    #             print("ERROR in run_subject_method: given params list length differs from subjects list")
+    #             return
+    #     # here nparams is surely == nsubj
+    #
+    #     numblocks   = math.ceil(nprocesses/nthread)     # num of processing blocks (threads)
+    #
+    #     subjects    = []
+    #     processes   = []
+    #
+    #     for p in range(numblocks):
+    #         subjects.append([])
+    #         processes.append([])
+    #
+    #     proc4block = 0
+    #     curr_block = 0
+    #
+    #     # divide nprocesses across numblocks
+    #     for proc in range(nprocesses):
+    #         processes[curr_block].append(kwparams[proc])
+    #         subjects[curr_block].append(subj_labels[proc])
+    #
+    #         proc4block = proc4block + 1
+    #         if proc4block == nthread:
+    #             curr_block = curr_block + 1
+    #             proc4block = 0
+    #
+    #     for bl in range(numblocks):
+    #         threads = []
+    #
+    #         for s in range(len(subjects[bl])):
+    #
+    #             subj = self.get_subject_by_label(subjects[bl][s])
+    #
+    #             if subj is not None:
+    #
+    #                 if analysis_type == "":
+    #                     method = eval("subj." + analysis_name)
+    #                 else:
+    #                     method = eval("subj." + analysis_type + "." + analysis_name)
+    #
+    #                 try:
+    #                     process = Thread(target=method, kwargs=processes[bl][s])
+    #                     process.start()
+    #                     threads.append(process)
+    #                 except Exception as e:
+    #                     print(e)
+    #
+    #         for process in threads:
+    #             process.join()
+    #
+    #         print("completed block " + str(bl) + " with processes: " + str(subjects[bl]))
 
     # create a folder where it copies the brain extracted from BET, FreeSurfer and SPM
     def compare_brain_extraction(self, tempdir, list_subj_label=None):
