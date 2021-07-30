@@ -26,6 +26,56 @@ class Stats:
         sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
 
 
+    # get cov values from many groups and concat them into a single vector
+    # interaction=1 : no interaction, otherwise specify factors (1-based + 1, e.g. first factor = 2)
+    @staticmethod
+    def spm_stats_add_manycov_1group(out_batch_job, group_label, project, cov_names, cov_interaction=None, datafile=None):
+
+        cov_string = ""
+        ncov = len(cov_names)
+
+        if cov_interaction is None:
+            cov_interaction = [1 for i in range(ncov)]
+
+        cint = len(cov_interaction)
+        if ncov != cint:
+            print("ERROR: spm_stats_add_manycov_1group. number of covariates and their interaction differs")
+            return
+
+
+
+        for cov_id in range(ncov):
+            cov_name = cov_names[cov_id]
+            cov = project.get_filtered_column(cov_names[cov_id], group_label, data=datafile)[0]
+            str_cov = "\n" + import_data_file.list2spm_text_column(cov) # ends with a "\n"
+
+            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id+1) + ").c = "
+            cov_string = cov_string + "[" + str_cov + "];\n"
+            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id+1) + ").cname = '" + cov_name + "';\n"
+            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id+1) + ").iCFI = " + str(cov_interaction[cov_id]) + ";\n"
+            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id+1) + ").iCC = 1;\n"
+
+        sed_inplace(out_batch_job, "<COV_STRING>", cov_string)
+
+    # get cov values from many groups and concat them into a single vector
+    # interaction=1 : no interaction, otherwise specify factors (1-based + 1, e.g. first factor = 2)
+    # @staticmethod
+    # def spm_stats_add_manycov_manygroups(out_batch_job, groups_labels, project, cov_names, cov_interaction=1, datafile=None):
+    #
+    #     cov = []
+    #     for grp in groups_labels:
+    #         cov = cov + project.get_filtered_column(cov_name, grp, datafile)[0]
+    #     str_cov = "\n" + import_data_file.list2spm_text_column(cov) # ends with a "\n"
+    #
+    #     cov_string = "matlabbatch{1}.spm.stats.factorial_design.cov.c = "
+    #     cov_string = cov_string + "[" + str_cov + "];\n"
+    #     cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.cname = '" + cov_name + "';\n"
+    #     cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCFI = " + str(cov_interaction) + ";\n"
+    #     cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCC = 1;"
+    #     sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
+
+
+
     @staticmethod
     def spm_stats_replace_conditions_string(out_batch_job, conditions):
 
@@ -40,6 +90,60 @@ class Stats:
             conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond("+ str(c) + ").orth = 1;\n"
 
         sed_inplace(out_batch_job,"<CONDITION_STRING>", conditions_string)
+
+    @staticmethod
+    def cat_replace_1group_multregr_contrasts(out_batch_job, cov_names):
+        contr_str = ""
+
+        ncov = len(cov_names)
+        for cov_id in range(ncov):
+            cov_name = cov_names[cov_id]
+
+            # define weight
+            weight_str_pos = "0"
+            weight_str_neg = "0"
+            for wp in range(cov_id):
+                weight_str_pos = weight_str_pos + " 0"
+                weight_str_neg = weight_str_neg + " 0"
+            weight_str_pos = weight_str_pos + " 1"
+            weight_str_neg = weight_str_neg + " -1"
+
+            contr_str = contr_str + "matlabbatch{1}.spm.tools.cat.stools.con.consess{" + str(2*(cov_id + 1) - 1) + "}.tcon.name = \'" + cov_name + " pos\';\n"
+            contr_str = contr_str + "matlabbatch{1}.spm.tools.cat.stools.con.consess{" + str(2*(cov_id + 1) - 1) + "}.tcon.weights = [" + weight_str_pos + "];\n"
+            contr_str = contr_str + "matlabbatch{1}.spm.tools.cat.stools.con.consess{" + str(2*(cov_id + 1) - 1) + "}.tcon.sessrep = 'none';\n"
+
+            contr_str = contr_str + "matlabbatch{1}.spm.tools.cat.stools.con.consess{" + str(2*(cov_id + 1)) + "}.tcon.name = \'" + cov_name + " neg\';\n"
+            contr_str = contr_str + "matlabbatch{1}.spm.tools.cat.stools.con.consess{" + str(2*(cov_id + 1)) + "}.tcon.weights = [" + weight_str_neg + "];\n"
+            contr_str = contr_str + "matlabbatch{1}.spm.tools.cat.stools.con.consess{" + str(2*(cov_id + 1)) + "}.tcon.sessrep = 'none';\n"
+
+        sed_inplace(out_batch_job, "<CONTRASTS>", contr_str)
+
+    @staticmethod
+    def spm_replace_1group_multregr_contrasts(out_batch_job, cov_names):
+        contr_str = ""
+
+        ncov = len(cov_names)
+        for cov_id in range(ncov):
+            cov_name = cov_names[cov_id]
+
+            # define weight
+            weight_str_pos = "0"
+            weight_str_neg = "0"
+            for wp in range(cov_id):
+                weight_str_pos = weight_str_pos + " 0"
+                weight_str_neg = weight_str_neg + " 0"
+            weight_str_pos = weight_str_pos + " 1"
+            weight_str_neg = weight_str_neg + " -1"
+
+            contr_str = contr_str + "matlabbatch{1}.spm.stats.stools.con.consess{" + str(2*(cov_id + 1) - 1) + "}.tcon.name = \'" + cov_name + " pos\';\n"
+            contr_str = contr_str + "matlabbatch{1}.spm.stats.stools.con.consess{" + str(2*(cov_id + 1) - 1) + "}.tcon.weights = [" + weight_str_pos + "];\n"
+            contr_str = contr_str + "matlabbatch{1}.spm.stats.stools.con.consess{" + str(2*(cov_id + 1) - 1) + "}.tcon.sessrep = 'none';\n"
+
+            contr_str = contr_str + "matlabbatch{1}.spm.stats.stools.con.consess{" + str(2*(cov_id + 1)) + "}.tcon.name = \'" + cov_name + " neg\';\n"
+            contr_str = contr_str + "matlabbatch{1}.spm.stats.stools.con.consess{" + str(2*(cov_id + 1)) + "}.tcon.weights = [" + weight_str_neg + "];\n"
+            contr_str = contr_str + "matlabbatch{1}.spm.stats.stools.con.consess{" + str(2*(cov_id + 1)) + "}.tcon.sessrep = 'none';\n"
+
+        sed_inplace(out_batch_job, "<CONTRASTS>", contr_str)
 
 
     # replace CAT results trasformation string
@@ -66,7 +170,6 @@ class Stats:
         else:
             print("warning in cat_replace_trasformation_string...unrecognized cluster_extend in Tsurf transf")
             sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;")
-
 
     # parse a series of spm-output csv files and report info of those voxels/cluster associated to the given cluster
     #set    set cluster         cluster         cluster cluster peak            peak            peak    peak    peak
@@ -95,7 +198,6 @@ class Stats:
                                                  int(data_row[11]),int(data_row[12]),int(data_row[13])))
 
         return clusters
-
 
     # create a gifti image with ones in correspondence of each vmask voxel
     @staticmethod

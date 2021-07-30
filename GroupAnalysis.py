@@ -8,7 +8,7 @@ from shutil import copyfile, move
 
 from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
 from myfsl.utils.run import rrun
-from utility.images import imcp, imtest
+from utility.images import imcp, imtest, immv
 from utility.utilities import sed_inplace
 from utility import import_data_file
 from Stats import Stats
@@ -148,7 +148,7 @@ class GroupAnalysis:
     #                                                                               'yyy'
     #                                                                            };
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
-    def create_spm_vbm_stats_1Wanova(self, statsdir, groups_labels, cov_name, cov_interaction=1, data_file=None, sess_id=1, spm_template_name="spm_vbm_stats_1Wanova_design_estimate"):
+    def create_spm_vbm_stats_factdes_1Wanova(self, statsdir, groups_labels, cov_name, cov_interaction=1, data_file=None, sess_id=1, spm_template_name="spm_vbm_stats_1Wanova_design_estimate"):
 
         try:
             os.makedirs(statsdir, exist_ok=True)
@@ -225,7 +225,7 @@ class GroupAnalysis:
     #                                                                               'yyy'
     #                                                                            };
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
-    def create_cat_thickness_stats_1Wanova(self, statsdir, groups_labels, cov_name, cov_interaction=1, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_1Wanova_onlydesign", spm_contrasts_template_name=""):
+    def create_cat_thickness_stats_factdes_1Wanova(self, statsdir, groups_labels, cov_name, cov_interaction=1, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_1Wanova_onlydesign", spm_contrasts_template_name=""):
 
         try:
             os.makedirs(statsdir, exist_ok=True)
@@ -280,7 +280,7 @@ class GroupAnalysis:
                 eng.pymri_cat_surfaces_stat_spm(statsdir, nargout=0)
 
             # check whether running a given contrasts batch. script must only modify SPM.mat file
-            if spm_contrasts_template_name is not "":
+            if spm_contrasts_template_name != "":
                 self.create_spm_stats_predefined_contrasts_results(statsdir, spm_contrasts_template_name, eng)
 
             eng.quit()
@@ -300,7 +300,7 @@ class GroupAnalysis:
     #     '/data/MRI/projects/T15/subjects/T15_C_001/s1/mpr/anat/cat_proc/surf/rh.sphere.T1_T15_C_001.gii'
     # };
     # cells is [factor][level][subjects_label]
-    def create_cat_thickness_stats_2Wanova(self, statsdir, factors_labels, cells, cov_name="", cov_interaction=1, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_2Wanova_onlydesign"):
+    def create_cat_thickness_stats_factdes_2Wanova(self, statsdir, factors_labels, cells, cov_name="", cov_interaction=1, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_2Wanova_onlydesign"):
 
         try:
             os.makedirs(statsdir, exist_ok=True)
@@ -378,7 +378,7 @@ class GroupAnalysis:
 
     # params to replace: <STATS_DIR>, <GROUP1_IMAGES>, <GROUP2_IMAGES>, <COV1_LIST>, <COV1_NAME>
     # GROUPx_IMAGES are :  'mpr/anat/cat_proc/surf/s15.mesh.thickness.resampled_32k.T1_XXXXXXXXXX.gii,1'
-    def create_cat_thickness_stats_2samplesttest(self, statsdir, grp1_label, grp2_label, cov_name="", cov_interaction=1, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_2samples_ttest_onlydesign", mult_corr="FWE", pvalue=0.05, cluster_extend=0, grp_labels=["g1", "g2"]):
+    def create_cat_thickness_stats_factdes_2samplesttest(self, statsdir, grp1_label, grp2_label, cov_name="", cov_interaction=1, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_2samples_ttest_onlydesign", mult_corr="FWE", pvalue=0.05, cluster_extend=0, grp_labels=["g1", "g2"]):
 
         try:
             os.makedirs(statsdir, exist_ok=True)
@@ -445,6 +445,68 @@ class GroupAnalysis:
             print(e)
             return ""
 
+    #
+    def create_cat_thickness_stats_1group_multregr(self, statsdir, grp_label, cov_names, anal_name, cov_interactions=None, data_file=None, sess_id=1, spm_template_name="cat_thickness_stats_1group_multiregr_check_estimate", spm_contrasts_template_name="", mult_corr="FWE", pvalue=0.05, cluster_extend=0):
+        try:
+            os.makedirs(statsdir, exist_ok=True)
+            # set dirs
+            spm_script_dir  = os.path.join(self.project.script_dir, "mpr", "spm")
+            out_batch_dir   = os.path.join(spm_script_dir, "batch")
+
+            in_batch_start  = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+            in_batch_job    = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
+
+            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + "_" + anal_name + ".m")
+            out_batch_job   = os.path.join(out_batch_dir, spm_template_name + "_" + anal_name + "_job.m")
+
+            # set job file
+            copyfile(in_batch_job, out_batch_job)
+
+            # set start file
+            copyfile(in_batch_start, out_batch_start)
+            sed_inplace(out_batch_start, "X", "1")
+            sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
+
+            # ---------------------------------------------------------------------------
+            # compose images string
+            cells_images = "\r"
+            subjs = self.project.get_subjects(grp_label, sess_id)
+
+            for subj in subjs:
+                cells_images  = cells_images + "\'" + subj.t1_cat_resampled_surface + "\'\r"
+
+            # ---------------------------------------------------------------------------
+            # check whether adding a covariate
+            if len(cov_names) > 0:
+                Stats.spm_stats_add_manycov_1group(out_batch_job, grp_label, self.project, cov_names, cov_interactions, data_file)
+            else:
+                print("ERROR : No covariates in a multiple regression")
+                return ""
+
+            sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
+            sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
+
+
+            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=False)
+
+            if self._global.cat_version == "cat12.6":
+                # model estimate
+                print("estimating surface model")
+                eng.pymri_cat_surfaces_stat_spm(statsdir, nargout=0)
+
+            # check whether running a given contrasts batch. script must only modify SPM.mat file
+            if spm_contrasts_template_name is not "":
+                self.create_spm_stats_predefined_contrasts_results(statsdir, spm_contrasts_template_name, eng)
+
+            eng.quit()
+
+            return os.path.join(statsdir, "SPM.mat")
+
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
+            return ""
+
     # ---------------------------------------------------
     # STATS - GENERAL
     # ---------------------------------------------------
@@ -487,7 +549,44 @@ class GroupAnalysis:
             traceback.print_exc()
             print(e)
 
-    # run a prebuilt batch file in a non-standard location, which only need to set the stat folder and
+    # calculate contrasts and report their results on a given, already estimated, SPM.mat
+    # cluster_extend = "none" | "en_corr" | "en_nocorr"
+    def create_cat_stats_1group_multregr_contrasts_results(self, spmmat, cov_names, spm_template_name="cat_stats_contrasts_results", mult_corr="FWE", pvalue=0.05, cluster_extend="none"):
+
+        try:
+            # set dirs
+            spm_script_dir  = os.path.join(self.project.script_dir, "mpr", "spm")
+            out_batch_dir   = os.path.join(spm_script_dir, "batch")
+
+            in_batch_start  = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+            in_batch_job    = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
+
+            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + ".m")
+            out_batch_job   = os.path.join(out_batch_dir, spm_template_name + "_job.m")
+
+            # set job file
+            copyfile(in_batch_job, out_batch_job)
+            sed_inplace(out_batch_job, "<SPM_MAT>", spmmat)
+            sed_inplace(out_batch_job, "<STATS_DIR>", ntpath.dirname(spmmat))
+
+            Stats.cat_replace_1group_multregr_contrasts(out_batch_job, cov_names)
+
+            sed_inplace(out_batch_job, "<MULT_CORR>", mult_corr)
+            sed_inplace(out_batch_job, "<PVALUE>", str(pvalue))
+            sed_inplace(out_batch_job, "<CLUSTER_EXTEND>", str(cluster_extend))
+
+            # set start file
+            copyfile(in_batch_start, out_batch_start)
+            sed_inplace(out_batch_start, "X", "1")
+            sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
+
+            call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir])
+
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
+
+    # run a prebuilt batch file in a non-standard location, which only need to set the stat folder and SPM.mat path
     def create_spm_stats_predefined_contrasts_results(self, statsdir, spm_template_full_path_noext, eng=None):
 
         try:
@@ -581,8 +680,8 @@ class GroupAnalysis:
         #
         pass
 
-    # modalities = ["FA", "MD", "L1", ....]
-    def run_tbss(self, group_label, modalities, odn, sessid=1, prepare=True, proc=True):
+    # run tbss for FA
+    def run_tbss_fa(self, group_label, odn, sessid=1, prepare=True, proc=True):
 
         root_analysis_folder = os.path.join(self.project.tbss_dir, odn)
 
@@ -591,31 +690,67 @@ class GroupAnalysis:
 
         # copy DTIFIT IMAGES to MAIN_ANALYSIS_FOLDER
         if prepare is True:
-            print("copy subjects' corresponding dtifit_FA images to analysis folder")
-            # copy all T1 to VBM/struc folder and generate template_list file
 
+            print("copy subjects' corresponding dtifit_FA images to analysis folder")
             subjects = self.project.get_subjects(group_label, sessid)
             for subj in subjects:
-
-                for mod in modalities:
-                    dest_img    = os.path.join(root_analysis_folder, mod, subj.dti_fit_label + "_" + mod)
-                    src_img     = os.path.join(subj.dti_dir, subj.dti_fit_label + "_" + mod)
-                    imcp(src_img, dest_img)
+                src_img     = os.path.join(subj.dti_dir, subj.dti_fit_label + "_FA")
+                dest_img    = os.path.join(root_analysis_folder, subj.dti_fit_label + "_FA")
+                imcp(src_img, dest_img)
 
         if proc is True:
 
             curr_dir = os.getcwd()
+            os.chdir(root_analysis_folder)
+
+            print("preprocessing dtifit_FA images")
+            rrun("tbss_1_preproc *.nii.gz")
+            print("co-registrating images to MNI template")
+            rrun("tbss_2_reg - T")
+            print("postreg")
+            rrun("tbss_3_postreg - S")
+            rrun("tbss_4_prestats 0.2")
+
+            os.chdir(curr_dir)
+
+        return root_analysis_folder
+
+    # run tbss for other modalities = ["MD", "L1", ....]
+    # you first must have done run_tbss_fa
+    def run_tbss_alternatives(self, group_label, input_folder, modalities, sessid=1, prepare=True, proc=True):
+
+        input_stats = os.path.join(input_folder, "stats")
+
+        # copy DTIFIT IMAGES to MAIN_ANALYSIS_FOLDER
+        if prepare is True:
+
+            print("copy subjects' corresponding dtifit_XX images to analysis folder")
+            subjects = self.project.get_subjects(group_label, sessid)
+            for subj in subjects:
+
+                for mod in modalities:
+
+                    alternative_folder = os.path.join(input_folder, mod)    # /group_analysis/tbss/population/MD
+                    os.makedirs(alternative_folder, exist_ok=True)
+
+                    src_img     = os.path.join(subj.dti_dir, subj.dti_fit_label + "_" + mod)
+                    dest_img    = os.path.join(alternative_folder, subj.dti_fit_label + "_" + mod)
+                    imcp(src_img, dest_img)
+
+                    src_img     = os.path.join(alternative_folder, subj.dti_fit_label + "_" + mod)
+                    dest_img    = os.path.join(alternative_folder, subj.dti_fit_label + "_FA")
+                    immv(src_img, dest_img)
+
+                    imcp(os.path.join(input_stats, "mean_FA_skeleton_mask_dst"), os.path.join(input_stats, "mean_" + mod + "_skeleton_mask_dst"))
+                    imcp(os.path.join(input_stats, "mean_FA_skeleton_mask"), os.path.join(input_stats, "mean_" + mod + "_skeleton_mask"))
+                    imcp(os.path.join(input_stats, "mean_FA_skeleton"), os.path.join(input_stats, "mean_" + mod + "_skeleton_mask"))
+
+        if proc is True:
+            curr_dir = os.getcwd()
+            os.chdir(input_folder)
 
             for mod in modalities:
-                mod_dir = os.path.join(root_analysis_folder, mod)
-                os.chdir(mod_dir)
-
                 print("preprocessing dtifit_" + mod + " images")
-                rrun("tbss_1_preproc *.nii.gz")
-                print("co-registrating images to MNI template")
-                rrun("tbss_2_reg - T")
-                print("postreg")
-                rrun("tbss_3_postreg - S")
-                rrun("tbss_4_prestats 0.2")
+                rrun("tbss_non_FA " + mod)
 
-                os.chdir(curr_dir)
+            os.chdir(curr_dir)
