@@ -72,7 +72,7 @@ class Subject:
         self.sienax_dir     = os.path.join(self.t1_dir, "sienax")
         self.t1_fs_dir      = os.path.join(self.t1_dir, "freesurfer")
         self.t1_fs_mri_dir  = os.path.join(self.t1_fs_dir, "mri")
-        self.t1_spm_dir     = os.path.join(self.t1_dir, "spm_proc")
+        self.t1_spm_dir     = os.path.join(self.t1_dir, "spm")
         self.t1_cat_dir     = os.path.join(self.t1_dir, "cat")
 
         self.t1_image_label         = self.label + "-t1"
@@ -388,7 +388,7 @@ class Subject:
                         odn=odn,
                         do_bet_overwrite=spm_seg_over_bet,
                         do_overwrite=do_overwrite,
-                        spm_template_name="spm_segment_dartelimport_template")
+                        spm_template_name="spm_segment_tissuevolume")
 
                 if do_cat_seg is True:
                     self.mpr.cat_segment(

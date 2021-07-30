@@ -419,7 +419,7 @@ class SubjectMpr:
                         odn="anat", imgtype=1,
                         do_overwrite=False,
                         do_bet_overwrite=False,
-                        add_bet_mask=True,
+                        add_bet_mask=False,
                         set_origin=False,
                         seg_templ="",
                         spm_template_name="spm_segment_tissuevolume"
@@ -501,8 +501,7 @@ class SubjectMpr:
             c3img = os.path.join(anatdir, "spm_proc", "c3T1_" + self.subject.label + ".nii")
 
             rrun("fslmaths " + c1img + " -add " + c2img + " -thr 0.1 -fillh " + brain_mask, logFile=log)
-            rrun("fslmaths " + c1img + " -add " + c2img + " -add " + c3img + " -thr 0.1 -bin " + skullstripped_mask,
-                 logFile=log)
+            rrun("fslmaths " + c1img + " -add " + c2img + " -add " + c3img + " -thr 0.1 -bin " + skullstripped_mask, logFile=log)
 
             # this codes have two aims:
             # 1) it resets like in the original image the dt header parameters that spm set to 0.
@@ -514,8 +513,7 @@ class SubjectMpr:
             if add_bet_mask is True:
 
                 if imtest(os.path.join(self.subject.t1_anat_dir, "T1_biascorr_brain_mask")) is True:
-                    rrun("fslmaths " + brain_mask + " -add " + os.path.join(self.subject.t1_anat_dir,
-                                                                            "T1_biascorr_brain_mask") + " -bin " + brain_mask)
+                    rrun("fslmaths " + brain_mask + " -add " + os.path.join(self.subject.t1_anat_dir, "T1_biascorr_brain_mask") + " -bin " + brain_mask)
                 elif imtest(self.subject.t1_brain_data_mask) is True:
                     rrun("fslmaths " + brain_mask + " -add " + self.subject.t1_brain_data_mask + " " + brain_mask)
                 else:
