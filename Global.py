@@ -66,6 +66,7 @@ class Global:
             self.cat_template_name          = "cat28_segment_shooting_tiv_smooth"
 
         self.spm_tissue_map                 = os.path.join(self.spm_dir, "tpm", "TPM.nii")
+        self.spm_icv_mask                   = os.path.join(self.spm_dir, "tpm", "mask_ICV.nii")
 
         self.fsl_bin                        = os.path.join(self.fsl_dir, "bin")
         self.fsl_data_std_dir               = os.path.join(self.fsl_dir, "data", "standard")

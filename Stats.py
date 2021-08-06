@@ -74,8 +74,6 @@ class Stats:
     #     cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCC = 1;"
     #     sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
 
-
-
     @staticmethod
     def spm_stats_replace_conditions_string(out_batch_job, conditions):
 

@@ -496,9 +496,9 @@ class SubjectMpr:
             call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], log)
 
             # create brainmask (WM+GM) and skullstrippedmask (WM+GM+CSF)
-            c1img = os.path.join(anatdir, "spm_proc", "c1T1_" + self.subject.label + ".nii")
-            c2img = os.path.join(anatdir, "spm_proc", "c2T1_" + self.subject.label + ".nii")
-            c3img = os.path.join(anatdir, "spm_proc", "c3T1_" + self.subject.label + ".nii")
+            c1img = os.path.join(self.subject.t1_spm_dir, "c1T1_" + self.subject.label + ".nii")
+            c2img = os.path.join(self.subject.t1_spm_dir, "c2T1_" + self.subject.label + ".nii")
+            c3img = os.path.join(self.subject.t1_spm_dir, "c3T1_" + self.subject.label + ".nii")
 
             rrun("fslmaths " + c1img + " -add " + c2img + " -thr 0.1 -fillh " + brain_mask, logFile=log)
             rrun("fslmaths " + c1img + " -add " + c2img + " -add " + c3img + " -thr 0.1 -bin " + skullstripped_mask, logFile=log)
@@ -551,6 +551,33 @@ class SubjectMpr:
             traceback.print_exc()
             log.close()
             print(e)
+
+
+    def spm_segment_check(self, check_dartel=True):
+        icv_file = os.path.join(self.subject.t1_spm_dir, "icv_" + self.subject.label + ".dat")
+
+        if os.path.exists(icv_file) is False:
+            print("Error in cat_segment_check of subj " + self.subject.label + ", ICV_FILE is missing")
+            return False
+
+        if os.path.getsize(icv_file) == 0:
+            print("Error in spm_segment_check of subj " + self.subject.label + ", ICV_FILE is empty")
+            return False
+
+        c1file  = os.path.join(self.subject.t1_spm_dir, "c1T1_" + self.subject.label + ".nii")
+        if imtest(c1file) is False:
+            print("Error in spm_segment_check of subj " + self.subject.label + ", C1 File is missing")
+            return False
+
+        if check_dartel is True:
+            rc1file = os.path.join(self.subject.t1_spm_dir, "rc1T1_" + self.subject.label + ".nii")
+            if imtest(rc1file) is False:
+                print("Error in spm_segment_check of subj " + self.subject.label + ", RC1 File is missing")
+                return False
+
+
+
+        return True
 
     # segment T1 with CAT and create  WM+GM mask (CSF is not created)
     # add_bet_mask params is used to correct the presence of holes (only partially filled) in the WM+GM mask.
@@ -686,16 +713,16 @@ class SubjectMpr:
     def cat_segment_check(self, calc_surfaces=True):
         icv_file = os.path.join(self.subject.t1_cat_dir, "tiv_" + self.subject.label + ".txt")
 
-        if os.path.exists(os.path.join(self.subject.t1_cat_dir, "report", "cat_T1_" + self.subject.label + ".xml")) is False:
-            print("Error in cat_segment_check of subj " + self.subject.label + ", CAT REPORT is missing")
-            return False
-
         if os.path.exists(icv_file) is False:
             print("Error in cat_segment_check of subj " + self.subject.label + ", ICV_FILE is missing")
             return False
 
         if os.path.getsize(icv_file) == 0:
             print("Error in cat_segment_check of subj " + self.subject.label + ", ICV_FILE is empty")
+            return False
+
+        if os.path.exists(os.path.join(self.subject.t1_cat_dir, "report", "cat_T1_" + self.subject.label + ".xml")) is False:
+            print("Error in cat_segment_check of subj " + self.subject.label + ", CAT REPORT is missing")
             return False
 
         if calc_surfaces is True:

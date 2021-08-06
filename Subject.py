@@ -96,6 +96,7 @@ class Subject:
         self.t1_cat_resampled_surface               = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
         self.t1_cat_resampled_surface_longitudinal  = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
 
+        self.t1_spm_icv_file            = os.path.join(self.t1_spm_dir, "icv_" + self.label + ".dat")
         self.hr2std_warp  = os.path.join(self.roi_std_dir, "hr2std_warp")
         self.std2hr_warp  = os.path.join(self.roi_t1_dir, "std2hr_warp")
 
