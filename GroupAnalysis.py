@@ -237,6 +237,7 @@ class GroupAnalysis:
             traceback.print_exc()
             print(e)
 
+
     def create_spm_vbm_dartel_stats_factdes_multregr(self, darteldir, grp_label, cov_names, anal_name,
                                                      data_file=None, glob_calc="subj_icv", cov_interactions=None, expl_mask="icv", sess_id=1,
                                                      spm_template_name="spm_vbm_stats_multregr_design_estimate", spm_contrasts_template_name="",
@@ -261,7 +262,7 @@ class GroupAnalysis:
             # ---------------------------------------------------------------------------
             # set dirs
 
-            out_batch_job = self.create_batch_files(spm_vbm_stats_multregr_design_estimate, "mpr")
+            out_batch_job = self.create_batch_files(spm_template_name, "mpr")
 
             #
             # spm_script_dir  = os.path.join(self.project.script_dir, "mpr", "spm")
@@ -779,7 +780,11 @@ class GroupAnalysis:
         out_batch_dir       = os.path.join(spm_script_dir, "batch")
 
         in_batch_start      = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-        in_batch_job        = templfile_noext + ".m"
+
+        if os.path.exists(templfile_noext) is True:
+            in_batch_job    = templfile_noext
+        else:
+            in_batch_job    = os.path.join(self._global.spm_templates_dir, templfile_noext + "_job.m")
 
         out_batch_start     = os.path.join(out_batch_dir, "create_" + input_batch_name + "_start.m")
         out_batch_job       = os.path.join(out_batch_dir, "create_" + input_batch_name + ".m")
