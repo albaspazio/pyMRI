@@ -5,10 +5,10 @@ import os
 from copy import deepcopy
 from shutil import move, rmtree
 
-from SubjectDti import SubjectDti
-from SubjectEpi import SubjectEpi
-from SubjectMpr import SubjectMpr
-from SubjectTransforms import SubjectTransforms
+from subject.SubjectDti import SubjectDti
+from subject.SubjectEpi import SubjectEpi
+from subject.SubjectMpr import SubjectMpr
+from subject.SubjectTransforms import SubjectTransforms
 from utility.fslfun import runsystem
 from utility.images import imtest, immv, imcp, is_image, img_split_ext
 from myfsl.utils.run import rrun
@@ -133,6 +133,8 @@ class Subject:
         self.dti_nodiff_data            = os.path.join(self.dti_dir, "nodif")
         self.dti_nodiff_brain_data      = os.path.join(self.dti_dir, "nodif_brain")
         self.dti_nodiff_brainmask_data  = os.path.join(self.dti_dir, "nodif_brain_mask")
+
+        self.dti_bedpostx_mean_S0_label = "mean_S0samples"
 
         self.trackvis_transposed_bvecs = "bvec_vert.txt"
 

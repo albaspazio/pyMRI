@@ -1,3 +1,4 @@
+import json
 import ntpath
 import os
 import glob
@@ -291,3 +292,27 @@ def remove_slices(self, numslice2remove=1, whichslices2remove="updown", remove_d
     imcp(self.subject.fmri_data, self.subject.fmri_data + "full")
     # rrun('fslroi ' + self.subject.epi_data + " " + self.subject.epi_data + " -1 -1  1 35")
     rrun('fslroi ' + self.subject.fmri_data + " " + self.subject.fmri_data + " -1 -1  0 34")
+
+
+# create a folder containing parts of the tbss mean skeleton belonging
+# divide the tbss mean skeleton in images according to a given atlas file (where each volume is specific tract)
+def mask_tbss_skeleton(template, atlas_img, atlas_json):
+
+    with open(atlas_json) as json_file:
+        datas = json.load(json_file)
+
+    temp_name = os.path.basename(template)
+
+    atlas_dir = os.path.dirname(atlas_img)
+
+    cnt = 1
+    for roi in datas["data"]:
+
+        tempmask = os.path.join(atlas_dir, roi["lab"] + "_mask")
+        finalmask = os.path.join(atlas_dir, temp_name + "_" + roi["lab"] + "_mask")
+        rrun("fslmaths " + atlas_img + " -thr " + str(cnt) + " -uthr " + str(cnt) + " -bin " + tempmask)
+        cnt = cnt + 1
+
+        rrun("fslmaths " + template + " -mas " + tempmask + " -bin " + finalmask)
+
+        # imrm(tempmask)

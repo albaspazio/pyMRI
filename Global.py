@@ -83,6 +83,8 @@ class Global:
         self.fsl_std_mni_4mm_brain_mask_dil = os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain_mask_dil")
         self.fsl_std_mni_4mm_cnf            = os.path.join(self.framework_dir, "templates", "images", "T1_2_MNI152_4mm.cnf")
 
+        self.fsl_std_mean_skeleton          = os.path.join(self.fsl_data_std_dir, "FMRIB58_FA-skeleton_1mm")
+
         self.std_aal_atlas_2mm         = os.path.join(self.global_data_templates, "mpr", "aal_262_standard")
 
     def check_paths(self):
