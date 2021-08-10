@@ -5,7 +5,7 @@ from threading import Thread
 from inspect import signature
 from copy import deepcopy
 
-from Subject import Subject
+from subject.Subject import Subject
 from utility.images import imcp, imrm
 from utility.utilities import gunzip, compress
 from utility import import_data_file

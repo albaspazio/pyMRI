@@ -357,8 +357,8 @@ class Subject:
 
         self.has_T2         = 0
         BET_F_VALUE_T2      = "0.5"
-        feat_preproc_model  = os.path.join(self.project.script_dir, "glm", "templates", feat_preproc_model)
-        melodic_model       = os.path.join(self.project.script_dir, "glm", "templates", mel_preproc_model)
+        feat_preproc_model  = os.path.join(self.project.script_dir, "glm", "../templates", feat_preproc_model)
+        melodic_model       = os.path.join(self.project.script_dir, "glm", "../templates", mel_preproc_model)
 
         # ==============================================================================================================================================================
         #  T1 data

@@ -484,7 +484,7 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<SMOOTHED_VOLS>', epi_all_volumes)
         sed_inplace(out_batch_job, '<MOTION_PARAMS>', rp_filemame)
 
-        Stats.spm_stats_replace_conditions_string(out_batch_job, conditions_lists)
+        Stats.spm_create_surface_mask_from_volume_mask(out_batch_job, conditions_lists,,
 
         copyfile(in_batch_start, out_batch_start)
         sed_inplace(out_batch_start, 'X', '1')
