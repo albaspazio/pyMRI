@@ -207,11 +207,13 @@ def get_filtered_subj_dict_column_within_values(dic, colname, value1, value2, op
 
     return res, lab
 
+
 # =====================================================================================
 # =====================================================================================
 # return a list of values from a given column
 def get_dict_column(dic, colname):
     return [d[colname] for d in dic]
+
 
 def get_filtered_dict_column(dic, colname, filt_col="", filter=None):
 
@@ -226,6 +228,7 @@ def get_filtered_dict_column(dic, colname, filt_col="", filter=None):
             print("Error in get_filtered_dict_column")
     else:
         return get_dict_column(dic, colname)
+
 
 # get a data list and return a \n separated string
 def list2spm_text_column(datalist):

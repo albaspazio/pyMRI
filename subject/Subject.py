@@ -344,7 +344,7 @@ class Subject:
                  do_sienax=False, bet_sienax_param_string="-SNB -f 0.2",
                  do_reg=True, do_nonlinreg=True,
                  do_seg=True, do_spm_seg=False, spm_seg_over_bet=False, spm_seg_over_fs=False,  # over-ride bet an
-                 do_cat_seg=False, cat_seg_over_bet=False, cat_seg_over_fs=False, cat_use_dartel=False, do_cat_surf=True, # over-ride bet an
+                 do_cat_seg=False, cat_seg_over_bet=False, cat_seg_over_fs=False, cat_use_dartel=False, do_cat_surf=True,  # over-ride bet an
                  do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
                  use_lesionmask=False, lesionmask="lesionmask",
                  do_freesurfer=False,
@@ -352,8 +352,8 @@ class Subject:
                  do_epirm2vol=0, do_aroma=True, do_nuisance=True, hpfsec=100,
                  feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic", do_featinitreg=False,
                  do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=False,
-                 do_dtifit=True, do_bedx=True, do_bedx_cuda=False, bedpost_odn="bedpostx",
-                 do_autoptx_tract=False,
+                 do_dtifit=True, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
+                 do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False,
                  do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0,
                  std_image=""):
 
@@ -595,16 +595,13 @@ class Subject:
                     runsystem("gunzip " + os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz"), logFile=log)
 
             if do_bedx is True:
-                self.dti.bedpostx()  # .sh $SUBJ_NAME $PROJ_DIR $BEDPOST_OUTDIR_NAME
+                self.dti.bedpostx(bedpost_odn, use_gpu=do_bedx_gpu)  # .sh $SUBJ_NAME $PROJ_DIR $BEDPOST_OUTDIR_NAME
 
-            if do_bedx_cuda is True:
-                self.dti.bedpostx_gpu()  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_bedpostx_CUDA.sh $SUBJ_NAME $PROJ_DIR $BEDPOST_OUTDIR_NAME
-
-            if do_autoptx_tract is True:
+            if do_xtract is True:
                 if imtest(os.path.join(self.dti_dir, bedpost_odn, "mean_S0samples")) is False:
-                    print("subj " + self.label + " ,you requested the autoPtx tractorgraphy, but bedpostx was not performed.....skipping")
+                    print("subj " + self.label + " ,you requested the xtract tractorgraphy, but bedpostx was not performed.....skipping")
                 else:
-                    self.dti.autoptx_tractography()  # . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_autoptx_tractography.sh $SUBJ_NAME $PROJ_DIR
+                    self.dti.xtract(xtract_odn, bedpost_odn, xtract_refspace, xtract_gpu)
 
             if do_struct_conn is True and os.path.isfile(os.path.join(self.tv_matrices_dir, "fa_AM.mat")) is False:
                 self.dti.conn_matrix(struct_conn_atlas_path, struct_conn_atlas_nroi)  # . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_conn_matrix.sh $SUBJ_NAME $PROJ_DIR

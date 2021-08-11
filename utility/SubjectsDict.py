@@ -8,6 +8,7 @@ class SubjectsDict:
 
         self.data = {}
         self.num = len(self.data)
+        self.labels = []
     # =====================================================================================
     # DATA EXTRACTION FROM A "SUBJ" DICTIONARY {"a_subj_label":{"a":..., "b":...., }}
     # =====================================================================================
@@ -32,16 +33,21 @@ class SubjectsDict:
                             data_row[header[cnt]] = elem
                         cnt = cnt+1
                     self.data[subj_lab] = data_row
+                    self.labels.append(subj_lab)
 
             self.num = len(self.data)
             return self.data
 
     # works with a "subj" dict
     # returns a filtered matrix [subj x colnames]
-    def get_filtered_columns(self, colnames, subj_labels, sort=-1):
+    def get_filtered_columns(self, colnames, subj_labels=None, sort=-1):
+
+        if subj_labels is None:
+            subj_labels = self.labels
 
         res = []
         lab = []
+
         for subj in subj_labels:
             try:
                 subj_dic = self.data[subj]
@@ -66,11 +72,14 @@ class SubjectsDict:
     # returns two vectors filtered by [subj labels]
     # - [values]
     # - [labels]
-    def get_filtered_column(self, colname, subjects_label, sort=False):
+    def get_filtered_column(self, colname, subj_labels=None, sort=False):
+
+        if subj_labels is None:
+            subj_labels = self.labels
 
         res = []
         lab = []
-        for subj in subjects_label:
+        for subj in subj_labels:
             try:
                 colvalue = typeUnknown(self.data[subj][colname])
                 res.append(colvalue)
@@ -90,11 +99,14 @@ class SubjectsDict:
     # returns two vectors filtered by [subj labels] & value
     # - [values]
     # - [labels]
-    def get_filtered_column_by_value(self, colname, value, operation="=", subjects_label=None, sort=False):
+    def get_filtered_column_by_value(self, colname, value, operation="=", subj_labels=None, sort=False):
+
+        if subj_labels is None:
+            subj_labels = self.labels
 
         res = []
         lab = []
-        for subj in subjects_label:
+        for subj in subj_labels:
             try:
                 colvalue = typeUnknown(self.data[subj][colname])
                 if operation == "=" or operation == "==" :
@@ -133,11 +145,14 @@ class SubjectsDict:
     # returns two vectors filtered by [subj labels] & whether value is within value1/2
     # - [values]
     # - [labels]
-    def get_filtered_column_within_values(self, colname, value1, value2, operation="<>", subjects_label=None, sort=False):
+    def get_filtered_column_within_values(self, colname, value1, value2, operation="<>", subj_labels=None, sort=False):
+
+        if subj_labels is None:
+            subj_labels = self.labels
 
         res = []
         lab = []
-        for subj in subjects_label:
+        for subj in subj_labels:
             try:
                 colvalue = typeUnknown(self.data[subj][colname])
                 if operation == "<>":

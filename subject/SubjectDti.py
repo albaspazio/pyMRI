@@ -42,10 +42,7 @@ class SubjectDti:
     def probtrackx(self):
         pass
 
-    def bedpostx(self):
-        pass
-
-    def bedpostx_gpu(self, out_dir_name="bedpostx_gpu", stdimg=""):
+    def bedpostx(self, out_dir_name="bedpostx", use_gpu=False):
 
         bp_dir      = os.path.join(self.subject.dti_dir, out_dir_name)
         bp_out_dir  = os.path.join(self.subject.dti_dir, out_dir_name + ".bedpostX")
@@ -60,29 +57,51 @@ class SubjectDti:
         res = rrun("bedpostx_datacheck " + bp_dir)
 
         # if res > 0:
-        #     print("ERROR in bedpostx_gpu (" +  bp_dir + " ....exiting")
+        #     print("ERROR in bedpostx (" +  bp_dir + " ....exiting")
         #     return
 
-        rrun("bedpostx_gpu " + bp_dir + " -n 3 -w 1 -b 1000")
-
-        if imtest(os.path.join(bp_out_dir, self.subject.dti_bedpostx_mean_S0_label)):
-            shutil.move(bp_out_dir, os.path.join(self.subject.dti_dir, out_dir_name))
-            os.removedirs(bp_dir)
-
+        if use_gpu is True:
+            rrun("bedpostx_gpu " + bp_dir + " -n 3 -w 1 -b 1000")
         else:
-            print("ERROR in bedpostx_gpu....something went wrong in bedpostx")
-            return
+            rrun("bedpostx " + bp_dir + " -n 3 -w 1 -b 1000")
 
+        # if imtest(os.path.join(bp_out_dir, self.subject.dti_bedpostx_mean_S0_label)):
+        #     shutil.move(bp_out_dir, os.path.join(self.subject.dti_dir, out_dir_name))
+        #     os.removedirs(bp_dir)
 
-    def xtract(self, outdir_name="xtract", bedpostx_dir="bedpostx", species="HUMAN", use_gpu=False):
+        # else:
+        #     print("ERROR in bedpostx_gpu....something went wrong in bedpostx")
+        #     return
 
-        bp_dir      = os.path.join(self.subject.dti_dir, bedpostx_dir)
+    def xtract(self, outdir_name="xtract", bedpostx_dirname="bedpostx", refspace="native", use_gpu=False, species="HUMAN"):
+
+        bp_dir      = os.path.join(self.subject.dti_dir, bedpostx_dirname)
         out_dir     = os.path.join(self.subject.dti_dir, outdir_name)
 
-        rrun("xtract -bpx " + bp_dir + " -out " + out_dir + " -stdwarp " + self.subject.std2dti_warp + " " + self.subject.dti2std_warp + " -species " + species )
+        refspace_str = " -native "
+        if refspace != "native":
+            # TODO: split refspace by space, check if the two elements are valid files
+            refspace_str = " -ref " + refspace + " "
 
+        gpu_str = ""
+        if use_gpu is True:
+            gpu_str = " -gpu "
 
+        rrun("xtract -bpx " + bp_dir + " -out " + out_dir + " -stdwarp " + self.subject.std2dti_warp + " " + self.subject.dti2std_warp + gpu_str + refspace_str + " -species " + species)
 
+    def xtract_viewer(self, xtract_dir, structures="", species="HUMAN"):
+
+        if structures != "":
+            structures = " -str " + structures + " "
+
+        rrun("xtract_viewer -dir " + xtract_dir + " -species " + species + "" + structures)
+
+    def xtract_stats(self, xtract_dir, meas="vol,prob,length,FA,MD", structures=""):
+
+        if structures != "":
+            structures = " -str " + structures + " "
+
+        rrun("xtract_stats " + " -xtract " + xtract_dir + " -meas " + meas + "" + structures)
 
     def conn_matrix(self, atlas_path="freesurfer", nroi=0):
         pass
