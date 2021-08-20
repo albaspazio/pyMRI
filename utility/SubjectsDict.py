@@ -4,11 +4,15 @@ from utility.utilities import argsort, reorder_list, typeUnknown
 
 class SubjectsDict:
 
-    def __init__(self):
+    def __init__(self, filepath=""):
 
         self.data = {}
         self.num = len(self.data)
         self.labels = []
+
+        if filepath != "":
+            self.load(filepath)
+
     # =====================================================================================
     # DATA EXTRACTION FROM A "SUBJ" DICTIONARY {"a_subj_label":{"a":..., "b":...., }}
     # =====================================================================================

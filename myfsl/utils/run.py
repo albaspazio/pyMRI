@@ -206,6 +206,9 @@ def rrun(*args, **kwargs):
     returnStderr   = kwargs.get('stderr',   False)
     returnExitcode = kwargs.get('exitcode', False)
     submit         = kwargs.get('submit',   {})
+    stop_on_error  = kwargs.get('stop_on_error', True)
+
+
     log            = kwargs.get('log',      {})
     tee            = log   .get('tee',      False)
     logStdout      = log   .get('stdout',   None)
@@ -246,11 +249,12 @@ def rrun(*args, **kwargs):
 
     if not returnExitcode and (exitcode != 0 or len(stderr)):
 
-        str = '{} returned non-zero exit code or error: {}\nmessage: {}\nfull command: {}'.format(args[0], exitcode, stderr, " ".join(args))
+        str = '{} returned non-zero exit code or error: {}\nmessage: {}\n full command: {}'.format(args[0], exitcode, stderr, " ".join(args))
         if logFile is not None:
             print(str, file=logFile)
 
-        raise RuntimeError(str)
+        if stop_on_error is True:
+            raise RuntimeError(str)
 
     results = []
     if returnStdout:   results.append(stdout)

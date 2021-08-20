@@ -4,6 +4,7 @@ import os
 import glob
 from shutil import copyfile, move
 import xml.etree.ElementTree as ET
+from utility.utilities import get_filename
 
 from myfsl.utils.run import rrun
 
@@ -127,6 +128,9 @@ def imcp_notexisting(src, dest, error_src_not_exist=False, logFile=None):
 
 
 def imrm(filelist, logFile=None):
+
+    if isinstance(filelist, str) is True:
+        filelist = [filelist]
 
     for file in filelist:
 
@@ -294,25 +298,53 @@ def remove_slices(self, numslice2remove=1, whichslices2remove="updown", remove_d
     rrun('fslroi ' + self.subject.fmri_data + " " + self.subject.fmri_data + " -1 -1  0 34")
 
 
-# create a folder containing parts of the tbss mean skeleton belonging
 # divide the tbss mean skeleton in images according to a given atlas file (where each volume is specific tract)
-def mask_tbss_skeleton(template, atlas_img, atlas_json):
+# and save to "mean_skeleton" subfolder of atlas folder
+def mask_tbss_skeleton_volumes_atlas(skel_templ, atlas_img, atlas_json):
+
+    atlas_dir   = os.path.dirname(atlas_img)
+
+    out_dir     = os.path.join(atlas_dir, "mean_skeleton")
+    os.makedirs(out_dir, exist_ok=True)
 
     with open(atlas_json) as json_file:
         datas = json.load(json_file)
 
-    temp_name = os.path.basename(template)
-
-    atlas_dir = os.path.dirname(atlas_img)
+    temp_name = os.path.basename(skel_templ)
 
     cnt = 1
     for roi in datas["data"]:
 
-        tempmask = os.path.join(atlas_dir, roi["lab"] + "_mask")
-        finalmask = os.path.join(atlas_dir, temp_name + "_" + roi["lab"] + "_mask")
+        tempmask  = os.path.join(out_dir, roi["lab"] + "_mask")
+        finalmask = os.path.join(out_dir, temp_name + "_" + roi["lab"] + "_mask")
+
         rrun("fslmaths " + atlas_img + " -thr " + str(cnt) + " -uthr " + str(cnt) + " -bin " + tempmask)
+        rrun("fslmaths " + skel_templ + " -mas " + tempmask + " -bin " + finalmask)
+
+        imrm(tempmask)
         cnt = cnt + 1
 
-        rrun("fslmaths " + template + " -mas " + tempmask + " -bin " + finalmask)
+# divide the tbss mean skeleton in images according to a given atlas folder
+#  each file is a specific tract and its name define its label, no need for a json file
+# and save to "mean_skeleton" subfolder of atlas folder
+def mask_tbss_skeleton_folder_atlas(skel_templ, atlas_dir, thr=0.95):
 
-        # imrm(tempmask)
+    out_dir     = os.path.join(atlas_dir, "mean_skeleton")
+    os.makedirs(out_dir, exist_ok=True)
+
+    temp_name = os.path.basename(skel_templ)
+
+    files = glob.glob(atlas_dir + "/*")
+
+    for f in files:
+
+        if imtest(f) is False:
+            continue
+        f_name = imgname(f)
+        tempmask  = os.path.join(out_dir, f_name + "_mask")
+        finalmask = os.path.join(out_dir, temp_name + "_" + f_name + "_mask")
+
+        rrun("fslmaths " + f + " -thr " + str(thr) + " -bin " + tempmask)
+        rrun("fslmaths " + skel_templ + " -mas " + tempmask + " -bin " + finalmask)
+
+        imrm(tempmask)

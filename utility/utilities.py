@@ -92,3 +92,13 @@ def copytree(src, dst, symlinks=False, ignore=None):
             shutil.copytree(s, d, symlinks, ignore)
         else:
             shutil.copy2(s, d)
+
+# read a file where each line is a string and returns them as list (pruning the '\n')
+def read_list_from_file(srcfile):
+
+    with open(srcfile, 'r') as f:
+        str = f.readlines()
+
+    for s in range(len(str)):
+        str[s] = str[s].strip()
+    return str

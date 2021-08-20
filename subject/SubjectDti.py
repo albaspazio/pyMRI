@@ -1,3 +1,4 @@
+import csv
 import os
 import shutil
 from shutil import copyfile
@@ -87,21 +88,99 @@ class SubjectDti:
         if use_gpu is True:
             gpu_str = " -gpu "
 
-        rrun("xtract -bpx " + bp_dir + " -out " + out_dir + " -stdwarp " + self.subject.std2dti_warp + " " + self.subject.dti2std_warp + gpu_str + refspace_str + " -species " + species)
+        rrun("xtract -bpx " + bp_dir + " -out " + out_dir + " -stdwarp " + self.subject.std2dti_warp + " " + self.subject.dti2std_warp + gpu_str + refspace_str + " -species " + species, stop_on_error=False)
 
-    def xtract_viewer(self, xtract_dir, structures="", species="HUMAN"):
+        self.check_xtracts(out_dir)
+        return out_dir
+
+
+    def check_xtracts(self, in_dir):
+        all_ok = True
+        tracts = self._global.dti_xtract_labels
+        for tract in tracts:
+            if imtest(os.path.join(in_dir, "tracts", tract, "densityNorm")) is False:
+                print("WARNING: in xtract. SUBJ " + self.subject.label + ", tract " + tract + " is missing")
+                all_ok = False
+        if all_ok is True:
+            print("  ============>  check_xtracts of SUBJ " + self.subject.label + ", is ok!")
+
+
+    def xtract_viewer(self, xtract_dir="xtract", structures="", species="HUMAN"):
+
+        xdir = os.path.join(self.subject.dti_dir, xtract_dir)
 
         if structures != "":
             structures = " -str " + structures + " "
 
-        rrun("xtract_viewer -dir " + xtract_dir + " -species " + species + "" + structures)
+        rrun("xtract_viewer -dir " + xdir + " -species " + species + "" + structures)
 
-    def xtract_stats(self, xtract_dir, meas="vol,prob,length,FA,MD", structures=""):
+    def xtract_stats(self, xtract_dir="xtract", refspace="native", meas="vol,prob,length,FA,MD,L1", structures=""):
+
+        xdir = os.path.join(self.subject.dti_dir, xtract_dir)
+
+        if refspace == "native":
+            rspace = " -w native "
+        elif refspace == "":
+            print("ERROR in xtract_stats: refspace param is empty.....exiting")
+            return
+        else:
+            if imtest(refspace) is False:
+                print("ERROR in xtract_stats: given refspace param is not a transform image.....exiting")
+                return
+            else:
+                rspace = " -w " + refspace + " "
+
+        root_dir = " -d " + os.path.join(self.subject.dti_dir, self.subject.dti_fit_label + "_") + " "
 
         if structures != "":
             structures = " -str " + structures + " "
 
-        rrun("xtract_stats " + " -xtract " + xtract_dir + " -meas " + meas + "" + structures)
+        rrun("xtract_stats " + " -xtract " + xdir + rspace + root_dir + " -meas " + meas + "" + structures)
+
+    # read its own xtract_stats output file and return a dictionary = { "tractX":{"val1":XX,"val2":YY, ...}, .. }
+    def read_xtract_file(self, tracts=None, values=None, ifn="stats.csv"):
+
+        if len(tracts) is None:
+            tracts  = self._global.dti_xtract_labels
+
+        if values is None:
+            values  = ["mean_FA", "mean_MD"]
+
+        inputfile   = os.path.join(self.subject.dti_xtract_dir, ifn)
+        datas       = {}
+
+        with open(inputfile, "r") as f:
+            reader = csv.reader(f, dialect='excel', delimiter=',')
+            for row in reader:
+                if reader.line_num == 1:
+                    header = row
+                else:
+                    data_row = {}
+                    cnt = 0
+                    for elem in row:
+                        if cnt == 0:
+
+                            if elem in tracts:
+                                tract_lab = elem
+                            else:
+                                break
+                        else:
+                            hdr = header[cnt].strip()
+                            for v in values:
+                                if v in hdr:
+                                    data_row[v] = elem
+
+                        cnt = cnt + 1
+
+                    if bool(data_row):
+                        datas[tract_lab] = data_row
+
+        str = self.subject.label + "\t"
+        for tract in datas:
+            for v in values:
+                str = str + datas[tract_lab][v] + "\t"
+
+        return str, datas
 
     def conn_matrix(self, atlas_path="freesurfer", nroi=0):
         pass

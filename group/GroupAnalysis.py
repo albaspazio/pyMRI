@@ -1,3 +1,4 @@
+import csv
 import os
 import shutil
 import traceback
@@ -8,7 +9,7 @@ from shutil import copyfile, move
 
 from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
 from myfsl.utils.run import rrun
-from utility.images import imcp, imtest, immv
+from utility.images import imcp, imtest, immv, imrm
 from utility.utilities import sed_inplace
 from utility.import_data_file import get_header_of_tabbed_file, get_icv_spm_file
 from utility import import_data_file
@@ -135,6 +136,27 @@ class GroupAnalysis:
 
         b = numpy.hstack((data_file, icv_scores))
         numpy.savetxt(input_data_file, b, ['%1.0f', '%1.0f', '%5.0f', '%5.0f', '%5.0f', '%2.4f'], '\t')
+
+    # read xtract's stats.csv file of each subject in the given list and create a tabbed file (ofp) with given values/tract
+    def export_xtract_data(self, subjs, ofp, tracts=None, values=None, ifn="stats.csv"):
+
+        if len(tracts) is None:
+            tracts = self._global.dti_xtract_labels
+
+        if values is None:
+            values = ["mean_FA", "mean_MD"]
+
+        file_str = "subj\t"
+        for tr in tracts:
+            for v in values:
+                file_str = file_str + tr + "_" + v + "\t"
+        file_str = file_str + "\n"
+
+        for subj in subjs:
+            file_str = file_str + subj.dti.read_xtract_file(tracts, values, ifn)[0] + "\n"
+
+        with open(ofp, 'w', encoding='utf-8') as f:
+            f.write(file_str)
 
     # ---------------------------------------------------
     # STATS - VBM
@@ -866,6 +888,11 @@ class GroupAnalysis:
         #
         pass
 
+
+    # ====================================================================================================================================================
+    # TBSS
+    # ====================================================================================================================================================
+
     # run tbss for FA
     def run_tbss_fa(self, group_label, odn, sessid=1, prepare=True, proc=True):
 
@@ -940,3 +967,61 @@ class GroupAnalysis:
                 rrun("tbss_non_FA " + mod)
 
             os.chdir(curr_dir)
+
+    # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
+    def clusterize_tbss_results_by_atlas(self, tbss_result_image, tracts_labels, tracts_dir, out_folder, log_file="log.txt", thr=0.95):
+
+        try:
+            log                 = os.path.join(out_folder, log_file)
+            tot_voxels          = 0
+            classified_tracts   = []
+            os.makedirs(out_folder, exist_ok=True)
+
+            # ------------------------------------------------
+            # threshold tbss input, copy to out_folder, get number of voxels
+            name        = os.path.basename(tbss_result_image)
+            thr_input   = os.path.join(out_folder, name)
+            rrun("fslmaths " + tbss_result_image + " -thr " + str(thr) + " -bin " + thr_input)
+            original_voxels = rrun("fslstats " + thr_input + " -V").strip().split(" ")[0]
+
+            out_str = ""
+            for tract in tracts_labels:
+                tr_img  = os.path.join(tracts_dir, "FMRIB58_FA-skeleton_1mm_" + tract + "_mask")
+                out_img = os.path.join(out_folder, "sk_" + tract)
+                rrun("fslmaths " + thr_input + " -mas " + tr_img + " " + out_img)
+
+                res = rrun("fslstats " + out_img + " -V").strip().split(" ")[0]
+                if int(res) > 0:
+                    tot_voxels = tot_voxels + int(res)
+                    out_str = out_str + tract + "\t" + res + "\n"
+                    classified_tracts.append(out_img)
+                else:
+                    imrm(out_img)
+
+            # ------------------------------------------------
+            # create unclassified image
+            unclass_img = os.path.join(out_folder, "unclassified")
+            cmd_str     = "fslmaths " + thr_input
+            for img in classified_tracts:
+                cmd_str = cmd_str + " -sub " + img + " -bin "
+            cmd_str = cmd_str + unclass_img
+            rrun(cmd_str)
+            unclass_vox = rrun("fslstats " + unclass_img + " -V").strip().split(" ")[0]
+
+            # ------------------------------------------------
+            # write log file
+            out_str = out_str + "\n" + "\n" + "tot voxels = " + str(tot_voxels) + " out of " + str(original_voxels) + "\n"
+            out_str = out_str + "unclassified image has " + str(unclass_vox)
+            with open(log, 'w', encoding='utf-8') as f:
+                f.write(out_str)
+
+        except Exception as e:
+            e
+
+
+
+
+
+
+
+

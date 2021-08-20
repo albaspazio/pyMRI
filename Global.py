@@ -85,7 +85,11 @@ class Global:
 
         self.fsl_std_mean_skeleton          = os.path.join(self.fsl_data_std_dir, "FMRIB58_FA-skeleton_1mm")
 
-        self.std_aal_atlas_2mm         = os.path.join(self.global_data_templates, "mpr", "aal_262_standard")
+        self.std_aal_atlas_2mm              = os.path.join(self.global_data_templates, "mpr", "aal_262_standard")
+
+        self.dti_xtract_labels              = ["af_l", "af_r", "ar_l", "ar_r", "atr_l", "atr_r", "cbd_l", "cbd_r", "cbp_l", "cbp_r", "cbt_l", "cbt_r", "cst_l", "cst_r", "fa_l", "fa_r", "fma", "fmi", "fx_l", "fx_r", "ilf_l", "ilf_r", "ifo_l", "ifo_r", "mcp", "mdlf_l", "mdlf_r", "or_l", "or_r", "str_l", "str_r", "slf1_l", "slf1_r", "slf2_l", "slf2_r", "slf3_l", "slf3_r", "ac", "uf_l", "uf_r", "vof_l", "vof_r"]
+        self.dti_xtract_dir                 = os.path.join(self.framework_dir, "templates", "images", "xtract", "mean_skeleton")
+
 
     def check_paths(self):
 

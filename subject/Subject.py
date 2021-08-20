@@ -117,6 +117,7 @@ class Subject:
         self.probtrackx_dir     = os.path.join(self.dti_dir, "probtrackx")
         self.trackvis_dir       = os.path.join(self.dti_dir, "trackvis")
         self.tv_matrices_dir    = os.path.join(self.dti_dir, "tv_matrices")
+        self.dti_xtract_dir     = os.path.join(self.dti_dir, "xtract")
 
         self.dti_image_label    = self.label + "-dti"
         self.dti_ec_image_label = self.dti_image_label + "_ec"
@@ -353,7 +354,7 @@ class Subject:
                  feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic", do_featinitreg=False,
                  do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=False,
                  do_dtifit=True, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
-                 do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False,
+                 do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",
                  do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0,
                  std_image=""):
 
@@ -578,10 +579,10 @@ class Subject:
 
             if imtest(os.path.join(self.dti_dir, self.dti_fit_label + "_FA")) is False:
                 print("===========>>>> " + self.label + " : dtifit")
-                self.dti.ec_fit()  # run .	$GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_ec_fit.sh $SUBJ_NAME $PROJ_DIR
-                rrun("fslmaths " + os.path.join(self.dti_dir, self.dti_fit_label) + "_L2 -add " + os.path.join(self.dti_dir, self.dti_fit_label + "_L3") + " -div 2 " + os.path.join(self.dti_dir, self.dti_fit_label + "_L23"), logFile=log)
+                self.dti.ec_fit()
 
-                self.dti.autoptx_tractography()
+                # create L23 image
+                rrun("fslmaths " + os.path.join(self.dti_dir, self.dti_fit_label) + "_L2 -add " + os.path.join(self.dti_dir, self.dti_fit_label + "_L3") + " -div 2 " + os.path.join(self.dti_dir, self.dti_fit_label + "_L23"), logFile=log)
 
             os.makedirs(self.roi_dti_dir, exist_ok=True)
 
@@ -602,6 +603,7 @@ class Subject:
                     print("subj " + self.label + " ,you requested the xtract tractorgraphy, but bedpostx was not performed.....skipping")
                 else:
                     self.dti.xtract(xtract_odn, bedpost_odn, xtract_refspace, xtract_gpu)
+                    self.dti.xtract_stats(xtract_odn, xtract_refspace, xtract_meas)
 
             if do_struct_conn is True and os.path.isfile(os.path.join(self.tv_matrices_dir, "fa_AM.mat")) is False:
                 self.dti.conn_matrix(struct_conn_atlas_path, struct_conn_atlas_nroi)  # . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_conn_matrix.sh $SUBJ_NAME $PROJ_DIR
