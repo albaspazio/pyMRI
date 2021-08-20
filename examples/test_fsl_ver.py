@@ -1,9 +1,9 @@
-from pymri.utility import FslSwitcher
+from utility import fsl_switcher
 import os
 
 if __name__ == "__main__":
 
-    fslswitch = FslSwitcher()
+    fslswitch = fsl_switcher()
 
     res = fslswitch.activate_fsl_version("600")
 

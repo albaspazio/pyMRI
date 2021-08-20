@@ -1,32 +1,42 @@
 import os
 import json
 import traceback
-from shutil import copyfile, move
+from shutil import copyfile
 
-from pymri.Global import Global
-from pymri.Project import Project
-from pymri.utility import startup_utilities
+from Global import Global
+from Project import Project
 
-from pymri.utility.fslfun import imtest, run_notexisting_img
-from pymri.fsl.utils.run import rrun
+from myfsl.utils.run import rrun
 
-from pymri.utility import import_data_file
-from pymri.utility import plot_data
-
+from utility import import_data_file
 
 if __name__ == "__main__":
+    
+    
+    # ======================================================================================================================
+    # check global data and external toolboxes
+    # ======================================================================================================================
+    fsl_code = "601"
+    try:
+        globaldata = Global(fsl_code)
+
+    except Exception as e:
+        print(e)
+        exit()
 
     # ======================================================================================================================
-    global_script_dir = "/media/alba/data/MRI/scripts"
+    # HEADER
+    # ======================================================================================================================
     proj_dir = "/media/alba/dados/MRI/projects/temperamento_murcia"
-    fsl_code = "509"
+    project     = Project(proj_dir, globaldata)
+    SESS_ID     = 1
+    num_cpu     = 4
+    group_label = "single"
 
+    # ======================================================================================================================
+    # PROCESSING
+    # ======================================================================================================================
     try:
-        if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
-            print("Error")
-            exit()
-
-        globaldata = Global(global_script_dir)
 
         # ======================================================================================================================
         # init vars
@@ -56,23 +66,23 @@ if __name__ == "__main__":
 
         # ======================================================================================================================
         # ======================================================================================================================
-        project = Project(proj_dir, globaldata, hasT1=True)
+        project = Project(proj_dir, globaldata)
 
         project.load_subjects(subjects_list_name)
-        subjects            = project.get_subjects_labels()
+        subjects            = project.get_loaded_subjects_labels()
         NUM_SUBJ            = len(subjects)
 
-        # load melodic template
+        # load resting template
         with open(template_file_name + ".json") as templfile:
             melodic_template = json.load(templfile)
 
         TEMPL_STATS_DIR         = os.path.join(project.melodic_templates_dir, template_file_name, "stats")
         DR_DIR                  = os.path.join(project.melodic_dr_dir, "templ_" + template_file_name, population_name)
-        RESULTS2_OUT_DIR        = os.path.join(DR_DIR, "results", "standard2")
-        RESULTS4_OUT_DIR        = os.path.join(DR_DIR, "results", "standard4")
-        standard_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
+        RESULTS2_OUT_DIR        = os.path.join(DR_DIR, "results", "std2")
+        RESULTS4_OUT_DIR        = os.path.join(DR_DIR, "results", "std4")
+        standard_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_std_dir, "MNI152_T1_2mm_brain")
 
-        subjects_data           = import_data_file.read_tabbed_file_with_header(os.path.join(project.dir, "data_2x56.txt"))
+        subjects_data           = import_data_file.tabbed_file_with_header2dict_list(os.path.join(project.dir, "data_2x56.txt"))
 
 
         # create baseline images

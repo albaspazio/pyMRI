@@ -2,31 +2,43 @@ import os
 import json
 import traceback
 
-from pymri.Global import Global
-from pymri.Project import Project
-from pymri.utility import startup_utilities
+from Global import Global
+from Project import Project
 
-from pymri.utility.fslfun import imtest, run_notexisting_img
-from pymri.fsl.utils.run import rrun
+from utility.fslfun import imtest, run_notexisting_img
+from myfsl.utils.run import rrun
 
-from pymri.utility import import_data_file
-from pymri.utility import plot_data
+from utility import import_data_file
+from utility import plot_data
 
 
 if __name__ == "__main__":
 
     # ======================================================================================================================
-    global_script_dir = "/media/alba/data/MRI/scripts"
-    proj_dir = "/media/alba/dados/MRI/projects/temperamento_murcia"
-    fsl_code = "509"
-
+    # check global data and external toolboxes
+    # ======================================================================================================================
+    fsl_code = "601"
     try:
-        if not startup_utilities.init(global_script_dir, proj_dir, fsl_code):
-            print("Error")
-            exit()
+        globaldata = Global(fsl_code)
 
-        globaldata = Global(global_script_dir)
+    except Exception as e:
+        print(e)
+        exit()
 
+    # ======================================================================================================================
+    # HEADER
+    # ======================================================================================================================
+    proj_dir = "/media/alba/dados/MRI/projects/temperamento_murcia"
+    project     = Project(proj_dir, globaldata)
+    SESS_ID     = 1
+    num_cpu     = 4
+    group_label = "single"
+
+    # ======================================================================================================================
+    # PROCESSING
+    # ======================================================================================================================
+    
+    try:
         # ======================================================================================================================
         # init vars
         # ======================================================================================================================
@@ -54,23 +66,23 @@ if __name__ == "__main__":
 
         # ======================================================================================================================
         # ======================================================================================================================
-        project = Project(proj_dir, globaldata, hasT1=True)
+        project = Project(proj_dir, globaldata)
 
         project.load_subjects(subjects_list_name)
-        subjects            = project.get_subjects_labels()
+        subjects            = project.get_loaded_subjects_labels()
         NUM_SUBJ            = len(subjects)
 
-        # load melodic template
+        # load resting template
         with open(template_file_name + ".json") as templfile:
             melodic_template = json.load(templfile)
 
         TEMPL_STATS_DIR         = os.path.join(project.melodic_templates_dir, template_file_name, "stats")
         DR_DIR                  = os.path.join(project.melodic_dr_dir, "templ_" + template_file_name, population_name)
-        RESULTS2_OUT_DIR        = os.path.join(DR_DIR, "results", "standard2")
-        RESULTS4_OUT_DIR        = os.path.join(DR_DIR, "results", "standard4")
-        standard_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_standard_dir, "MNI152_T1_2mm_brain")
+        RESULTS2_OUT_DIR        = os.path.join(DR_DIR, "results", "std2")
+        RESULTS4_OUT_DIR        = os.path.join(DR_DIR, "results", "std4")
+        std_MNI_2mm_brain  = os.path.join(globaldata.fsl_data_std_dir, "MNI152_T1_2mm_brain")
 
-        subjects_data           = import_data_file.read_tabbed_file_with_header(os.path.join(project.dir, subjects_data_file))
+        subjects_data           = import_data_file.tabbed_file_with_header2dict_list(os.path.join(project.dir, subjects_data_file))
 
         # -----------------------------------------------------
         # SBFC
@@ -89,9 +101,9 @@ if __name__ == "__main__":
 
             # calculate tranform from bgimage(4mm) to standard(2mm)
             # => /dr/templ_subjects_2x56_melodic_ST/subjects_2x56/results/standard2/bg_image_standard.nii.gz
-            templ2standard_mat = os.path.join(TEMPL_STATS_DIR, "bg2standard.mat")
-            bg_image_standard = os.path.join(RESULTS2_OUT_DIR, "bg_image_standard.nii.gz")
-            run_notexisting_img(bg_image_standard, "flirt -in " + melodic_template["TEMPLATE_BG_IMAGE"] + " -ref " + os.path.join(globaldata.fsl_data_standard_dir, "MNI152_T1_2mm_brain") + " -out " + bg_image_standard + " -omat " + templ2standard_mat)
+            templ2std_mat = os.path.join(TEMPL_STATS_DIR, "bg2std.mat")
+            bg_image_std = os.path.join(RESULTS2_OUT_DIR, "bg_image_std.nii.gz")
+            run_notexisting_img(bg_image_std, "flirt -in " + melodic_template["TEMPLATE_BG_IMAGE"] + " -ref " + os.path.join(globaldata.fsl_data_std_dir, "MNI152_T1_2mm_brain") + " -out " + bg_image_std + " -omat " + templ2std_mat)
 
             # -----------------------------------------------------
             # transform RSN image to standard(4mm) to standard(2mm)
@@ -103,34 +115,34 @@ if __name__ == "__main__":
                 dest_res_file   = os.path.join(TEMPL_STATS_DIR, arr_rsn_labels[cnt])
 
                 if imtest(dest_res_file) is False:
-                    rrun("flirt - in " + src_res_file + " -ref " + standard_MNI_2mm_brain + " -applyxfm -init " + templ2standard_mat + " -out " + dest_res_file)
+                    rrun("flirt - in " + src_res_file + " -ref " + std_MNI_2mm_brain + " -applyxfm -init " + templ2std_mat + " -out " + dest_res_file)
                     rrun("fslmaths " + dest_res_file + " -thr 2.7 " + dest_res_file)
 
                 cnt = cnt+1
 
             # -----------------------------------------------------
-            # transform melodic results from 4mm to 2mm
+            # transform resting results from 4mm to 2mm
             # -----------------------------------------------------
             for foldimg in arr_images_names:
                 img             = os.path.basename(foldimg)
                 src_res_file    = os.path.join(DR_DIR, foldimg)
                 dest_res_file   = os.path.join(RESULTS2_OUT_DIR, img)
-                inputmat        = os.path.join(RESULTS2_OUT_DIR, "bg2standard.mat")
+                inputmat        = os.path.join(RESULTS2_OUT_DIR, "bg2std.mat")
 
                 if imtest(src_res_file) is False:
                     print(src_res_file + " is missing !!")
                     exit(1)
 
-                if os.path.exists(templ2standard_mat) is False:
+                if os.path.exists(templ2std_mat) is False:
                     print(inputmat + " is missing !!")
                     exit(1)
 
 
-                rrun("flirt -in " + src_res_file + " -ref " + standard_MNI_2mm_brain + " -applyxfm -init " + templ2standard_mat + " -out " + dest_res_file)
+                rrun("flirt -in " + src_res_file + " -ref " + std_MNI_2mm_brain + " -applyxfm -init " + templ2std_mat + " -out " + dest_res_file)
                 # $FSLDIR/bin/fslmaths $dest_res_file -thr $PTHRESH $dest_res_file
 
         # -----------------------------------------------------
-        # extracting PE from melodic analysis (dr_stage2_000X_diff)
+        # extracting PE from resting analysis (dr_stage2_000X_diff)
         # -----------------------------------------------------
         if DO_MELODIC_RES is True:
             for roi in arr_roi_2_extract_melodic:

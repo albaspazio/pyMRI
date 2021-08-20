@@ -1,3 +1,3 @@
 # pyMri
 
-python script for MRI processing. 
+my python scripts for MRI processing.
