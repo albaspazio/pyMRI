@@ -16,6 +16,7 @@ def read_varlist_file(filepath, comment_char="#"):
             data[values[0]] = values[1]
     return data
 
+
 # =====================================================================================
 # DATA EXTRACTION FROM A PLAIN DICTIONARY [{"a":..., "b":...., }]
 # =====================================================================================
@@ -37,10 +38,10 @@ def tabbed_file_with_header2dict_list(filepath):
 
         return data
 
+
 # =====================================================================================
 # DATA EXTRACTION FROM A "SUBJ" DICTIONARY {"a_subj_label":{"a":..., "b":...., }}
 # =====================================================================================
-
 # assumes that the first column represents subjects' labels (it will act as dictionary's key).
 # creates a dictionary with subj label as key and data columns as a dictionary  {subjlabel:{"a":..., "b":..., }}
 def tabbed_file_with_header2subj_dic(filepath):
@@ -62,6 +63,17 @@ def tabbed_file_with_header2subj_dic(filepath):
                     cnt = cnt+1
                 data[subj_lab] = data_row
         return data
+
+
+# returns the header of a tabbed file as a list
+def get_header_of_tabbed_file(filepath):
+
+    with open(filepath, "r") as f:
+        reader = csv.reader(f, dialect='excel', delimiter='\t')
+        for row in reader:
+            if reader.line_num == 1:
+                return row
+
 
 # works with a "subj" dict
 # returns a filtered matrix [subj x colnames]
@@ -195,11 +207,13 @@ def get_filtered_subj_dict_column_within_values(dic, colname, value1, value2, op
 
     return res, lab
 
+
 # =====================================================================================
 # =====================================================================================
 # return a list of values from a given column
 def get_dict_column(dic, colname):
     return [d[colname] for d in dic]
+
 
 def get_filtered_dict_column(dic, colname, filt_col="", filter=None):
 
@@ -214,6 +228,7 @@ def get_filtered_dict_column(dic, colname, filt_col="", filter=None):
             print("Error in get_filtered_dict_column")
     else:
         return get_dict_column(dic, colname)
+
 
 # get a data list and return a \n separated string
 def list2spm_text_column(datalist, ndecimals=3):
@@ -242,6 +257,7 @@ def process_results(fname, subjs_list, outname, dataprecision='.3f'):
 
     return list_str
 
+
 # read file, split in two columns (1-56 & 57-112), add a third column with the difference.
 def process_results2tp(fname, subjs_list, outname, dataprecision=".3f"):
     with open(fname) as f:
@@ -260,11 +276,13 @@ def process_results2tp(fname, subjs_list, outname, dataprecision=".3f"):
 
     return list_str
 
-    #     content = f.readlines()
-    #     # you may also want to remove whitespace characters like `\n` at the end of each line
-    # content = [x.strip() for x in content]
-    # nlines = len(content)
-    #
-    # header = content[0]
 
+def get_icv_spm_file(filepath):
 
+    with open(filepath) as f:
+        content = f.readlines()
+
+    secondline = str(content[1].strip())
+    values = secondline.split(",")
+
+    return float(values[1]) + float(values[2]) + float(values[3])

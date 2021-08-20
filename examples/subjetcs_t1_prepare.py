@@ -46,4 +46,4 @@ if __name__ == "__main__":
     # subject.do_first("L_Amyg,R_Amyg", odn="first")
     # subject.do_first()
 
-    subject.mpr_spm_segment()
+    subject.spm_segment()

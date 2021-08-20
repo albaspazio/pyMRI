@@ -5,9 +5,9 @@ from threading import Thread
 from inspect import signature
 from copy import deepcopy
 
-from utility.manage_images import imcp, imrm
+from subject.Subject import Subject
+from utility.images import imcp, imrm
 from utility.utilities import gunzip, compress
-from Subject import Subject
 from utility import import_data_file
 
 
@@ -26,13 +26,17 @@ class Project:
         self.group_analysis_dir     = os.path.join(self.dir, "group_analysis")
         self.script_dir             = os.path.join(self.dir, "script")
 
-        self.melodic_templates_dir  = os.path.join(self.group_analysis_dir, "melodic", "group_templates")
-        self.melodic_dr_dir         = os.path.join(self.group_analysis_dir, "melodic", "dr")
+        self.glm_template_dir       = os.path.join(self.script_dir, "glm", "templates")
+
+        self.melodic_templates_dir  = os.path.join(self.group_analysis_dir, "resting", "group_templates")
+        self.melodic_dr_dir         = os.path.join(self.group_analysis_dir, "resting", "dr")
 
         self.sbfc_dir               = os.path.join(self.group_analysis_dir, "sbfc")
         self.mpr_dir                = os.path.join(self.group_analysis_dir, "mpr")
 
         self.vbm_dir                = os.path.join(self.mpr_dir, "vbm")
+
+        self.tbss_dir               = os.path.join(self.group_analysis_dir, "tbss")
 
         self._global                = globaldata
 
@@ -85,7 +89,7 @@ class Project:
             subjs.append(Subject(subj, sess_id, self))
         return subjs
 
-    # load a list of subjects
+    # returns a list of subjects instances
     def load_subjects(self, list_label, sess_id=1):
 
         self.subjects   = self.get_subjects(list_label, sess_id)
@@ -126,7 +130,7 @@ class Project:
 
     # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subj_labels) > 1 ...pass that same kwparams[0] to all subjects
     # if subj_labels is not given...use the loaded subjects
-    def run_subjects_methods(self, method_name, kwparams, subj_labels=None, nthread=1):
+    def run_subjects_methods(self, method_type, method_name, kwparams, subj_labels=None, nthread=1):
 
         # check subjects
         if subj_labels is None:
@@ -138,7 +142,12 @@ class Project:
 
         # check number of NECESSARY (without a default value) method params
         subj    = self.get_subject_by_label(subj_labels[0])
-        method  = eval("subj." + method_name)
+
+        if method_type == "":
+            method = eval("subj." + method_name)
+        else:
+            method = eval("subj." + method_type + "." + method_name)
+
         sig     = signature(method)
         nparams = len(sig.parameters)       # parameters that need a value
         for p in sig.parameters:
@@ -146,7 +155,7 @@ class Project:
                 nparams = nparams - 1       # this param has a default value
 
         # if no params are given, create a nsubj list of None
-        if len(kwparams) is 0:
+        if len(kwparams) == 0:
             if nparams > 0:
                 print("ERROR in run_subjects_methods: given params list is empty, while method needs " + str(nparams) + " params" )
                 return
@@ -164,7 +173,7 @@ class Project:
                 return
         # here nparams is surely == nsubj
 
-        numblocks   = math.ceil(nprocesses/nthread)     # num of provessing blocks (threads)
+        numblocks   = math.ceil(nprocesses/nthread)     # num of processing blocks (threads)
 
         subjects    = []
         processes   = []
@@ -194,15 +203,116 @@ class Project:
                 subj = self.get_subject_by_label(subjects[bl][s])
 
                 if subj is not None:
-                    method  = eval("subj." + method_name)
-                    process = Thread(target=method, kwargs=processes[bl][s])
-                    process.start()
-                    threads.append(process)
+
+                    if method_type == "":
+                        method = eval("subj." + method_name)
+                    else:
+                        method = eval("subj." + method_type + "." + method_name)
+
+                    try:
+                        process = Thread(target=method, kwargs=processes[bl][s])
+                        process.start()
+                        threads.append(process)
+                    except Exception as e:
+                        print(e)
 
             for process in threads:
                 process.join()
 
             print("completed block " + str(bl) + " with processes: " + str(subjects[bl]))
+
+    # # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subj_labels) > 1 ...pass that same kwparams[0] to all subjects
+    # # if subj_labels is not given...use the loaded subjects
+    # def run_groupanalysis(self, analysis_type, analysis_name, kwparams, subj_labels=None, nthread=1):
+    #
+    #     # check subjects
+    #     if subj_labels is None:
+    #         subj_labels = self.get_loaded_subjects_labels()
+    #     nsubj       = len(subj_labels)
+    #     if nsubj == 0:
+    #         print("ERROR in run_subjects_methods: subject list is empty")
+    #         return
+    #
+    #     # check number of NECESSARY (without a default value) method params
+    #     subj    = self.get_subject_by_label(subj_labels[0])
+    #
+    #     if analysis_type == "":
+    #         method = eval("subj." + analysis_name)
+    #     else:
+    #         method = eval("subj." + analysis_type + "." + analysis_name)
+    #
+    #     sig     = signature(method)
+    #     nparams = len(sig.parameters)       # parameters that need a value
+    #     for p in sig.parameters:
+    #         if sig.parameters[p].default is not None:
+    #             nparams = nparams - 1       # this param has a default value
+    #
+    #     # if no params are given, create a nsubj list of None
+    #     if len(kwparams) == 0:
+    #         if nparams > 0:
+    #             print("ERROR in run_subjects_methods: given params list is empty, while method needs " + str(nparams) + " params")
+    #             return
+    #         else:
+    #             kwparams = [None] * nsubj
+    #
+    #     nprocesses  = len(kwparams)
+    #
+    #     if nsubj > 1 and nprocesses == 1:
+    #         kwparams    = [kwparams[0]] * nsubj        # duplicate the first kwparams up to given subj number
+    #         nprocesses  = nsubj
+    #     else:
+    #         if nprocesses != nsubj:
+    #             print("ERROR in run_subject_method: given params list length differs from subjects list")
+    #             return
+    #     # here nparams is surely == nsubj
+    #
+    #     numblocks   = math.ceil(nprocesses/nthread)     # num of processing blocks (threads)
+    #
+    #     subjects    = []
+    #     processes   = []
+    #
+    #     for p in range(numblocks):
+    #         subjects.append([])
+    #         processes.append([])
+    #
+    #     proc4block = 0
+    #     curr_block = 0
+    #
+    #     # divide nprocesses across numblocks
+    #     for proc in range(nprocesses):
+    #         processes[curr_block].append(kwparams[proc])
+    #         subjects[curr_block].append(subj_labels[proc])
+    #
+    #         proc4block = proc4block + 1
+    #         if proc4block == nthread:
+    #             curr_block = curr_block + 1
+    #             proc4block = 0
+    #
+    #     for bl in range(numblocks):
+    #         threads = []
+    #
+    #         for s in range(len(subjects[bl])):
+    #
+    #             subj = self.get_subject_by_label(subjects[bl][s])
+    #
+    #             if subj is not None:
+    #
+    #                 if analysis_type == "":
+    #                     method = eval("subj." + analysis_name)
+    #                 else:
+    #                     method = eval("subj." + analysis_type + "." + analysis_name)
+    #
+    #                 try:
+    #                     process = Thread(target=method, kwargs=processes[bl][s])
+    #                     process.start()
+    #                     threads.append(process)
+    #                 except Exception as e:
+    #                     print(e)
+    #
+    #         for process in threads:
+    #             process.join()
+    #
+    #         print("completed block " + str(bl) + " with processes: " + str(subjects[bl]))
 
     # create a folder where it copies the brain extracted from BET, FreeSurfer and SPM
     def compare_brain_extraction(self, tempdir, list_subj_label=None):
@@ -217,37 +327,55 @@ class Project:
         else:
             subjs = self.get_subjects_labels(list_subj_label)
 
-        os.makedirs(tempdir,exist_ok=True)
+        os.makedirs(tempdir, exist_ok=True)
 
         for subj in subjs:
-            subj.mpr_compare_brain_extraction(tempdir)
+            subj.compare_brain_extraction(tempdir)
 
-    def prepare_mpr_for_setorigin1(self, destdirname, group_label, sess_id, overwrite=False):
+    # prepare_mpr_for_setorigin1 and prepare_mpr_for_setorigin2 are to be used in conjunction
+    # the former make a backup and unzip the original file,
+    # the latter zip and clean up
+    def prepare_mpr_for_setorigin1(self, group_label, sess_id=1, replaceOrig=False):
         subjects    = self.load_subjects(group_label, sess_id)
-        tempdir     = os.path.join(self.dir, destdirname)
-        os.makedirs(tempdir, exist_ok=True)
         for subj in subjects:
-            niifile = os.path.join(tempdir, subj.t1_image_label + "_" + str(sess_id) + ".nii")
 
-            if overwrite is True or os.path.exists(niifile) is False:
-                gunzip(subj.t1_data + ".nii.gz", niifile)
-            # call_matlab_function_noret("spm_display_image", [self._global.spm_functions_dir], "\'" + niifile + "\'", endengine=False)
-            # input("press any key to continue")
+            if replaceOrig is False:
+                imcp(subj.t1_data, subj.t1_data + "_old_origin")
 
-    # copy from temp to :
+            niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
+            gunzip(subj.t1_data + ".nii.gz", niifile)
+            print("unzipped " + subj.label + " mri")
+
+    def prepare_mpr_for_setorigin2(self, group_label, sess_id=1):
+
+        subjects    = self.load_subjects(group_label, sess_id)
+        for subj in subjects:
+
+            niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
+            imrm([subj.t1_data + ".nii.gz"])
+            compress(niifile, subj.t1_data + ".nii.gz")
+            imrm([niifile])
+            print("zipped " + subj.label + " mri")
+
+    # works with already converted and renames images
     # - subj.t1_data
     # - t1_cat_dir
-    def prepare_mpr_for_setorigin2(self, destdirname, group_label, sess_id, replaceOrig=False):
+    def mpr_setorigin(self, group_label, sess_id=1, replaceOrig=False):
         subjects    = self.load_subjects(group_label, sess_id)
-        tempdir     = os.path.join(self.dir, destdirname)
         for subj in subjects:
-            src_image = os.path.join(tempdir, subj.t1_image_label + "_" + str(sess_id) + ".nii")
-            if replaceOrig is True:
-                imrm([subj.t1_data])
-                compress(src_image, subj.t1_data)
-            else:
-                os.makedirs(subj.t1_cat_dir, exist_ok=True)
-                imcp(src_image, os.path.join(subj.t1_cat_dir, "T1_" + subj.label + ".nii"))
+
+            if replaceOrig is False:
+                imcp(subj.t1_data, subj.t1_data + "_old_origin")
+
+            niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
+            gunzip(subj.t1_data + ".nii.gz", niifile)
+
+            # call_matlab_function_noret("spm_display_image", [self._global.spm_functions_dir], "\'" + niifile + "\'", endengine=False)
+            input("press any key to continue")
+
+            imrm([subj.t1_data + ".nii.gz"])
+            compress(niifile, subj.t1_data + ".nii.gz")
+            imrm([niifile])
 
     # ==================================================================================================================
     # GET SUBJECTS DATA

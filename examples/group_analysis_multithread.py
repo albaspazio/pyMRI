@@ -2,7 +2,7 @@ import os
 
 from Global import Global
 from Project import Project
-from GroupAnalysis import GroupAnalysis
+from group.GroupAnalysis import GroupAnalysis
 
 if __name__ == "__main__":
 

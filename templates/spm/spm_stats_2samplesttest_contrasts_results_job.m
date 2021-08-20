@@ -22,3 +22,11 @@ matlabbatch{2}.spm.stats.results.conspec.mask.none = 1;
 matlabbatch{2}.spm.stats.results.units = 1;
 matlabbatch{2}.spm.stats.results.export{1}.csv = true;
 matlabbatch{2}.spm.stats.results.export{2}.jpg = true;
+matlabbatch{3}.spm.tools.cat.tools.T2x_surf.data_T2x = {
+                                                        '<STATS_DIR>/spmT_0001.gii'
+                                                        '<STATS_DIR>/spmT_0002.gii'
+                                                        };
+matlabbatch{3}.spm.tools.cat.tools.T2x_surf.conversion.sel = 2;
+<CAT_T_CONV_THRESHOLD>
+matlabbatch{3}.spm.tools.cat.tools.T2x_surf.conversion.inverse = 0;
+<CAT_T_CONV_CLUSTER>

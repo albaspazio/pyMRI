@@ -1,7 +1,7 @@
 import csv
 import ntpath
 
-from utility.manage_images import imtest
+from utility.images import imtest
 from utility.utilities import sed_inplace
 from utility import import_data_file
 from utility.matlab import call_matlab_function_noret
@@ -26,8 +26,56 @@ class Stats:
         sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
 
 
+    # get cov values from many groups and concat them into a single vector
+    # interaction=1 : no interaction, otherwise specify factors (1-based + 1, e.g. first factor = 2)
     @staticmethod
-    def spm_stats_add_conditions(out_batch_job, conditions):
+    def spm_stats_add_manycov_1group(out_batch_job, group_label, project, cov_names, cov_interaction=None, datafile=None):
+
+        cov_string = ""
+        ncov = len(cov_names)
+
+        if cov_interaction is None:
+            cov_interaction = [1 for i in range(ncov)]
+
+        cint = len(cov_interaction)
+        if ncov != cint:
+            print("ERROR: spm_stats_add_manycov_1group. number of covariates and their interaction differs")
+            return
+
+        for cov_id in range(ncov):
+            cov_name = cov_names[cov_id]
+            cov = project.get_filtered_column(cov_names[cov_id], group_label, data=datafile)[0]
+            str_cov = "\n" + import_data_file.list2spm_text_column(cov) # ends with a "\n"
+
+            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id+1) + ").c = "
+            cov_string = cov_string + "[" + str_cov + "];\n"
+            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id+1) + ").cname = '" + cov_name + "';\n"
+            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id+1) + ").iCFI = " + str(cov_interaction[cov_id]) + ";\n"
+            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id+1) + ").iCC = 1;\n"
+
+        sed_inplace(out_batch_job, "<COV_STRING>", cov_string)
+
+    # get cov values from many groups and concat them into a single vector
+    # interaction=1 : no interaction, otherwise specify factors (1-based + 1, e.g. first factor = 2)
+    # @staticmethod
+    # def spm_stats_add_manycov_manygroups(out_batch_job, groups_labels, project, cov_names, cov_interaction=1, datafile=None):
+    #
+    #     cov = []
+    #     for grp in groups_labels:
+    #         cov = cov + project.get_filtered_column(cov_name, grp, datafile)[0]
+    #     str_cov = "\n" + import_data_file.list2spm_text_column(cov) # ends with a "\n"
+    #
+    #     cov_string = "matlabbatch{1}.spm.stats.factorial_design.cov.c = "
+    #     cov_string = cov_string + "[" + str_cov + "];\n"
+    #     cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.cname = '" + cov_name + "';\n"
+    #     cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCFI = " + str(cov_interaction) + ";\n"
+    #     cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCC = 1;"
+    #     sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
+
+    # create spm fmri 1st level contrasts onsets
+    # conditions is a dictionary list with field: [name, onsets, duration]
+    @staticmethod
+    def spm_fmri_subj_stats_replace_conditions_string(out_batch_job, conditions):
 
         conditions_string = ""
         for c in range(1, len(conditions)+1):
@@ -41,12 +89,64 @@ class Stats:
 
         sed_inplace(out_batch_job,"<CONDITION_STRING>", conditions_string)
 
+    # create multregr contrasts for spm and cat
     @staticmethod
-    def spm_stats_add_conditions_onsets(out_batch_job, onsets):
-        for c in range(1, len(onsets)+1):
-            str_onsets = import_data_file.list2spm_text_column(onsets[c-1])  # ends with a "\n"
-            sed_inplace(out_batch_job, "<COND" + str(c) + "_ONSETS>", str_onsets)
+    def replace_1group_multregr_contrasts(out_batch_job, cov_names, tool="spm"):
 
+        if tool == "spm":
+            con_str = "spm.stats.stools.con.consess"
+        else:
+            con_str = "spm.tools.cat.stools.con.consess"
+
+        contr_str = ""
+
+        ncov = len(cov_names)
+        for cov_id in range(ncov):
+            cov_name = cov_names[cov_id]
+
+            # define weight
+            weight_str_pos = "0"
+            weight_str_neg = "0"
+            for wp in range(cov_id):
+                weight_str_pos = weight_str_pos + " 0"
+                weight_str_neg = weight_str_neg + " 0"
+            weight_str_pos = weight_str_pos + " 1"
+            weight_str_neg = weight_str_neg + " -1"
+
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2*(cov_id + 1) - 1) + "}.tcon.name = \'" + cov_name + " pos\';\n"
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2*(cov_id + 1) - 1) + "}.tcon.weights = [" + weight_str_pos + "];\n"
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2*(cov_id + 1) - 1) + "}.tcon.sessrep = 'none';\n"
+
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2*(cov_id + 1)) + "}.tcon.name = \'" + cov_name + " neg\';\n"
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2*(cov_id + 1)) + "}.tcon.weights = [" + weight_str_neg + "];\n"
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2*(cov_id + 1)) + "}.tcon.sessrep = 'none';\n"
+
+        sed_inplace(out_batch_job, "<CONTRASTS>", contr_str)
+
+    # replace CAT results trasformation string
+    # mult_corr = "FWE" | "FDR" | "none"
+    # cluster_extend = "none" | "en_corr" | "en_nocorr"
+    @staticmethod
+    def cat_replace_results_trasformation_string(out_batch_job, cmd_id=3, mult_corr="FWE", pvalue=0.05, cluster_extend="none"):
+
+        if mult_corr == "FWE":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";")
+        elif mult_corr == "FDR":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fdr.thresh05 = " + str(pvalue) + ";")
+        elif mult_corr == "none":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.uncorr.thresh001 = " + str(pvalue) + ";")
+        else:
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";")
+
+        if cluster_extend == "none":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;")
+        elif mult_corr == "en_corr":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 1;")
+        elif mult_corr == "en_nocorr":
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 0;")
+        else:
+            print("warning in cat_replace_results_trasformation_string...unrecognized cluster_extend in Tsurf transf")
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;")
 
     # parse a series of spm-output csv files and report info of those voxels/cluster associated to the given cluster
     #set    set cluster         cluster         cluster cluster peak            peak            peak    peak    peak
@@ -76,10 +176,9 @@ class Stats:
 
         return clusters
 
-
     # create a gifti image with ones in correspondence of each vmask voxel
     @staticmethod
-    def create_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths, distance=8):
+    def spm_create_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths, distance=8):
 
         if imtest(vmask) is False:
             print("Error in create_surface_mask_from_volume_mask: input vmask does not exist")
@@ -90,8 +189,6 @@ class Stats:
             return
 
         call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths, "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
-
-
 
 
 class Peak:

@@ -1,7 +1,9 @@
 # copy this file to framework root and update the following info.
 # make it empty string if you don't have that toolbox. not empty string will be checked and if not valid will raise an error
 spm_dir=/data/matlab_toolbox/spm12
-cat_version=cat12
+cat_version=cat12.7  #  indicates the version. the dot and the following number is removed and "cat12" is used to verify toolbox presence.
+#                       cat >= 12.7 has estimate surfaces model,
+marsbar=marsbar
 ica_aroma_script=/data/MRI/bash-fsl-pipeline/external_tools/ica_aroma/ica_aroma.py
 global_data_templates=/data/MRI/bash-fsl-pipeline/data_templates
 autoptx_script_dir=/data/MRI/bash-fsl-pipeline/external_tools/autoPtx_0_1_1
