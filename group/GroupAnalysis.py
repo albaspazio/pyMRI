@@ -1,4 +1,3 @@
-import csv
 import os
 import shutil
 import traceback
@@ -7,13 +6,13 @@ import numpy
 import ntpath
 from shutil import copyfile, move
 
-from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
+from utility.matlab import call_matlab_spmbatch
 from myfsl.utils.run import rrun
 from utility.images import imcp, imtest, immv, imrm
 from utility.utilities import sed_inplace
 from utility.import_data_file import get_header_of_tabbed_file, get_icv_spm_file
 from utility import import_data_file
-from Stats import Stats
+from group.Stats import Stats
 
 
 class GroupAnalysis:
