@@ -1,15 +1,14 @@
 import os
-import shutil
 import sys
 from numpy import arange, concatenate, array
-from shutil import copyfile, move, rmtree
+from shutil import copyfile, rmtree
 
 from Global import Global
 from myfsl.utils.run import rrun
-from utility.images import imtest, imcp, is_image, remove_ext, imcp_notexisting, imgparts, immv
+from utility.images import imtest, imcp, is_image, remove_ext, imcp_notexisting, immv
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
 from utility.utilities import sed_inplace, gunzip, compress, copytree, get_filename
-from Stats import Stats
+from group.Stats import Stats
 
 class SubjectEpi:
 

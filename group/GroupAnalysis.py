@@ -1,4 +1,3 @@
-import csv
 import os
 import shutil
 import traceback
@@ -7,13 +6,13 @@ import numpy
 import ntpath
 from shutil import copyfile, move
 
-from utility.matlab import call_matlab_function, call_matlab_function_noret, call_matlab_spmbatch
+from utility.matlab import call_matlab_spmbatch
 from myfsl.utils.run import rrun
 from utility.images import imcp, imtest, immv, imrm
 from utility.utilities import sed_inplace
 from utility.import_data_file import get_header_of_tabbed_file, get_icv_spm_file
 from utility import import_data_file
-from Stats import Stats
+from group.Stats import Stats
 
 
 class GroupAnalysis:
@@ -140,7 +139,7 @@ class GroupAnalysis:
     # read xtract's stats.csv file of each subject in the given list and create a tabbed file (ofp) with given values/tract
     def export_xtract_data(self, subjs, ofp, tracts=None, values=None, ifn="stats.csv"):
 
-        if len(tracts) is None:
+        if tracts is None:
             tracts = self._global.dti_xtract_labels
 
         if values is None:
@@ -153,7 +152,7 @@ class GroupAnalysis:
         file_str = file_str + "\n"
 
         for subj in subjs:
-            file_str = file_str + subj.dti.read_xtract_file(tracts, values, ifn)[0] + "\n"
+            file_str = file_str + subj.dti.xtract_read_file(tracts, values, ifn)[0] + "\n"
 
         with open(ofp, 'w', encoding='utf-8') as f:
             f.write(file_str)
@@ -894,7 +893,7 @@ class GroupAnalysis:
     # ====================================================================================================================================================
 
     # run tbss for FA
-    def run_tbss_fa(self, group_label, odn, sessid=1, prepare=True, proc=True):
+    def run_tbss_fa(self, group_label, odn, sessid=1, prepare=True, proc=True, postreg="S", prestat_thr=0.2):
 
         root_analysis_folder = os.path.join(self.project.tbss_dir, odn)
 
@@ -919,10 +918,10 @@ class GroupAnalysis:
             print("preprocessing dtifit_FA images")
             rrun("tbss_1_preproc *.nii.gz")
             print("co-registrating images to MNI template")
-            rrun("tbss_2_reg - T")
+            rrun("tbss_2_reg -T")
             print("postreg")
-            rrun("tbss_3_postreg - S")
-            rrun("tbss_4_prestats 0.2")
+            rrun("tbss_3_postreg -" + postreg)
+            rrun("tbss_4_prestats " + str(prestat_thr))
 
             os.chdir(curr_dir)
 
@@ -987,20 +986,23 @@ class GroupAnalysis:
             out_str = ""
             for tract in tracts_labels:
                 tr_img  = os.path.join(tracts_dir, "FMRIB58_FA-skeleton_1mm_" + tract + "_mask")
+
+                tract_tot_voxels = int(rrun("fslstats " + tr_img + " -V").strip().split(" ")[0])
+
                 out_img = os.path.join(out_folder, "sk_" + tract)
                 rrun("fslmaths " + thr_input + " -mas " + tr_img + " " + out_img)
 
                 res = rrun("fslstats " + out_img + " -V").strip().split(" ")[0]
                 if int(res) > 0:
                     tot_voxels = tot_voxels + int(res)
-                    out_str = out_str + tract + "\t" + res + "\n"
+                    out_str = out_str + tract + "\t" + res + " out of " + str(tract_tot_voxels) + " voxels = " + str(round((int(res) * 100)/tract_tot_voxels,2)) + " %" + "\n"
                     classified_tracts.append(out_img)
                 else:
                     imrm(out_img)
 
             # ------------------------------------------------
             # create unclassified image
-            unclass_img = os.path.join(out_folder, "unclassified")
+            unclass_img = os.path.join(out_folder, "unclass_" + os.path.basename(out_folder))
             cmd_str     = "fslmaths " + thr_input
             for img in classified_tracts:
                 cmd_str = cmd_str + " -sub " + img + " -bin "
