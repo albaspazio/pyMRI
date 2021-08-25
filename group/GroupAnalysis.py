@@ -8,10 +8,11 @@ from shutil import copyfile, move
 
 from utility.matlab import call_matlab_spmbatch
 from myfsl.utils.run import rrun
-from utility.images import imcp, imtest, immv, imrm
+from utility.images import imcp, imtest, immv, imrm, remove_ext
 from utility.utilities import sed_inplace
 from utility.import_data_file import get_header_of_tabbed_file, get_icv_spm_file
-from utility import import_data_file
+from utility import import_data_file, plot_data
+
 from group.Stats import Stats
 
 
@@ -137,7 +138,8 @@ class GroupAnalysis:
         numpy.savetxt(input_data_file, b, ['%1.0f', '%1.0f', '%5.0f', '%5.0f', '%5.0f', '%2.4f'], '\t')
 
     # read xtract's stats.csv file of each subject in the given list and create a tabbed file (ofp) with given values/tract
-    def export_xtract_data(self, subjs, ofp, tracts=None, values=None, ifn="stats.csv"):
+    # calls the subject routine
+    def xtract_export_group_data(self, subjs, ofp, tracts=None, values=None, ifn="stats.csv"):
 
         if tracts is None:
             tracts = self._global.dti_xtract_labels
@@ -893,7 +895,7 @@ class GroupAnalysis:
     # ====================================================================================================================================================
 
     # run tbss for FA
-    def run_tbss_fa(self, group_label, odn, sessid=1, prepare=True, proc=True, postreg="S", prestat_thr=0.2):
+    def tbss_run_fa(self, group_label, odn, sessid=1, prepare=True, proc=True, postreg="S", prestat_thr=0.2):
 
         root_analysis_folder = os.path.join(self.project.tbss_dir, odn)
 
@@ -929,7 +931,7 @@ class GroupAnalysis:
 
     # run tbss for other modalities = ["MD", "L1", ....]
     # you first must have done run_tbss_fa
-    def run_tbss_alternatives(self, group_label, input_folder, modalities, sessid=1, prepare=True, proc=True):
+    def tbss_run_alternatives(self, group_label, input_folder, modalities, sessid=1, prepare=True, proc=True):
 
         input_stats = os.path.join(input_folder, "stats")
 
@@ -968,7 +970,7 @@ class GroupAnalysis:
             os.chdir(curr_dir)
 
     # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
-    def clusterize_tbss_results_by_atlas(self, tbss_result_image, tracts_labels, tracts_dir, out_folder, log_file="log.txt", thr=0.95):
+    def tbss_clusterize_results_by_atlas(self, tbss_result_image, tracts_labels, tracts_dir, out_folder, log_file="log.txt", thr=0.95):
 
         try:
             log                 = os.path.join(out_folder, log_file)
@@ -1020,10 +1022,48 @@ class GroupAnalysis:
         except Exception as e:
             e
 
+    # clust_res_dir: output folder of tbss's results clustering
+    # datas is a tuple of two elements containing the list of values and subj_labels
+    def tbss_plot_clusterized_folder(self, in_clust_res_dir, datas, data_label, tbss_folder, modality="FA", subj_img_postfix="_FA_FA_to_target", ofn="res_"):
 
+        subjects_images = os.path.join(tbss_folder, modality)   # folder containing tbss subjects' folder of that modality
+        results_folder  = os.path.join(tbss_folder, "results")
+        os.makedirs(results_folder, exist_ok=True)
 
+        # compose header
+        str_data = "subj\t" + data_label
+        for entry in os.scandir(in_clust_res_dir):
+            if not entry.name.startswith('.') and not entry.is_dir():
+                if entry.name.startswith("sk_"):
+                    str_data = str_data + "\t" + remove_ext(entry.name[3:])
+        str_data = str_data + "\n"
 
+        nsubj = len(datas[0])
+        for i in range(nsubj):
+            subj_label      = datas[1][i]
+            subj_img        = os.path.join(subjects_images, subj_label + "-dti_fit" + subj_img_postfix)
+            subj_img_masked = subj_img + "_masked"
 
+            str_data = str_data + subj_label + "\t" + str(datas[0][i])
 
+            for entry in os.scandir(in_clust_res_dir):
+                if not entry.name.startswith('.') and not entry.is_dir():
+                    if entry.name.startswith("sk_"):
+                        roi_row = []
 
+                        rrun("fslmaths " + subj_img + " -mas " + entry.path + " " + subj_img_masked)
+                        val = float(rrun("fslstats " + subj_img_masked + " -M").strip())
+                        imrm([subj_img_masked])
+
+                        str_data = str_data + "\t" + str(val)
+                        roi_row.append(val)
+
+                        # fig_file = os.path.join(results_folder, entry.name + "_" + data_label + ".png")
+                        # plot_data.scatter_plot_dataserie(datas[0], roi_row, fig_file)
+            str_data = str_data + "\n"
+
+        res_file = os.path.join(results_folder, "scatter_tracts_" + modality + "_" + data_label + ".dat")
+
+        with open(res_file, "w") as f:
+            f.write(str_data)
 

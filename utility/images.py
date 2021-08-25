@@ -299,6 +299,7 @@ def remove_slices(self, numslice2remove=1, whichslices2remove="updown", remove_d
 
 
 # divide the tbss mean skeleton in images according to a given atlas file (where each volume is specific tract)
+# needs that atlas has its own json file
 # and save to "mean_skeleton" subfolder of atlas folder
 def mask_tbss_skeleton_volumes_atlas(skel_templ, atlas_img, atlas_json):
 
@@ -324,8 +325,9 @@ def mask_tbss_skeleton_volumes_atlas(skel_templ, atlas_img, atlas_json):
         imrm(tempmask)
         cnt = cnt + 1
 
+
 # divide the tbss mean skeleton in images according to a given atlas folder
-#  each file is a specific tract and its name define its label, no need for a json file
+# each file is a specific tract and its name define its label, no need for a json file
 # and save to "mean_skeleton" subfolder of atlas folder
 def mask_tbss_skeleton_folder_atlas(skel_templ, atlas_dir, thr=0.95):
 

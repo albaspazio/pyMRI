@@ -599,6 +599,24 @@ class SubjectTransforms:
         if imtest(std2dti + "_warp") is False:
             rrun("invwarp -r " + self.subject.dti_nodiff_data  + " -w " + dti2std + "_warp" + " -o " + std2dti + "_warp", logFile=logFile)
 
+    # this method takes base images (t1, epi_example_function, dti_no_diff) and coregister to all other modalities and standard
+    def test_all_coregistration(self):
+
+        #t1
+        in_img = self.subject.t1_brain_data
+
+        t12std_nl = os.path.join(self.subject.roi_std_dir, "t12std_nl")
+        t12std_l = os.path.join(self.subject.roi_std_dir, "t12std_l")
+
+        t12rs_nl = os.path.join(self.subject.roi_std_dir, "t12std_nl")
+        t12rs_l = os.path.join(self.subject.roi_std_dir, "t12std_l")
+
+        t12dti_nl = os.path.join(self.subject.roi_std_dir, "t12std_nl")
+        t12dti_l = os.path.join(self.subject.roi_std_dir, "t12std_l")
+
+        self.transform_roi("hr2std", islin=False, rois=[in_img])
+
+
     # ==================================================================================================================================================
     # GENERIC ROI TRANSFORMS
     # ==================================================================================================================================================
