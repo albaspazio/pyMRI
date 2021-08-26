@@ -206,11 +206,11 @@ class SubjectEpi:
 
         if imtest(self.subject.rs_mask_t1_wmseg4nuis_epi) is False:
             # regtype, pathtype="standard", mask="", orf="", thresh=0.2, islin=True, std_img="", rois=[]):
-            self.subject.transform.transform_roi("hr2epi", "abs", thresh=0, rois=[self.subject.t1_segment_wm_ero_path])
+            self.subject.transform.transform_roi("hrTOepi", "abs", rois=[self.subject.t1_segment_wm_ero_path])
 
         if imtest(self.subject.rs_mask_t1_csfseg4nuis_epi) is False:
             # regtype, pathtype="standard", mask="", orf="", thresh=0.2, islin=True, std_img="", rois=[]):
-            self.subject.transform.transform_roi("hr2epi", "abs", thresh=0, rois=[self.subject.t1_segment_csf_ero_path])
+            self.subject.transform.transform_roi("hrTOepi", "abs", rois=[self.subject.t1_segment_csf_ero_path])
 
         rrun("fslmeants -i " + in_img + " -o " + series_wm + " -m " + self.subject.rs_mask_t1_wmseg4nuis_epi + " --no_bin")
         rrun("fslmeants -i " + in_img + " -o " + series_csf + " -m " + self.subject.rs_mask_t1_csfseg4nuis_epi + " --no_bin")
@@ -524,7 +524,7 @@ class SubjectEpi:
     def adopt_rs_preproc_step(self, step_label, outsuffix=""):
 
         in_img  = os.path.join(self.subject.rs_dir, step_label)
-        self.subject.transform.transform_roi("epi2std4", "abs", thresh=0, rois=[in_img])  # add _std4 to roi name)
+        self.subject.transform.transform_roi("epiTOstd4", "abs", rois=[in_img])  # add _std4 to roi name)
         in_img4 = os.path.join(self.subject.roi_std4_dir, step_label + "_std4")
         immv(in_img4, self.subject.rs_final_regstd_image + outsuffix)
 
@@ -535,7 +535,7 @@ class SubjectEpi:
         in_mask     = os.path.join(proc_folder, "reg_standard", "mask")
         in_bgimage  = os.path.join(proc_folder, "reg_standard", "bg_image")
 
-        self.subject.transform.transform_roi("std2std4", "abs", thresh=0, rois=[in_img, in_mask, in_bgimage])
+        self.subject.transform.transform_roi("stdTOstd4", "abs", rois=[in_img, in_mask, in_bgimage])
 
         in_img4     = os.path.join(self.subject.roi_std4_dir, "filtered_func_data_std4")
         in_mask4    = os.path.join(self.subject.roi_std4_dir, "mask_std4")

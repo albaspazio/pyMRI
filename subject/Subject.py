@@ -541,20 +541,24 @@ class Subject:
                 # ------------------------------------------------------------------------------------------------------
                 # mask from preproc feat
                 mask = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "mask")
-                self.transform.transform_roi("epi2std4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[mask])
-                imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask", logFile=log)
+                if imtest(self.rs_final_regstd_mask + "_mask") is False:
+                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[mask])
+                    imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask", logFile=log)
 
                 # mask from example_function (the one used to calculate all the co-registrations)
-                self.transform.transform_roi("epi2std4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.rs_examplefunc_mask])
-                imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask, logFile=log)
+                if imtest(self.rs_final_regstd_mask) is False:
+                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[self.rs_examplefunc_mask])
+                    imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask, logFile=log)
 
                 # brain
-                self.transform.transform_roi("hr2std4", "abs" , stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.t1_brain_data])
-                imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage, logFile=log)
+                if imtest(self.rs_final_regstd_bgimage) is False:
+                    self.transform.transform_roi("hrTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[self.t1_brain_data])
+                    imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage, logFile=log)
 
                 # functional data
-                self.transform.transform_roi("epi2std4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[postnuisance])
-                immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image, logFile=log)
+                if imtest(self.rs_final_regstd_image) is False:
+                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[postnuisance])
+                    immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image, logFile=log)
 
                 log.close()
 
@@ -586,10 +590,9 @@ class Subject:
 
             os.makedirs(self.roi_dti_dir, exist_ok=True)
 
+            self.transform.transform_dti()
             if self.has_T2 is True:
                 self.transform.transform_dti_t2()
-            else:
-                self.transform.transform_dti()
 
             if imtest(os.path.join(self.dti_dir, bedpost_odn, "mean_S0samples")) is False:
                 if os.path.isfile(os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz")) is True:
