@@ -90,11 +90,19 @@ class SubjectDti:
 
         rrun("xtract -bpx " + bp_dir + " -out " + out_dir + " -stdwarp " + self.subject.std2dti_warp + " " + self.subject.dti2std_warp + gpu_str + refspace_str + " -species " + species, stop_on_error=False)
 
-        self.check_xtracts(out_dir)
+        self.xtract_check(out_dir)
         return out_dir
 
 
-    def check_xtracts(self, in_dir):
+    def xtract_check(self, in_dir="xtract"):
+
+        if in_dir == "xtract":
+            in_dir = os.path.join(self.subject.dti_dir, in_dir)
+        else:
+            if os.path.isdir(in_dir) is False:
+                print("ERROR in xtract_check: given folder (" + in_dir + ") is missing....exiting")
+                return
+
         all_ok = True
         tracts = self._global.dti_xtract_labels
         for tract in tracts:
@@ -138,7 +146,7 @@ class SubjectDti:
         rrun("xtract_stats " + " -xtract " + xdir + rspace + root_dir + " -meas " + meas + "" + structures)
 
     # read its own xtract_stats output file and return a dictionary = { "tractX":{"val1":XX,"val2":YY, ...}, .. }
-    def read_xtract_file(self, tracts=None, values=None, ifn="stats.csv"):
+    def xtract_read_file(self, tracts=None, values=None, ifn="stats.csv"):
 
         if len(tracts) is None:
             tracts  = self._global.dti_xtract_labels
@@ -178,7 +186,7 @@ class SubjectDti:
         str = self.subject.label + "\t"
         for tract in datas:
             for v in values:
-                str = str + datas[tract_lab][v] + "\t"
+                str = str + datas[tract][v] + "\t"
 
         return str, datas
 

@@ -43,6 +43,7 @@
     {"index":"38", "x":"121", "y":"137", "z":"66", "lab":"uf_l", "descr":"Uncinate Fasciculus L"},
     {"index":"39", "x":"59", "y":"137", "z":"66", "lab":"uf_r", "descr":"Uncinate Fasciculus R"},
     {"index":"40", "x":"121", "y":"45", "z":"76", "lab":"vof_l", "descr":"Vertical Occipital Fasciculus L"},
-    {"index":"41", "x":"59", "y":"45", "z":"76", "lab":"vof_r", "descr":"Vertical Occipital Fasciculus R"}
+    {"index":"41", "x":"59", "y":"45", "z":"76", "lab":"vof_r", "descr":"Vertical Occipital Fasciculus R"},
+    {"index":"42", "x":"0", "y":"0", "z":"0", "lab":"cc", "descr":"Corpus Callosum"}
   ]
 }
