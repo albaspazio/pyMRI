@@ -10,6 +10,7 @@ from utility.matlab import call_matlab_spmbatch, call_matlab_function
 from utility.utilities import sed_inplace, gunzip, compress, copytree, get_filename
 from group.Stats import Stats
 
+
 class SubjectEpi:
 
     def __init__(self, subject, _global):
@@ -188,7 +189,6 @@ class SubjectEpi:
         rrun("python2.7 " + self._global.ica_aroma_script + " -feat " + input_dir + " -out " + aroma_dir, logFile=logFile)
 
         if upsampling > 0:
-
             os.makedirs(regstd_aroma_dir, exist_ok=True)
             # problems with non linear registration....use linear one.
             copyfile(os.path.join(input_dir, "design.fsf"), os.path.join(aroma_dir, "design.fsf"))
