@@ -140,14 +140,9 @@ class Project:
 
         return incomplete_subjects
 
-    def test_all_coregistration(self, subjects, outdir, num_cpu=1):
+    def check_all_coregistration(self, subjects, outdir, num_cpu=1):
 
-        kwparams = []
-        for p in range(len(subjects)):
-            kwparams.append({"outdir":outdir})
-        self.run_subjects_methods("transform", "test_all_coregistration", kwparams, self.get_subjects_labels(), nthread=num_cpu)
-
-
+        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir}], self.get_subjects_labels(), nthread=num_cpu)
         # rrun("slicesdir " + )
 
     # create a folder where it copies the brain extracted from BET, FreeSurfer and SPM

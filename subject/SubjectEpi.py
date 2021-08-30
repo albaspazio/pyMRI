@@ -201,7 +201,7 @@ class SubjectEpi:
             # 		                    run ${FSLDIR}/bin/flirt  -ref                $RS_REGSTD_AROMA_DIR/standard       -in                  $input_feat_dir/reg/highres       -out $RS_REGSTD_AROMA_DIR/bg_image                     -applyxfm -init $input_feat_dir/reg/highres2standard.mat                       -interp sinc -datatype float
             rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join(input_dir, "reg", "highres") + " -out " + os.path.join(regstd_aroma_dir, "bg_image") + " -applyxfm -init " + os.path.join(input_dir, "reg", "highres2standard.mat") + " -interp sinc -datatype float", logFile=logFile)
             # 		                    run ${FSLDIR}/bin/flirt  -ref               $RS_REGSTD_AROMA_DIR/standard        -in                $RS_AROMA_DIR/denoised_func_data_nonaggr       -out                $RS_REGSTD_AROMA_DIR/filtered_func_data       -applyxfm -init                 $input_feat_dir/reg/example_func2standard.mat       -interp trilinear -datatype float
-            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join(aroma_dir, "denoised_func_data_nonaggr") + " -out " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -applyxfm -init " + os.path.join(input_dir, "reg", "example_func2standard.mat") + " -interp trilinear -datatype float", logFile=logFile)
+            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join( aroma_dir, "denoised_func_data_nonaggr") + " -out " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -applyxfm -init " + os.path.join(input_dir, "reg", "example_func2standard.mat") + " -interp trilinear -datatype float", logFile=logFile)
             # 		                    run ${FSLDIR}/bin/fslmaths                 $RS_REGSTD_AROMA_DIR/filtered_func_data       -Tstd -bin                $RS_REGSTD_AROMA_DIR/mask       -odt char
             rrun(os.path.join(self._global.fsl_bin, "fslmaths") + " " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -Tstd -bin " + os.path.join(regstd_aroma_dir, "mask") + " -odt char", logFile=logFile)
 
@@ -218,8 +218,8 @@ class SubjectEpi:
             print('ERROR in epi_resting_nuisance of subject ' + self.subject.label + ". input image (" + in_img + ") is missing")
             return
 
-        tr = float(rrun('fslval '  + in_img + ' pixdim4'))
-        hpf_sigma = hpfsec/(2*tr)
+        tr = float(rrun('fslval ' + in_img + ' pixdim4'))
+        hpf_sigma = hpfsec / (2 * tr)
         print("execute_subject_resting_nuisance of " + self.subject.label)
 
         os.makedirs(self.subject.sbfc_dir, exist_ok=True)
@@ -289,7 +289,7 @@ class SubjectEpi:
 
     # coregister epi (or a given image) to given volume of given image (usually the epi itself, the pepolar in case of distortion correction process)
     def spm_motioncorrection(self, ref_vol=1, ref_image=None, epi2correct=None,
-                                 spm_template_name="spm_fmri_realign_estimate_reslice_to_given_vol"):
+                             spm_template_name="spm_fmri_realign_estimate_reslice_to_given_vol"):
 
         if ref_image is None:
             ref_image = self.subject.fmri_data
@@ -392,13 +392,13 @@ class SubjectEpi:
                 gunzip(f.name, os.path.join(outdir, remove_ext(f.name) + ".nii"), replace=True)
 
     def spm_fmri_preprocessing_motioncorrected(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice=-1,
-                                                   slice_timing=None):
+                                               slice_timing=None):
         self.subject.epi_spm_fmri_preprocessing(num_slices, TR, TA, acq_scheme, ref_slice, slice_timing,
-                                        epi_image=self.subject.fmri_data_mc,
-                                        spm_template_name='spm_fmri_preprocessing_norealign')
+                                                epi_image=self.subject.fmri_data_mc,
+                                                spm_template_name='spm_fmri_preprocessing_norealign')
 
     def spm_fmri_preprocessing(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice=-1, slice_timing=None,
-                                   epi_image=None, spm_template_name='spm_fmri_preprocessing'):
+                               epi_image=None, spm_template_name='spm_fmri_preprocessing'):
 
         # default params:
         if epi_image is None:
@@ -417,7 +417,7 @@ class SubjectEpi:
             ref_slice = num_slices // 2 + 1
 
         #
-        if slice_timing == None:
+        if slice_timing is None:
             slice_timing = self.subject.epi_get_slicetiming_params(num_slices, acq_scheme)
         else:
             slice_timing = [str(p) for p in slice_timing]
@@ -468,7 +468,7 @@ class SubjectEpi:
 
     # conditions_lists[{"name", "onsets", "duration"}, ....]
     def spm_fmri_1st_level_analysis(self, analysis_name, TR, num_slices, conditions_lists, events_unit="secs",
-                                        spm_template_name='spm_fmri_stats_1st_level', rp_filemame=""):
+                                    spm_template_name='spm_fmri_stats_1st_level', rp_filemame=""):
 
         # default params:
         stats_dir = os.path.join(self.subject.fmri_dir, "stats", analysis_name)
@@ -546,7 +546,7 @@ class SubjectEpi:
     # take a preproc step in the individual space (epi), convert to std4 and copy to resting/reg_std folder
     def adopt_rs_preproc_step(self, step_label, outsuffix=""):
 
-        in_img  = os.path.join(self.subject.rs_dir, step_label)
+        in_img = os.path.join(self.subject.rs_dir, step_label)
         self.subject.transform.transform_roi("epiTOstd4", "abs", rois=[in_img])  # add _std4 to roi name)
         in_img4 = os.path.join(self.subject.roi_std4_dir, step_label + "_std4")
         immv(in_img4, self.subject.rs_final_regstd_image + outsuffix)

@@ -36,6 +36,8 @@ class Subject:
 
         self.project_subjects_dir = project.subjects_dir
 
+        self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
+
         self.set_file_system(self.sessid)
 
         self.transform  = SubjectTransforms(self, self._global)
@@ -71,6 +73,8 @@ class Subject:
         # ------------------------------------------------------------------------------------------------------------------------
         # T1/MPR
         # ------------------------------------------------------------------------------------------------------------------------
+        self.t1_image_label = self.label + "-t1"
+
         self.t1_dir         = os.path.join(self.dir, "mpr")
         self.t1_anat_dir    = os.path.join(self.t1_dir, "anat")
         self.fast_dir       = os.path.join(self.t1_dir, "fast")
@@ -81,7 +85,6 @@ class Subject:
         self.t1_spm_dir     = os.path.join(self.t1_dir, "spm")
         self.t1_cat_dir     = os.path.join(self.t1_dir, "cat")
 
-        self.t1_image_label         = self.label + "-t1"
         self.t1_data                = os.path.join(self.t1_dir, self.t1_image_label)
         self.t1_brain_data          = os.path.join(self.t1_dir, self.t1_image_label + "_brain")
         self.t1_brain_data_mask     = os.path.join(self.t1_dir, self.t1_image_label + "_brain_mask")
@@ -118,16 +121,16 @@ class Subject:
         # ------------------------------------------------------------------------------------------------------------------------
         # DTI
         # ------------------------------------------------------------------------------------------------------------------------
+        self.dti_image_label    = self.label + "-dti"
+        self.dti_ec_image_label = self.dti_image_label + "_ec"
+        self.dti_fit_label      = self.dti_image_label + "_fit"
+
         self.dti_dir            = os.path.join(self.dir, "dti")
         self.bedpost_X_dir      = os.path.join(self.dti_dir, "bedpostx")
         self.probtrackx_dir     = os.path.join(self.dti_dir, "probtrackx")
         self.trackvis_dir       = os.path.join(self.dti_dir, "trackvis")
         self.tv_matrices_dir    = os.path.join(self.dti_dir, "tv_matrices")
         self.dti_xtract_dir     = os.path.join(self.dti_dir, "xtract")
-
-        self.dti_image_label    = self.label + "-dti"
-        self.dti_ec_image_label = self.dti_image_label + "_ec"
-        self.dti_fit_label      = self.dti_image_label + "_fit"
 
         self.dti_bval           = os.path.join(self.dti_dir, self.label + "-dti.bval")
         self.dti_bvec           = os.path.join(self.dti_dir, self.label + "-dti.bvec")
@@ -164,6 +167,7 @@ class Subject:
         # RS
         # ------------------------------------------------------------------------------------------------------------------------
         self.rs_image_label = self.label + "-rs"
+
         self.rs_dir         = os.path.join(self.dir, "resting")
         self.rs_data        = os.path.join(self.rs_dir, self.rs_image_label)
         self.sbfc_dir       = os.path.join(self.rs_dir, "sbfc")
@@ -226,6 +230,7 @@ class Subject:
         # fMRI
         # ------------------------------------------------------------------------------------------------------------------------
         self.fmri_image_label   = self.label + "-fmri"
+
         self.fmri_dir           = os.path.join(self.dir, "fmri")
         self.fmri_data          = os.path.join(self.fmri_dir, self.fmri_image_label)
         self.fmri_data_mc       = os.path.join(self.fmri_dir, "r" + self.fmri_image_label)
@@ -250,25 +255,30 @@ class Subject:
         self.hr2fmri_mat       = os.path.join(self.roi_fmri_dir, "hr2fmri.mat")
 
         # ------------------------------------------------------------------------------------------------------------------------
-        # OTHER (DE/T2/WB/PE)
+        # WB
         # ------------------------------------------------------------------------------------------------------------------------
-        self.de_dir         = os.path.join(self.dir, "t2")
-        self.de_image_label = "de"
-        self.de_data        = os.path.join(self.de_dir, self.de_image_label)
-        self.de_brain_data  = os.path.join(self.de_dir, self.de_image_label + "_brain")
-
-        self.has_T2 = False
-        self.t2_dir         = self.de_dir
-        self.t2_image_label = "t2"
-        self.t2_data        = os.path.join(self.t2_dir, self.t2_image_label)
-        self.t2_brain_data  = os.path.join(self.t2_dir, self.t2_image_label + "_brain")
+        self.wb_image_label = self.label + "-wb_epi"
 
         self.wb_dir         = os.path.join(self.dir, "wb")
-        self.wb_image_label = self.label + "-wb_epi"
         self.wb_data        = os.path.join(self.wb_dir, self.wb_image_label)
         self.wb_brain_data  = os.path.join(self.wb_dir, self.wb_image_label + "_brain")
 
-        self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
+        # ------------------------------------------------------------------------------------------------------------------------
+        # T2
+        # ------------------------------------------------------------------------------------------------------------------------
+        self.t2_image_label = self.label + "-t2"
+
+        self.t2_dir         = os.path.join(self.dir, "t2")
+        self.t2_data        = os.path.join(self.t2_dir, self.t2_image_label)
+        self.t2_brain_data  = os.path.join(self.t2_dir, self.t2_image_label + "_brain")
+
+        # ------------------------------------------------------------------------------------------------------------------------
+        # DE
+        # ------------------------------------------------------------------------------------------------------------------------
+        self.de_image_label = self.label + "-de"
+        self.de_dir         = os.path.join(self.dir, "de")
+        self.de_data        = os.path.join(self.de_dir, self.de_image_label)
+        self.de_brain_data  = os.path.join(self.de_dir, self.de_image_label + "_brain")
 
         self_copy = deepcopy(self)
         if rollback is True:
@@ -617,6 +627,29 @@ class Subject:
 
             log.close()
 
+        # ==============================================================================================================================================================
+        # FMRI DATA
+        # ==============================================================================================================================================================
+        if self.hasFMRI is True:
+            self.transform.transform_epi("fmri", logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
+
+        # ==============================================================================================================================================================
+        # EXTRA
+        # ==============================================================================================================================================================
+        if self.hasFMRI and self.hasRS:
+
+            rs2std   = os.path.join(self.roi_std_dir, "rs2std")
+            std2fmri = os.path.join(self.roi_fmri_dir, "std2fmri")
+
+            # => rs2fmri.mat
+            rs2fmri = os.path.join(self.roi_fmri_dir, "rs2fmri")
+            if os.path.isfile(rs2fmri + ".mat") is False:
+                rrun("convert_xfm -concat " + rs2std + ".mat" + " " + std2fmri + ".mat" + " -omat " + rs2fmri + ".mat", logFile=log)
+
+            # => fmri2rs.mat
+            fmri2rs = os.path.join(self.roi_rs_dir, "fmri2rs")
+            if os.path.exists(fmri2rs + ".mat") is False:
+                rrun("convert_xfm -inverse -omat " + fmri2rs + ".mat " + rs2fmri + ".mat")
 
     # ==================================================================================================================================================
     # DATA CONVERSIONS

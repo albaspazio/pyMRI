@@ -74,7 +74,6 @@ class MatlabManager:
             eng.addpath(path)
         return eng
 
-
     @staticmethod
     def call_matlab_function(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
 
@@ -97,7 +96,6 @@ class MatlabManager:
             print("quitting matlab session of " + batch_file)
 
         return [engine, res]
-
 
     @staticmethod
     def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
@@ -126,7 +124,6 @@ class MatlabManager:
             print("quitting matlab session of " + batch_file)
 
         return engine
-
 
     # subcase of call_matlab_function_noret: call a SPM batch file that does not return anything
     @staticmethod

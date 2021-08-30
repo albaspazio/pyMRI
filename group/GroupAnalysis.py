@@ -893,7 +893,6 @@ class GroupAnalysis:
     # ====================================================================================================================================================
     # TBSS
     # ====================================================================================================================================================
-
     # run tbss for FA
     def tbss_run_fa(self, group_label, odn, sessid=1, prepare=True, proc=True, postreg="S", prestat_thr=0.2):
 
@@ -1030,37 +1029,43 @@ class GroupAnalysis:
         results_folder  = os.path.join(tbss_folder, "results")
         os.makedirs(results_folder, exist_ok=True)
 
+        tracts_labels = []
         # compose header
         str_data = "subj\t" + data_label
         for entry in os.scandir(in_clust_res_dir):
             if not entry.name.startswith('.') and not entry.is_dir():
                 if entry.name.startswith("sk_"):
-                    str_data = str_data + "\t" + remove_ext(entry.name[3:])
+                    lab = remove_ext(entry.name[3:])
+                    tracts_labels.append(lab)
+                    str_data = str_data + "\t" + lab
         str_data = str_data + "\n"
 
+        tracts_data = []
+        [tracts_data.append([]) for t in range(len(tracts_labels))]
         nsubj = len(datas[0])
         for i in range(nsubj):
             subj_label      = datas[1][i]
             subj_img        = os.path.join(subjects_images, subj_label + "-dti_fit" + subj_img_postfix)
             subj_img_masked = subj_img + "_masked"
-
-            str_data = str_data + subj_label + "\t" + str(datas[0][i])
+            n_tracts        = 0
+            str_data        = str_data + subj_label + "\t" + str(datas[0][i])
 
             for entry in os.scandir(in_clust_res_dir):
                 if not entry.name.startswith('.') and not entry.is_dir():
                     if entry.name.startswith("sk_"):
-                        roi_row = []
 
                         rrun("fslmaths " + subj_img + " -mas " + entry.path + " " + subj_img_masked)
                         val = float(rrun("fslstats " + subj_img_masked + " -M").strip())
                         imrm([subj_img_masked])
 
                         str_data = str_data + "\t" + str(val)
-                        roi_row.append(val)
-
-                        # fig_file = os.path.join(results_folder, entry.name + "_" + data_label + ".png")
-                        # plot_data.scatter_plot_dataserie(datas[0], roi_row, fig_file)
+                        tracts_data[n_tracts].append(val)
+                        n_tracts = n_tracts + 1
             str_data = str_data + "\n"
+
+        for t in range(len(tracts_labels)):
+            fig_file = os.path.join(results_folder, tracts_labels[t] + "_" + data_label + ".png")
+            plot_data.scatter_plot_dataserie(datas[0], tracts_data[t], fig_file)
 
         res_file = os.path.join(results_folder, "scatter_tracts_" + modality + "_" + data_label + ".dat")
 

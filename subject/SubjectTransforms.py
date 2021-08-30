@@ -4,6 +4,7 @@ from myfsl.utils.run import rrun
 from utility.fslfun import runsystem
 from utility.images import imtest, imcp, imgname, remove_ext, read_header
 
+
 #   RS    <----------> HR <---> STD  <---> STD4
 #    |    <----------> HR <--------------> STD4
 #    |
@@ -718,8 +719,8 @@ class SubjectTransforms:
 
             exfun = self.subject.epi.get_example_function("rs")
 
-            imcp(exfun, os.path.join(nl_rs, "example_func"))
-            imcp(exfun, os.path.join(l_rs, "example_func"))
+            imcp(exfun, os.path.join(nl_rs, self.subject.label + "_example_func"))
+            imcp(exfun, os.path.join(l_rs,  self.subject.label + "_example_func"))
 
             self.transform_roi("hrTOrs",    pathtype="abs", outdir=nl_rs   , islin=False,   rois=[self.subject.t1_data])
             self.transform_roi("hrTOrs",    pathtype="abs", outdir=l_rs    , islin=True,    rois=[self.subject.t1_brain_data])
@@ -824,7 +825,7 @@ class SubjectTransforms:
         if self.subject.hasDTI is True:
 
             nl_dti = os.path.join(nldir, "dti")
-            l_dti = os.path.join(ldir, "dti")
+            l_dti  = os.path.join(ldir, "dti")
 
             os.makedirs(nl_dti, exist_ok=True)
             os.makedirs(l_dti, exist_ok=True)
@@ -856,7 +857,7 @@ class SubjectTransforms:
     #                                       -> stdimg, stdimg_brain, stdimg_brain_mask_dil
     #                                       -> stdimg4, stdimg4_brain, stdimg4_brain_mask_dil
     # in linear transf, it must be betted (must contain the "_brain" text) in non-linear is must be a full head image.
-    def transform_roi(self, regtype, pathtype="standard", outdir="", mask="", orf="", thresh=0, islin=True, stdimg="", rois=[]):
+    def transform_roi(self, regtype, pathtype="standard", outdir="", outname="", mask="", orf="", thresh=0, islin=True, stdimg="", rois=[]):
 
         # ===========================================================
         # SANITY CHECK
@@ -974,23 +975,28 @@ class SubjectTransforms:
             # ----------------------------------------------------------------------------------------------------------
             # SET OUTPUT
             # ----------------------------------------------------------------------------------------------------------
+            if outname != "":
+                name = outname
+            else:
+                name = roi_name
+
             if outdir == "":
                 if to_space == "hr":
-                    output_roi = os.path.join(self.subject.roi_dir, "reg_t1", roi_name + "_" + to_space)
+                    output_roi = os.path.join(self.subject.roi_dir, "reg_t1", name + "_" + to_space)
                 elif to_space == "rs":
-                    output_roi = os.path.join(self.subject.roi_dir, "reg_rs", roi_name + "_" + to_space)
+                    output_roi = os.path.join(self.subject.roi_dir, "reg_rs", name + "_" + to_space)
                 elif to_space == "fmri":
-                    output_roi = os.path.join(self.subject.roi_dir, "reg_fmri", roi_name + "_" + to_space)
+                    output_roi = os.path.join(self.subject.roi_dir, "reg_fmri", name + "_" + to_space)
                 elif to_space == "dti":
-                    output_roi = os.path.join(self.subject.roi_dir, "reg_dti", roi_name + "_" + to_space)
+                    output_roi = os.path.join(self.subject.roi_dir, "reg_dti", name + "_" + to_space)
                 elif to_space == "t2":
-                    output_roi = os.path.join(self.subject.roi_dir, "reg_t2", roi_name + "_" + to_space)
+                    output_roi = os.path.join(self.subject.roi_dir, "reg_t2", name + "_" + to_space)
                 elif to_space == "std":
-                    output_roi = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, roi_name + "_" + to_space)
+                    output_roi = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, name + "_" + to_space)
                 elif to_space == "std4":
-                    output_roi = os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4", roi_name + "_" + to_space)
+                    output_roi = os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4", name + "_" + to_space)
             else:
-                output_roi = os.path.join(outdir, roi_name + "_" + to_space)
+                output_roi = os.path.join(outdir, name + "_" + to_space)
 
             # ----------------------------------------------------------------------------------------------------------
             # TRANSFORM !!!!
@@ -1070,6 +1076,15 @@ class SubjectTransforms:
 
         rrun("applywarp -i " + input_roi + " -r " + self.subject.t1_data + " -o " + output_roi + " --premat=" + rs2std_mat + " --warp=" + std2hr_warp )
 
+    def transform_l_rs2hr(self, input_roi, output_roi, std_img, std_img_label="std"):
+
+        mat = os.path.join(self.subject.roi_t1_dir, "rs2hr.mat")
+        if os.path.exists(mat) is False:
+            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
+            return ""
+
+        rrun("flirt -in " + input_roi + " -ref " + self.subject.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
+
     def transform_nl_fmri2hr(self, input_roi, output_roi, std_img, std_img_label="std"):
 
         fmri2std_mat = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "fmri2" + std_img_label + ".mat")
@@ -1083,15 +1098,6 @@ class SubjectTransforms:
             return ""
 
         rrun("applywarp -i " + input_roi + " -r " + self.subject.t1_data + " -o " + output_roi + " --premat=" + fmri2std_mat + " --warp=" + std2hr_warp )
-
-    def transform_l_rs2hr(self, input_roi, output_roi, std_img, std_img_label="std"):
-
-        mat = os.path.join(self.subject.roi_t1_dir, "rs2hr.mat")
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
 
     def transform_l_fmri2hr(self, input_roi, output_roi, std_img, std_img_label="std"):
 
@@ -1149,7 +1155,7 @@ class SubjectTransforms:
         rrun("flirt -in " + input_roi + " -ref " + self.subject.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + self.subject.dti2hr_mat + " -interp trilinear")
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # TO RS (from hr, dti, std, std4)
+    # TO RS (from hr, fmri, std, std4)
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def transform_nl_std2rs(self, input_roi, output_roi, std_img, rs_label="rs", std_img_label="std"):
 
@@ -1210,11 +1216,28 @@ class SubjectTransforms:
 
         rrun("flirt -in " + input_roi + " -ref " + self.subject.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
 
-    # def transform_nl_dti2rs(self, input_roi, output_roi, std_img, std_img_label="std"):
-    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
-    #
-    # def transform_l_dti2rs(self, input_roi, output_roi, std_img, std_img_label="std"):
-    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
+    def transform_nl_fmri2rs(self, input_roi, output_roi, std_img, epi_label="rs", std_img_label="std"):
+
+        fmri2std_mat = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "fmri2" + std_img_label + ".mat")
+        std2rs_mat   = os.path.join(self.subject.roi_rs_dir, std_img_label + "2rs.mat")
+
+        if os.path.exists(fmri2std_mat) is False:
+            print("ERROR: transformation warp " + fmri2std_mat + " is missing...exiting transform roi")
+            return ""
+        if os.path.exists(std2rs_mat) is False:
+            print("ERROR: transformation matrix " + std2rs_mat + " is missing...exiting transform roi")
+            return ""
+
+        rrun("applywarp -i " + input_roi + " -r " + self.subject.rs_examplefunc + " -o " + output_roi + " --warp=" + hr2std_warp + " --postmat=" + std2rs_mat)
+
+    def transform_l_fmri2rs(self, input_roi, output_roi, std_img, epi_label="rs", std_img_label="std"):
+
+        mat  = os.path.join(self.subject.roi_rs_dir, "hr2rs.mat")
+        if os.path.exists(mat) is False:
+            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
+            return ""
+
+        rrun("flirt -in " + input_roi + " -ref " + self.subject.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO FMRI (from hr, dti, std, std4)
@@ -1270,12 +1293,6 @@ class SubjectTransforms:
             return ""
 
         rrun("flirt -in " + input_roi + " -ref " + self.subject.fmri_examplefunc + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    # def transform_nl_dti2fmri(self, input_roi, output_roi, std_img, std_img_label="std"):
-    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
-    #
-    # def transform_l_dti2fmri(self, input_roi, output_roi, std_img, std_img_label="std"):
-    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO STD (from hr, epi, dti)
@@ -1467,6 +1484,8 @@ class SubjectTransforms:
 
         # ==============================================================================================================
 
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
     # def transform_nl_rs2dti(self, input_roi, output_roi, std_img, epi_label="rs", std_img_label="std"):
     #     print("registration type: epi2dti NOT SUPPORTED...exiting")
     #     return ""
@@ -1482,3 +1501,16 @@ class SubjectTransforms:
     # def transform_l_fmri2dti(self, input_roi, output_roi, std_img, epi_label="rs"):
     #     print("registration type: epi2dti NOT SUPPORTED...exiting")
     #     return ""
+
+    # def transform_nl_dti2fmri(self, input_roi, output_roi, std_img, std_img_label="std"):
+    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
+    #
+    # def transform_l_dti2fmri(self, input_roi, output_roi, std_img, std_img_label="std"):
+    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
+
+
+    # def transform_nl_dti2rs(self, input_roi, output_roi, std_img, std_img_label="std"):
+    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
+    #
+    # def transform_l_dti2rs(self, input_roi, output_roi, std_img, std_img_label="std"):
+    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
