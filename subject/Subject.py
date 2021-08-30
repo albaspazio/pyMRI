@@ -43,6 +43,12 @@ class Subject:
         self.dti        = SubjectDti(self, self._global)
         self.epi        = SubjectEpi(self, self._global)
 
+        self.hasT1      = imtest(self.t1_data)
+        self.hasRS      = imtest(self.rs_data)
+        self.hasDTI     = imtest(self.dti_data)
+        self.hasT2      = imtest(self.t2_data)
+        self.hasFMRI    = imtest(self.fmri_data)
+
     def get_sess_file_system(self, sess):
         return self.set_file_system(sess, True)
 
@@ -131,9 +137,9 @@ class Subject:
         self.dti_ec_data    = os.path.join(self.dti_dir, self.dti_ec_image_label)
         self.dti_fit_data   = os.path.join(self.dti_dir, self.dti_fit_label)
 
-        self.dti_nodiff_data            = os.path.join(self.dti_dir, "nodif")
-        self.dti_nodiff_brain_data      = os.path.join(self.dti_dir, "nodif_brain")
-        self.dti_nodiff_brainmask_data  = os.path.join(self.dti_dir, "nodif_brain_mask")
+        self.dti_nodiff_data            = os.path.join(self.roi_dti_dir, "nodif")
+        self.dti_nodiff_brain_data      = os.path.join(self.roi_dti_dir, "nodif_brain")
+        self.dti_nodiff_brainmask_data  = os.path.join(self.roi_dti_dir, "nodif_brain_mask")
 
         self.dti_bedpostx_mean_S0_label = "mean_S0samples"
 
@@ -591,8 +597,6 @@ class Subject:
             os.makedirs(self.roi_dti_dir, exist_ok=True)
 
             self.transform.transform_dti()
-            if self.has_T2 is True:
-                self.transform.transform_dti_t2()
 
             if imtest(os.path.join(self.dti_dir, bedpost_odn, "mean_S0samples")) is False:
                 if os.path.isfile(os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz")) is True:

@@ -1,8 +1,10 @@
 import csv
+import os
+
 from utility.utilities import argsort, reorder_list, typeUnknown
 
 
-class SubjectsDict:
+class SubjectsDataDict:
 
     def __init__(self, filepath=""):
 
@@ -22,6 +24,10 @@ class SubjectsDict:
     def load(self, filepath):
 
         self.data = {}
+        if os.path.exists(filepath) is False:
+            print("ERROR in get_header_of_tabbed_file, given filepath param (" + filepath + ") is not a file")
+            return self.data
+
         with open(filepath, "r") as f:
             reader = csv.reader(f, dialect='excel', delimiter='\t')
             for row in reader:

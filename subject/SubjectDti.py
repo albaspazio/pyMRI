@@ -12,59 +12,66 @@ class SubjectDti:
     def __init__(self, subject, _global):
         self.subject = subject
         self._global = _global
-        
+
 
     # ==================================================================================================================================================
     # DIFFUSION
     # ==================================================================================================================================================
+    def get_nodiff(self, logFile=None):
 
-    def ec_fit(self):
+        if imtest(self.subject.dti_nodiff_data) is False:
+            rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1", logFile=logFile)
+
+        if imtest(self.subject.dti_nodiff_brain_data) is False:
+            rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
+
+    def ec_fit(self, logFile=None):
 
         if imtest(self.subject.dti_data) is False:
             return
 
-        rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1")
-        rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3")  # also creates dti_nodiff_brain_mask_data
+        rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1", logFile=logFile)
+        rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
 
         if imtest(self.subject.dti_ec_data) is False:
             print("starting eddy_correct on " + self.subject.label)
-            rrun("eddy_correct " + self.subject.dti_data + " " + self.subject.dti_ec_data + " 0")
+            rrun("eddy_correct " + self.subject.dti_data + " " + self.subject.dti_ec_data + " 0", logFile=logFile)
 
         if os.path.exists(self.subject.dti_rotated_bvec) is False:
-            rrun("fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_ec_data + ".ecclog")
+            rrun("fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_ec_data + ".ecclog", logFile=logFile)
 
         if imtest(self.subject.dti_fit_data) is False:
             print("starting DTI fit on " + self.subject.label)
-            rrun("dtifit --sse -k " + self.subject.dti_ec_data + " -o " + self.subject.dti_fit_data + " -m " + self.subject.dti_nodiff_brainmask_data + " -r " + self.subject.dti_rotated_bvec + " -b " + self.subject.dti_bval)
+            rrun("dtifit --sse -k " + self.subject.dti_ec_data + " -o " + self.subject.dti_fit_data + " -m " + self.subject.dti_nodiff_brainmask_data + " -r " + self.subject.dti_rotated_bvec + " -b " + self.subject.dti_bval, logFile=logFile)
 
         if imtest(self.subject.dti_ec_data + "_L23") is False:
-            rrun("fslmaths " + self.subject.dti_fit_data + "_L2" + " -add " + self.subject.dti_fit_data + "_L3" + " -div 2 " + self.subject.dti_fit_data + "_L23")
+            rrun("fslmaths " + self.subject.dti_fit_data + "_L2" + " -add " + self.subject.dti_fit_data + "_L3" + " -div 2 " + self.subject.dti_fit_data + "_L23", logFile=logFile)
 
     def probtrackx(self):
         pass
 
-    def bedpostx(self, out_dir_name="bedpostx", use_gpu=False):
+    def bedpostx(self, out_dir_name="bedpostx", use_gpu=False, logFile=None):
 
         bp_dir      = os.path.join(self.subject.dti_dir, out_dir_name)
         bp_out_dir  = os.path.join(self.subject.dti_dir, out_dir_name + ".bedpostX")
 
         os.makedirs(bp_dir, exist_ok=True)
 
-        imcp(self.subject.dti_ec_data, os.path.join(bp_dir, "data"))
-        imcp(self.subject.dti_nodiff_brainmask_data, os.path.join(bp_dir, "nodif_brain_mask"))
+        imcp(self.subject.dti_ec_data, os.path.join(bp_dir, "data"), logFile=logFile)
+        imcp(self.subject.dti_nodiff_brainmask_data, os.path.join(bp_dir, "nodif_brain_mask"), logFile=logFile)
         copyfile(self.subject.dti_bval, os.path.join(bp_dir, "bvals"))
         copyfile(self.subject.dti_rotated_bvec, os.path.join(bp_dir, "bvecs"))
 
-        res = rrun("bedpostx_datacheck " + bp_dir)
+        res = rrun("bedpostx_datacheck " + bp_dir, logFile=logFile)
 
         # if res > 0:
         #     print("ERROR in bedpostx (" +  bp_dir + " ....exiting")
         #     return
 
         if use_gpu is True:
-            rrun("bedpostx_gpu " + bp_dir + " -n 3 -w 1 -b 1000")
+            rrun("bedpostx_gpu " + bp_dir + " -n 3 -w 1 -b 1000", logFile=logFile)
         else:
-            rrun("bedpostx " + bp_dir + " -n 3 -w 1 -b 1000")
+            rrun("bedpostx " + bp_dir + " -n 3 -w 1 -b 1000", logFile=logFile)
 
         # if imtest(os.path.join(bp_out_dir, self.subject.dti_bedpostx_mean_S0_label)):
         #     shutil.move(bp_out_dir, os.path.join(self.subject.dti_dir, out_dir_name))
@@ -74,7 +81,7 @@ class SubjectDti:
         #     print("ERROR in bedpostx_gpu....something went wrong in bedpostx")
         #     return
 
-    def xtract(self, outdir_name="xtract", bedpostx_dirname="bedpostx", refspace="native", use_gpu=False, species="HUMAN"):
+    def xtract(self, outdir_name="xtract", bedpostx_dirname="bedpostx", refspace="native", use_gpu=False, species="HUMAN", logFile=None):
 
         bp_dir      = os.path.join(self.subject.dti_dir, bedpostx_dirname)
         out_dir     = os.path.join(self.subject.dti_dir, outdir_name)
@@ -88,7 +95,7 @@ class SubjectDti:
         if use_gpu is True:
             gpu_str = " -gpu "
 
-        rrun("xtract -bpx " + bp_dir + " -out " + out_dir + " -stdwarp " + self.subject.std2dti_warp + " " + self.subject.dti2std_warp + gpu_str + refspace_str + " -species " + species, stop_on_error=False)
+        rrun("xtract -bpx " + bp_dir + " -out " + out_dir + " -stdwarp " + self.subject.std2dti_warp + " " + self.subject.dti2std_warp + gpu_str + refspace_str + " -species " + species, stop_on_error=False, logFile=logFile)
 
         self.xtract_check(out_dir)
         return out_dir
@@ -120,9 +127,9 @@ class SubjectDti:
         if structures != "":
             structures = " -str " + structures + " "
 
-        rrun("xtract_viewer -dir " + xdir + " -species " + species + "" + structures)
+        rrun("xtract_viewer -dir " + xdir + " -species " + species + "" + structures, logFile=logFile)
 
-    def xtract_stats(self, xtract_dir="xtract", refspace="native", meas="vol,prob,length,FA,MD,L1", structures=""):
+    def xtract_stats(self, xtract_dir="xtract", refspace="native", meas="vol,prob,length,FA,MD,L1", structures="", logFile=None):
 
         xdir = os.path.join(self.subject.dti_dir, xtract_dir)
 
@@ -143,10 +150,10 @@ class SubjectDti:
         if structures != "":
             structures = " -str " + structures + " "
 
-        rrun("xtract_stats " + " -xtract " + xdir + rspace + root_dir + " -meas " + meas + "" + structures)
+        rrun("xtract_stats " + " -xtract " + xdir + rspace + root_dir + " -meas " + meas + "" + structures, logFile=logFile)
 
     # read its own xtract_stats output file and return a dictionary = { "tractX":{"val1":XX,"val2":YY, ...}, .. }
-    def xtract_read_file(self, tracts=None, values=None, ifn="stats.csv"):
+    def xtract_read_file(self, tracts=None, values=None, ifn="stats.csv", logFile=None):
 
         if len(tracts) is None:
             tracts  = self._global.dti_xtract_labels
@@ -193,6 +200,3 @@ class SubjectDti:
     def conn_matrix(self, atlas_path="freesurfer", nroi=0):
         pass
 
-
-
-    

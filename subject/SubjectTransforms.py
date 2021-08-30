@@ -2,17 +2,101 @@ import os
 
 from myfsl.utils.run import rrun
 from utility.fslfun import runsystem
-from utility.images import imtest, imgname, remove_ext, read_header
+from utility.images import imtest, imcp, imgname, remove_ext, read_header
 
-
+#   RS    <----------> HR <---> STD  <---> STD4
+#    |    <----------> HR <--------------> STD4
+#    |
+#   FMRI  <----------> HR <---> STD
+#   FMRI  <----------> HR <--------------> STD4
+#
+#   DTI   <----------> HR <---> STD
+#   DTI   <--> T2 <--> HR <---> STD
+#
 class SubjectTransforms:
-    
+
     def __init__(self, subject, _global):
         
         self.subject = subject
         self._global = _global
+        # define all available transformations
+        self.linear_registration_type = {
+            "stdTOstd4": self.transform_l_std2std4,
+            "stdTOhr": self.transform_l_std2hr,
+            "stdTOrs": self.transform_l_std2rs,
+            "stdTOfmri": self.transform_l_std2fmri,
+            "stdTOdti": self.transform_l_std2dti,
+            # "stdTOt2": self.transform_l_std2t2,
+
+            "std4TOhr": self.transform_l_std42hr,
+            "std4TOrs": self.transform_l_std42rs,
+            "std4TOfmri": self.transform_l_std42fmri,
+
+            "hrTOstd": self.transform_l_hr2std,
+            "hrTOstd4": self.transform_l_hr2std4,
+            "hrTOrs": self.transform_l_hr2rs,
+            "hrTOfmri": self.transform_l_hr2fmri,
+            "hrTOdti": self.transform_l_hr2dti,
+            # "hrTOt2": self.transform_l_hr2t2,
+
+            "rsTOstd": self.transform_l_rs2std,
+            "rsTOstd4": self.transform_l_rs2std4,
+            "rsTOhr": self.transform_l_rs2hr,
+            # "rsTOdti": self.transform_l_rs2dti,
+
+            "fmriTOstd": self.transform_l_fmri2std,
+            "fmriTOhr": self.transform_l_fmri2hr,
+            "fmriTOstd4": self.transform_l_fmri2std4,
+            # "fmriTOdti": self.transform_l_fmri2dti,
+
+            "dtiTOstd": self.transform_l_dti2std,
+            "dtiTOhr": self.transform_l_dti2hr,
+            # "dtiTOrs": self.transform_l_dti2rs,
+            # "dtiTOfmri": self.transform_l_dti2fmri
+
+            # "t2TOstd": self.transform_l_t22std,
+            # "t2TOhr": self.transform_l_t22hr
+        }
+        self.non_linear_registration_type = {
+
+            "stdTOstd4": self.transform_nl_std2std4,
+            "stdTOhr": self.transform_nl_std2hr,
+            "stdTOrs": self.transform_nl_std2rs,
+            "stdTOfmri": self.transform_nl_std2fmri,
+            "stdTOdti": self.transform_nl_std2dti,
+            # "stdTOt2": self.transform_nl_std2t2,
+
+            "std4TOhr": self.transform_nl_std42hr,
+            "std4TOrs": self.transform_nl_std42rs,
+            "std4TOfmri": self.transform_nl_std42fmri,
+
+            "hrTOstd": self.transform_nl_hr2std,
+            "hrTOstd4": self.transform_nl_hr2std4,
+            "hrTOrs": self.transform_nl_hr2rs,
+            "hrTOfmri": self.transform_nl_hr2fmri,
+            "hrTOdti": self.transform_nl_hr2dti,
+            # "hrTOt2": self.transform_nl_hr2t2,
+
+            "rsTOstd": self.transform_nl_rs2std,
+            "rsTOstd4": self.transform_nl_rs2std4,
+            "rsTOhr": self.transform_nl_rs2hr,
+            # "rsTOdti": self.transform_nl_rs2dti,
+
+            "fmriTOstd": self.transform_nl_fmri2std,
+            "fmriTOstd4": self.transform_nl_fmri2std4,
+            "fmriTOhr": self.transform_nl_fmri2hr,
+            # "fmriTOdti": self.transform_nl_fmri2dti,
+
+            "dtiTOstd": self.transform_nl_dti2std,
+            "dtiTOhr": self.transform_nl_dti2hr,
+            # "dtiTOrs": self.transform_nl_dti2fmri,
+            # "dtiTOfmri": self.transform_nl_dti2fmri
+
+            # "t2TOstd": self.transform_nl_t22std,
+            # "t2TOhr": self.transform_nl_t22hr
+        }
         
-    def fnirt(self, ref, ofn="", odp="", refmask="", inimg="t1_brain"):
+    def fnirt(self, ref, ofn="", odp="", refmask="", inimg="t1"):
 
         if inimg == "t1_brain":
             img = self.subject.t1_brain_data
@@ -66,6 +150,8 @@ class SubjectTransforms:
     # In the latter case, user must provide (in a same folder) the following images:
     #  -> stdimg, stdimg_brain, stdimg_brain_mask_dil
     #  -> stdimg4, stdimg4_brain, stdimg4_brain_mask_dil
+    # it creates:   hr2std.mat, hrhead2std.mat, std2hr.mat, hr2std_warp, std2hr_warp
+    #               hr2std4.mat, hrhead2std4.mat, std42hr.mat, hr2std4_warp, std42hr_warp
     def transform_mpr(self, stdimg="", logFile=None):
 
         if stdimg == "":
@@ -161,9 +247,9 @@ class SubjectTransforms:
         # NON LINEAR
         # => hr2{std}_warp
         if imtest(hr2std_warp) is False:
-            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + ".mat --config=" + self.subject._global.self.fsl_std_mni_2mm_cnf +
+            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + ".mat --config=" + self.subject._global.fsl_std_mni_2mm_cnf +
                     " --ref=" + std_head_img + " --refmask=" + std_img_mask_dil + " --warpres=10,10,10" +
-                    "--cout=" + hr2std_warp + " --iout=" + hr2std + " --jout=" + hr2std + "_jac")
+                    " --cout=" + hr2std_warp + " --iout=" + hr2std + " --jout=" + hr2std + "_jac")
 
         # => {std}2hr_warp
         if imtest(std2hr_warp) is False:
@@ -215,6 +301,7 @@ class SubjectTransforms:
     # In the latter case, user must provide (in a same folder) the following images:
     #  -> stdimg, stdimg_brain, stdimg_brain_mask_dil
     #  -> stdimg4, stdimg4_brain, stdimg4_brain_mask_dil
+    # it creates    : example_func, epi2hr.mat,
     def transform_epi(self, type='fmri', stdimg="", do_bbr=False, wmseg="", logFile=None):
 
         if stdimg == "":
@@ -265,6 +352,7 @@ class SubjectTransforms:
             std42epi    = os.path.join(self.subject.roi_rs_dir  , std_img_label + "42rs")
 
         hr2std          = os.path.join(self.subject.roi_dir, "reg_" + std_img_label         , "hr2" + std_img_label)
+        hr2std4         = os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4"   , "hr2" + std_img_label + "4")
         hr2std_warp     = os.path.join(self.subject.roi_dir, "reg_" + std_img_label         , "hr2" + std_img_label + "_warp")
         hr2std4_warp    = os.path.join(self.subject.roi_dir, "reg_" + std_img_label + "4"   , "hr2" + std_img_label + "4_warp")
 
@@ -313,15 +401,8 @@ class SubjectTransforms:
         os.makedirs(os.path.join(self.subject.roi_dir, "reg_" + std_img_label), exist_ok=True)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # create example function
-        if imtest(exfun) is False:
-            rrun("fslmaths " + data + " " + os.path.join(folder, "prefiltered_func_data") + " -odt float", logFile=logFile)
-            rrun("fslroi " + os.path.join(folder, "prefiltered_func_data") + " " + exfun + " 100 1", logFile=logFile)
-            rrun("bet2 " + exfun + " " + exfun + " -f 0.3", logFile=logFile)
-
-            rrun("imrm " + os.path.join(folder, "prefiltered_func_data*"), logFile=logFile)
-
-            rrun("fslmaths " + exfun + " -bin " + m_exfun, logFile=logFile)      # create example_function mask (a -thr 0.01/0.1 could have been used to further reduce it)
+        # check or create example function
+        exfun = self.subject.epi.get_example_function(logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #  EPI <--> HIGHRES (linear, bbr or not)
@@ -387,8 +468,16 @@ class SubjectTransforms:
             if imtest(epi2std4 + "_warp") is False:
                 rrun("convertwarp --ref=" + std4_head_img + " --premat=" + epi2hr + ".mat" + " --warp1=" + hr2std4_warp + " --out=" + epi2std4 + "_warp", logFile=logFile)
 
+            # => epi2std4.mat
+            if os.path.isfile(epi2std4 + ".mat") is False:
+                rrun("convert_xfm -concat " + hr2std4 + ".mat" + " " + epi2hr + ".mat" + " -omat " + epi2std4 + ".mat", logFile=logFile)
+
             if imtest(std42epi + "_warp") is False:
                 rrun("invwarp -r " + exfun + " -w " + epi2std4 + "_warp" + " -o " + std42epi + "_warp", logFile=logFile)
+
+            # => std42epi.mat
+            if os.path.exists(std42epi + ".mat") is False:
+                rrun("convert_xfm -inverse -omat " + std42epi + ".mat " + epi2std4 + ".mat")
 
             # ------------------------------------------------------------------------------------------------------
             # various co-registration
@@ -416,114 +505,10 @@ class SubjectTransforms:
             rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_brain_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_brain_rs"), logFile=logFile)
             rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_brain_mask_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_brain_rs"), logFile=logFile)
 
-    # DTI <-- (non-lin) -- t2 -- (lin) -- HIGHRES -- (non-lin) --> STANDARD
-    # creates:  t22hr.mat, hr2t2.mat, dti2t2.mat, t22dti.mat,
-    #           dti2t2_warp, t22dti_warp, dti2hr_warp, hr2dti_warp, dti2std_warp, std2dti_warp
-    def transform_dti_t2(self, stdimg="", logFile=None):
-
-        if stdimg == "":
-
-            std_img_label = "std"
-
-            std_img             = self.subject._global.fsl_std_mni_2mm_brain
-            std_head_img        = self.subject._global.fsl_std_mni_2mm_head
-            std_img_mask_dil    = self.subject._global.fsl_std_mni_2mm_brain_mask_dil
-
-        else:
-            imgdir = os.path.dirname(stdimg)
-            std_img_label = remove_ext(os.path.basename(stdimg))  # "pediatric"
-
-            std_head_img        = os.path.join(imgdir, std_img_label)  # "pediatric"
-            std_img             = os.path.join(imgdir, std_img_label + "_brain")  # "pediatric_brain"
-            std_img_mask_dil    = os.path.join(imgdir, std_img_label + "_brain_mask_dil")  # "pediatric_brain_mask_dil"
-
-        if imtest(self.subject.t1_brain_data) is False:
-            print(
-                "file T1_BRAIN_DATA: " + self.subject.t1_brain_data + ".nii.gz is not present...exiting transforms_mpr")
-            return
-
-        if imtest(self.subject.t1_data) is False:
-            print("file T1_DATA: " + self.subject.t1_data + ".nii.gz is not present...exiting transforms_mpr")
-            return
-
-        # check template
-        if imtest(std_img) is False:
-            print("ERROR: file std_img: " + std_img + ".nii.gz is not present...exiting transforms_mpr")
-            return
-
-        if imtest(std_head_img) is False:
-            print("ERROR: file std_img: " + std_head_img + ".nii.gz is not present...exiting transforms_mpr")
-            return
-
-        if imtest(std_img_mask_dil) is False:
-            print(
-                "ERROR: file std_img_mask_dil: " + std_img_mask_dil + ".nii.gz is not present...exiting transforms_mpr")
-            return
-
-        print(self.subject.label + ":						STARTED : nonlin nodiff-t1-standard coregistration")
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if imtest(self.subject.dti_nodiff_data) is False:
-            rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1", logFile=logFile)
-        if imtest(self.subject.dti_nodiff_brain_data) is False:
-            rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
-
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # T2 <------> HIGHRES (linear)
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # t2 -> hr linear
-        t22hr = os.path.join(self.subject.roi_t1_dir, "t22hr")
-        if os.path.exists(t22hr + ".mat") is False:
-            rrun("flirt -in " + self.subject.t2_brain_data + " -ref " + self.subject.t1_brain_data + " -out " + t22hr + " -omat " + t22hr + ".mat" +
-                " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
-
-        # hr -> t2 linear
-        hr2t2 = os.path.join(self.subject.roi_t2_dir, "hr2t2")
-        if os.path.exists(hr2t2 + ".mat") is False:
-            rrun("convert_xfm -omat " + hr2t2 + ".mat" + " -inverse " + t22hr + ".mat", logFile=logFile)
-
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # DTI <--->  T2 non linear
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # dti -> t2 linear
-        if os.path.exists(self.subject.dti2t2_mat) is False:
-            rrun("flirt -in " + self.subject.t2_brain_data + " -ref " + self.subject.dti_nodiff_brain_data + " -omat " + self.subject.dti2t2_mat +
-                " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
-
-        # t2 -> dti linear
-        if os.path.exists(self.subject.t22dti_mat) is False:
-            rrun("convert_xfm -omat " + self.subject.t22dti_mat + " -inverse " + self.subject.dti2t2_mat, logFile=logFile)
-
-        # dti -> t2 non linear
-        if imtest(self.subject.dti2t2_warp) is False:
-            rrun("fnirt --in=" + self.subject.t2_data + " --ref=" + self.subject.t2_data + " --aff=" + self.subject.dti2t2_mat + " --cout=" + self.subject.dti2t2_warp, logFile=logFile)
-
-        # t2 -> dti non linear
-        if imtest(self.subject.t22dti_warp) is False:
-            rrun("invwarp -r " + self.subject.dti_nodiff_data + " -w " + self.subject.dti2t2_warp + " -o " + self.subject.t22dti_warp, logFile=logFile)
-
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # DTI <-- (non-lin) -- t2 -- (lin) -- HIGHRES
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if imtest(self.subject.dti2hr_warp) is False:
-            rrun("convertwarp --ref=" + self.subject.t1_data + " --warp1=" + self.subject.dti2t2_warp + " --postmat=" + t22hr + ".mat" + " --out=" + self.subject.dti2hr_warp, logFile=logFile)
-
-        if imtest(self.subject.hr2dti_warp) is False:
-            rrun("invwarp -r " + self.subject.dti_nodiff_data + " -w " + self.subject.dti2hr_warp + " -o " + self.subject.hr2dti_warp, logFile=logFile)
-
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # DTI <-- (non-lin) -- t2 -- (lin) -- HIGHRES -- (non-lin) --> STANDARD
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        dti2std     = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "dti2" + std_img_label)
-        hr2std_warp = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hr2" + std_img_label + "_warp")
-        if imtest(dti2std + "_warp") is False:
-            rrun("convertwarp --ref=" + std_head_img + " --warp1=" + self.subject.dti2t2_warp + " --midmat=" + t22hr + ".mat" + " --warp2=" + hr2std_warp + " --out=" + dti2std + "_warp",logFile=logFile)
-
-        std2dti = os.path.join(self.subject.roi_dti_dir, std_img_label + "2dti")
-        if imtest(std2dti + "_warp") is False:
-            rrun("invwarp -r " + self.subject.dti_nodiff_data + " -w " + dti2std + "_warp" + " -o " + std2dti + "_warp", logFile=logFile)
-
     # DTI <-- (lin) -- HIGHRES -- (non-lin) --> STANDARD
-    # creates: dti2hr.mat, hr2dti.mat, dti2std_warp, std2dti_warp
+    # creates       :   dti2hr.mat, hr2dti.mat, dti2std_warp, std2dti_warp (dti <-> hr <-> std)
+    # and if has_T2 :   t22hr.mat, hr2t2.mat, dti2t2.mat, t22dti.mat, dti2t2_warp, t22dti_warp, dti2hr_warp, hr2dti_warp
+    #                   overwrites dti2std_warp, std2dti_warp
     def transform_dti(self, stdimg="", logFile=None):
 
         if stdimg == "":
@@ -534,9 +519,6 @@ class SubjectTransforms:
             std_head_img        = self.subject._global.fsl_std_mni_2mm_head
             std_img_mask_dil    = self.subject._global.fsl_std_mni_2mm_brain_mask_dil
 
-            std4_img            = self.subject._global.fsl_std_mni_4mm_brain
-            std4_head_img       = self.subject._global.fsl_std_mni_4mm_head
-            std4_img_mask_dil   = self.subject._global.fsl_std_mni_4mm_brain_mask_dil
         else:
             imgdir              = os.path.dirname(stdimg)
             std_img_label       = remove_ext(os.path.basename(stdimg))                      # "pediatric"
@@ -544,10 +526,6 @@ class SubjectTransforms:
             std_head_img        = os.path.join(imgdir, std_img_label)                       # "pediatric"
             std_img             = os.path.join(imgdir, std_img_label + "_brain")            # "pediatric_brain"
             std_img_mask_dil    = os.path.join(imgdir, std_img_label + "_brain_mask_dil")   # "pediatric_brain_mask_dil"
-
-            std4_head_img        = os.path.join(imgdir, std_img_label + "4")                # "pediatric4"
-            std4_img             = os.path.join(imgdir, std_img_label + "4_brain")          # "pediatric4_brain"
-            std4_img_mask_dil    = os.path.join(imgdir, std_img_label + "4_brain_mask_dil") # "pediatric4_brain_mask_dil"
 
         if imtest(self.subject.t1_brain_data) is False:
             print("file T1_BRAIN_DATA: " + self.subject.t1_brain_data + ".nii.gz is not present...exiting transforms_mpr")
@@ -572,10 +550,7 @@ class SubjectTransforms:
 
         print(self.subject.label + ":						STARTED : nonlin nodiff-t1-standard coregistration")
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if imtest(self.subject.dti_nodiff_data) is False:
-            rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1", logFile=logFile)
-        if imtest(self.subject.dti_nodiff_brain_data) is False:
-            rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
+        self.subject.dti.get_nodiff()
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # DTI <------> HIGHRES (linear)
@@ -589,106 +564,283 @@ class SubjectTransforms:
         if os.path.exists(hr2dti + ".mat") is False:
             rrun("convert_xfm -omat " + hr2dti + ".mat" + " -inverse " + dti2hr + ".mat", logFile=logFile)
 
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # DTI <-- (lin) -- HIGHRES -- (non-lin) --> STANDARD
-        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        dti2std     = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "dti2" + std_img_label)
-        hr2std_warp = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hr2" + std_img_label + "_warp")
-        if imtest(dti2std + "_warp") is False:
-            rrun("convertwarp --ref=" + std_head_img + " --premat=" + dti2hr + ".mat" + " --warp1=" + hr2std_warp + " --out=" + dti2std + "_warp", logFile=logFile)
+        if self.subject.has_T2 is False:
 
-        std2dti = os.path.join(self.subject.roi_dti_dir, std_img_label + "2dti")
-        if imtest(std2dti + "_warp") is False:
-            rrun("invwarp -r " + self.subject.dti_nodiff_data  + " -w " + dti2std + "_warp" + " -o " + std2dti + "_warp", logFile=logFile)
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            # DTI <-- (lin) -- HIGHRES -- (non-lin) --> STANDARD
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            dti2std     = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "dti2" + std_img_label)
+            hr2std_warp = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hr2" + std_img_label + "_warp")
+            hr2std      = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hr2" + std_img_label)
+            if imtest(dti2std + "_warp") is False:
+                rrun("convertwarp --ref=" + std_head_img + " --premat=" + dti2hr + ".mat" + " --warp1=" + hr2std_warp + " --out=" + dti2std + "_warp", logFile=logFile)
 
-    # this method takes base images (t1, epi_example_function, dti_no_diff) and coregister to all other modalities and standard
-    # create 14 folders, 7 for linear and 7 for non linear transformation towards the 7 different space (hr, rs, frmi, dti, t2, std, std4)
-    def test_all_coregistration(self, test_dir, std="std"):
+            if os.path.exists(dti2std + ".mat") is False:
+                rrun("convert_xfm -omat " + dti2std + ".mat" + " -concat " + dti2hr + ".mat" + " " + hr2std + ".mat", logFile=logFile)
+
+            std2dti = os.path.join(self.subject.roi_dti_dir, std_img_label + "2dti")
+            if imtest(std2dti + "_warp") is False:
+                rrun("invwarp -r " + self.subject.dti_nodiff_data  + " -w " + dti2std + "_warp" + " -o " + std2dti + "_warp", logFile=logFile)
+
+            if os.path.exists(std2dti + ".mat") is False:
+                rrun("convert_xfm -omat " + std2dti + ".mat" + " -inverse " + dti2std + ".mat")
+
+        else:
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            # DTI <--->  T2  linear and non-linear
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            # t2 -> dti
+            # linear
+            if os.path.exists(self.subject.t22dti_mat) is False:
+                rrun("flirt -in " + self.subject.t2_brain_data + " -ref " + self.subject.dti_nodiff_brain_data + " -omat " + self.subject.t22dti_mat +
+                    " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
+            # non-linear
+            if imtest(self.subject.t22dti_warp) is False:
+                rrun("fnirt --in=" + self.subject.t2_data + " --ref=" + self.subject.dti_nodiff_data + " --aff=" + self.subject.t22dti_mat + " --cout=" + self.subject.t22dti_warp, logFile=logFile)
+
+            # dti -> t2
+            # linear
+            if os.path.exists(self.subject.dti2t2_mat) is False:
+                rrun("convert_xfm -omat " + self.subject.dti2t2_mat + " -inverse " + self.subject.t22dti_mat,
+                     logFile=logFile)
+            # non-linear
+            if imtest(self.subject.dti2t2_warp) is False:
+                rrun("invwarp -r " + self.subject.dti_nodiff_data + " -w " + self.subject.t22dti_warp + " -o " + self.subject.dti2t2_warp, logFile=logFile)
+
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            # T2 <------> HIGHRES (linear)
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            # t2 -> hr linear
+            t22hr = os.path.join(self.subject.roi_t1_dir, "t22hr")
+            if os.path.exists(t22hr + ".mat") is False:
+                rrun("flirt -in " + self.subject.t2_brain_data + " -ref " + self.subject.t1_brain_data + " -out " + t22hr + " -omat " + t22hr + ".mat" +
+                    " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear",
+                    logFile=logFile)
+
+            # hr -> t2 linear
+            hr2t2 = os.path.join(self.subject.roi_t2_dir, "hr2t2")
+            if os.path.exists(hr2t2 + ".mat") is False:
+                rrun("convert_xfm -omat " + hr2t2 + ".mat" + " -inverse " + t22hr + ".mat", logFile=logFile)
+
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            # DTI <-- (non-lin) -- t2 -- (lin) -- HIGHRES
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            if imtest(self.subject.dti2hr_warp) is False:
+                rrun("convertwarp --ref=" + self.subject.t1_data + " --warp1=" + self.subject.dti2t2_warp + " --postmat=" + t22hr + ".mat" + " --out=" + self.subject.dti2hr_warp, logFile=logFile)
+
+            if imtest(self.subject.hr2dti_warp) is False:
+                rrun("invwarp -r " + self.subject.dti_nodiff_data + " -w " + self.subject.dti2hr_warp + " -o " + self.subject.hr2dti_warp, logFile=logFile)
+
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            # DTI <-- (non-lin) -- t2 -- (lin) -- HIGHRES -- (non-lin) --> STANDARD
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            dti2std     = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "dti2" + std_img_label)
+            hr2std_warp = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "hr2" + std_img_label + "_warp")
+            if imtest(dti2std + "_warp") is False:
+                rrun("convertwarp --ref=" + std_head_img + " --warp1=" + self.subject.dti2t2_warp + " --midmat=" + t22hr + ".mat" + " --warp2=" + hr2std_warp + " --out=" + dti2std + "_warp", logFile=logFile)
+
+            std2dti = os.path.join(self.subject.roi_dti_dir, std_img_label + "2dti")
+            if imtest(std2dti + "_warp") is False:
+                rrun("invwarp -r " + self.subject.dti_nodiff_data + " -w " + dti2std + "_warp" + " -o " + std2dti + "_warp", logFile=logFile)
+
+    # this method takes base images (t1/t1_brain, epi_example_function, dti_nodiff/dti_nodiff_brain) and coregister to all other modalities and standard
+    # creates up to 14 folders, 7 for linear and 7 for non linear transformation towards the 7 different space (hr, rs, frmi, dti, t2, std, std4)
+    def test_all_coregistration(self, test_dir, stdimg=""):
+
+        # manage STANDARD image
+        if stdimg == "":
+
+            std_img_label       = "std"
+
+            std_img             = self.subject._global.fsl_std_mni_2mm_brain
+            std_head_img        = self.subject._global.fsl_std_mni_2mm_head
+            std_img_mask_dil    = self.subject._global.fsl_std_mni_2mm_brain_mask_dil
+
+            std4_img            = self.subject._global.fsl_std_mni_4mm_brain
+            std4_head_img       = self.subject._global.fsl_std_mni_4mm_head
+            std4_img_mask_dil   = self.subject._global.fsl_std_mni_4mm_brain_mask_dil
+        else:
+            imgdir              = os.path.dirname(stdimg)
+            std_img_label       = remove_ext(os.path.basename(stdimg))                      # "pediatric"
+
+            std_head_img        = os.path.join(imgdir, std_img_label)                       # "pediatric"
+            std_img             = os.path.join(imgdir, std_img_label + "_brain")            # "pediatric_brain"
+            std_img_mask_dil    = os.path.join(imgdir, std_img_label + "_brain_mask_dil")   # "pediatric_brain_mask_dil"
+
+            std4_head_img        = os.path.join(imgdir, std_img_label + "4")                # "pediatric4"
+            std4_img             = os.path.join(imgdir, std_img_label + "4_brain")          # "pediatric4_brain"
+            std4_img_mask_dil    = os.path.join(imgdir, std_img_label + "4_brain_mask_dil") # "pediatric4_brain_mask_dil"
 
         nldir   = os.path.join(test_dir, "nlin")
         ldir    = os.path.join(test_dir, "lin")
 
-        nl_t1   = os.path.join(nldir, "hr");    nl_rs  = os.path.join(nldir, "rs"); nl_fmri = os.path.join(nldir, "fmri"); nl_dti  = os.path.join(nldir, "dti"); nl_t2   = os.path.join(nldir, "t2"); nl_std  = os.path.join(nldir, std); nl_std4 = os.path.join(nldir, std + "4")
-        l_t1   = os.path.join(ldir, "hr");      l_rs   = os.path.join(ldir, "rs");  l_fmri  = os.path.join(ldir, "fmri");  l_dti   = os.path.join(ldir, "dti");  l_t2    = os.path.join(ldir, "t2");  l_std   = os.path.join(ldir, std);  l_std4  = os.path.join(ldir, std + "4")
+        # --------------------------------------------------------------
+        #  FROM HR <--> STD
+        #       HR <--> STD4 if hasRS
+        # --------------------------------------------------------------
+        if self.subject.hasT1 is True:
 
-        os.makedirs(nl_t1, exist_ok=True);os.makedirs(nl_rs, exist_ok=True);os.makedirs(nl_fmri, exist_ok=True);os.makedirs(nl_dti, exist_ok=True);os.makedirs(nl_t2, exist_ok=True);os.makedirs(nl_std, exist_ok=True);os.makedirs(nl_std4, exist_ok=True)
-        os.makedirs(l_t1, exist_ok=True); os.makedirs(l_rs, exist_ok=True); os.makedirs(l_fmri, exist_ok=True); os.makedirs(l_dti, exist_ok=True); os.makedirs(l_t2, exist_ok=True); os.makedirs(l_std, exist_ok=True); os.makedirs(l_std4, exist_ok=True)
+            nl_t1   = os.path.join(nldir, "hr"); nl_std  = os.path.join(nldir, std_img_label); nl_std4 = os.path.join(nldir, std_img_label + "4")
+            l_t1    = os.path.join(ldir, "hr");   l_std  = os.path.join(ldir, std_img_label);  l_std4  = os.path.join(ldir, std_img_label + "4")
+
+            os.makedirs(nl_t1, exist_ok=True);os.makedirs(nl_std, exist_ok=True);os.makedirs(nl_std4, exist_ok=True)
+            os.makedirs(l_t1, exist_ok=True); os.makedirs(l_std, exist_ok=True); os.makedirs(l_std4, exist_ok=True)
+
+            imcp(self.subject.t1_data,       os.path.join(nl_t1, self.subject.t1_image_label))
+            imcp(self.subject.t1_brain_data, os.path.join(l_t1 , self.subject.t1_image_label + "_brain"))
+
+            self.transform_roi("hrTOstd",    pathtype="abs", outdir=nl_std   , islin=False, rois=[self.subject.t1_data])
+            self.transform_roi("hrTOstd",    pathtype="abs",  outdir=l_std   , islin=True,  rois=[self.subject.t1_brain_data])
+
+            self.transform_roi("stdTOhr",    pathtype="abs", outdir=nl_t1   , islin=False, rois=[std_head_img])
+            self.transform_roi("stdTOhr",    pathtype="abs",  outdir=l_t1   , islin=True,  rois=[std_img])
+
+            if self.subject.hasRS is True:  # connect HR with STD4
+                pass
+                self.transform_roi("hrTOstd4", pathtype="abs", outdir=nl_std4, islin=False, rois=[self.subject.t1_data])
+                self.transform_roi("hrTOstd4", pathtype="abs", outdir=l_std4, islin=True, rois=[self.subject.t1_brain_data])
+
+                self.transform_roi("std4TOhr", pathtype="abs", outdir=nl_t1, islin=False, rois=[std4_head_img])
+                self.transform_roi("std4TOhr", pathtype="abs", outdir=l_t1, islin=True, rois=[std4_img])
 
         # --------------------------------------------------------------
-        #  FROM HR
+        #  FROM RS <--> HR
+        #       RS <--> STD
+        #       RS <--> STD4
+        #       RS <--> FMRI if hasFMRI
         # --------------------------------------------------------------
-        in_img = self.subject.t1_brain_data
+        if self.subject.hasRS is True:  # goes to HR, STD and STD4
 
-        self.transform_roi("hr2std",    outdir=nl_std   , islin=False, rois=[in_img])
-        self.transform_roi("hr2std4",   outdir=nl_std4  , islin=False, rois=[in_img])
-        self.transform_roi("hr2rs",     outdir=nl_rs    , islin=False, rois=[in_img])
-        self.transform_roi("hr2fmri",   outdir=nl_fmri  , islin=False, rois=[in_img])
-        self.transform_roi("hr2dti",    outdir=nl_dti   , islin=False, rois=[in_img])
+            nl_rs = os.path.join(nldir, "rs")
+            l_rs = os.path.join(ldir, "rs");
+            os.makedirs(nl_rs, exist_ok=True)
+            os.makedirs(l_rs, exist_ok=True)
 
-        self.transform_roi("hr2std",    outdir=l_std    , islin=True, rois=[in_img])
-        self.transform_roi("hr2std4",   outdir=l_std4   , islin=True, rois=[in_img])
-        self.transform_roi("hr2rs",     outdir=l_rs     , islin=True, rois=[in_img])
-        self.transform_roi("hr2fmri",   outdir=l_fmri   , islin=True, rois=[in_img])
-        self.transform_roi("hr2dti",    outdir=l_dti    , islin=True, rois=[in_img])
+            exfun = self.subject.epi.get_example_function("rs")
 
-        # --------------------------------------------------------------
-        #  FROM RS
-        # --------------------------------------------------------------
-        in_img = self.subject.rs_examplefunc
+            imcp(exfun, os.path.join(nl_rs, "example_func"))
+            imcp(exfun, os.path.join(l_rs, "example_func"))
 
-        self.transform_roi("rs2std" , outdir=nl_std , islin=False, rois=[in_img])
-        self.transform_roi("rs2std4", outdir=nl_std4, islin=False, rois=[in_img])
-        self.transform_roi("rs2hr"  , outdir=nl_t1  , islin=False, rois=[in_img])
-        self.transform_roi("rs2fmri", outdir=nl_fmri, islin=False, rois=[in_img])
-        self.transform_roi("rs2dti" , outdir=nl_dti , islin=False, rois=[in_img])
+            self.transform_roi("hrTOrs",    pathtype="abs", outdir=nl_rs   , islin=False,   rois=[self.subject.t1_data])
+            self.transform_roi("hrTOrs",    pathtype="abs", outdir=l_rs    , islin=True,    rois=[self.subject.t1_brain_data])
+            self.transform_roi("rsTOhr",    pathtype="abs", outdir=nl_t1   , islin=False,   rois=[exfun])
+            self.transform_roi("rsTOhr",    pathtype="abs", outdir=l_t1    , islin=True,    rois=[exfun])
 
-        self.transform_roi("rs2std" , outdir=l_std  , islin=True, rois=[in_img])
-        self.transform_roi("rs2std4", outdir=l_std4 , islin=True, rois=[in_img])
-        self.transform_roi("rs2hr"  , outdir=l_t1   , islin=True, rois=[in_img])
-        self.transform_roi("rs2fmri", outdir=l_fmri , islin=True, rois=[in_img])
-        self.transform_roi("rs2dti" , outdir=l_dti  , islin=True, rois=[in_img])
+            self.transform_roi("rsTOstd",   pathtype="abs", outdir=nl_std   , islin=False,   rois=[exfun])
+            self.transform_roi("rsTOstd",   pathtype="abs", outdir=l_std    , islin=True,    rois=[exfun])
+            self.transform_roi("stdTOrs",   pathtype="abs", outdir=nl_rs   , islin=False,   rois=[std_head_img])
+            self.transform_roi("stdTOrs",   pathtype="abs", outdir=l_rs    , islin=True,    rois=[std_img])
 
-        # --------------------------------------------------------------
-        #  FROM FMRI
-        # --------------------------------------------------------------
-        in_img = self.subject.fmri_examplefunc
+            self.transform_roi("rsTOstd4",  pathtype="abs", outdir=nl_std4   , islin=False,   rois=[exfun])
+            self.transform_roi("rsTOstd4",  pathtype="abs", outdir=l_std4    , islin=True,    rois=[exfun])
+            self.transform_roi("std4TOrs",  pathtype="abs", outdir=nl_rs   , islin=False,   rois=[std4_head_img])
+            self.transform_roi("std4TOrs",  pathtype="abs", outdir=l_rs    , islin=True,    rois=[std4_img])
 
-        self.transform_roi("fmri2std" , outdir=nl_std , islin=False, rois=[in_img])
-        self.transform_roi("fmri2std4", outdir=nl_std4, islin=False, rois=[in_img])
-        self.transform_roi("fmri2hr"  , outdir=nl_t1  , islin=False, rois=[in_img])
-        self.transform_roi("fmri2rs"  , outdir=nl_rs  , islin=False, rois=[in_img])
-        self.transform_roi("fmri2dti" , outdir=nl_dti , islin=False, rois=[in_img])
+            if self.subject.hasFMRI:    # connect RS with FMRI
 
-        self.transform_roi("fmri2std" , outdir=l_std  , islin=True, rois=[in_img])
-        self.transform_roi("fmri2std4", outdir=l_std4 , islin=True, rois=[in_img])
-        self.transform_roi("fmri2hr"  , outdir=l_t1   , islin=True, rois=[in_img])
-        self.transform_roi("fmri2rs"  , outdir=l_rs   , islin=True, rois=[in_img])
-        self.transform_roi("fmri2dti" , outdir=l_dti  , islin=True, rois=[in_img])
+                exfun_fmri = self.subject.epi.get_example_function("fmri")
+
+                nl_fmri = os.path.join(nldir, "fmri")
+                l_fmri = os.path.join(ldir, "fmri")
+
+                os.makedirs(nl_fmri, exist_ok=True);
+                os.makedirs(l_fmri, exist_ok=True);
+
+                self.transform_roi("rsTOfmri", pathtype="abs", outdir=nl_fmri, islin=False, rois=[exfun])
+                self.transform_roi("rsTOfmri", pathtype="abs", outdir=l_fmri, islin=True,   rois=[exfun])
+
+                self.transform_roi("fmriTOrs", pathtype="abs", outdir=nl_rs, islin=False,   rois=[exfun_fmri])
+                self.transform_roi("fmriTOrs", pathtype="abs", outdir=l_rs, islin=True,     rois=[exfun_fmri])
 
         # --------------------------------------------------------------
-        #  FROM DTI
+        #  FROM FMRI <--> HR
+        #       FMRI <--> STD
+        #       FMRI <--> STD4 if hasRS  (fmri <--> was done previously)
         # --------------------------------------------------------------
-        in_img = self.subject.dti_nodiff_brain_data
+        if self.subject.hasFMRI is True:  # goes to HR, STD and STD4, RS
 
-        self.transform_roi("dti2std" , outdir=nl_std , islin=False, rois=[in_img])
-        self.transform_roi("dti2std4", outdir=nl_std4, islin=False, rois=[in_img])
-        self.transform_roi("dti2hr"  , outdir=nl_t1  , islin=False, rois=[in_img])
-        self.transform_roi("dti2rs"  , outdir=nl_rs  , islin=False, rois=[in_img])
-        self.transform_roi("dti2fmri", outdir=nl_fmri, islin=False, rois=[in_img])
+            nl_fmri = os.path.join(nldir, "fmri")
+            l_fmri = os.path.join(ldir, "fmri")
 
-        self.transform_roi("dti2std" , outdir=l_std  , islin=True, rois=[in_img])
-        self.transform_roi("dti2std4", outdir=l_std4 , islin=True, rois=[in_img])
-        self.transform_roi("dti2hr"  , outdir=l_t1   , islin=True, rois=[in_img])
-        self.transform_roi("dti2rs"  , outdir=l_rs   , islin=True, rois=[in_img])
-        self.transform_roi("dti2fmri", outdir=l_fmri , islin=True, rois=[in_img])
+            os.makedirs(nl_fmri, exist_ok=True);
+            os.makedirs(l_fmri, exist_ok=True);
+
+            exfun = self.subject.epi.get_example_function("fmri")
+
+            imcp(exfun, os.path.join(nl_fmri, "example_func"))
+            imcp(exfun, os.path.join(l_fmri, "example_func"))
+
+            self.transform_roi("fmriTOhr", pathtype="abs", outdir=nl_t1, islin=False,   rois=[exfun])
+            self.transform_roi("fmriTOhr", pathtype="abs", outdir=l_t1, islin=True,     rois=[exfun])
+
+            self.transform_roi("hrTOfmri", pathtype="abs", outdir=nl_fmri, islin=False,   rois=[self.subject.t1_brain_data])
+            self.transform_roi("hrTOfmri", pathtype="abs", outdir=l_fmri, islin=True,     rois=[self.subject.t1_data])
+
+            self.transform_roi("fmriTOstd", pathtype="abs", outdir=nl_std, islin=False,  rois=[exfun])
+            self.transform_roi("fmriTOstd", pathtype="abs", outdir=l_std, islin=True,    rois=[exfun])
+
+            self.transform_roi("stdTOfmri", pathtype="abs", outdir=nl_fmri, islin=False,  rois=[std_head_img])
+            self.transform_roi("stdTOfmri", pathtype="abs", outdir=l_fmri, islin=True,    rois=[std_img])
+
+            if self.subject.hasRS:
+
+                self.transform_roi("fmriTOstd4", pathtype="abs", outdir=nl_std4, islin=False, rois=[exfun])
+                self.transform_roi("fmriTOstd4", pathtype="abs", outdir=l_std4, islin=True,   rois=[exfun])
+
+                self.transform_roi("std4TOfmri", pathtype="abs", outdir=nl_fmri, islin=False, rois=[std4_head_img])
+                self.transform_roi("std4TOfmri", pathtype="abs", outdir=l_fmri, islin=True,   rois=[std4_img])
 
         # --------------------------------------------------------------
-        #  FROM T2
+        #  FROM T2 <--> HR
+        #       T2 <--> STD
         # --------------------------------------------------------------
+        if self.subject.has_T2 is True:
 
+            nl_t2   = os.path.join(nldir, "t2");
+            l_t2    = os.path.join(ldir, "t2");
+            os.makedirs(nl_t2, exist_ok=True);
+            os.makedirs(l_t2,  exist_ok=True)
 
+            imcp(self.subject.t2_data,       os.path.join(nl_t2, self.subject.t2_image_label))
+            imcp(self.subject.t2_brain_data, os.path.join(l_t2 , self.subject.t2_image_label + "_brain"))
 
+            self.transform_roi("t22hr"  , pathtype="abs",  outdir=nl_t1  , islin=False, rois=[self.subject.t2_data])
+            self.transform_roi("t22hr"  , pathtype="abs",  outdir=l_t1   , islin=True,  rois=[self.subject.t2_brain_data])
 
+            self.transform_roi("hr2t2"  , pathtype="abs",  outdir=nl_t2  , islin=False, rois=[self.subject.t1_data])
+            self.transform_roi("hr2t2"  , pathtype="abs",  outdir=l_t2   , islin=True,  rois=[self.subject.t1_brain_data])
+
+            self.transform_roi("t22std" , pathtype="abs",  outdir=nl_std , islin=False, rois=[self.subject.t2_data])
+            self.transform_roi("t22std" , pathtype="abs",  outdir=l_std  , islin=True,  rois=[self.subject.t2_brain_data])
+
+            self.transform_roi("std2t2" , pathtype="abs",  outdir=nl_t2  , islin=False, rois=[std_head_img])
+            self.transform_roi("std2t2" , pathtype="abs",  outdir=l_t2   , islin=True,  rois=[std_img])
+
+        # --------------------------------------------------------------
+        #  FROM DTI <--> HR
+        #       DTI <--> STD
+        #       DTI <--> T2 if hasT2
+        # --------------------------------------------------------------
+        if self.subject.hasDTI is True:
+
+            nl_dti = os.path.join(nldir, "dti")
+            l_dti = os.path.join(ldir, "dti")
+
+            os.makedirs(nl_dti, exist_ok=True)
+            os.makedirs(l_dti, exist_ok=True)
+
+            imcp(self.subject.dti_nodiff_data,       os.path.join(nl_dti, self.subject.label + "_nodiff"))
+            imcp(self.subject.dti_nodiff_brain_data, os.path.join(l_dti , self.subject.label + "_nodiff_brain"))
+
+            self.transform_roi("hrTOdti"  , pathtype="abs",  outdir=nl_dti , islin=False, rois=[self.subject.t1_data])
+            self.transform_roi("hrTOdti"  , pathtype="abs",  outdir=l_dti  , islin=True,  rois=[self.subject.t1_brain_data])
+            self.transform_roi("dtiTOhr"  , pathtype="abs",  outdir=nl_t1  , islin=False, rois=[self.subject.dti_nodiff_data])
+            self.transform_roi("dtiTOhr"  , pathtype="abs",  outdir=l_t1   , islin=True,  rois=[self.subject.dti_nodiff_brain_data])
+
+            self.transform_roi("dtiTOstd" , pathtype="abs",  outdir=nl_std , islin=False, rois=[self.subject.dti_nodiff_data])
+            self.transform_roi("dtiTOstd" , pathtype="abs",  outdir=l_std  , islin=True,  rois=[self.subject.dti_nodiff_brain_data])
+            self.transform_roi("stdTOdti" , pathtype="abs",  outdir=nl_dti , islin=False, rois=[std_head_img])
+            self.transform_roi("stdTOdti" , pathtype="abs",  outdir=l_dti  , islin=True,  rois=[std_img])
 
     # ==================================================================================================================================================
     # GENERIC ROI TRANSFORMS
@@ -696,14 +848,13 @@ class SubjectTransforms:
     # path_type =   "standard"      : a roi name, located in the default folder (subjectXX/s1/roi/reg_YYY/INPUTPATH),
     #	            "rel"			: a path relative to SUBJECT_DIR (subjectXX/s1/INPUTPATH)
     #               "abs"			: a full path (INPUTPATH)
-    # outdir    = ""                : save it into roi/reg_... folders
-    #           = dir path          : save to outdir
+    # outdir    =   ""              : save it into roi/reg_... folders
+    #               dir path        : save to outdir
     # std_img                       : can be specified a different templete.
     #                                 it must be in 2x2x2 for std transformation and 4x4x4 for std4 ones. correctness is here checked
     #                                 user must provide (in a same folder) the following images:
     #                                       -> stdimg, stdimg_brain, stdimg_brain_mask_dil
     #                                       -> stdimg4, stdimg4_brain, stdimg4_brain_mask_dil
-
     # in linear transf, it must be betted (must contain the "_brain" text) in non-linear is must be a full head image.
     def transform_roi(self, regtype, pathtype="standard", outdir="", mask="", orf="", thresh=0, islin=True, stdimg="", rois=[]):
 
@@ -724,7 +875,7 @@ class SubjectTransforms:
             print("Input ROI list is empty......exiting")
             return
 
-        if bool(linear_registration_type[regtype]) is False:
+        if bool(self.linear_registration_type[regtype]) is False:
             print("ERROR in transform_roi: given regtype (" + regtype + ") is not valid.....exiting")
             return
         # ===========================================================
@@ -788,83 +939,6 @@ class SubjectTransforms:
         if imtest(self.subject.t2_data) is True:
             self.subject.has_T2 = True
 
-        linear_registration_type = {
-            "stdTOstd4": self.transform_l_std2std4,
-            "stdTOhr": self.transform_l_std2hr,
-            "stdTOrs": self.transform_l_std2rs,
-            "stdTOfmri": self.transform_l_std2fmri,
-            "stdTOdti": self.transform_l_std2dti,
-            "stdTOt2": self.transform_l_std2t2,
-
-            "std4TOhr": self.transform_l_std42hr,
-            "std4TOrs": self.transform_l_std42rs,
-            "std4TOfmri": self.transform_l_std42fmri,
-
-            "hrTOstd": self.transform_l_hr2std,
-            "hrTOstd4": self.transform_l_hr2std4,
-            "hrTOrs": self.transform_l_hr2rs,
-            "hrTOfmri": self.transform_l_hr2fmri,
-            "hrTOdti": self.transform_l_hr2dti,
-            "hrTOt2": self.transform_l_hr2t2,
-
-            "rsTOstd": self.transform_l_rs2std,
-            "rsTOstd4": self.transform_l_rs2std4,
-            "rsTOhr": self.transform_l_rs2hr,
-            # "rsTOdti": self.transform_l_rs2dti,
-
-            "fmriTOstd": self.transform_l_fmri2std,
-            "fmriTOhr": self.transform_l_fmri2hr,
-            "fmriTOstd4": self.transform_l_fmri2std4,
-            # "fmriTOdti": self.transform_l_fmri2dti,
-
-            "dtiTOstd": self.transform_l_dti2std,
-            "dtiTOhr": self.transform_l_dti2hr,
-            # "dtiTOrs": self.transform_l_dti2rs,
-            # "dtiTOfmri": self.transform_l_dti2fmri
-
-            "t2TOstd": self.transform_l_t22std,
-            "t2TOhr": self.transform_l_t22hr
-        }
-
-        non_linear_registration_type = {
-
-            "stdTOstd4": self.transform_nl_std2std4,
-            "stdTOhr": self.transform_nl_std2hr,
-            "stdTOrs": self.transform_nl_std2rs,
-            "stdTOfmri": self.transform_nl_std2fmri,
-            "stdTOdti": self.transform_nl_std2dti,
-            "stdTOt2": self.transform_nl_std2t2,
-
-            "std4TOhr": self.transform_nl_std42hr,
-            "std4TOrs": self.transform_nl_std42rs,
-            "std4TOfmri": self.transform_nl_std42fmri,
-
-            "hrTOstd": self.transform_nl_hr2std,
-            "hrTOstd4": self.transform_nl_hr2std4,
-            "hrTOrs": self.transform_nl_hr2rs,
-            "hrTOfmri": self.transform_nl_hr2fmri,
-            "hrTOdti": self.transform_nl_hr2dti,
-            "hrTOt2": self.transform_nl_hr2t2,
-
-            "rsTOstd": self.transform_nl_rs2std,
-            "rsTOstd4": self.transform_nl_rs2std4,
-            "rsTOhr": self.transform_nl_rs2hr,
-            # "rsTOdti": self.transform_nl_rs2dti,
-
-            "fmriTOstd": self.transform_nl_fmri2std,
-            "fmriTOstd4": self.transform_nl_fmri2std4,
-            "fmriTOhr": self.transform_nl_fmri2hr,
-            # "fmriTOdti": self.transform_nl_fmri2dti,
-
-            "dtiTOstd": self.transform_nl_dti2std,
-            "dtiTOhr": self.transform_nl_dti2hr,
-            # "dtiTOrs": self.transform_nl_dti2fmri,
-            # "dtiTOfmri": self.transform_nl_dti2fmri
-
-            "t2TOstd": self.transform_nl_t22std,
-            "t2TOhr": self.transform_nl_t22hr
-        }
-
         for roi in rois:
 
             roi_name = os.path.basename(roi)
@@ -873,16 +947,16 @@ class SubjectTransforms:
             # ----------------------------------------------------------------------------------------------------------
             # SET INPUT
             # ----------------------------------------------------------------------------------------------------------
-            if   path_type == "abs":
+            if   pathtype == "abs":
                  input_roi = roi
-            elif path_type == "rel":
+            elif pathtype == "rel":
                  input_roi = os.path.join(self.subject.dir, roi)
             else:
                 # is a roi name
                 if from_space   == "hr":
                     input_roi = os.path.join(self.subject.roi_dir, "reg_t1", roi_name)
                 elif from_space == "rs":
-                    input_roi = os.path.join(self.subject.roi_dir, "reg_res", roi_name)
+                    input_roi = os.path.join(self.subject.roi_dir, "reg_rs", roi_name)
                 elif from_space == "fmri":
                     input_roi = os.path.join(self.subject.roi_dir, "reg_fmri", roi_name)
                 elif from_space == "dti":
@@ -922,10 +996,10 @@ class SubjectTransforms:
             # TRANSFORM !!!!
             # ----------------------------------------------------------------------------------------------------------
             if islin:
-                output_roi = linear_registration_type[regtype](pathtype, roi_name, roi, std_img)
+                self.linear_registration_type[regtype](input_roi, output_roi, std_img)
             else:
                 # is non linear
-                output_roi = non_linear_registration_type[regtype](pathtype, roi_name, roi, std_img)
+                self.non_linear_registration_type[regtype](input_roi, output_roi, std_img)
 
             # ----------------------------------------------------------------------------------------------------------
             # THRESHOLD
@@ -940,6 +1014,8 @@ class SubjectTransforms:
                 if v1 == 0:
                     if orf != "":
                         print("subj: " + self.subject.label + ", roi: " + roi_name + " ... is empty, thr: " + str(thresh))  # TODO: print to file
+
+            return output_roi
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO HR (from epi, dti, std, std4)
@@ -983,7 +1059,7 @@ class SubjectTransforms:
     def transform_nl_rs2hr(self, input_roi, output_roi, std_img, std_img_label="std"):
 
         rs2std_mat  = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "rs2" + std_img_label + ".mat")
-        std2hr_warp = os.path.join(self.subject.roi_t1_dir, std_img_label + "2hr.mat")
+        std2hr_warp = os.path.join(self.subject.roi_t1_dir, std_img_label + "2hr_warp")
 
         if imtest(std2hr_warp) is False:
             print("ERROR: transformation warp " + std2hr_warp + " is missing...exiting transform roi")
@@ -1036,7 +1112,7 @@ class SubjectTransforms:
         else:
 
             dti2std_mat = os.path.join(self.subject.roi_dir, "reg_" + std_img_label, "dti2" + std_img_label + ".mat")
-            std2hr_warp = os.path.join(self.subject.roi_t1_dir, std_img_label + "2hr.mat")
+            std2hr_warp = os.path.join(self.subject.roi_t1_dir, std_img_label + "2hr_warp")
 
             if imtest(std2hr_warp) is False:
                 print("ERROR: transformation warp " + std2hr_warp + " is missing...exiting transform roi")
@@ -1091,7 +1167,7 @@ class SubjectTransforms:
             print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
             return ""
 
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.roi_rs_dir + " -out " + output_roi + " -applyxfm -init " + mat)
+        rrun("flirt -in " + input_roi + " -ref " + self.subject.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + mat)
 
     def transform_nl_std42rs(self, input_roi, output_roi, std_img, epi_label="rs", std_img_label="std"):
 

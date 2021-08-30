@@ -19,6 +19,29 @@ class SubjectEpi:
     # ==================================================================================================================================================
     # GENERAL (pepolar corr, fsl_feat, aroma, remove_nuisance)
     # ==================================================================================================================================================
+
+    def get_example_function(self, seq="rs", logFile=None):
+
+        if seq == "rs":
+            exfun   = self.subject.rs_examplefunc
+            data    = self.subject.rs_data
+            m_exfun = self.subject.rs_examplefunc_mask
+        else:
+            exfun   = self.subject.fmri_examplefunc
+            data    = self.subject.fmri_data
+            m_exfun = self.subject.fmri_examplefunc_mask
+
+        if imtest(exfun) is False:
+            rrun("fslmaths " + data + " " + data + "_prefiltered_func_data" + " -odt float", logFile=logFile)
+            rrun("fslroi " + data + "_prefiltered_func_data" + " " + exfun + " 100 1", logFile=logFile)
+            rrun("bet2 " + exfun + " " + exfun + " -f 0.3", logFile=logFile)
+
+            rrun("imrm " + data + "prefiltered_func_data*", logFile=logFile)
+
+            rrun("fslmaths " + exfun + " -bin " + m_exfun, logFile=logFile)  # create example_function mask (a -thr 0.01/0.1 could have been used to further reduce it)
+
+        return exfun
+
     # assumes opposite PE direction sequence is called label-epi_pe and acquisition parameters
     # - epi_ref_vol/pe_ref_vol =-1 means use the middle volume
     # 1: get number of volumes of epi_pe image in opposite phase-encoding direction and extract middle volume (add "_ref")
@@ -619,5 +642,4 @@ class SubjectEpi:
 
     def sbfc_several_1roi_feat(self):
         pass
-
     # ===============================================================================

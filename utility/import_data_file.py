@@ -1,10 +1,16 @@
 import csv
+import os
 
 from utility.utilities import argsort, reorder_list, typeUnknown
 
 
 def read_varlist_file(filepath, comment_char="#"):
+
     data = {}
+    if os.path.exists(filepath) is False:
+        print("ERROR in read_varlist_file, given filepath param (" + filepath + ") is not a file")
+        return data
+
     with open(filepath, "r") as f:
         
         lines = f.readlines()
@@ -22,7 +28,12 @@ def read_varlist_file(filepath, comment_char="#"):
 # =====================================================================================
 # returns a list of filtered
 def tabbed_file_with_header2dict_list(filepath):
+
     data = []
+    if os.path.exists(filepath) is False:
+        print("ERROR in tabbed_file_with_header2dict_list, given filepath param (" + filepath + ") is not a file")
+        return data
+
     with open(filepath, "r") as f:
         reader = csv.reader(f, dialect='excel', delimiter='\t')
         for row in reader:
@@ -40,13 +51,18 @@ def tabbed_file_with_header2dict_list(filepath):
 
 
 # =====================================================================================
-# DATA EXTRACTION FROM A "SUBJ" DICTIONARY {"a_subj_label":{"a":..., "b":...., }}
+# DATA EXTRACTION FROM A "SUBJ" DICTIONARY
 # =====================================================================================
 # assumes that the first column represents subjects' labels (it will act as dictionary's key).
-# creates a dictionary with subj label as key and data columns as a dictionary  {subjlabel:{"a":..., "b":..., }}
+# creates a dictionary with subj label as key and data columns as a dictionary
+# returns  {"a_subj_label":{"a":..., "b":...., }}
 def tabbed_file_with_header2subj_dic(filepath):
 
     data = {}
+    if os.path.exists(filepath) is False:
+        print("ERROR in tabbed_file_with_header2subj_dic, given filepath param (" + filepath + ") is not a file")
+        return data
+
     with open(filepath, "r") as f:
         reader = csv.reader(f, dialect='excel', delimiter='\t')
         for row in reader:
@@ -68,16 +84,21 @@ def tabbed_file_with_header2subj_dic(filepath):
 # returns the header of a tabbed file as a list
 def get_header_of_tabbed_file(filepath):
 
+    if os.path.exists(filepath) is False:
+        print("ERROR in get_header_of_tabbed_file, given filepath param (" + filepath + ") is not a file")
+        return []
+
     with open(filepath, "r") as f:
         reader = csv.reader(f, dialect='excel', delimiter='\t')
         for row in reader:
             if reader.line_num == 1:
                 return row
 
+    return []
 
 # works with a "subj" dict
 # returns a filtered matrix [subj x colnames]
-def get_filtered_subj_dict_columns(dic, colnames, subj_labels, sort=-1):
+def get_filtered_subj_dict_columns(dic, colnames, subj_labels, sort=False):
 
     res = []
     lab = []
@@ -102,7 +123,7 @@ def get_filtered_subj_dict_columns(dic, colnames, subj_labels, sort=-1):
     return res, lab
 
 # works with a "subj" dict
-# returns two vectors filtered by [subj labels]
+# returns a tuple with two vectors filtered by [subj labels]
 # - [values]
 # - [labels]
 def get_filtered_subj_dict_column(dic, colname, subjects_label, sort=False):
@@ -240,14 +261,20 @@ def list2spm_text_column(datalist, ndecimals=3):
 
 
 # read file, create subjlabel and value columns
-def process_results(fname, subjs_list, outname, dataprecision='.3f'):
-    with open(fname) as f:
+def process_results(filepath, subjs_list, outname, dataprecision='.3f'):
+
+    list_str = []
+    if os.path.exists(filepath) is False:
+        print("ERROR in get_header_of_tabbed_file, given filepath param (" + filepath + ") is not a file")
+        return list_str
+
+    with open(filepath) as f:
         content = f.readlines()
     # you may also want to remove whitespace characters like `\n` at the end of each line
     content = [x.strip() for x in content]
     nsubj = len(content)
 
-    list_str = []
+
     for i in range(nsubj):
         list_str.append(subjs_list[i] + "\t" + format(float(content[i]), dataprecision))
 
