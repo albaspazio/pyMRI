@@ -674,116 +674,116 @@ class SubjectTransforms:
         #
             nl_t1   = os.path.join(nldir, "hr"); nl_std  = os.path.join(nldir, std_img_label); nl_std4 = os.path.join(nldir, std_img_label + "4")
             l_t1    = os.path.join(ldir, "hr");   l_std  = os.path.join(ldir, std_img_label);  l_std4  = os.path.join(ldir, std_img_label + "4")
-        #
-        #     os.makedirs(nl_t1, exist_ok=True);os.makedirs(nl_std, exist_ok=True);os.makedirs(nl_std4, exist_ok=True)
-        #     os.makedirs(l_t1, exist_ok=True); os.makedirs(l_std, exist_ok=True); os.makedirs(l_std4, exist_ok=True)
-        #
-        #     imcp(self.subject.t1_data,       os.path.join(nl_t1, self.subject.t1_image_label))
-        #     imcp(self.subject.t1_brain_data, os.path.join(l_t1 , self.subject.t1_image_label + "_brain"))
-        #
-        #     self.transform_roi("hrTOstd",    pathtype="abs", outdir=nl_std   , islin=False, rois=[self.subject.t1_data])
-        #     self.transform_roi("hrTOstd",    pathtype="abs",  outdir=l_std   , islin=True,  rois=[self.subject.t1_brain_data])
-        #
-        #     self.transform_roi("stdTOhr",    pathtype="abs", outdir=nl_t1   , islin=False, rois=[std_head_img])
-        #     self.transform_roi("stdTOhr",    pathtype="abs",  outdir=l_t1   , islin=True,  rois=[std_img])
-        #
-        #     if self.subject.hasRS is True:  # connect HR with STD4
-        #         pass
-        #         self.transform_roi("hrTOstd4", pathtype="abs", outdir=nl_std4, islin=False, rois=[self.subject.t1_data])
-        #         self.transform_roi("hrTOstd4", pathtype="abs", outdir=l_std4, islin=True, rois=[self.subject.t1_brain_data])
-        #
-        #         self.transform_roi("std4TOhr", pathtype="abs", outdir=nl_t1, islin=False, rois=[std4_head_img])
-        #         self.transform_roi("std4TOhr", pathtype="abs", outdir=l_t1, islin=True, rois=[std4_img])
-        # else:
-        #     print("ERROR...T1 is missing......exiting")
-        #     return
-        #
-        # # --------------------------------------------------------------
-        # #  FROM RS <--> HR
-        # #       RS <--> STD
-        # #       RS <--> STD4
-        # #       RS <--> FMRI if hasFMRI
-        # # --------------------------------------------------------------
+
+            os.makedirs(nl_t1, exist_ok=True);os.makedirs(nl_std, exist_ok=True);os.makedirs(nl_std4, exist_ok=True)
+            os.makedirs(l_t1, exist_ok=True); os.makedirs(l_std, exist_ok=True); os.makedirs(l_std4, exist_ok=True)
+
+            imcp(self.subject.t1_data,       os.path.join(nl_t1, self.subject.t1_image_label))
+            imcp(self.subject.t1_brain_data, os.path.join(l_t1 , self.subject.t1_image_label + "_brain"))
+
+            self.transform_roi("hrTOstd",    pathtype="abs", outdir=nl_std   , islin=False, rois=[self.subject.t1_data])
+            self.transform_roi("hrTOstd",    pathtype="abs",  outdir=l_std   , islin=True,  rois=[self.subject.t1_brain_data])
+
+            self.transform_roi("stdTOhr",    pathtype="abs", outdir=nl_t1   , islin=False, rois=[std_head_img])
+            self.transform_roi("stdTOhr",    pathtype="abs",  outdir=l_t1   , islin=True,  rois=[std_img])
+
+            if self.subject.hasRS is True:  # connect HR with STD4
+                pass
+                self.transform_roi("hrTOstd4", pathtype="abs", outdir=nl_std4, islin=False, rois=[self.subject.t1_data])
+                self.transform_roi("hrTOstd4", pathtype="abs", outdir=l_std4, islin=True, rois=[self.subject.t1_brain_data])
+
+                self.transform_roi("std4TOhr", pathtype="abs", outdir=nl_t1, islin=False, rois=[std4_head_img])
+                self.transform_roi("std4TOhr", pathtype="abs", outdir=l_t1, islin=True, rois=[std4_img])
+        else:
+            print("ERROR...T1 is missing......exiting")
+            return
+
+        # --------------------------------------------------------------
+        #  FROM RS <--> HR
+        #       RS <--> STD
+        #       RS <--> STD4
+        #       RS <--> FMRI if hasFMRI
+        # --------------------------------------------------------------
         if self.subject.hasRS is True:  # goes to HR, STD and STD4
-        #
+
             nl_rs = os.path.join(nldir, "rs")
             l_rs = os.path.join(ldir, "rs")
-        #     os.makedirs(nl_rs, exist_ok=True)
-        #     os.makedirs(l_rs, exist_ok=True)
-        #
-        #     exfun = self.subject.epi.get_example_function("rs")
-        #
-        #     imcp(exfun, os.path.join(nl_rs, self.subject.label + "_example_func"))
-        #     imcp(exfun, os.path.join(l_rs,  self.subject.label + "_example_func"))
-        #
-        #     self.transform_roi("hrTOrs",    pathtype="abs", outdir=nl_rs   , islin=False,   rois=[self.subject.t1_data])
-        #     self.transform_roi("hrTOrs",    pathtype="abs", outdir=l_rs    , islin=True,    rois=[self.subject.t1_brain_data])
-        #     self.transform_roi("rsTOhr",    pathtype="abs", outdir=nl_t1   , islin=False,   rois=[exfun])
-        #     self.transform_roi("rsTOhr",    pathtype="abs", outdir=l_t1    , islin=True,    rois=[exfun])
-        #
-        #     self.transform_roi("rsTOstd",   pathtype="abs", outdir=nl_std   , islin=False,   rois=[exfun])
-        #     self.transform_roi("rsTOstd",   pathtype="abs", outdir=l_std    , islin=True,    rois=[exfun])
-        #     self.transform_roi("stdTOrs",   pathtype="abs", outdir=nl_rs   , islin=False,   rois=[std_head_img])
-        #     self.transform_roi("stdTOrs",   pathtype="abs", outdir=l_rs    , islin=True,    rois=[std_img])
-        #
-        #     self.transform_roi("rsTOstd4",  pathtype="abs", outdir=nl_std4   , islin=False,   rois=[exfun])
-        #     self.transform_roi("rsTOstd4",  pathtype="abs", outdir=l_std4    , islin=True,    rois=[exfun])
-        #     self.transform_roi("std4TOrs",  pathtype="abs", outdir=nl_rs   , islin=False,   rois=[std4_head_img])
-        #     self.transform_roi("std4TOrs",  pathtype="abs", outdir=l_rs    , islin=True,    rois=[std4_img])
-        #
-        #     if self.subject.hasFMRI:    # connect RS with FMRI
-        #
-        #         exfun_fmri = self.subject.epi.get_example_function("fmri")
-        #
-        #         nl_fmri = os.path.join(nldir, "fmri")
-        #         l_fmri = os.path.join(ldir, "fmri")
-        #
-        #         os.makedirs(nl_fmri, exist_ok=True)
-        #         os.makedirs(l_fmri, exist_ok=True)
-        #
-        #         self.transform_roi("rsTOfmri", pathtype="abs", outdir=nl_fmri, islin=False, rois=[exfun])
-        #         self.transform_roi("rsTOfmri", pathtype="abs", outdir=l_fmri, islin=True,   rois=[exfun])
-        #
-        #         self.transform_roi("fmriTOrs", pathtype="abs", outdir=nl_rs, islin=False,   rois=[exfun_fmri])
-        #         self.transform_roi("fmriTOrs", pathtype="abs", outdir=l_rs, islin=True,     rois=[exfun_fmri])
-        #
-        # # --------------------------------------------------------------
-        # #  FROM FMRI <--> HR
-        # #       FMRI <--> STD
-        # #       FMRI <--> STD4 if hasRS  (fmri <--> was done previously)
-        # # --------------------------------------------------------------
+            os.makedirs(nl_rs, exist_ok=True)
+            os.makedirs(l_rs, exist_ok=True)
+
+            exfun = self.subject.epi.get_example_function("rs")
+
+            imcp(exfun, os.path.join(nl_rs, self.subject.label + "_example_func"))
+            imcp(exfun, os.path.join(l_rs,  self.subject.label + "_example_func"))
+
+            self.transform_roi("hrTOrs",    pathtype="abs", outdir=nl_rs   , islin=False,   rois=[self.subject.t1_data])
+            self.transform_roi("hrTOrs",    pathtype="abs", outdir=l_rs    , islin=True,    rois=[self.subject.t1_brain_data])
+            self.transform_roi("rsTOhr",    pathtype="abs", outdir=nl_t1   , islin=False,   rois=[exfun])
+            self.transform_roi("rsTOhr",    pathtype="abs", outdir=l_t1    , islin=True,    rois=[exfun])
+
+            self.transform_roi("rsTOstd",   pathtype="abs", outdir=nl_std   , islin=False,   rois=[exfun])
+            self.transform_roi("rsTOstd",   pathtype="abs", outdir=l_std    , islin=True,    rois=[exfun])
+            self.transform_roi("stdTOrs",   pathtype="abs", outdir=nl_rs   , islin=False,   rois=[std_head_img])
+            self.transform_roi("stdTOrs",   pathtype="abs", outdir=l_rs    , islin=True,    rois=[std_img])
+
+            self.transform_roi("rsTOstd4",  pathtype="abs", outdir=nl_std4   , islin=False,   rois=[exfun])
+            self.transform_roi("rsTOstd4",  pathtype="abs", outdir=l_std4    , islin=True,    rois=[exfun])
+            self.transform_roi("std4TOrs",  pathtype="abs", outdir=nl_rs   , islin=False,   rois=[std4_head_img])
+            self.transform_roi("std4TOrs",  pathtype="abs", outdir=l_rs    , islin=True,    rois=[std4_img])
+
+            if self.subject.hasFMRI:    # connect RS with FMRI
+
+                exfun_fmri = self.subject.epi.get_example_function("fmri")
+
+                nl_fmri = os.path.join(nldir, "fmri")
+                l_fmri = os.path.join(ldir, "fmri")
+
+                os.makedirs(nl_fmri, exist_ok=True)
+                os.makedirs(l_fmri, exist_ok=True)
+
+                self.transform_roi("rsTOfmri", pathtype="abs", outdir=nl_fmri, islin=False, rois=[exfun])
+                self.transform_roi("rsTOfmri", pathtype="abs", outdir=l_fmri, islin=True,   rois=[exfun])
+
+                self.transform_roi("fmriTOrs", pathtype="abs", outdir=nl_rs, islin=False,   rois=[exfun_fmri])
+                self.transform_roi("fmriTOrs", pathtype="abs", outdir=l_rs, islin=True,     rois=[exfun_fmri])
+
+        # --------------------------------------------------------------
+        #  FROM FMRI <--> HR
+        #       FMRI <--> STD
+        #       FMRI <--> STD4 if hasRS  (fmri <--> was done previously)
+        # --------------------------------------------------------------
         if self.subject.hasFMRI is True:  # goes to HR, STD and STD4, RS
-        #
+
             nl_fmri = os.path.join(nldir, "fmri")
             l_fmri = os.path.join(ldir, "fmri")
-        #
-        #     os.makedirs(nl_fmri, exist_ok=True)
-        #     os.makedirs(l_fmri, exist_ok=True)
-        #
-        #     exfun = self.subject.epi.get_example_function("fmri")
-        #
-        #     imcp(exfun, os.path.join(nl_fmri, "example_func"))
-        #     imcp(exfun, os.path.join(l_fmri, "example_func"))
-        #
-        #     self.transform_roi("fmriTOhr", pathtype="abs", outdir=nl_t1, islin=False,   rois=[exfun])
-        #     self.transform_roi("fmriTOhr", pathtype="abs", outdir=l_t1, islin=True,     rois=[exfun])
-        #
-        #     self.transform_roi("hrTOfmri", pathtype="abs", outdir=nl_fmri, islin=False,   rois=[self.subject.t1_brain_data])
-        #     self.transform_roi("hrTOfmri", pathtype="abs", outdir=l_fmri, islin=True,     rois=[self.subject.t1_data])
-        #
-        #     self.transform_roi("fmriTOstd", pathtype="abs", outdir=nl_std, islin=False,  rois=[exfun])
-        #     self.transform_roi("fmriTOstd", pathtype="abs", outdir=l_std, islin=True,    rois=[exfun])
-        #
-        #     self.transform_roi("stdTOfmri", pathtype="abs", outdir=nl_fmri, islin=False,  rois=[std_head_img])
-        #     self.transform_roi("stdTOfmri", pathtype="abs", outdir=l_fmri, islin=True,    rois=[std_img])
-        #
-        #     if self.subject.hasRS:
-        #
-        #         self.transform_roi("fmriTOstd4", pathtype="abs", outdir=nl_std4, islin=False, rois=[exfun])
-        #         self.transform_roi("fmriTOstd4", pathtype="abs", outdir=l_std4, islin=True,   rois=[exfun])
-        #
-        #         self.transform_roi("std4TOfmri", pathtype="abs", outdir=nl_fmri, islin=False, rois=[std4_head_img])
-        #         self.transform_roi("std4TOfmri", pathtype="abs", outdir=l_fmri, islin=True,   rois=[std4_img])
+
+            os.makedirs(nl_fmri, exist_ok=True)
+            os.makedirs(l_fmri, exist_ok=True)
+
+            exfun = self.subject.epi.get_example_function("fmri")
+
+            imcp(exfun, os.path.join(nl_fmri, "example_func"))
+            imcp(exfun, os.path.join(l_fmri, "example_func"))
+
+            self.transform_roi("fmriTOhr", pathtype="abs", outdir=nl_t1, islin=False,   rois=[exfun])
+            self.transform_roi("fmriTOhr", pathtype="abs", outdir=l_t1, islin=True,     rois=[exfun])
+
+            self.transform_roi("hrTOfmri", pathtype="abs", outdir=nl_fmri, islin=False,   rois=[self.subject.t1_brain_data])
+            self.transform_roi("hrTOfmri", pathtype="abs", outdir=l_fmri, islin=True,     rois=[self.subject.t1_data])
+
+            self.transform_roi("fmriTOstd", pathtype="abs", outdir=nl_std, islin=False,  rois=[exfun])
+            self.transform_roi("fmriTOstd", pathtype="abs", outdir=l_std, islin=True,    rois=[exfun])
+
+            self.transform_roi("stdTOfmri", pathtype="abs", outdir=nl_fmri, islin=False,  rois=[std_head_img])
+            self.transform_roi("stdTOfmri", pathtype="abs", outdir=l_fmri, islin=True,    rois=[std_img])
+
+            if self.subject.hasRS:
+
+                self.transform_roi("fmriTOstd4", pathtype="abs", outdir=nl_std4, islin=False, rois=[exfun])
+                self.transform_roi("fmriTOstd4", pathtype="abs", outdir=l_std4, islin=True,   rois=[exfun])
+
+                self.transform_roi("std4TOfmri", pathtype="abs", outdir=nl_fmri, islin=False, rois=[std4_head_img])
+                self.transform_roi("std4TOfmri", pathtype="abs", outdir=l_fmri, islin=True,   rois=[std4_img])
 
         # --------------------------------------------------------------
         #  FROM T2 <--> HR
@@ -805,11 +805,11 @@ class SubjectTransforms:
             self.transform_roi("hrTOt2"  , pathtype="abs",  outdir=nl_t2  , islin=False, rois=[self.subject.t1_data])
             self.transform_roi("hrTOt2"  , pathtype="abs",  outdir=l_t2   , islin=True,  rois=[self.subject.t1_brain_data])
 
-            # self.transform_roi("t2TOstd" , pathtype="abs",  outdir=nl_std , islin=False, rois=[self.subject.t2_data])
-            # self.transform_roi("t2TOstd" , pathtype="abs",  outdir=l_std  , islin=True,  rois=[self.subject.t2_brain_data])
-            #
-            # self.transform_roi("stdTOt2" , pathtype="abs",  outdir=nl_t2  , islin=False, rois=[std_head_img])
-            # self.transform_roi("stdTOt2" , pathtype="abs",  outdir=l_t2   , islin=True,  rois=[std_img])
+            self.transform_roi("t2TOstd" , pathtype="abs",  outdir=nl_std , islin=False, rois=[self.subject.t2_data])
+            self.transform_roi("t2TOstd" , pathtype="abs",  outdir=l_std  , islin=True,  rois=[self.subject.t2_brain_data])
+
+            self.transform_roi("stdTOt2" , pathtype="abs",  outdir=nl_t2  , islin=False, rois=[std_head_img])
+            self.transform_roi("stdTOt2" , pathtype="abs",  outdir=l_t2   , islin=True,  rois=[std_img])
 
         # --------------------------------------------------------------
         #  FROM DTI <--> HR
