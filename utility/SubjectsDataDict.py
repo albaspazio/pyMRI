@@ -48,6 +48,37 @@ class SubjectsDataDict:
             self.num = len(self.data)
             return self.data
 
+    # return a list of values from a given column
+    def get_dict_column(self, colname):
+        return [d[colname] for d in self.data]
+
+    # works with a "subj" dict
+    # returns two vectors filtered by [subj labels]
+    # - [values]
+    # - [labels]
+    def get_filtered_column(self, colname, subj_labels=None, sort=False):
+
+        if subj_labels is None:
+            subj_labels = self.labels
+
+        res = []
+        lab = []
+        for subj in subj_labels:
+            try:
+                colvalue = typeUnknown(self.data[subj][colname])
+                res.append(colvalue)
+                lab.append(subj)
+            except KeyError:
+                print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+                return
+
+        if sort is True:
+            sort_schema = argsort(res)
+            res.sort()
+            lab = reorder_list(lab, sort_schema)
+
+        return res, lab
+
     # works with a "subj" dict
     # returns a filtered matrix [subj x colnames]
     def get_filtered_columns(self, colnames, subj_labels=None, sort=-1):
@@ -67,33 +98,6 @@ class SubjectsDataDict:
                 res.append(subj_row)
                 lab.append(subj)
 
-            except KeyError:
-                print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
-                return
-
-        if sort is True:
-            sort_schema = argsort(res)
-            res.sort()
-            lab = reorder_list(lab, sort_schema)
-
-        return res, lab
-
-    # works with a "subj" dict
-    # returns two vectors filtered by [subj labels]
-    # - [values]
-    # - [labels]
-    def get_filtered_column(self, colname, subj_labels=None, sort=False):
-
-        if subj_labels is None:
-            subj_labels = self.labels
-
-        res = []
-        lab = []
-        for subj in subj_labels:
-            try:
-                colvalue = typeUnknown(self.data[subj][colname])
-                res.append(colvalue)
-                lab.append(subj)
             except KeyError:
                 print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
                 return

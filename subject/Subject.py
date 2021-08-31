@@ -118,6 +118,8 @@ class Subject:
         self.hr2std4_warp = os.path.join(self.roi_std4_dir, "hr2std4_warp")
         self.std42hr_warp = os.path.join(self.roi_t1_dir, "std42hr_warp")
 
+        self.hr2t2_mat    = os.path.join(self.roi_t2_dir, "hr2t2.mat")
+        self.t22hr_mat  = os.path.join(self.roi_t1_dir, "t22hr.mat")
         # ------------------------------------------------------------------------------------------------------------------------
         # DTI
         # ------------------------------------------------------------------------------------------------------------------------
@@ -215,6 +217,12 @@ class Subject:
         self.rs2hr_mat       = os.path.join(self.roi_t1_dir, "rs2hr.mat")
         self.hr2rs_mat       = os.path.join(self.roi_rs_dir, "hr2rs.mat")
 
+        self.rs2fmri_mat     = os.path.join(self.roi_fmri_dir, "rs2fmri.mat")
+        self.fmri2rs_mat     = os.path.join(self.roi_rs_dir, "fmri2rs.mat")
+
+        self.rs2fmri_warp    = os.path.join(self.roi_fmri_dir, "rs2fmri_warp")
+        self.fmri2rs_warp    = os.path.join(self.roi_rs_dir, "fmri2rs_warp")
+
         # self.rs_post_nuisance_std4_image_label          = self.rs_image_label + "_preproc_aroma_nuisance_std4"
         # self.rs_post_nuisance_melodic_std4_image_label  = self.rs_image_label + "_preproc_aroma_nuisance_melodic_std4"
         # self.rs_regstd_dir              = os.path.join(self.rs_dir, "resting.ica", "reg_std")
@@ -272,6 +280,10 @@ class Subject:
         self.t2_data        = os.path.join(self.t2_dir, self.t2_image_label)
         self.t2_brain_data  = os.path.join(self.t2_dir, self.t2_image_label + "_brain")
 
+        self.t22std_mat      = os.path.join(self.roi_std_dir, "t22std.mat")
+        self.std2t2_mat      = os.path.join(self.roi_t2_dir, "std2t2.mat")
+        self.t22std_warp     = os.path.join(self.roi_std_dir, "t22std_warp")
+        self.std2t2_warp     = os.path.join(self.roi_t2_dir, "std2t2_warp")
         # ------------------------------------------------------------------------------------------------------------------------
         # DE
         # ------------------------------------------------------------------------------------------------------------------------
@@ -372,7 +384,7 @@ class Subject:
                  do_dtifit=True, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
                  do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",
                  do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0,
-                 std_image=""):
+                 std_image_brain=""):
 
         self.has_T2         = 0
         BET_F_VALUE_T2      = "0.5"
@@ -500,7 +512,7 @@ class Subject:
                         if os.path.isdir(preproc_feat_dir) is True:
                             rmtree(preproc_feat_dir, ignore_errors=True)
 
-                        self.epi.fsl_feat("rs", self.rs_image_label, "resting.feat", feat_preproc_model, do_initreg=do_featinitreg, std_image=std_image)
+                        self.epi.fsl_feat("rs", self.rs_image_label, "resting.feat", feat_preproc_model, do_initreg=do_featinitreg, std_image=std_image_brain)
                         imcp(filtfuncdata, preproc_img, logFile=log)
 
                 # calculate all trasformations once (I do it here after MCFLIRT acted on images)
@@ -549,7 +561,7 @@ class Subject:
                         if os.path.isdir(mel_out_dir) is True:
                             rmtree(mel_out_dir, ignore_errors=True)
 
-                        self.epi.fsl_feat("rs",  self.rs_post_nuisance_image_label, mel_odn + ".ica", melodic_model, do_initreg=do_melinitreg, std_image=std_image)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
+                        self.epi.fsl_feat("rs",  self.rs_post_nuisance_image_label, mel_odn + ".ica", melodic_model, do_initreg=do_melinitreg, std_image=std_image_brain)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
                         imcp(os.path.join(mel_out_dir, "filtered_func_data"), postmel_img, logFile=log)
 
                 # ------------------------------------------------------------------------------------------------------
@@ -638,18 +650,30 @@ class Subject:
         # ==============================================================================================================================================================
         if self.hasFMRI and self.hasRS:
 
+            # must create
+            rs2fmri = os.path.join(self.roi_fmri_dir, "rs2fmri")
+            fmri2rs = os.path.join(self.roi_rs_dir, "fmri2rs")
+
+            # linear   rs <-> hr <-> fmri
+            rs2hr   = os.path.join(self.roi_t1_dir, "rs2hr")
+            hr2fmri = os.path.join(self.roi_fmri_dir, "hr2fmri")
+            # => rs2fmri.mat
+            if os.path.isfile(rs2fmri + ".mat") is False:
+                rrun("convert_xfm -concat " + rs2hr + ".mat" + " " + hr2fmri + ".mat" + " -omat " + rs2fmri + ".mat", logFile=log)
+            # => fmri2rs.mat
+            if os.path.exists(fmri2rs + ".mat") is False:
+                rrun("convert_xfm -inverse -omat " + fmri2rs + ".mat " + rs2fmri + ".mat")
+
+            # non-linear   rs <-> std <-> fmri
             rs2std   = os.path.join(self.roi_std_dir, "rs2std")
             std2fmri = os.path.join(self.roi_fmri_dir, "std2fmri")
 
-            # => rs2fmri.mat
-            rs2fmri = os.path.join(self.roi_fmri_dir, "rs2fmri")
-            if os.path.isfile(rs2fmri + ".mat") is False:
-                rrun("convert_xfm -concat " + rs2std + ".mat" + " " + std2fmri + ".mat" + " -omat " + rs2fmri + ".mat", logFile=log)
+            if imtest(rs2fmri + "_warp") is False:
+                rrun("convertwarp --ref=" + self.fmri_examplefunc + " --warp1=" + rs2std + "_warp" + " --warp2=" + std2fmri + "_warp" + " --out=" + rs2fmri + "_warp", logFile=log)
 
-            # => fmri2rs.mat
-            fmri2rs = os.path.join(self.roi_rs_dir, "fmri2rs")
-            if os.path.exists(fmri2rs + ".mat") is False:
-                rrun("convert_xfm -inverse -omat " + fmri2rs + ".mat " + rs2fmri + ".mat")
+            if imtest(fmri2rs + "_warp") is False:
+                rrun("invwarp -r " + self.fmri_examplefunc + " -w " + rs2fmri + "_warp" + " -o " + fmri2rs + "_warp", logFile=log)
+
 
     # ==================================================================================================================================================
     # DATA CONVERSIONS

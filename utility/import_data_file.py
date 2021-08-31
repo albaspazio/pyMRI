@@ -4,31 +4,11 @@ import os
 from utility.utilities import argsort, reorder_list, typeUnknown
 
 
-def read_varlist_file(filepath, comment_char="#"):
-
-    data = {}
-    if os.path.exists(filepath) is False:
-        print("ERROR in read_varlist_file, given filepath param (" + filepath + ") is not a file")
-        return data
-
-    with open(filepath, "r") as f:
-        
-        lines = f.readlines()
-        for line in lines:
-            
-            if line[0] == comment_char:
-                continue
-            values = line.rstrip().split("=")   # also remove trailing characters
-            data[values[0]] = values[1]
-    return data
-
-
 # =====================================================================================
-# DATA EXTRACTION FROM A PLAIN DICTIONARY [{"a":..., "b":...., }]
+# DATA EXTRACTION FROM A PLAIN DICTIONARY
 # =====================================================================================
-# returns a list of filtered
+# returns       [ {"subj":..., "col1":..., "col2":... }, {"subj":..., "col1":..., "col2":... }, ....]
 def tabbed_file_with_header2dict_list(filepath):
-
     data = []
     if os.path.exists(filepath) is False:
         print("ERROR in tabbed_file_with_header2dict_list, given filepath param (" + filepath + ") is not a file")
@@ -50,12 +30,32 @@ def tabbed_file_with_header2dict_list(filepath):
         return data
 
 
+# return a list of values from a given column
+def get_dict_column(dic, colname):
+    return [d[colname] for d in dic]
+
+
+def get_filtered_dict_column(dic, colname, filt_col="", filter=None):
+
+    if filt_col != "":
+        res = []
+        if filter is not None and isinstance(filter, list):
+            for d in dic:
+                if d[filt_col] in filter:
+                    res.append(d[colname])
+            return res
+        else:
+            print("Error in get_filtered_dict_column")
+    else:
+        return get_dict_column(dic, colname)
+
+
 # =====================================================================================
 # DATA EXTRACTION FROM A "SUBJ" DICTIONARY
 # =====================================================================================
 # assumes that the first column represents subjects' labels (it will act as dictionary's key).
 # creates a dictionary with subj label as key and data columns as a dictionary
-# returns  {"a_subj_label":{"a":..., "b":...., }}
+# returns   { "label1":{"col1", ..., "colN"}, "label2":{"col1", ..., "colN"}, .....}
 def tabbed_file_with_header2subj_dic(filepath):
 
     data = {}
@@ -96,7 +96,7 @@ def get_header_of_tabbed_file(filepath):
 
     return []
 
-# works with a "subj" dict
+
 # returns a filtered matrix [subj x colnames]
 def get_filtered_subj_dict_columns(dic, colnames, subj_labels, sort=False):
 
@@ -122,7 +122,7 @@ def get_filtered_subj_dict_columns(dic, colnames, subj_labels, sort=False):
 
     return res, lab
 
-# works with a "subj" dict
+
 # returns a tuple with two vectors filtered by [subj labels]
 # - [values]
 # - [labels]
@@ -146,7 +146,7 @@ def get_filtered_subj_dict_column(dic, colname, subjects_label, sort=False):
 
     return res, lab
 
-# works with a "subj" dict
+
 # returns two vectors filtered by [subj labels] & value
 # - [values]
 # - [labels]
@@ -189,7 +189,7 @@ def get_filtered_subj_dict_column_by_value(dic, colname, value, operation="=", s
 
     return res, lab
 
-# works with a "subj" dict
+
 # returns two vectors filtered by [subj labels] & whether value is within value1/2
 # - [values]
 # - [labels]
@@ -228,27 +228,29 @@ def get_filtered_subj_dict_column_within_values(dic, colname, value1, value2, op
 
     return res, lab
 
-
 # =====================================================================================
+# ACCESSORY
 # =====================================================================================
-# return a list of values from a given column
-def get_dict_column(dic, colname):
-    return [d[colname] for d in dic]
 
+# read files like:
+# var1=value1
+# varN=valueN
+def read_varlist_file(filepath, comment_char="#"):
+    data = {}
+    if os.path.exists(filepath) is False:
+        print("ERROR in read_varlist_file, given filepath param (" + filepath + ") is not a file")
+        return data
 
-def get_filtered_dict_column(dic, colname, filt_col="", filter=None):
+    with open(filepath, "r") as f:
 
-    if filt_col != "":
-        res = []
-        if filter is not None and isinstance(filter, list):
-            for d in dic:
-                if d[filt_col] in filter:
-                    res.append(d[colname])
-            return res
-        else:
-            print("Error in get_filtered_dict_column")
-    else:
-        return get_dict_column(dic, colname)
+        lines = f.readlines()
+        for line in lines:
+
+            if line[0] == comment_char:
+                continue
+            values = line.rstrip().split("=")  # also remove trailing characters
+            data[values[0]] = values[1]
+    return data
 
 
 # get a data list and return a \n separated string
@@ -260,7 +262,7 @@ def list2spm_text_column(datalist, ndecimals=3):
     return datastr
 
 
-# read file, create subjlabel and value columns
+# read the output file of fslmeants, create subjlabel and value columns
 def process_results(filepath, subjs_list, outname, dataprecision='.3f'):
 
     list_str = []
@@ -273,7 +275,6 @@ def process_results(filepath, subjs_list, outname, dataprecision='.3f'):
     # you may also want to remove whitespace characters like `\n` at the end of each line
     content = [x.strip() for x in content]
     nsubj = len(content)
-
 
     for i in range(nsubj):
         list_str.append(subjs_list[i] + "\t" + format(float(content[i]), dataprecision))
@@ -304,6 +305,7 @@ def process_results2tp(fname, subjs_list, outname, dataprecision=".3f"):
     return list_str
 
 
+# read the three values within ICV-SPM file and return their sum
 def get_icv_spm_file(filepath):
 
     with open(filepath) as f:

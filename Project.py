@@ -63,7 +63,7 @@ class Project:
             self.data_file = os.path.join(self.script_dir, data)
 
         if self.data_file != "":
-            self.data = SubjectsDataDict(self.data_file)    # import_data_file.tabbed_file_with_header2subj_dic(self.data_file)
+            self.data = SubjectsDataDict(self.data_file)
 
     # ==================================================================================================================
     # GET SUBJECTS' INSTANCES
@@ -273,7 +273,7 @@ class Project:
                 return data
             elif isinstance(data, str):
                 if os.path.exists(data) is True:
-                    return SubjectsDataDict(data)   #import_data_file.tabbed_file_with_header2subj_dic(data)
+                    return SubjectsDataDict(data)
                 else:
                     print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is string that does not point to a valid file to load")
                     return None
