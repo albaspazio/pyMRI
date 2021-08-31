@@ -6,7 +6,7 @@
 matlabbatch{1}.spm.spatial.preproc.channel.vols = {'<T1_IMAGE>,1'};
 matlabbatch{1}.spm.spatial.preproc.channel.biasreg = 0.001;
 matlabbatch{1}.spm.spatial.preproc.channel.biasfwhm = 60;
-matlabbatch{1}.spm.spatial.preproc.channel.write = [0 0];
+matlabbatch{1}.spm.spatial.preproc.channel.write = [1 1];
 matlabbatch{1}.spm.spatial.preproc.tissue(1).tpm = {'<TEMPLATE_TISSUES>,1'};
 matlabbatch{1}.spm.spatial.preproc.tissue(1).ngaus = 1;
 matlabbatch{1}.spm.spatial.preproc.tissue(1).native = [1 1];

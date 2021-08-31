@@ -85,15 +85,18 @@ def scatter_plot_2dataseries(ydata1, xdata1, ydata2, xdata2, fnameout, colors=("
 
 
 # on the X-axis goes a the order with the list (like an histogram, to separate two groups
-def scatter_plot_dataserie(ydata, xdata, fnameout, color="red", label="control"):
+def scatter_plot_dataserie(ydata, xdata, fnameout, color="red", label="control", show=True):
 
     fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1) #, axisbg="1.0")
+    ax  = fig.add_subplot(1, 1, 1) #, axisbg="1.0")
 
     ax.scatter(xdata, ydata, alpha=0.8, c=color, edgecolors='none', s=30, label=label)
 
     plt.title(os.path.basename(fnameout))
     plt.legend(loc=4)
+
+    # if show:
     plt.show()
 
-    plt.savefig(fnameout, dpi=1200)
+    if len(fnameout) > 0:
+        plt.savefig(fnameout, dpi=1200)

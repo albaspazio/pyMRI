@@ -36,12 +36,20 @@ class Subject:
 
         self.project_subjects_dir = project.subjects_dir
 
+        self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
+
         self.set_file_system(self.sessid)
 
         self.transform  = SubjectTransforms(self, self._global)
         self.mpr        = SubjectMpr(self, self._global)
         self.dti        = SubjectDti(self, self._global)
         self.epi        = SubjectEpi(self, self._global)
+
+        self.hasT1      = imtest(self.t1_data)
+        self.hasRS      = imtest(self.rs_data)
+        self.hasDTI     = imtest(self.dti_data)
+        self.hasT2      = imtest(self.t2_data)
+        self.hasFMRI    = imtest(self.fmri_data)
 
     def get_sess_file_system(self, sess):
         return self.set_file_system(sess, True)
@@ -65,6 +73,8 @@ class Subject:
         # ------------------------------------------------------------------------------------------------------------------------
         # T1/MPR
         # ------------------------------------------------------------------------------------------------------------------------
+        self.t1_image_label = self.label + "-t1"
+
         self.t1_dir         = os.path.join(self.dir, "mpr")
         self.t1_anat_dir    = os.path.join(self.t1_dir, "anat")
         self.fast_dir       = os.path.join(self.t1_dir, "fast")
@@ -75,7 +85,6 @@ class Subject:
         self.t1_spm_dir     = os.path.join(self.t1_dir, "spm")
         self.t1_cat_dir     = os.path.join(self.t1_dir, "cat")
 
-        self.t1_image_label         = self.label + "-t1"
         self.t1_data                = os.path.join(self.t1_dir, self.t1_image_label)
         self.t1_brain_data          = os.path.join(self.t1_dir, self.t1_image_label + "_brain")
         self.t1_brain_data_mask     = os.path.join(self.t1_dir, self.t1_image_label + "_brain_mask")
@@ -112,16 +121,16 @@ class Subject:
         # ------------------------------------------------------------------------------------------------------------------------
         # DTI
         # ------------------------------------------------------------------------------------------------------------------------
+        self.dti_image_label    = self.label + "-dti"
+        self.dti_ec_image_label = self.dti_image_label + "_ec"
+        self.dti_fit_label      = self.dti_image_label + "_fit"
+
         self.dti_dir            = os.path.join(self.dir, "dti")
         self.bedpost_X_dir      = os.path.join(self.dti_dir, "bedpostx")
         self.probtrackx_dir     = os.path.join(self.dti_dir, "probtrackx")
         self.trackvis_dir       = os.path.join(self.dti_dir, "trackvis")
         self.tv_matrices_dir    = os.path.join(self.dti_dir, "tv_matrices")
         self.dti_xtract_dir     = os.path.join(self.dti_dir, "xtract")
-
-        self.dti_image_label    = self.label + "-dti"
-        self.dti_ec_image_label = self.dti_image_label + "_ec"
-        self.dti_fit_label      = self.dti_image_label + "_fit"
 
         self.dti_bval           = os.path.join(self.dti_dir, self.label + "-dti.bval")
         self.dti_bvec           = os.path.join(self.dti_dir, self.label + "-dti.bvec")
@@ -131,9 +140,9 @@ class Subject:
         self.dti_ec_data    = os.path.join(self.dti_dir, self.dti_ec_image_label)
         self.dti_fit_data   = os.path.join(self.dti_dir, self.dti_fit_label)
 
-        self.dti_nodiff_data            = os.path.join(self.dti_dir, "nodif")
-        self.dti_nodiff_brain_data      = os.path.join(self.dti_dir, "nodif_brain")
-        self.dti_nodiff_brainmask_data  = os.path.join(self.dti_dir, "nodif_brain_mask")
+        self.dti_nodiff_data            = os.path.join(self.roi_dti_dir, "nodif")
+        self.dti_nodiff_brain_data      = os.path.join(self.roi_dti_dir, "nodif_brain")
+        self.dti_nodiff_brainmask_data  = os.path.join(self.roi_dti_dir, "nodif_brain_mask")
 
         self.dti_bedpostx_mean_S0_label = "mean_S0samples"
 
@@ -158,6 +167,7 @@ class Subject:
         # RS
         # ------------------------------------------------------------------------------------------------------------------------
         self.rs_image_label = self.label + "-rs"
+
         self.rs_dir         = os.path.join(self.dir, "resting")
         self.rs_data        = os.path.join(self.rs_dir, self.rs_image_label)
         self.sbfc_dir       = os.path.join(self.rs_dir, "sbfc")
@@ -220,6 +230,7 @@ class Subject:
         # fMRI
         # ------------------------------------------------------------------------------------------------------------------------
         self.fmri_image_label   = self.label + "-fmri"
+
         self.fmri_dir           = os.path.join(self.dir, "fmri")
         self.fmri_data          = os.path.join(self.fmri_dir, self.fmri_image_label)
         self.fmri_data_mc       = os.path.join(self.fmri_dir, "r" + self.fmri_image_label)
@@ -244,25 +255,30 @@ class Subject:
         self.hr2fmri_mat       = os.path.join(self.roi_fmri_dir, "hr2fmri.mat")
 
         # ------------------------------------------------------------------------------------------------------------------------
-        # OTHER (DE/T2/WB/PE)
+        # WB
         # ------------------------------------------------------------------------------------------------------------------------
-        self.de_dir         = os.path.join(self.dir, "t2")
-        self.de_image_label = "de"
-        self.de_data        = os.path.join(self.de_dir, self.de_image_label)
-        self.de_brain_data  = os.path.join(self.de_dir, self.de_image_label + "_brain")
-
-        self.has_T2 = False
-        self.t2_dir         = self.de_dir
-        self.t2_image_label = "t2"
-        self.t2_data        = os.path.join(self.t2_dir, self.t2_image_label)
-        self.t2_brain_data  = os.path.join(self.t2_dir, self.t2_image_label + "_brain")
+        self.wb_image_label = self.label + "-wb_epi"
 
         self.wb_dir         = os.path.join(self.dir, "wb")
-        self.wb_image_label = self.label + "-wb_epi"
         self.wb_data        = os.path.join(self.wb_dir, self.wb_image_label)
         self.wb_brain_data  = os.path.join(self.wb_dir, self.wb_image_label + "_brain")
 
-        self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
+        # ------------------------------------------------------------------------------------------------------------------------
+        # T2
+        # ------------------------------------------------------------------------------------------------------------------------
+        self.t2_image_label = self.label + "-t2"
+
+        self.t2_dir         = os.path.join(self.dir, "t2")
+        self.t2_data        = os.path.join(self.t2_dir, self.t2_image_label)
+        self.t2_brain_data  = os.path.join(self.t2_dir, self.t2_image_label + "_brain")
+
+        # ------------------------------------------------------------------------------------------------------------------------
+        # DE
+        # ------------------------------------------------------------------------------------------------------------------------
+        self.de_image_label = self.label + "-de"
+        self.de_dir         = os.path.join(self.dir, "de")
+        self.de_data        = os.path.join(self.de_dir, self.de_image_label)
+        self.de_brain_data  = os.path.join(self.de_dir, self.de_image_label + "_brain")
 
         self_copy = deepcopy(self)
         if rollback is True:
@@ -541,20 +557,24 @@ class Subject:
                 # ------------------------------------------------------------------------------------------------------
                 # mask from preproc feat
                 mask = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "mask")
-                self.transform.transform_roi("epi2std4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[mask])
-                imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask", logFile=log)
+                if imtest(self.rs_final_regstd_mask + "_mask") is False:
+                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[mask])
+                    imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask", logFile=log)
 
                 # mask from example_function (the one used to calculate all the co-registrations)
-                self.transform.transform_roi("epi2std4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.rs_examplefunc_mask])
-                imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask, logFile=log)
+                if imtest(self.rs_final_regstd_mask) is False:
+                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[self.rs_examplefunc_mask])
+                    imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask, logFile=log)
 
                 # brain
-                self.transform.transform_roi("hr2std4", "abs" , stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[self.t1_brain_data])
-                imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage, logFile=log)
+                if imtest(self.rs_final_regstd_bgimage) is False:
+                    self.transform.transform_roi("hrTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[self.t1_brain_data])
+                    imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage, logFile=log)
 
                 # functional data
-                self.transform.transform_roi("epi2std4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, thresh=0, rois=[postnuisance])
-                immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image, logFile=log)
+                if imtest(self.rs_final_regstd_image) is False:
+                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[postnuisance])
+                    immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image, logFile=log)
 
                 log.close()
 
@@ -586,10 +606,7 @@ class Subject:
 
             os.makedirs(self.roi_dti_dir, exist_ok=True)
 
-            if self.has_T2 is True:
-                self.transform.transform_dti_t2()
-            else:
-                self.transform.transform_dti()
+            self.transform.transform_dti()
 
             if imtest(os.path.join(self.dti_dir, bedpost_odn, "mean_S0samples")) is False:
                 if os.path.isfile(os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz")) is True:
@@ -610,6 +627,29 @@ class Subject:
 
             log.close()
 
+        # ==============================================================================================================================================================
+        # FMRI DATA
+        # ==============================================================================================================================================================
+        if self.hasFMRI is True:
+            self.transform.transform_epi("fmri", logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
+
+        # ==============================================================================================================================================================
+        # EXTRA
+        # ==============================================================================================================================================================
+        if self.hasFMRI and self.hasRS:
+
+            rs2std   = os.path.join(self.roi_std_dir, "rs2std")
+            std2fmri = os.path.join(self.roi_fmri_dir, "std2fmri")
+
+            # => rs2fmri.mat
+            rs2fmri = os.path.join(self.roi_fmri_dir, "rs2fmri")
+            if os.path.isfile(rs2fmri + ".mat") is False:
+                rrun("convert_xfm -concat " + rs2std + ".mat" + " " + std2fmri + ".mat" + " -omat " + rs2fmri + ".mat", logFile=log)
+
+            # => fmri2rs.mat
+            fmri2rs = os.path.join(self.roi_rs_dir, "fmri2rs")
+            if os.path.exists(fmri2rs + ".mat") is False:
+                rrun("convert_xfm -inverse -omat " + fmri2rs + ".mat " + rs2fmri + ".mat")
 
     # ==================================================================================================================================================
     # DATA CONVERSIONS

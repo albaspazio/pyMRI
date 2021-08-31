@@ -289,16 +289,23 @@ def read_header(file, list_field=None):
 
 def remove_slices(self, numslice2remove=1, whichslices2remove="updown", remove_dimension="axial"):
 
-    # dim_str = ""
-    # if remove_dimension == "axial":
-    #     dim_str = " -1 -1 "
-    nslices = 36
-    imcp(self.subject.fmri_data, self.subject.fmri_data + "full")
-    # rrun('fslroi ' + self.subject.epi_data + " " + self.subject.epi_data + " -1 -1  1 35")
-    rrun('fslroi ' + self.subject.fmri_data + " " + self.subject.fmri_data + " -1 -1  0 34")
+    nslices = int(rrun("fslval " + self.epi_data + " dim3"))
+
+    dim_str = ""
+    if remove_dimension == "axial":
+        if whichslices2remove == "updown":
+            dim_str = " 0 -1 0 -1 " + str(numslice2remove) + " " + str(nslices - 2 * numslice2remove)
+
+    imcp(self.epi_data, self.epi_data + "_full")
+    rrun('fslroi ' + self.epi_data + " " + self.epi_data + dim_str)
+
+    # lo faccio anche per pepolar
+    imcp(self.epi_pe_data, self.epi_pe_data + "_full")
+    rrun('fslroi ' + self.epi_pe_data + " " + self.epi_pe_data + dim_str)
 
 
 # divide the tbss mean skeleton in images according to a given atlas file (where each volume is specific tract)
+# needs that atlas has its own json file
 # and save to "mean_skeleton" subfolder of atlas folder
 def mask_tbss_skeleton_volumes_atlas(skel_templ, atlas_img, atlas_json):
 
@@ -324,8 +331,9 @@ def mask_tbss_skeleton_volumes_atlas(skel_templ, atlas_img, atlas_json):
         imrm(tempmask)
         cnt = cnt + 1
 
+
 # divide the tbss mean skeleton in images according to a given atlas folder
-#  each file is a specific tract and its name define its label, no need for a json file
+# each file is a specific tract and its name define its label, no need for a json file
 # and save to "mean_skeleton" subfolder of atlas folder
 def mask_tbss_skeleton_folder_atlas(skel_templ, atlas_dir, thr=0.95):
 

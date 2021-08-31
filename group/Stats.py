@@ -6,6 +6,7 @@ from utility.utilities import sed_inplace
 from utility import import_data_file
 from utility.matlab import call_matlab_function_noret
 
+
 class Stats:
 
     # get cov values from many groups and concat them into a single vector
@@ -23,8 +24,7 @@ class Stats:
         cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.cname = '" + cov_name + "';\n"
         cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCFI = " + str(cov_interaction) + ";\n"
         cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCC = 1;"
-        sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
-
+        sed_inplace(out_batch_job, "<COV_STRING>", cov_string)
 
     # get cov values from many groups and concat them into a single vector
     # interaction=1 : no interaction, otherwise specify factors (1-based + 1, e.g. first factor = 2)
