@@ -40,24 +40,6 @@ class SubjectTransformsEx:
         self.t22hr_mat  = os.path.join(self.subject.roi_t1_dir, "t22hr.mat")
 
         # ------------------------------------------------------------------------------------------------------------------------
-        # DTI
-        # ------------------------------------------------------------------------------------------------------------------------
-        self.dti2hr_mat       = os.path.join(self.subject.roi_t1_dir, "dti2hr.mat")
-        self.hr2dti_mat       = os.path.join(self.subject.roi_dti_dir, "hr2dti.mat")
-        self.dti2hr_warp      = os.path.join(self.subject.roi_t1_dir, "dti2hr_warp")
-        self.hr2dti_warp      = os.path.join(self.subject.roi_dti_dir, "hr2dti_warp")
-
-        self.dti2t2_mat       = os.path.join(self.subject.roi_t2_dir, "dti2t2.mat")
-        self.t22dti_mat       = os.path.join(self.subject.roi_dti_dir, "t22dti.mat")
-        self.dti2t2_warp      = os.path.join(self.subject.roi_t2_dir, "dti2t2_warp")
-        self.t22dti_warp      = os.path.join(self.subject.roi_dti_dir, "t22dti_warp")
-
-        self.dti2std_mat      = os.path.join(self.subject.roi_std_dir, "dti2std.mat")
-        self.std2dti_mat      = os.path.join(self.subject.roi_dti_dir, "std2dti.mat")
-        self.dti2std_warp     = os.path.join(self.subject.roi_std_dir, "dti2std_warp")
-        self.std2dti_warp     = os.path.join(self.subject.roi_dti_dir, "std2dti_warp")
-
-        # ------------------------------------------------------------------------------------------------------------------------
         # RS
         # ------------------------------------------------------------------------------------------------------------------------
         self.rs2std_warp    = os.path.join(self.subject.roi_std_dir, "rs2std_warp")
@@ -107,6 +89,23 @@ class SubjectTransformsEx:
         self.t22std_warp     = os.path.join(self.subject.roi_std_dir, "t22std_warp")
         self.std2t2_warp     = os.path.join(self.subject.roi_t2_dir, "std2t2_warp")
 
+        # ------------------------------------------------------------------------------------------------------------------------
+        # DTI
+        # ------------------------------------------------------------------------------------------------------------------------
+        self.dti2hr_mat       = os.path.join(self.subject.roi_t1_dir, "dti2hr.mat")
+        self.hr2dti_mat       = os.path.join(self.subject.roi_dti_dir, "hr2dti.mat")
+        self.dti2hr_warp      = os.path.join(self.subject.roi_t1_dir, "dti2hr_warp")
+        self.hr2dti_warp      = os.path.join(self.subject.roi_dti_dir, "hr2dti_warp")
+
+        self.dti2t2_mat       = os.path.join(self.subject.roi_t2_dir, "dti2t2.mat")
+        self.t22dti_mat       = os.path.join(self.subject.roi_dti_dir, "t22dti.mat")
+        self.dti2t2_warp      = os.path.join(self.subject.roi_t2_dir, "dti2t2_warp")
+        self.t22dti_warp      = os.path.join(self.subject.roi_dti_dir, "t22dti_warp")
+
+        self.dti2std_mat      = os.path.join(self.subject.roi_std_dir, "dti2std.mat")
+        self.std2dti_mat      = os.path.join(self.subject.roi_dti_dir, "std2dti.mat")
+        self.dti2std_warp     = os.path.join(self.subject.roi_std_dir, "dti2std_warp")
+        self.std2dti_warp     = os.path.join(self.subject.roi_dti_dir, "std2dti_warp")
         # ------------------------------------------------------------------------------------------------------------------------
         # ------------------------------------------------------------------------------------------------------------------------
         # define all available transformations

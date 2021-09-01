@@ -1,6 +1,7 @@
 import os
 import json
 import math
+import shutil
 from threading import Thread
 from inspect import signature
 from copy import deepcopy
@@ -9,7 +10,7 @@ from myfsl.utils.run import rrun
 from subject.Subject import Subject
 from utility.SubjectsDataDict import SubjectsDataDict
 from utility.images import imcp, imrm
-from utility.utilities import gunzip, compress
+from utility.utilities import gunzip, compress, copytree
 from utility import import_data_file
 
 
@@ -121,7 +122,7 @@ class Project:
                 if subj.sessid == sess:
                     return deepcopy(subj)
                 else:
-                    return subj.set_file_system(sess, rollback=True)    # it returns a deepcopy of requested session
+                    return subj.set_properties(sess, rollback=True)    # it returns a deepcopy of requested session
         return None
 
     def get_subjects_num(self):
@@ -142,8 +143,51 @@ class Project:
 
     def check_all_coregistration(self, subjects, outdir, num_cpu=1):
 
-        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir}], self.get_subjects_labels(), nthread=num_cpu)
-        # rrun("slicesdir " + )
+        # self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir}], self.get_subjects_labels(), nthread=num_cpu)
+
+        l_t1    = os.path.join(outdir, "lin", "hr")
+        l_dti   = os.path.join(outdir, "lin", "dti")
+        l_rs    = os.path.join(outdir, "lin", "rs")
+        l_std   = os.path.join(outdir, "lin", "std")
+        l_std4  = os.path.join(outdir, "lin", "std4")
+        l_t2    = os.path.join(outdir, "lin", "t2")
+
+        nl_t1    = os.path.join(outdir, "nlin", "hr")
+        nl_dti   = os.path.join(outdir, "nlin", "dti")
+        nl_rs    = os.path.join(outdir, "nlin", "rs")
+        nl_std   = os.path.join(outdir, "nlin", "std")
+        nl_std4  = os.path.join(outdir, "nlin", "std4")
+        nl_t2    = os.path.join(outdir, "nlin", "t2")
+
+        sd_l_t1    = os.path.join(outdir, "slicesdir", "lin_hr");     os.makedirs(sd_l_t1, exist_ok=True)
+        sd_l_dti   = os.path.join(outdir, "slicesdir", "lin_dti");    os.makedirs(sd_l_dti, exist_ok=True)
+        sd_l_rs    = os.path.join(outdir, "slicesdir", "lin_rs");     os.makedirs(sd_l_rs, exist_ok=True)
+        sd_l_std   = os.path.join(outdir, "slicesdir", "lin_std");    os.makedirs(sd_l_std, exist_ok=True)
+        sd_l_std4  = os.path.join(outdir, "slicesdir", "lin_std4");   os.makedirs(sd_l_std4, exist_ok=True)
+        sd_l_t2    = os.path.join(outdir, "slicesdir", "lin_t2");     os.makedirs(sd_l_t2, exist_ok=True)
+
+        sd_nl_t1    = os.path.join(outdir, "slicesdir", "nlin_hr");   os.makedirs(sd_l_t1, exist_ok=True)
+        sd_nl_dti   = os.path.join(outdir, "slicesdir", "nlin_dti");  os.makedirs(sd_l_dti, exist_ok=True)
+        sd_nl_rs    = os.path.join(outdir, "slicesdir", "nlin_rs");   os.makedirs(sd_l_rs, exist_ok=True)
+        sd_nl_std   = os.path.join(outdir, "slicesdir", "nlin_std");  os.makedirs(sd_l_std, exist_ok=True)
+        sd_nl_std4  = os.path.join(outdir, "slicesdir", "nlin_std4"); os.makedirs(sd_l_std4, exist_ok=True)
+        sd_nl_t2    = os.path.join(outdir, "slicesdir", "nlin_t2");   os.makedirs(sd_l_t2, exist_ok=True)
+
+        os.chdir(l_t1);     os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_t1, "slicesdir"), sd_l_t1)
+        os.chdir(l_dti);    os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_dti, "slicesdir"), sd_l_dti)
+        os.chdir(l_rs);     os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_rs, "slicesdir"), sd_l_rs)
+        os.chdir(l_std);    os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_std, "slicesdir"), sd_l_std)
+        os.chdir(l_std4);   os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_std4, "slicesdir"), sd_l_std4)
+        os.chdir(l_t2);     os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_t2, "slicesdir"), sd_l_t2)
+
+        os.chdir(nl_t1);    os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_t1, "slicesdir"), sd_nl_t1)
+        os.chdir(nl_dti);   os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_dti, "slicesdir"), sd_nl_dti)
+        os.chdir(nl_rs);    os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_rs, "slicesdir"), sd_nl_rs)
+        os.chdir(nl_std);   os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_std, "slicesdir"), sd_nl_std)
+        os.chdir(nl_std4);  os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_std4, "slicesdir"), sd_nl_std4)
+        os.chdir(nl_t2);    os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(l_t2, "slicesdir"), sd_nl_t2)
+
+
 
     # create a folder where it copies the brain extracted from BET, FreeSurfer and SPM
     def compare_brain_extraction(self, tempdir, list_subj_label=None):

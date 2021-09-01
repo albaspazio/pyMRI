@@ -24,21 +24,21 @@ class Subject:
 
     def __init__(self, label, sessid, project):
 
-        self.label = label
+        self.label  = label
         self.sessid = sessid
 
         self.project = project
         self._global = project._global
 
-        self.fsl_dir = self._global.fsl_dir
-        self.fsl_bin = self._global.fsl_bin
-        self.fsl_data_std_dir = self._global.fsl_data_std_dir
+        self.fsl_dir            = self._global.fsl_dir
+        self.fsl_bin            = self._global.fsl_bin
+        self.fsl_data_std_dir   = self._global.fsl_data_std_dir
 
         self.project_subjects_dir = project.subjects_dir
 
         self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
 
-        self.set_file_system(self.sessid)
+        self.set_properties(self.sessid)
 
         self.transform  = SubjectTransforms(self, self._global)
         self.mpr        = SubjectMpr(self, self._global)
@@ -51,13 +51,13 @@ class Subject:
         self.hasT2      = imtest(self.t2_data)
         self.hasFMRI    = imtest(self.fmri_data)
 
-    def get_sess_file_system(self, sess):
-        return self.set_file_system(sess, True)
+    def get_properties(self, sess):
+        return self.set_properties(sess, True)
 
     # this method has 2 usages:
     # 1) DEFAULT : to create filesystem names at startup    => returns : self  (DOUBT !! alternatively may always return a deepcopy)
     # 2) to get a copy with names of another session        => returns : deepcopy(self)
-    def set_file_system(self, sess, rollback=False):
+    def set_properties(self, sess, rollback=False):
 
         self.dir = os.path.join(self.project.subjects_dir, self.label, "s" + str(sess))
 
@@ -294,7 +294,7 @@ class Subject:
 
         self_copy = deepcopy(self)
         if rollback is True:
-            self.set_file_system(self.sessid, False)
+            self.set_properties(self.sessid, False)
             return self_copy
         else:
             self.sessid = sess
@@ -618,7 +618,7 @@ class Subject:
 
             os.makedirs(self.roi_dti_dir, exist_ok=True)
 
-            self.transform.transform_dti()
+            self.transform.transform_dti_t2()
 
             if imtest(os.path.join(self.dti_dir, bedpost_odn, "mean_S0samples")) is False:
                 if os.path.isfile(os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz")) is True:

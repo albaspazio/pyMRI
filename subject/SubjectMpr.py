@@ -804,7 +804,7 @@ class SubjectMpr:
             # create images list
             for sess in sessions:
 
-                subj = self.subject.get_sess_file_system(sess)
+                subj = self.subject.get_properties(sess)
 
                 if imgtype == 1:
                     anatdir = os.path.join(subj.t1_dir, odn)
@@ -898,7 +898,7 @@ class SubjectMpr:
 
         for sess in sessions:
 
-            subj = self.subject.get_sess_file_system(sess)
+            subj = self.subject.get_properties(sess)
 
             icv_file = os.path.join(subj.t1_cat_dir, "tiv_r_" + subj.label + ".txt")
             report_file = os.path.join(subj.t1_cat_dir, "report", "cat_rT1_" + subj.label + ".xml")
@@ -943,7 +943,7 @@ class SubjectMpr:
 
         copyfile(in_script_start, output_start)
 
-        subj = self.subject.get_sess_file_system(session)
+        subj = self.subject.get_properties(session)
 
         surf_prefix = "T1"
         if isLong is True:
@@ -979,7 +979,7 @@ class SubjectMpr:
 
         copyfile(in_script_start, output_start)
 
-        subj = self.subject.get_sess_file_system(session)
+        subj = self.subject.get_properties(session)
 
         prefix = "cat_T1_"
         prefix_tiv = "tiv_"
@@ -1038,7 +1038,7 @@ class SubjectMpr:
         out_str = ""
         surfaces = []
         for sess in sessions:
-            subj = self.subject.get_sess_file_system(sess)
+            subj = self.subject.get_properties(sess)
             out_str = out_str + str(sess) + "_"
             surfaces.append(subj.t1_cat_resampled_surface_longitudinal)
 
