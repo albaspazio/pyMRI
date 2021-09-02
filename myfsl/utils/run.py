@@ -6,15 +6,18 @@
 #
 # Modified to serve pymri pipeline (January 2019)
 #
-# Author: Alberto Inuggi
+# Editor: Alberto Inuggi (last edit 02-09-21)
 #
 # changes:
 # 1) run function renamed to "rrun" and include a new kwargs  "logFile" containing the descriptor of the file to log to
 # 2) in case of error, rrun raise also the full stderr message (and log it to "logFile").
+# 3) added kwargs.get('stop_on_error', True) that, in case of error, may raises or not an exception that exit the processing
 #
-# rrun dosn't work with the following commands:
-# avscale " + T1 + "2std_skullcon.mat | grep Determinant | awk '{ print $3 }'
-# "fslreorient2std " + T1 + " > " + T1 + "_orig2std.mat"
+# rrun doesn't work with the following commands:
+# - avscale " + T1 + "2std_skullcon.mat | grep Determinant | awk '{ print $3 }'
+# - "fslreorient2std " + T1 + " > " + T1 + "_orig2std.mat"
+# - slicesdir
+
 """This module provides some functions for running shell commands.
 
 .. note:: The functions in this module are only known to work in Unix-like

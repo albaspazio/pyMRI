@@ -624,31 +624,7 @@ class SubjectEx:
         # ==============================================================================================================================================================
         # EXTRA
         # ==============================================================================================================================================================
-        if self.hasFMRI and self.hasRS:
-
-            # must create
-            rs2fmri = os.path.join(self.roi_fmri_dir, "rs2fmri")
-            fmri2rs = os.path.join(self.roi_rs_dir, "fmri2rs")
-
-            # linear   rs <-> hr <-> fmri
-            rs2hr   = os.path.join(self.roi_t1_dir, "rs2hr")
-            hr2fmri = os.path.join(self.roi_fmri_dir, "hr2fmri")
-            # => rs2fmri.mat
-            if os.path.isfile(rs2fmri + ".mat") is False:
-                rrun("convert_xfm -concat " + rs2hr + ".mat" + " " + hr2fmri + ".mat" + " -omat " + self.transform.rs2fmri + ".mat", logFile=log)
-            # => fmri2rs.mat
-            if os.path.exists(fmri2rs + ".mat") is False:
-                rrun("convert_xfm -inverse -omat " + fmri2rs + ".mat " + rs2fmri + ".mat")
-
-            # non-linear   rs <-> std <-> fmri
-            std2fmri = os.path.join(self.roi_fmri_dir, "std2fmri")
-
-            if imtest(rs2fmri + "_warp") is False:
-                rrun("convertwarp --ref=" + self.fmri_examplefunc + " --warp1=" + self.transform.rs2std + "_warp" + " --warp2=" + std2fmri + "_warp" + " --out=" + rs2fmri + "_warp", logFile=log)
-
-            if imtest(fmri2rs + "_warp") is False:
-                rrun("invwarp -r " + self.fmri_examplefunc + " -w " + rs2fmri + "_warp" + " -o " + fmri2rs + "_warp", logFile=log)
-
+        self.transform.transform_extra(logFile=log)
 
     # ==================================================================================================================================================
     # DATA CONVERSIONS
