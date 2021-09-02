@@ -7,14 +7,14 @@ from inspect import signature
 from copy import deepcopy
 
 from myfsl.utils.run import rrun
-from subject.Subject import Subject
+from subject.SubjectEx import SubjectEx
 from utility.SubjectsDataDict import SubjectsDataDict
 from utility.images import imcp, imrm
 from utility.utilities import gunzip, compress, copytree
 from utility import import_data_file
 
 
-class Project:
+class ProjectEx:
 
     def __init__(self, folder, globaldata, data="data.dat"):
 
@@ -83,7 +83,7 @@ class Project:
         subjects = self.get_subjects_labels(group_label)
         subjs = []
         for subj in subjects:
-            subjs.append(Subject(subj, sess_id, self))
+            subjs.append(SubjectEx(subj, sess_id, self))
         return subjs
 
     # ==================================================================================================================
