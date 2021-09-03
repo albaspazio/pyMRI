@@ -358,11 +358,11 @@ class SubjectTransformsEx:
         os.makedirs(self.subject.roi_std4_dir, exist_ok=True)
         # => hr2{std}4.mat
         if os.path.isfile(self.hr2std4_mat) is False:
-            rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + self.subject.std4_img + " -omat " + self.hr2std4_mat + ".mat -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+            rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + self.subject.std4_img + " -omat " + self.hr2std4_mat + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
         # => hrhead2{std}4.mat
         if os.path.isfile(hrhead2std4 + ".mat") is False:
-            rrun("flirt -in " + self.subject.t1_data + " -ref " + self.subject.std4_head_img + " -omat " + hrhead2std4 + ".mat -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+            rrun("flirt -in " + self.subject.t1_data + " -ref " + self.subject.std4_head_img + " -omat " + hrhead2std4 + ".mat" + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
         # # => {std}42hr.mat
         if os.path.isfile(self.std42hr_mat) is False:
@@ -976,6 +976,155 @@ class SubjectTransformsEx:
                 self.transform_roi("t2TOdti", pathtype="abs", outdir=l_dti, islin=True, rois=[self.subject.t2_brain_data])
                 self.transform_roi("dtiTOt2", pathtype="abs", outdir=nl_t2, outname=self.subject.label + "_nodif_data", islin=False, rois=[self.subject.dti_nodiff_data])
                 self.transform_roi("dtiTOt2", pathtype="abs", outdir=l_t2, outname=self.subject.label + "_nodif_brain_data", islin=True, rois=[self.subject.dti_nodiff_brain_data])
+
+    # open fsleyes with all sequence coregistered to given seq = [t1, t2, dti, rs, fmri, std, std4]
+    def view_space_images(self, seq):
+
+        outdir = os.path.join(self.subject.roi_dir, "check_coregistration", seq)
+        os.makedirs(outdir, exist_ok=True)
+
+        if seq == "t1":
+            if self.subject.hasFMRI:
+                self.transform_roi("fmriTOhr", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_nonlin", islin=False, rois=[self.subject.fmri_examplefunc])
+                self.transform_roi("fmriTOhr", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_lin",    islin=True, rois=[self.subject.fmri_examplefunc])
+
+            if self.subject.hasRS:
+                self.transform_roi("rsTOhr", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_nonlin", islin=False, rois=[self.subject.rs_examplefunc])
+                self.transform_roi("rsTOhr", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_lin",    islin=True, rois=[self.subject.rs_examplefunc])
+
+            if self.subject.hasDTI:
+                self.transform_roi("dtiTOhr", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_nonlin",          islin=False, rois=[self.subject.dti_nodiff_data])
+                self.transform_roi("dtiTOhr", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_brain_lin",       islin=True, rois=[self.subject.dti_nodiff_brain_data])
+
+            if self.subject.hasT2:
+                self.transform_roi("t2TOhr", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_nonlin",      islin=False, rois=[self.subject.t2_data])
+                self.transform_roi("t2TOhr", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_brain_lin",   islin=True, rois=[self.subject.t2_brain_data])
+
+            imcp(self.subject.t1_brain_data, outdir)
+
+        elif seq == "t2":
+            if self.subject.hasFMRI:
+                self.transform_roi("fmriTOt2", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_nonlin", islin=False, rois=[self.subject.fmri_examplefunc])
+                self.transform_roi("fmriTOt2", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_lin",    islin=True, rois=[self.subject.fmri_examplefunc])
+
+            if self.subject.hasRS:
+                self.transform_roi("rsTOt2", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_nonlin", islin=False, rois=[self.subject.rs_examplefunc])
+                self.transform_roi("rsTOt2", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_lin",    islin=True, rois=[self.subject.rs_examplefunc])
+
+            if self.subject.hasDTI:
+                self.transform_roi("dtiTOt2", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_nonlin",          islin=False, rois=[self.subject.dti_nodiff_data])
+                self.transform_roi("dtiTOt2", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_brain_lin",       islin=True, rois=[self.subject.dti_nodiff_brain_data])
+
+            if self.subject.hasT1:
+                self.transform_roi("hrTOt2", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_nonlin",      islin=False, rois=[self.subject.t1_data])
+                self.transform_roi("hrTOt2", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_brain_lin",   islin=True, rois=[self.subject.t1_brain_data])
+
+            imcp(self.subject.t2_brain_data, outdir)
+
+        elif seq == "dti":
+            if self.subject.hasFMRI:
+                self.transform_roi("fmriTOdti", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_nonlin", islin=False, rois=[self.subject.fmri_examplefunc])
+                self.transform_roi("fmriTOdti", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_lin",    islin=True, rois=[self.subject.fmri_examplefunc])
+
+            if self.subject.hasRS:
+                self.transform_roi("rsTOdti", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_nonlin", islin=False, rois=[self.subject.rs_examplefunc])
+                self.transform_roi("rsTOdti", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_lin",    islin=True, rois=[self.subject.rs_examplefunc])
+
+            if self.subject.hasT2:
+                self.transform_roi("t2TOdti", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_nonlin",    islin=False, rois=[self.subject.t2_data])
+                self.transform_roi("t2TOdti", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_brain_lin", islin=True, rois=[self.subject.t2_brain_data])
+
+            if self.subject.hasT1:
+                self.transform_roi("hrTOdti", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_nonlin",     islin=False, rois=[self.subject.t1_data])
+                self.transform_roi("hrTOdti", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_brain_lin",  islin=True, rois=[self.subject.t1_brain_data])
+
+            imcp(self.subject.dti_nodiff_brain_data, outdir)
+
+        elif seq == "rs":
+            if self.subject.hasFMRI:
+                self.transform_roi("fmriTOrs", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_nonlin", islin=False, rois=[self.subject.fmri_examplefunc])
+                self.transform_roi("fmriTOrs", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_lin",    islin=True, rois=[self.subject.fmri_examplefunc])
+
+            if self.subject.hasDTI:
+                self.transform_roi("dtiTOrs", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_nonlin",      islin=False, rois=[self.subject.dti_nodiff_data])
+                self.transform_roi("dtiTOrs", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_brain_lin",   islin=True, rois=[self.subject.dti_nodiff_brain_data])
+
+            if self.subject.hasT2:
+                self.transform_roi("t2TOrs", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_nonlin",    islin=False, rois=[self.subject.t2_data])
+                self.transform_roi("t2TOrs", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_brain_lin", islin=True, rois=[self.subject.t2_brain_data])
+
+            if self.subject.hasT1:
+                self.transform_roi("hrTOrs", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_nonlin",     islin=False, rois=[self.subject.t1_data])
+                self.transform_roi("hrTOrs", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_brain_lin",  islin=True, rois=[self.subject.t1_brain_data])
+
+            imcp(self.subject.rs_examplefunc, outdir)
+
+        elif seq == "fmri":
+            if self.subject.hasRS:
+                self.transform_roi("rsTOfmri", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_nonlin", islin=False, rois=[self.subject.rs_examplefunc])
+                self.transform_roi("rsTOfmri", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_lin",    islin=True, rois=[self.subject.rs_examplefunc])
+
+            if self.subject.hasDTI:
+                self.transform_roi("dtiTOfmri", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_nonlin",    islin=False, rois=[self.subject.dti_nodiff_data])
+                self.transform_roi("dtiTOfmri", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_brain_lin", islin=True, rois=[self.subject.dti_nodiff_brain_data])
+
+            if self.subject.hasT2:
+                self.transform_roi("t2TOfmri", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_nonlin",    islin=False, rois=[self.subject.t2_data])
+                self.transform_roi("t2TOfmri", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_brain_lin", islin=True, rois=[self.subject.t2_brain_data])
+
+            if self.subject.hasT1:
+                self.transform_roi("hrTOfmri", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_nonlin",     islin=False, rois=[self.subject.t1_data])
+                self.transform_roi("hrTOfmri", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_brain_lin",  islin=True, rois=[self.subject.t1_brain_data])
+
+            imcp(self.subject.fmri_examplefunc, outdir)
+
+        elif seq == "std":
+            if self.subject.hasRS:
+                self.transform_roi("rsTOstd", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_nonlin",    islin=False, rois=[self.subject.rs_examplefunc])
+                self.transform_roi("rsTOstd", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_lin",       islin=True, rois=[self.subject.rs_examplefunc])
+
+            if self.subject.hasFMRI:
+                self.transform_roi("fmriTOstd", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_nonlin", islin=False, rois=[self.subject.fmri_examplefunc])
+                self.transform_roi("fmriTOstd", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_lin",    islin=True, rois=[self.subject.fmri_examplefunc])
+
+            if self.subject.hasDTI:
+                self.transform_roi("dtiTOstd", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_nonlin",     islin=False, rois=[self.subject.dti_nodiff_data])
+                self.transform_roi("dtiTOstd", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_brain_lin",  islin=True, rois=[self.subject.dti_nodiff_brain_data])
+
+            if self.subject.hasT2:
+                self.transform_roi("t2TOstd", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_nonlin",     islin=False, rois=[self.subject.t2_data])
+                self.transform_roi("t2TOstd", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_brain_lin",  islin=True, rois=[self.subject.t2_brain_data])
+
+            if self.subject.hasT1:
+                self.transform_roi("hrTOstd", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_nonlin",     islin=False, rois=[self.subject.t1_data])
+                self.transform_roi("hrTOstd", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_brain_lin",  islin=True, rois=[self.subject.t1_brain_data])
+
+            imcp(self.subject.std_img, outdir)
+
+        elif seq == "std4":
+            if self.subject.hasRS:
+                self.transform_roi("rsTOstd4", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_nonlin",    islin=False, rois=[self.subject.rs_examplefunc])
+                self.transform_roi("rsTOstd4", pathtype="abs", outdir=outdir, outname=self.subject.label + "_rs_example_func_lin",       islin=True, rois=[self.subject.rs_examplefunc])
+
+            if self.subject.hasFMRI:
+                self.transform_roi("fmriTOstd4", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_nonlin", islin=False, rois=[self.subject.fmri_examplefunc])
+                self.transform_roi("fmriTOstd4", pathtype="abs", outdir=outdir, outname=self.subject.label + "_fmri_example_func_lin",    islin=True, rois=[self.subject.fmri_examplefunc])
+
+            if self.subject.hasDTI:
+                self.transform_roi("dtiTOstd4", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_nonlin",     islin=False, rois=[self.subject.dti_nodiff_data])
+                self.transform_roi("dtiTOstd4", pathtype="abs", outdir=outdir, outname=self.subject.label + "_nodif_brain_lin",  islin=True, rois=[self.subject.dti_nodiff_brain_data])
+
+            if self.subject.hasT2:
+                self.transform_roi("t2TOstd4", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_nonlin",     islin=False, rois=[self.subject.t2_data])
+                self.transform_roi("t2TOstd4", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t2_brain_lin",  islin=True, rois=[self.subject.t2_brain_data])
+
+            if self.subject.hasT1:
+                self.transform_roi("hrTOstd4", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_nonlin",     islin=False, rois=[self.subject.t1_data])
+                self.transform_roi("hrTOstd4", pathtype="abs", outdir=outdir, outname=self.subject.label + "_t1_brain_lin",  islin=True, rois=[self.subject.t1_brain_data])
+
+            imcp(self.subject.std4_img, outdir)
+
+        rrun("fsleyes " + outdir + "/*.*", stop_on_error=False)
 
     # ==================================================================================================================================================
     # GENERIC ROI TRANSFORMS

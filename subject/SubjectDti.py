@@ -38,7 +38,8 @@ class SubjectDti:
             rrun("eddy_correct " + self.subject.dti_data + " " + self.subject.dti_ec_data + " 0", logFile=logFile)
 
         if os.path.exists(self.subject.dti_rotated_bvec) is False:
-            rrun("fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_ec_data + ".ecclog", logFile=logFile)
+            os.system("bash fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_ec_data + ".ecclog")
+            # rrun("fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_ec_data + ".ecclog", logFile=logFile)
 
         if imtest(self.subject.dti_fit_data) is False:
             print("starting DTI fit on " + self.subject.label)
@@ -127,7 +128,7 @@ class SubjectDti:
         if structures != "":
             structures = " -str " + structures + " "
 
-        rrun("xtract_viewer -dir " + xdir + " -species " + species + "" + structures, logFile=logFile)
+        rrun("xtract_viewer -dir " + xdir + " -species " + species + "" + structures)
 
     def xtract_stats(self, xtract_dir="xtract", refspace="native", meas="vol,prob,length,FA,MD,L1", structures="", logFile=None):
 

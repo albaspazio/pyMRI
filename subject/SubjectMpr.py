@@ -598,6 +598,10 @@ class SubjectMpr:
                         spm_template_name="cat27_segment_customizedtemplate_tiv_smooth"
                         ):
 
+        if imtest(os.path.join(self.subject.t1_cat_dir, "mri", "y_T1_" + self.subject.label)) is True and do_overwrite is False:
+            print(self.subject.label + ": skipping cat_segment, already done")
+            return
+
         # define placeholder variables for input dir and image name
         if imgtype == 1:
             anatdir = os.path.join(self.subject.t1_dir, odn)
@@ -1125,7 +1129,7 @@ class SubjectMpr:
             #### TISSUE-TYPE SEGMENTATION (uses the t1_brain whichever created, not necessarly the bet one.)
             # required input: T1_biascorr + label-t1_brain + label-t1_brain_mask
             # output:  T1_biascorr (modified) + T1_biascorr_brain (modified) + T1_fast* (as normally output by fast) + T1_fast_bias (modified)
-            if imtest(T1 + "_fast_pve_1") is False or do_overwrite is True:
+            if (imtest(T1 + "_fast_pve_1") is False and imtest(os.path.join(self.subject.fast_dir, "T1_fast_pve_1")) is False) or do_overwrite is True:
                 if do_seg is True:
 
                     print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))

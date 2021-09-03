@@ -227,16 +227,16 @@ class SubjectEpi:
 
         print(self.subject.label + ": coregister fast-highres to epi")
 
-        if imtest(self.subject.rs_mask_t1_wmseg4nuis_epi) is False:
+        if imtest(self.subject.rs_mask_t1_wmseg4nuis) is False:
             # regtype, pathtype="standard", mask="", orf="", thresh=0.2, islin=True, std_img="", rois=[]):
-            self.subject.transform.transform_roi("hrTOepi", "abs", rois=[self.subject.t1_segment_wm_ero_path])
+            self.subject.transform.transform_roi("hrTOrs", "abs", rois=[self.subject.t1_segment_wm_ero_path])
 
-        if imtest(self.subject.rs_mask_t1_csfseg4nuis_epi) is False:
+        if imtest(self.subject.rs_mask_t1_csfseg4nuis) is False:
             # regtype, pathtype="standard", mask="", orf="", thresh=0.2, islin=True, std_img="", rois=[]):
-            self.subject.transform.transform_roi("hrTOepi", "abs", rois=[self.subject.t1_segment_csf_ero_path])
+            self.subject.transform.transform_roi("hrTOrs", "abs", rois=[self.subject.t1_segment_csf_ero_path])
 
-        rrun("fslmeants -i " + in_img + " -o " + series_wm + " -m " + self.subject.rs_mask_t1_wmseg4nuis_epi + " --no_bin")
-        rrun("fslmeants -i " + in_img + " -o " + series_csf + " -m " + self.subject.rs_mask_t1_csfseg4nuis_epi + " --no_bin")
+        rrun("fslmeants -i " + in_img + " -o " + series_wm + " -m " + self.subject.rs_mask_t1_wmseg4nuis + " --no_bin")
+        rrun("fslmeants -i " + in_img + " -o " + series_csf + " -m " + self.subject.rs_mask_t1_csfseg4nuis + " --no_bin")
 
         if os.path.isfile(series_csf) and os.path.isfile(series_wm):
             os.system("paste " + series_wm + " " + series_csf + " > " + output_series)

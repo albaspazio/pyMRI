@@ -199,8 +199,8 @@ class Subject:
         self.rs_regstd_aroma_dir    = os.path.join(self.rs_aroma_dir, "reg_standard")
         self.rs_regstd_aroma_image  = os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data")
 
-        self.rs_mask_t1_wmseg4nuis_epi  = os.path.join(self.roi_dir, "reg_rs", "mask_t1_wmseg4Nuisance_epi")
-        self.rs_mask_t1_csfseg4nuis_epi = os.path.join(self.roi_dir, "reg_rs", "mask_t1_csfseg4Nuisance_epi")
+        self.rs_mask_t1_wmseg4nuis  = os.path.join(self.roi_dir, "reg_rs", "mask_t1_wmseg4Nuisance_rs")
+        self.rs_mask_t1_csfseg4nuis = os.path.join(self.roi_dir, "reg_rs", "mask_t1_csfseg4Nuisance_rs")
 
         self.rs2std_warp    = os.path.join(self.roi_std_dir, "rs2std_warp")
         self.std2rs_warp    = os.path.join(self.roi_rs_dir, "std2rs_warp")
@@ -388,8 +388,8 @@ class Subject:
 
         self.has_T2         = 0
         BET_F_VALUE_T2      = "0.5"
-        feat_preproc_model  = os.path.join(self.project.script_dir, "glm", "../templates", feat_preproc_model)
-        melodic_model       = os.path.join(self.project.script_dir, "glm", "../templates", mel_preproc_model)
+        feat_preproc_model  = os.path.join(self.project.script_dir, "glm", "templates", feat_preproc_model)
+        melodic_model       = os.path.join(self.project.script_dir, "glm", "templates", mel_preproc_model)
 
         # ==============================================================================================================================================================
         #  T1 data
@@ -593,7 +593,7 @@ class Subject:
         # ==============================================================================================================================================================
         # T2 data
         # ==============================================================================================================================================================
-        if os.path.isdir(self.de_dir) is True:
+        if os.path.isdir(self.t2_dir) is True:
             if imtest(self.t2_data) is True:
                 self.has_T2 = True
                 os.makedirs(os.path.join(self.roi_dir, "reg_t2"), exist_ok=True)

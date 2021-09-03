@@ -174,8 +174,8 @@ class SubjectEx:
         self.rs_regstd_aroma_dir    = os.path.join(self.rs_aroma_dir, "reg_standard")
         self.rs_regstd_aroma_image  = os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data")
 
-        self.rs_mask_t1_wmseg4nuis_epi  = os.path.join(self.roi_dir, "reg_rs", "mask_t1_wmseg4Nuisance_epi")
-        self.rs_mask_t1_csfseg4nuis_epi = os.path.join(self.roi_dir, "reg_rs", "mask_t1_csfseg4Nuisance_epi")
+        self.rs_mask_t1_wmseg4nuis  = os.path.join(self.roi_dir, "reg_rs", "mask_t1_wmseg4Nuisance_rs")
+        self.rs_mask_t1_csfseg4nuis = os.path.join(self.roi_dir, "reg_rs", "mask_t1_csfseg4Nuisance_rs")
 
         # self.rs_post_nuisance_std4_image_label          = self.rs_image_label + "_preproc_aroma_nuisance_std4"
         # self.rs_post_nuisance_melodic_std4_image_label  = self.rs_image_label + "_preproc_aroma_nuisance_melodic_std4"
@@ -242,7 +242,6 @@ class SubjectEx:
             self.sessid = sess
             return self
 
-
     def set_templates(self, stdimg=""):
 
         if stdimg == "":
@@ -276,7 +275,6 @@ class SubjectEx:
             res2 = read_header(self.std4_img, ["dx"])["dx"]
             if res1 != "4" or res2 != "4":
                 raise Exception("Error in set_templates. given custom 4mm template have a different resolution")
-
 
     # ==================================================================================================
     # GENERAL
@@ -364,8 +362,8 @@ class SubjectEx:
                  do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0):
 
         BET_F_VALUE_T2      = "0.5"
-        feat_preproc_model  = os.path.join(self.project.script_dir, "glm", "../templates", feat_preproc_model)
-        melodic_model       = os.path.join(self.project.script_dir, "glm", "../templates", mel_preproc_model)
+        feat_preproc_model  = os.path.join(self.project.script_dir, "glm", "templates", feat_preproc_model)
+        melodic_model       = os.path.join(self.project.script_dir, "glm", "templates", mel_preproc_model)
 
         # ==============================================================================================================================================================
         #  T1 data
@@ -546,22 +544,22 @@ class SubjectEx:
                 # mask from preproc feat
                 mask = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "mask")
                 if imtest(self.rs_final_regstd_mask + "_mask") is False:
-                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self.std4_head_img, islin=False, rois=[mask])
+                    self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[mask])
                     imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask", logFile=log)
 
                 # mask from example_function (the one used to calculate all the co-registrations)
                 if imtest(self.rs_final_regstd_mask) is False:
-                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self.std4_head_img, islin=False, rois=[self.rs_examplefunc_mask])
+                    self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[self.rs_examplefunc_mask])
                     imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask, logFile=log)
 
                 # brain
                 if imtest(self.rs_final_regstd_bgimage) is False:
-                    self.transform.transform_roi("hrTOstd4", "abs", stdimg=self.std4_head_img, islin=False, rois=[self.t1_brain_data])
+                    self.transform.transform_roi("hrTOstd4", "abs", islin=False, rois=[self.t1_brain_data])
                     imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage, logFile=log)
 
                 # functional data
                 if imtest(self.rs_final_regstd_image) is False:
-                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self.std4_head_img, islin=False, rois=[postnuisance])
+                    self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[postnuisance])
                     immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image, logFile=log)
 
                 log.close()
@@ -569,9 +567,9 @@ class SubjectEx:
         # ==============================================================================================================================================================
         # T2 data
         # ==============================================================================================================================================================
-        if os.path.isdir(self.de_dir) is True:
+        if os.path.isdir(self.t2_dir) is True:
             if imtest(self.t2_data) is True:
-                self.has_T2 = True
+                self.hasT2 = True
                 os.makedirs(os.path.join(self.roi_dir, "reg_t2"), exist_ok=True)
 
             if imtest(self.t2_brain_data) is False:
@@ -766,5 +764,9 @@ class SubjectEx:
 
         rrun("fslmerge " + dimension + " " + outputname + " " + " ".join(input_files))
         os.chdir(cur_dir)
+
+
+
+
     # ==================================================================================================================================================
 
