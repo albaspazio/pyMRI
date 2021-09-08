@@ -50,8 +50,9 @@ class SubjectTransformsEx:
         #self.fmri2hr_warp does not exist
         self.fmri2hr_mat    = os.path.join(self.subject.roi_t1_dir, "fmri2hr.mat")
 
-        self.dti2hr_warp      = os.path.join(self.subject.roi_t1_dir, "dti2hr_warp")    # when t2 is available
-        self.dti2hr_mat       = os.path.join(self.subject.roi_t1_dir, "dti2hr.mat")     # TODO: decide whether using direct or through-T2
+        self.dti2hr_warp    = os.path.join(self.subject.roi_t1_dir, "dti2hr_warp")    # when t2 is available
+        self.dti2hr_mat     = os.path.join(self.subject.roi_t1_dir, "dti2hr.mat")     # TODO: decide whether using direct or through-T2
+        self.dtihead2hr_mat = os.path.join(self.subject.roi_t1_dir, "dtihead2hr.mat")     #
 
         #self.t22hr_warp  does not exist
         self.t22hr_mat      = os.path.join(self.subject.roi_t1_dir, "t22hr.mat")
@@ -133,6 +134,7 @@ class SubjectTransformsEx:
 
         self.t22dti_warp      = os.path.join(self.subject.roi_dti_dir, "t22dti_warp")
         self.t22dti_mat       = os.path.join(self.subject.roi_dti_dir, "t22dti.mat")
+        self.t2head2dti_mat   = os.path.join(self.subject.roi_dti_dir, "t2head2dti.mat")     #
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # TO T2 (from std, hr, dti)
@@ -600,7 +602,11 @@ class SubjectTransformsEx:
         # DTI <------> HIGHRES (linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if os.path.exists(self.dti2hr_mat) is False:
-            rrun("flirt -in " + self.subject.dti_nodiff_data + "_brain" + " -ref " + self.subject.t1_brain_data + " -omat " + self.dti2hr_mat +
+            rrun("flirt -in " + self.subject.dti_nodiff_brain_data + " -ref " + self.subject.t1_brain_data + " -omat " + self.dti2hr_mat +
+                " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 7 -interp trilinear", logFile=logFile)
+
+        if os.path.exists(self.dtihead2hr_mat) is False:
+            rrun("flirt -in " + self.subject.dti_nodiff_data + " -ref " + self.subject.t1_data + " -omat " + self.dtihead2hr_mat +
                 " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 7 -interp trilinear", logFile=logFile)
 
         if os.path.exists(self.hr2dti_mat) is False:
@@ -613,7 +619,7 @@ class SubjectTransformsEx:
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # dti --> std
             if imtest(self.dti2std_warp) is False:
-                rrun("convertwarp --ref=" + self.subject.std_head_img + " --premat=" + self.dti2hr_mat + " --warp1=" + self.hr2std_warp + " --out=" + self.dti2std_warp, logFile=logFile)
+                rrun("convertwarp --ref=" + self.subject.std_head_img + " --premat=" + self.dtihead2hr_mat + " --warp1=" + self.hr2std_warp + " --out=" + self.dti2std_warp, logFile=logFile)
 
             if os.path.exists(self.dti2std_mat) is False:
                 rrun("convert_xfm -omat " + self.dti2std_mat + " -concat " + self.dti2hr_mat + " " + self.hr2std_mat, logFile=logFile)
@@ -634,15 +640,19 @@ class SubjectTransformsEx:
             if os.path.exists(self.t22dti_mat) is False:
                 rrun("flirt -in " + self.subject.t2_brain_data + " -ref " + self.subject.dti_nodiff_brain_data + " -omat " + self.t22dti_mat +
                     " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
+
+            if os.path.exists(self.t2head2dti_mat) is False:
+                rrun("flirt -in " + self.subject.t2_data + " -ref " + self.subject.dti_nodiff_data + " -omat " + self.t2head2dti_mat +
+                    " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
+
             # non-linear
             if imtest(self.t22dti_warp) is False:
-                rrun("fnirt --in=" + self.subject.t2_data + " --ref=" + self.subject.dti_nodiff_data + " --aff=" + self.t22dti_mat + " --cout=" + self.t22dti_warp, logFile=logFile)
+                rrun("fnirt --in=" + self.subject.t2_data + " --ref=" + self.subject.dti_nodiff_data + " --aff=" + self.t2head2dti_mat + " --cout=" + self.t22dti_warp, logFile=logFile)
 
             # dti -> t2
             # linear
             if os.path.exists(self.dti2t2_mat) is False:
-                rrun("convert_xfm -omat " + self.dti2t2_mat + " -inverse " + self.t22dti_mat,
-                     logFile=logFile)
+                rrun("convert_xfm -omat " + self.dti2t2_mat + " -inverse " + self.t22dti_mat, logFile=logFile)
             # non-linear
             if imtest(self.dti2t2_warp) is False:
                 rrun("invwarp -r " + self.subject.dti_nodiff_data + " -w " + self.t22dti_warp + " -o " + self.dti2t2_warp, logFile=logFile)
@@ -653,8 +663,7 @@ class SubjectTransformsEx:
             # t2 -> hr linear
             if os.path.exists(self.t22hr_mat) is False:
                 rrun("flirt -in " + self.subject.t2_brain_data + " -ref " + self.subject.t1_brain_data + " -omat " + self.t22hr_mat +
-                    " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear",
-                    logFile=logFile)
+                    " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
 
             # hr -> t2 linear
             if os.path.exists(self.hr2t2_mat) is False:
@@ -674,7 +683,7 @@ class SubjectTransformsEx:
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # t2 --> std
             if imtest(self.t22std_warp) is False:
-                rrun("convertwarp --ref=" + self.subject.std_head_img + " --premat=" + self.t22hr_mat +" --warp1=" + self.hr2std_warp + " --out=" + self.dti2std_warp, logFile=logFile)
+                rrun("convertwarp --ref=" + self.subject.std_head_img + " --premat=" + self.t22hr_mat +" --warp1=" + self.hr2std_warp + " --out=" + self.t22std_warp, logFile=logFile)
 
             if imtest(self.t22std_mat) is False:
                 rrun("convert_xfm -concat " + self.t22hr_mat + " " + self.hr2std_mat + " -omat " + self.t22std_mat, logFile=logFile)
@@ -692,7 +701,7 @@ class SubjectTransformsEx:
             # overwrites
             # dti --> std
             if imtest(self.dti2std_warp) is False:
-                rrun("convertwarp --ref=" + self.subject.std_head_img + " --warp1=" + self.dti2t2_warp + " --midmat=" + self.hr2t2_mat + " --warp2=" + self.hr2std_warp + " --out=" + self.dti2std_warp, logFile=logFile)
+                rrun("convertwarp --ref=" + self.subject.std_head_img + " --warp1=" + self.dti2t2_warp + " --midmat=" + self.t22hr_mat + " --warp2=" + self.hr2std_warp + " --out=" + self.dti2std_warp, logFile=logFile)
 
             if os.path.exists(self.dti2std_mat) is False:
                 rrun("convert_xfm -omat " + self.dti2std_mat + " -concat " + self.dti2hr_mat + " " + self.hr2std_mat, logFile=logFile)

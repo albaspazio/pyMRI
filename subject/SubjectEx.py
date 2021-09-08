@@ -322,6 +322,47 @@ class SubjectEx:
 
         return missing_images
 
+    def check_template(self):
+
+        can_process_std4 = True
+        missing_images = ""
+
+        if imtest(self.t1_brain_data) is False:
+            print("file T1_BRAIN_DATA: " + self.t1_brain_data + ".nii.gz is not present...exiting transforms_mpr")
+            missing_images = missing_images + "T1_BRAIN_DATA: " + self.t1_brain_data + " "
+
+        if imtest(self.t1_data) is False:
+            print("file T1_DATA: " + self.t1_data + ".nii.gz is not present...exiting transforms_mpr")
+            missing_images = missing_images + "T1_DATA: " + self.t1_data + " "
+
+        # check template
+        if imtest(self.std_img) is False:
+            print("ERROR: file std_img: " + self.std_img + ".nii.gz is not present...exiting transforms_mpr")
+            missing_images = missing_images + "T1_DATA: " + self.t1_data + " "
+
+
+        if imtest(self.std_head_img) is False:
+            print("ERROR: file std_img: " + self.std_head_img + ".nii.gz is not present...exiting transforms_mpr")
+            missing_images = missing_images + "T1_DATA: " + self.t1_data + " "
+
+
+        if imtest(self.std_img_mask_dil) is False:
+            print("ERROR: file std_img_mask_dil: " + self.std_img_mask_dil + ".nii.gz is not present...exiting transforms_mpr")
+            missing_images = missing_images + "T1_DATA: " + self.t1_data + " "
+
+        if imtest(self.std4_img) is False:
+            print("WARNING: file std4_img: " + self.std4_img + ".nii.gz is not present...skipping STD4 transform")
+            can_process_std4 = False
+
+        if imtest(self.std4_head_img) is False:
+            print("WARNING: file std4_head_img: " + self.std4_head_img + ".nii.gz is not present...skipping STD4 transform")
+            can_process_std4 = False
+
+        if imtest(self.std4_img_mask_dil) is False:
+            print("WARNING: file std4_img_mask_dil: " + self.std4_img_mask_dil + ".nii.gz is not present...skipping STD4 transform")
+            can_process_std4 = False
+
+        return missing_images, can_process_std4
     def reslice_image(self, direction):
 
         if direction == "sag->axial":
@@ -567,10 +608,10 @@ class SubjectEx:
         # ==============================================================================================================================================================
         # T2 data
         # ==============================================================================================================================================================
-        if os.path.isdir(self.t2_dir) is True:
-            if imtest(self.t2_data) is True:
-                self.hasT2 = True
-                os.makedirs(os.path.join(self.roi_dir, "reg_t2"), exist_ok=True)
+        if os.path.isdir(self.t2_dir) is True and imtest(self.t2_data) is True:
+
+            self.hasT2 = True
+            os.makedirs(os.path.join(self.roi_dir, "reg_t2"), exist_ok=True)
 
             if imtest(self.t2_brain_data) is False:
                 print(self.label + " : bet on t2")
@@ -579,11 +620,11 @@ class SubjectEx:
         # ==============================================================================================================================================================
         # DTI data
         # ==============================================================================================================================================================
-        if os.path.isdir(self.dti_dir) is True and do_dtifit is True:
+        if os.path.isdir(self.dti_dir) is True:
             log_file = os.path.join(self.dti_dir, "log_dti_processing.txt")
             log = open(log_file, "a")
 
-            if imtest(os.path.join(self.dti_dir, self.dti_fit_label + "_FA")) is False:
+            if imtest(os.path.join(self.dti_dir, self.dti_fit_label + "_FA")) is False and do_dtifit is True:
                 print("===========>>>> " + self.label + " : dtifit")
                 self.dti.ec_fit()
 
@@ -594,9 +635,8 @@ class SubjectEx:
 
             self.transform.transform_dti_t2()
 
-            if imtest(os.path.join(self.dti_dir, bedpost_odn, "mean_S0samples")) is False:
-                if os.path.isfile(os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz")) is True:
-                    runsystem("gunzip " + os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz"), logFile=log)
+            if os.path.isfile(os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz")) is True:
+                runsystem("gunzip " + os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz"), logFile=log)
 
             if do_bedx is True:
                 self.dti.bedpostx(bedpost_odn, use_gpu=do_bedx_gpu)  # .sh $SUBJ_NAME $PROJ_DIR $BEDPOST_OUTDIR_NAME

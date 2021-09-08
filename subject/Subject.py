@@ -428,7 +428,7 @@ class Subject:
                  do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0,
                  std_image_brain=""):
 
-        self.has_T2         = 0
+        self.hasT2         = False
         BET_F_VALUE_T2      = "0.5"
         feat_preproc_model  = os.path.join(self.project.script_dir, "glm", "templates", feat_preproc_model)
         melodic_model       = os.path.join(self.project.script_dir, "glm", "templates", mel_preproc_model)
@@ -612,22 +612,22 @@ class Subject:
                 # mask from preproc feat
                 mask = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "mask")
                 if imtest(self.rs_final_regstd_mask + "_mask") is False:
-                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[mask])
+                    self.transform.transform_roi("rsTOstd4", "abs", stdimg="", islin=False, rois=[mask])
                     imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask", logFile=log)
 
                 # mask from example_function (the one used to calculate all the co-registrations)
                 if imtest(self.rs_final_regstd_mask) is False:
-                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[self.rs_examplefunc_mask])
+                    self.transform.transform_roi("rsTOstd4", "abs", stdimg="", islin=False, rois=[self.rs_examplefunc_mask])
                     imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask, logFile=log)
 
                 # brain
                 if imtest(self.rs_final_regstd_bgimage) is False:
-                    self.transform.transform_roi("hrTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[self.t1_brain_data])
+                    self.transform.transform_roi("hrTOstd4", "abs", stdimg="", islin=False, rois=[self.t1_brain_data])
                     imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage, logFile=log)
 
                 # functional data
                 if imtest(self.rs_final_regstd_image) is False:
-                    self.transform.transform_roi("epiTOstd4", "abs", stdimg=self._global.fsl_std_mni_4mm_head, islin=False, rois=[postnuisance])
+                    self.transform.transform_roi("rsTOstd4", "abs", stdimg="", islin=False, rois=[postnuisance])
                     immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image, logFile=log)
 
                 log.close()
@@ -635,10 +635,9 @@ class Subject:
         # ==============================================================================================================================================================
         # T2 data
         # ==============================================================================================================================================================
-        if os.path.isdir(self.t2_dir) is True:
-            if imtest(self.t2_data) is True:
-                self.has_T2 = True
-                os.makedirs(os.path.join(self.roi_dir, "reg_t2"), exist_ok=True)
+        if os.path.isdir(self.t2_dir) is True and imtest(self.t2_data) is True:
+            self.hasT2 = True
+            os.makedirs(os.path.join(self.roi_dir, "reg_t2"), exist_ok=True)
 
             if imtest(self.t2_brain_data) is False:
                 print(self.label + " : bet on t2")
