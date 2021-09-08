@@ -758,8 +758,8 @@ class SubjectTransformsEx:
                 self.transform_roi("hrTOstd",    pathtype="abs",  outdir=l_std   , islin=True,  rois=[self.subject.t1_brain_data])
 
             if extended is True and "std" in _from and "hr" in _to:
-                self.transform_roi("stdTOhr",    pathtype="abs", outdir=nl_t1   , islin=False, rois=[std_head_img])
-                self.transform_roi("stdTOhr",    pathtype="abs",  outdir=l_t1   , islin=True,  rois=[std_img])
+                self.transform_roi("stdTOhr",    pathtype="abs", outdir=nl_t1   , islin=False, rois=[self.subject.std_head_img])
+                self.transform_roi("stdTOhr",    pathtype="abs",  outdir=l_t1   , islin=True,  rois=[self.subject.std_img])
 
             if self.subject.hasRS is True:  # connect HR with STD4
 
@@ -768,8 +768,8 @@ class SubjectTransformsEx:
                     self.transform_roi("hrTOstd4", pathtype="abs", outdir=l_std4, islin=True, rois=[self.subject.t1_brain_data])
 
                 if extended is True and "std4" in _from and "hr" in _to:
-                    self.transform_roi("std4TOhr", pathtype="abs", outdir=nl_t1, islin=False, rois=[std4_head_img])
-                    self.transform_roi("std4TOhr", pathtype="abs", outdir=l_t1, islin=True, rois=[std4_img])
+                    self.transform_roi("std4TOhr", pathtype="abs", outdir=nl_t1, islin=False, rois=[self.subject.std4_head_img])
+                    self.transform_roi("std4TOhr", pathtype="abs", outdir=l_t1, islin=True, rois=[self.subject.std4_img])
         else:
             print("ERROR...T1 is missing......exiting")
             return
@@ -805,16 +805,16 @@ class SubjectTransformsEx:
                 self.transform_roi("rsTOstd",   pathtype="abs", outdir=l_std    , outname=self.subject.label + "_rs_examplefunc", islin=True,    rois=[exfun])
 
             if extended is True and "std" in _from and "rs" in _to:
-                self.transform_roi("stdTOrs",   pathtype="abs", outdir=nl_rs   , islin=False,   rois=[std_head_img])
-                self.transform_roi("stdTOrs",   pathtype="abs", outdir=l_rs    , islin=True,    rois=[std_img])
+                self.transform_roi("stdTOrs",   pathtype="abs", outdir=nl_rs   , islin=False,   rois=[self.subject.std_head_img])
+                self.transform_roi("stdTOrs",   pathtype="abs", outdir=l_rs    , islin=True,    rois=[self.subject.std_img])
 
             if "rs" in _from and "std4" in _to:
                 self.transform_roi("rsTOstd4",  pathtype="abs", outdir=nl_std4   , outname=self.subject.label + "_rs_examplefunc", islin=False,   rois=[exfun])
                 self.transform_roi("rsTOstd4",  pathtype="abs", outdir=l_std4    , outname=self.subject.label + "_rs_examplefunc", islin=True,    rois=[exfun])
 
             if extended is True and "std4" in _from and "rs" in _to:
-                self.transform_roi("std4TOrs",  pathtype="abs", outdir=nl_rs   , islin=False,   rois=[std4_head_img])
-                self.transform_roi("std4TOrs",  pathtype="abs", outdir=l_rs    , islin=True,    rois=[std4_img])
+                self.transform_roi("std4TOrs",  pathtype="abs", outdir=nl_rs   , islin=False,   rois=[self.subject.std4_head_img])
+                self.transform_roi("std4TOrs",  pathtype="abs", outdir=l_rs    , islin=True,    rois=[self.subject.std4_img])
 
             if self.subject.hasFMRI:    # connect RS with FMRI
 
@@ -865,8 +865,8 @@ class SubjectTransformsEx:
                 self.transform_roi("fmriTOstd", pathtype="abs", outdir=l_std,  outname=self.subject.label + "_fmri_example_func", islin=True,    rois=[exfun])
 
             if extended is True and "std" in _from and "fmri" in _to:
-                self.transform_roi("stdTOfmri", pathtype="abs", outdir=nl_fmri, islin=False,  rois=[std_head_img])
-                self.transform_roi("stdTOfmri", pathtype="abs", outdir=l_fmri, islin=True,    rois=[std_img])
+                self.transform_roi("stdTOfmri", pathtype="abs", outdir=nl_fmri, islin=False,  rois=[self.subject.std_head_img])
+                self.transform_roi("stdTOfmri", pathtype="abs", outdir=l_fmri, islin=True,    rois=[self.subject.std_img])
 
             if self.subject.hasRS:
 
@@ -875,8 +875,8 @@ class SubjectTransformsEx:
                     self.transform_roi("fmriTOstd4", pathtype="abs", outdir=l_std4, outname=self.subject.label + "_fmri_example_func", islin=True,   rois=[exfun])
 
                 if extended is True and "std4" in _from and "fmri" in _to:
-                    self.transform_roi("std4TOfmri", pathtype="abs", outdir=nl_fmri, islin=False, rois=[std4_head_img])
-                    self.transform_roi("std4TOfmri", pathtype="abs", outdir=l_fmri, islin=True,   rois=[std4_img])
+                    self.transform_roi("std4TOfmri", pathtype="abs", outdir=nl_fmri, islin=False, rois=[self.subject.std4_head_img])
+                    self.transform_roi("std4TOfmri", pathtype="abs", outdir=l_fmri, islin=True,   rois=[self.subject.std4_img])
 
         # --------------------------------------------------------------
         #  FROM T2 <--> HR
@@ -905,8 +905,8 @@ class SubjectTransformsEx:
                 self.transform_roi("t2TOstd" , pathtype="abs",  outdir=l_std  , islin=True,  rois=[self.subject.t2_brain_data])
 
             if extended is True and "std" in _from and "t2" in _to:
-                self.transform_roi("stdTOt2" , pathtype="abs",  outdir=nl_t2  , islin=False, rois=[std_head_img])
-                self.transform_roi("stdTOt2" , pathtype="abs",  outdir=l_t2   , islin=True,  rois=[std_img])
+                self.transform_roi("stdTOt2" , pathtype="abs",  outdir=nl_t2  , islin=False, rois=[self.subject.std_head_img])
+                self.transform_roi("stdTOt2" , pathtype="abs",  outdir=l_t2   , islin=True,  rois=[self.subject.std_img])
 
         # --------------------------------------------------------------
         #  FROM DTI <--> HR
@@ -937,8 +937,8 @@ class SubjectTransformsEx:
                 self.transform_roi("dtiTOstd" , pathtype="abs",  outdir=l_std  , outname=self.subject.label + "_nodif_brain_data", islin=True,  rois=[self.subject.dti_nodiff_brain_data])
 
             if extended is True and "std" in _from and "dti" in _to:
-                self.transform_roi("stdTOdti" , pathtype="abs",  outdir=nl_dti , islin=False, rois=[std_head_img])
-                self.transform_roi("stdTOdti" , pathtype="abs",  outdir=l_dti  , islin=True,  rois=[std_img])
+                self.transform_roi("stdTOdti" , pathtype="abs",  outdir=nl_dti , islin=False, rois=[self.subject.std_head_img])
+                self.transform_roi("stdTOdti" , pathtype="abs",  outdir=l_dti  , islin=True,  rois=[self.subject.std_img])
 
             if self.subject.hasT2 is True:
 
