@@ -346,6 +346,48 @@ class Subject:
 
         return missing_images
 
+    def check_template(self):
+
+        can_process_std4 = True
+        missing_images = ""
+
+        if imtest(self.t1_brain_data) is False:
+            print("file T1_BRAIN_DATA: " + self.t1_brain_data + ".nii.gz is not present...exiting transforms_mpr")
+            missing_images = missing_images + "T1_BRAIN_DATA: " + self.t1_brain_data + " "
+
+        if imtest(self.t1_data) is False:
+            print("file T1_DATA: " + self.t1_data + ".nii.gz is not present...exiting transforms_mpr")
+            missing_images = missing_images + "T1_DATA: " + self.t1_data + " "
+
+        # check template
+        if imtest(self.std_img) is False:
+            print("ERROR: file std_img: " + self.std_img + ".nii.gz is not present...exiting transforms_mpr")
+            missing_images = missing_images + "T1_DATA: " + self.t1_data + " "
+
+
+        if imtest(self.std_head_img) is False:
+            print("ERROR: file std_img: " + self.std_head_img + ".nii.gz is not present...exiting transforms_mpr")
+            missing_images = missing_images + "T1_DATA: " + self.t1_data + " "
+
+
+        if imtest(self.std_img_mask_dil) is False:
+            print("ERROR: file std_img_mask_dil: " + self.std_img_mask_dil + ".nii.gz is not present...exiting transforms_mpr")
+            missing_images = missing_images + "T1_DATA: " + self.t1_data + " "
+
+        if imtest(self.std4_img) is False:
+            print("WARNING: file std4_img: " + self.std4_img + ".nii.gz is not present...skipping STD4 transform")
+            can_process_std4 = False
+
+        if imtest(self.std4_head_img) is False:
+            print("WARNING: file std4_head_img: " + self.std4_head_img + ".nii.gz is not present...skipping STD4 transform")
+            can_process_std4 = False
+
+        if imtest(self.std4_img_mask_dil) is False:
+            print("WARNING: file std4_img_mask_dil: " + self.std4_img_mask_dil + ".nii.gz is not present...skipping STD4 transform")
+            can_process_std4 = False
+
+        return missing_images, can_process_std4
+
     def reslice_image(self, direction):
 
         if direction == "sag->axial":
