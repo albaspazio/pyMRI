@@ -2,7 +2,7 @@ import os
 
 from myfsl.utils.run import rrun
 from utility.fslfun import runsystem
-from utility.images import imtest, imcp, imgname, remove_ext, read_header
+from utility.images import imtest, imcp
 
 # Class contains all the available transformations across different sequences.
 #
@@ -228,49 +228,19 @@ class SubjectTransformsEx:
             "hrTOt2": self.transform_nl_hr2t2,
             "dtiTOt2": self.transform_nl_dti2t2
         }
-        
-    def fnirt(self, ref, ofn="", odp="", refmask="", inimg="t1"):
 
-        if inimg == "t1_brain":
-            img = self.subject.t1_brain_data
-        elif inimg == "t1":
-            img = self.subject.t1_data
-        elif inimg == "t2_brain":
-            img = self.subject.t2_brain_data
-        elif inimg == "t2":
-            img = self.subject.t2_brain
-        else:
-            print("ERROR in fnirt: unknown input image....returning")
-            return
 
-        if odp == "":
-            odp = os.path.dirname(ref)
+    def flirt(self, inimg, ref, omat, params=" -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear"):
 
-        if ofn == "":
-            ofn = imgname(img) + "_2_" + imgname(ref)
-
-        # inputs sanity check
-        if imtest(img) is False:
-            print("ERROR in fnirt: specified input image does not exist......returning")
+        if imtest(inimg) is False:
+            print("ERROR in flirt: input image (" + inimg + ") is not valid....exiting")
             return
 
         if imtest(ref) is False:
-            print("ERROR in fnirt: specified ref image does not exist......returning")
+            print("ERROR in flirt: ref image (" + ref + ") is not valid....exiting")
             return
 
-        if os.path.isdir(odp) is False:
-            print("ERROR in fnirt: specified output path does not exist......creating it !!")
-            os.makedirs(odp, exist_ok=True)
-
-        REF_STRING = ""
-        if refmask != "":
-            if imtest(refmask) is False:
-                print("ERROR in fnirt: specified refmask image does not exist......returning")
-                return
-            REF_STRING = " --refmask=" + refmask
-
-        rrun("flirt -in " + img + " -ref " + ref + " -omat " + os.path.join(odp, ofn + ".mat") + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
-        rrun("fnirt --iout= " + os.path.join(odp, ofn) + " --in=" + inimg + " --aff=" + os.path.join(odp, ofn + ".mat") + " --ref=" + ref + REF_STRING)
+        rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + self.subject.std_img + " -omat " + self.hr2std_mat + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
     # ==================================================================================================================================================
     # MAIN SEQUENCES TRANSFORMS
@@ -283,8 +253,8 @@ class SubjectTransformsEx:
     #                   hr2std4_mat, std42hr_mat, hr2std4_warp, std42hr_warp,           hrhead2std4.mat
     def transform_mpr(self, logFile=None):
 
-        hrhead2std      = os.path.join(self.subject.roi_std_dir,  "hrhead2" + self.subject.std_img_label)
-        hrhead2std4     = os.path.join(self.subject.roi_std4_dir, "hrhead2" + self.subject.std_img_label + "4")
+        hrhead2std      = os.path.join(self.subject.roi_std_dir,  "hrhead2" + self.subject.std_img_label + ".mat")
+        hrhead2std4     = os.path.join(self.subject.roi_std4_dir, "hrhead2" + self.subject.std_img_label + "4.mat")
 
         check = self.subject.check_template()
         if check[0] != "":
@@ -305,8 +275,8 @@ class SubjectTransformsEx:
             rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + self.subject.std_img + " -omat " + self.hr2std_mat + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
         # => hrhead2{std}.mat
-        if os.path.isfile(hrhead2std + ".mat") is False:
-            rrun("flirt -in " + self.subject.t1_data + " -ref " + self.subject.std_img + " -omat " + hrhead2std + ".mat -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+        if os.path.isfile(hrhead2std) is False:
+            rrun("flirt -in " + self.subject.t1_data + " -ref " + self.subject.std_img + " -omat " + hrhead2std + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
         # # => {std}2hr.mat
         if os.path.isfile(self.std2hr_mat) is False:
@@ -315,7 +285,7 @@ class SubjectTransformsEx:
         # NON LINEAR
         # => hr2{std}_warp
         if imtest(self.hr2std_warp) is False:
-            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + ".mat --config=" + self._global.fsl_std_mni_2mm_cnf +
+            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + " --config=" + self._global.fsl_std_mni_2mm_cnf +
                     " --ref=" + self.subject.std_head_img + " --refmask=" + self.subject.std_img_mask_dil + " --warpres=10,10,10" +
                     " --cout=" + self.hr2std_warp + " --iout=" + self.hr2std_mat)
 
@@ -335,8 +305,8 @@ class SubjectTransformsEx:
             rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + self.subject.std4_img + " -omat " + self.hr2std4_mat + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
         # => hrhead2{std}4.mat
-        if os.path.isfile(hrhead2std4 + ".mat") is False:
-            rrun("flirt -in " + self.subject.t1_data + " -ref " + self.subject.std4_head_img + " -omat " + hrhead2std4 + ".mat" + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+        if os.path.isfile(hrhead2std4) is False:
+            rrun("flirt -in " + self.subject.t1_data + " -ref " + self.subject.std4_head_img + " -omat " + hrhead2std4 + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
         # # => {std}42hr.mat
         if os.path.isfile(self.std42hr_mat) is False:
@@ -345,7 +315,7 @@ class SubjectTransformsEx:
         # NON LINEAR
         # => hr2{std}4_warp
         if imtest(self.hr2std4_warp) is False:
-            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std4 + ".mat  --config=" + self._global.fsl_std_mni_4mm_cnf +
+            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std4 + " --config=" + self._global.fsl_std_mni_4mm_cnf +
                  " --ref=" + self.subject.std4_head_img + " --refmask=" + self.subject.std4_img_mask_dil + " --warpres=10,10,10" + " --cout=" + self.hr2std4_warp)
 
         # => {std}42hr_warp
