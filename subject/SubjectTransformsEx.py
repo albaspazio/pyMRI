@@ -28,6 +28,10 @@ from utility.images import imtest, imcp
 #   DTI   <----------> HR <---> STD
 #   DTI   <--> T2 <--> HR <---> STD
 #
+from utility.transform_images import check_concat_mat, check_invert_mat, check_convert_warp_mw, check_invert_warp, \
+    check_flirt, check_apply_mat, check_convert_warp_wmw, check_convert_warp_ww, check_apply_warp
+
+
 class SubjectTransformsEx:
 
     def __init__(self, subject, _global):
@@ -169,14 +173,12 @@ class SubjectTransformsEx:
             "hrTOfmri": self.transform_l_hr2fmri,
             "rsTOfmri": self.transform_l_rs2fmri,
 
-            "std4TOstd": self.transform_l_std2std4,
             "hrTOstd": self.transform_l_hr2std,
             "rsTOstd": self.transform_l_rs2std,
             "fmriTOstd": self.transform_l_fmri2std,
             "dtiTOstd": self.transform_l_dti2std,
             "t2TOstd": self.transform_l_t22dti,
 
-            "stdTOstd4": self.transform_l_std2std4,
             "hrTOstd4": self.transform_l_hr2std4,
             "rsTOstd4": self.transform_l_rs2std4,
             "fmriTOstd4": self.transform_l_fmri2std4,
@@ -208,14 +210,12 @@ class SubjectTransformsEx:
             "hrTOfmri": self.transform_nl_hr2fmri,
             "rsTOfmri": self.transform_nl_rs2fmri,
 
-            "std4TOstd": self.transform_nl_std2std4,
             "hrTOstd": self.transform_nl_hr2std,
             "rsTOstd": self.transform_nl_rs2std,
             "fmriTOstd": self.transform_nl_fmri2std,
             "dtiTOstd": self.transform_nl_dti2std,
             "t2TOstd": self.transform_nl_t22dti,
 
-            "stdTOstd4": self.transform_nl_std2std4,
             "hrTOstd4": self.transform_nl_hr2std4,
             "rsTOstd4": self.transform_nl_rs2std4,
             "fmriTOstd4": self.transform_nl_fmri2std4,
@@ -228,19 +228,6 @@ class SubjectTransformsEx:
             "hrTOt2": self.transform_nl_hr2t2,
             "dtiTOt2": self.transform_nl_dti2t2
         }
-
-
-    def flirt(self, inimg, ref, omat, params=" -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear"):
-
-        if imtest(inimg) is False:
-            print("ERROR in flirt: input image (" + inimg + ") is not valid....exiting")
-            return
-
-        if imtest(ref) is False:
-            print("ERROR in flirt: ref image (" + ref + ") is not valid....exiting")
-            return
-
-        rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + self.subject.std_img + " -omat " + self.hr2std_mat + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
 
     # ==================================================================================================================================================
     # MAIN SEQUENCES TRANSFORMS
@@ -271,27 +258,23 @@ class SubjectTransformsEx:
         # HIGHRES <--------> STANDARD
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # => hr2{std}.mat
-        if os.path.isfile(self.hr2std_mat) is False:
-            rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + self.subject.std_img + " -omat " + self.hr2std_mat + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+        check_flirt(self.hr2std_mat, self.subject.t1_brain_data, self.subject.std_img, logFile=logFile)
 
         # => hrhead2{std}.mat
-        if os.path.isfile(hrhead2std) is False:
-            rrun("flirt -in " + self.subject.t1_data + " -ref " + self.subject.std_img + " -omat " + hrhead2std + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+        check_flirt(hrhead2std, self.subject.t1_data, self.subject.std_img, logFile=logFile)
 
         # # => {std}2hr.mat
-        if os.path.isfile(self.std2hr_mat) is False:
-            rrun("convert_xfm -inverse -omat " + self.std2hr_mat + " " + self.hr2std_mat)
+        check_invert_mat(self.std2hr_mat, self.hr2std_mat, logFile=logFile)
 
         # NON LINEAR
         # => hr2{std}_warp
         if imtest(self.hr2std_warp) is False:
             rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + " --config=" + self._global.fsl_std_mni_2mm_cnf +
                     " --ref=" + self.subject.std_head_img + " --refmask=" + self.subject.std_img_mask_dil + " --warpres=10,10,10" +
-                    " --cout=" + self.hr2std_warp + " --iout=" + self.hr2std_mat)
+                    " --cout=" + self.hr2std_warp + " --iout=" + self.hr2std_mat, logFile=logFile)
 
         # => {std}2hr_warp
-        if imtest(self.std2hr_warp) is False:
-            rrun("invwarp -r " + self.subject.t1_data + " -w " + self.hr2std_warp + " -o " + self.std2hr_warp)
+        check_invert_warp(self.std2hr_warp, self.hr2std_warp, self.subject.t1_data, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # HIGHRES <--------> STANDARD4
@@ -301,16 +284,13 @@ class SubjectTransformsEx:
 
         os.makedirs(self.subject.roi_std4_dir, exist_ok=True)
         # => hr2{std}4.mat
-        if os.path.isfile(self.hr2std4_mat) is False:
-            rrun("flirt -in " + self.subject.t1_brain_data + " -ref " + self.subject.std4_img + " -omat " + self.hr2std4_mat + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+        check_flirt(self.hr2std4_mat, self.subject.t1_brain_data, self.subject.std4_img, logFile=logFile)
 
         # => hrhead2{std}4.mat
-        if os.path.isfile(hrhead2std4) is False:
-            rrun("flirt -in " + self.subject.t1_data + " -ref " + self.subject.std4_head_img + " -omat " + hrhead2std4 + " -cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+        check_flirt(hrhead2std4, self.subject.t1_data, self.subject.std4_head_img, logFile=logFile)
 
-        # # => {std}42hr.mat
-        if os.path.isfile(self.std42hr_mat) is False:
-            rrun("convert_xfm -inverse -omat " + self.std42hr_mat + " " + self.hr2std4_mat)
+        # => {std}42hr.mat
+        check_invert_mat(self.std42hr_mat, self.hr2std4_mat, logFile=logFile)
 
         # NON LINEAR
         # => hr2{std}4_warp
@@ -319,8 +299,7 @@ class SubjectTransformsEx:
                  " --ref=" + self.subject.std4_head_img + " --refmask=" + self.subject.std4_img_mask_dil + " --warpres=10,10,10" + " --cout=" + self.hr2std4_warp)
 
         # => {std}42hr_warp
-        if imtest(self.std42hr_warp) is False:
-            rrun("invwarp -r " + self.subject.t1_data + " -w " + self.hr2std4_warp + " -o " + self.std42hr_warp)
+        check_invert_warp(self.std42hr_warp, self.hr2std4_warp, self.subject.t1_data, logFile=logFile)
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # Calculate all the transforms involved in EPI processing.
@@ -343,16 +322,18 @@ class SubjectTransformsEx:
         else:
             process_std4 = check[1]
 
+        print(self.subject.label + " :STARTED transform_rs")
+
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # check or create example function
         exfun = self.subject.epi.get_example_function(logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #  EPI <--> HIGHRES (linear, bbr or not. 2 vars)
+        #  RS <--> HIGHRES (linear, bbr or not)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if do_bbr is True:
             # BBR (taken from $FSLDIR/bin/epi_reg.sh)
-            rrun("flirt -ref " + self.subject.t1_brain_data + " -in " + exfun + " -dof 6 -omat " + "init_" + self.rs2hr_mat, logFile=logFile)
+            check_flirt("init_" + self.rs2hr_mat, exfun, self.subject.t1_brain_data, params="-dof 6", logFile=logFile)
 
             if imtest(wmseg) is False:
                 print("Running FAST segmentation for subj " + self.subject.label)
@@ -362,81 +343,66 @@ class SubjectTransformsEx:
                 rrun("fslmaths " + os.path.join(temp_dir, "temp_pve_2") + " -thr 0.5 -bin " + wmseg, logFile=logFile)
                 runsystem("rm -rf " + temp_dir, logFile=logFile)
 
-            if os.path.isfile(self.rs2hr_mat) is False:
-                rrun("flirt -ref " + self.subject.t1_brain_data + " -in " + exfun + " -dof 6 -cost bbr -wmseg " + wmseg + " -init " + "init_" + self.rs2hr_mat + " -omat " + self.rs2hr_mat + " -schedule " + os.path.join(self.subject.fsl_dir, "etc", "flirtsch", "bbr.sch"), logFile=logFile)
+            check_flirt(self.rs2hr_mat, exfun, self.subject.t1_brain_data, params=" -dof 6 -cost bbr -wmseg " + wmseg + " -init " + "init_" + self.rs2hr_mat + " -schedule " + os.path.join(self.subject.fsl_dir, "etc", "flirtsch", "bbr.sch"), logFile=logFile)
 
             runsystem("rm " + "init_" + self.rs2hr_mat, logFile=logFile)
-        else:
-            # NOT BBR
-            if os.path.isfile(self.rs2hr_mat) is False:
-                rrun("flirt -in " + exfun + " -ref " + self.subject.t1_brain_data + " -omat " + self.rs2hr_mat + " -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear", logFile=logFile)
+        else:   # NOT BBR
+            check_flirt(self.rs2hr_mat, exfun, self.subject.t1_brain_data, params=" -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear", logFile=logFile)
 
-        if os.path.isfile(self.hr2rs_mat) is False:
-            rrun("convert_xfm -inverse -omat " + self.hr2rs_mat + " " + self.rs2hr_mat, logFile=logFile)
+        check_invert_mat(self.hr2rs_mat, self.rs2hr_mat, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # RS <--> STANDARD (linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # => rs2std.mat (as concat)
-        if os.path.isfile(self.rs2std_mat) is False:
-            rrun("convert_xfm -concat " + self.hr2std_mat + " " + self.rs2hr_mat + " -omat " + self.rs2std_mat, logFile=logFile)
+        # => rs2std.mat
+        check_concat_mat(self.rs2std_mat, self.rs2hr_mat, self.hr2std_mat, logFile=logFile)
 
         # => std2rs.mat
-        if os.path.exists(self.std2rs_mat) is False:
-            rrun("convert_xfm -inverse -omat " + self.std2rs_mat + " " + self.rs2std_mat)
+        check_invert_mat(self.std2rs_mat, self.rs2std_mat, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # RS <--> STANDARD (non linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if imtest(self.rs2std_warp) is False:
-            rrun("convertwarp --ref=" + self.subject.std_head_img + " --premat=" + self.rs2hr_mat + " --warp1=" + self.hr2std_warp + " --out=" + self.rs2std_warp, logFile=logFile)
+        # => rs2std_warp
+        check_convert_warp_mw(self.rs2std_warp, self.rs2hr_mat, self.hr2std_warp, self.subject.std_head_img, logFile=logFile)
 
-        # invwarp: standard -> highres -> epi
-        if imtest(self.std2rs_warp) is False:
-            rrun("invwarp -r " + exfun + " -w " + self.rs2std_warp + " -o " + self.std2rs_warp, logFile=logFile)
+        # => std2rs_warp
+        check_invert_warp(self.std2rs_warp, self.rs2std_warp, self.subject.rs_examplefunc, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # EPI <-> STANDARD4    (epi2hr + hr2std4_warp)
+        # RS <-> STANDARD4 (linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if imtest(self.rs2std4_warp) is False:
-            rrun("convertwarp --ref=" + self.subject.std4_head_img + " --premat=" + self.rs2hr_mat + " --warp1=" + self.hr2std4_warp + " --out=" + self.rs2std4_warp, logFile=logFile)
+        # => rs2std4.mat
+        check_concat_mat(self.rs2std4_mat, self.rs2hr_mat, self.hr2std4_mat, logFile=logFile)
 
-        # => epi2std4.mat
-        if os.path.isfile(self.rs2std4_mat) is False:
-            rrun("convert_xfm -concat " + self.hr2std4_mat + " " + self.rs2hr_mat + " -omat " + self.rs2std4_mat, logFile=logFile)
+        # => std42rs.mat
+        check_invert_mat(self.std42rs_mat, self.rs2std4_mat, logFile=logFile)
 
-        if imtest(self.std42rs_warp) is False:
-            rrun("invwarp -r " + exfun + " -w " + self.rs2std4_warp + " -o " + self.std42rs_warp, logFile=logFile)
+        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # RS <-> STANDARD4 (non linear)
+        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # => rs2std4_warp
+        check_convert_warp_mw(self.rs2std4_warp, self.rs2hr_mat, self.hr2std4_warp, self.subject.std4_head_img, logFile=logFile)
 
-        # => std42epi.mat
-        if os.path.exists(self.std42rs_mat) is False:
-            rrun("convert_xfm -inverse -omat " + self.std42rs_mat + " " + self.rs2std4_mat)
+        # => std42rs_warp
+        check_invert_warp(self.std42rs_warp, self.rs2std4_warp, exfun, logFile=logFile)
 
         # ------------------------------------------------------------------------------------------------------
         # various co-registration
         # ------------------------------------------------------------------------------------------------------
-        # coregister fast-highres to epi
-        if imtest(os.path.join(self.subject.roi_rs_dir, "t1_wm_rs")) is False:
-            rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, "mask_t1_wm") + " -ref " + self.subject.rs_examplefunc + " -applyxfm -init " + self.hr2rs_mat + " -out " + os.path.join(self.subject.roi_rs_dir, "t1_wm_rs"), logFile=logFile)
-
-        if imtest(os.path.join(self.subject.roi_rs_dir, "t1_csf_rs")) is False:
-            rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, "mask_t1_csf") + " -ref " + self.subject.rs_examplefunc + " -applyxfm -init " + self.hr2rs_mat + " -out " + os.path.join(self.subject.roi_rs_dir, "t1_csf_rs"), logFile=logFile)
-
-        if imtest(os.path.join(self.subject.roi_rs_dir, "t1_gm_rs")) is False:
-            rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, "mask_t1_gm") + " -ref " + self.subject.rs_examplefunc + " -applyxfm -init " + self.hr2rs_mat + " -out " + os.path.join(self.subject.roi_rs_dir, "t1_gm_rs"), logFile=logFile)
-
-        if imtest(os.path.join(self.subject.roi_rs_dir, "t1_brain_rs")) is False:
-            rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, self.subject.t1_brain_data) + " -ref " + self.subject.rs_examplefunc + " -applyxfm -init " + self.hr2rs_mat + " -out " + os.path.join(self.subject.roi_rs_dir, "t1_brain_rs"), logFile=logFile)
-
-        if imtest(os.path.join(self.subject.roi_rs_dir, "t1_brain_mask_rs")) is False:
-            rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, self.subject.t1_brain_data_mask) + " -ref " + self.subject.rs_examplefunc + " -applyxfm -init " + self.hr2rs_mat + " -out " + os.path.join(self.subject.roi_rs_dir, "t1_brain_mask_rs"), logFile=logFile)
+        # coregister fast-highres to rs
+        check_apply_mat(os.path.join(self.subject.roi_rs_dir, "t1_wm_rs"),          os.path.join(self.subject.roi_t1_dir, "mask_t1_wm"),    self.hr2rs_mat, self.subject.rs_examplefunc, logFile=logFile)
+        check_apply_mat(os.path.join(self.subject.roi_rs_dir, "t1_csf_rs"),         os.path.join(self.subject.roi_t1_dir, "mask_t1_csf"),   self.hr2rs_mat, self.subject.rs_examplefunc, logFile=logFile)
+        check_apply_mat(os.path.join(self.subject.roi_rs_dir, "t1_gm_rs"),          os.path.join(self.subject.roi_t1_dir, "mask_t1_gm"),    self.hr2rs_mat, self.subject.rs_examplefunc, logFile=logFile)
+        check_apply_mat(os.path.join(self.subject.roi_rs_dir, "t1_brain_rs"),       self.subject.t1_brain_data,                             self.hr2rs_mat, self.subject.rs_examplefunc, logFile=logFile)
+        check_apply_mat(os.path.join(self.subject.roi_rs_dir, "t1_brain_mask_rs"),  self.subject.t1_brain_data_mask,                        self.hr2rs_mat, self.subject.rs_examplefunc, logFile=logFile)
 
         # mask & binarize
-        rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_gm_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_gm_rs"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_wm_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_wm_rs"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_csf_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_csf_rs"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_brain_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_brain_rs"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_brain_mask_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_brain_rs"), logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_gm_rs")         + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_gm_rs"),      logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_wm_rs")         + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_wm_rs"),      logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_csf_rs")        + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_csf_rs"),     logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_brain_rs")      + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_brain_rs"),   logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_brain_mask_rs") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_brain_rs"),   logFile=logFile)
 
     # it creates (10) : example_func, fmri2hr_mat , hr2fmri_mat , fmri2std_mat , std2fmri_mat , fmri2std4_mat , std42fmri_mat
     #                                                             fmri2std_warp, std2fmri_warp, fmri2std4_warp, std42fmri_warp
@@ -454,16 +420,18 @@ class SubjectTransformsEx:
             return
         else:
             process_std4 = check[1]
+
+        print(self.subject.label + " :STARTED transform_fmri")
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # check or create example function
-        exfun = self.subject.epi.get_example_function(seq="fmri", logFile=logFile)
+        exfun = self.subject.epi.get_example_function(logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #  EPI <--> HIGHRES (linear, bbr or not)
+        #  fmri <--> HIGHRES (linear, bbr or not)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if do_bbr is True:
             # BBR (taken from $FSLDIR/bin/epi_reg.sh)
-            rrun("flirt -ref " + self.subject.t1_brain_data + " -in " + exfun + " -dof 6 -omat " + "init_" + self.fmri2hr_mat, logFile=logFile)
+            check_flirt("init_" + self.fmri2hr_mat, exfun, self.subject.t1_brain_data, params="-dof 6", logFile=logFile)
 
             if imtest(wmseg) is False:
                 print("Running FAST segmentation for subj " + self.subject.label)
@@ -473,82 +441,66 @@ class SubjectTransformsEx:
                 rrun("fslmaths " + os.path.join(temp_dir, "temp_pve_2") + " -thr 0.5 -bin " + wmseg, logFile=logFile)
                 runsystem("rm -rf " + temp_dir, logFile=logFile)
 
-            # => epi2hr.mat
-            if os.path.isfile(self.fmri2hr_mat) is False:
-                rrun("flirt -ref " + self.subject.t1_brain_data + " -in " + exfun + " -dof 6 -cost bbr -wmseg " + wmseg + " -init " + "init_" + self.fmri2hr_mat + " -omat " + self.fmri2hr_mat + " -schedule " + os.path.join(self.subject.fsl_dir, "etc", "flirtsch", "bbr.sch"), logFile=logFile)
+            check_flirt(self.fmri2hr_mat, exfun, self.subject.t1_brain_data, params=" -dof 6 -cost bbr -wmseg " + wmseg + " -init " + "init_" + self.fmri2hr_mat + " -schedule " + os.path.join(self.subject.fsl_dir, "etc", "flirtsch", "bbr.sch"), logFile=logFile)
 
             runsystem("rm " + "init_" + self.fmri2hr_mat, logFile=logFile)
-        else:
-            # NOT BBR
-            if os.path.isfile(self.fmri2hr_mat) is False:
-                rrun("flirt -in " + exfun + " -ref " + self.subject.t1_brain_data + " -omat " + self.fmri2hr_mat + " -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear", logFile=logFile)
+        else:   # NOT BBR
+            check_flirt(self.fmri2hr_mat, exfun, self.subject.t1_brain_data, params=" -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear", logFile=logFile)
 
-        if os.path.isfile(self.hr2fmri_mat) is False:
-            rrun("convert_xfm -inverse -omat " + self.hr2fmri_mat + " " + self.fmri2hr_mat, logFile=logFile)
+        check_invert_mat(self.hr2fmri_mat, self.fmri2hr_mat, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # EPI <--> STANDARD (linear)
+        # fmri <--> STANDARD (linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # => fmri2std.mat (as concat)
-        if os.path.isfile(self.fmri2std_mat) is False:
-            rrun("convert_xfm -concat " + self.hr2std_mat + " " + self.fmri2hr_mat + " -omat " + self.fmri2std_mat, logFile=logFile)
+        # => fmri2std.mat
+        check_concat_mat(self.fmri2std_mat, self.fmri2hr_mat, self.hr2std_mat, logFile=logFile)
 
         # => std2fmri.mat
-        if os.path.exists(self.std2fmri_mat) is False:
-            rrun("convert_xfm -inverse -omat " + self.std2fmri_mat + " " + self.fmri2std_mat)
+        check_invert_mat(self.std2fmri_mat, self.fmri2std_mat, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # EPI <--> STANDARD (non linear)
+        # fmri <--> STANDARD (non linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if imtest(self.fmri2std_warp) is False:
-            rrun("convertwarp --ref=" + self.subject.std_head_img + " --premat=" + self.fmri2hr_mat + " --warp1=" + self.hr2std_warp + " --out=" + self.fmri2std_warp, logFile=logFile)
+        # => fmri2std_warp
+        check_convert_warp_mw(self.fmri2std_warp, self.fmri2hr_mat, self.hr2std_warp, self.subject.std_head_img, logFile=logFile)
 
-        # invwarp: standard -> highres -> epi
-        if imtest(self.std2fmri_warp) is False:
-            rrun("invwarp -r " + exfun + " -w " + self.fmri2std_warp + " -o " + self.std2fmri_warp, logFile=logFile)
+        # => std2fmri_warp
+        check_invert_warp(self.std2fmri_warp, self.fmri2std_warp, self.subject.fmri_examplefunc, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # EPI <-> STANDARD4    (fmri2hr + hr2std4_warp)
+        # fmri <-> STANDARD4 (linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if imtest(self.fmri2std4_warp) is False:
-            rrun("convertwarp --ref=" + self.subject.std4_head_img + " --premat=" + self.fmri2hr_mat + " --warp1=" + self.hr2std4_warp + " --out=" + self.fmri2std4_warp, logFile=logFile)
+        # => fmri2std4.mat
+        check_concat_mat(self.fmri2std4_mat, self.fmri2hr_mat, self.hr2std4_mat, logFile=logFile)
 
-        # => epi2std4.mat
-        if os.path.isfile(self.fmri2std4_mat) is False:
-            rrun("convert_xfm -concat " + self.hr2std4_mat + " " + self.fmri2hr_mat + " -omat " + self.fmri2std4_mat, logFile=logFile)
+        # => std42fmri.mat
+        check_invert_mat(self.std42fmri_mat, self.fmri2std4_mat, logFile=logFile)
 
-        if imtest(self.std42fmri_warp) is False:
-            rrun("invwarp -r " + exfun + " -w " + self.fmri2std4_warp + " -o " + self.std42fmri_warp, logFile=logFile)
+        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # fmri <-> STANDARD4 (non linear)
+        # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # => fmri2std4_warp
+        check_convert_warp_mw(self.fmri2std4_warp, self.fmri2hr_mat, self.hr2std4_warp, self.subject.std4_head_img, logFile=logFile)
 
-        # => std42epi.mat
-        if os.path.exists(self.std42fmri_mat) is False:
-            rrun("convert_xfm -inverse -omat " + self.std42fmri_mat + " " + self.fmri2std4_mat)
+        # => std42fmri_warp
+        check_invert_warp(self.std42fmri_warp, self.fmri2std4_warp, exfun, logFile=logFile)
 
         # ------------------------------------------------------------------------------------------------------
         # various co-registration
         # ------------------------------------------------------------------------------------------------------
-        # coregister fast-highres to epi
-        if imtest(os.path.join(self.subject.roi_fmri_dir, "t1_wm_fmri")) is False:
-            rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, "mask_t1_wm") + " -ref " + self.subject.fmri_examplefunc + " -applyxfm -init " + self.hr2fmri_mat + " -out " + os.path.join(self.subject.roi_fmri_dir, "t1_wm_fmri"), logFile=logFile)
-
-        if imtest(os.path.join(self.subject.roi_fmri_dir, "t1_csf_fmri")) is False:
-            rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, "mask_t1_csf") + " -ref " + self.subject.fmri_examplefunc + " -applyxfm -init " + self.hr2fmri_mat + " -out " + os.path.join(self.subject.roi_fmri_dir, "t1_csf_fmri"), logFile=logFile)
-
-        if imtest(os.path.join(self.subject.roi_fmri_dir, "t1_gm_fmri")) is False:
-            rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, "mask_t1_gm") + " -ref " + self.subject.fmri_examplefunc + " -applyxfm -init " + self.hr2fmri_mat + " -out " + os.path.join(self.subject.roi_fmri_dir, "t1_gm_fmri"), logFile=logFile)
-
-        if imtest(os.path.join(self.subject.roi_fmri_dir, "t1_brain_fmri")) is False:
-            rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, self.subject.t1_brain_data) + " -ref " + self.subject.fmri_examplefunc + " -applyxfm -init " + self.hr2fmri_mat + " -out " + os.path.join(self.subject.roi_fmri_dir, "t1_brain_fmri"), logFile=logFile)
-
-        if imtest(os.path.join(self.subject.roi_fmri_dir, "t1_brain_mask_fmri")) is False:
-            rrun("flirt -in " + os.path.join(self.subject.roi_t1_dir, self.subject.t1_brain_data_mask) + " -ref " + self.subject.fmri_examplefunc + " -applyxfm -init " + self.hr2fmri_mat + " -out " + os.path.join(self.subject.roi_fmri_dir, "t1_brain_mask_fmri"), logFile=logFile)
+        # coregister fast-highres to fmri
+        check_apply_mat(os.path.join(self.subject.roi_fmri_dir, "t1_wm_fmri"),          os.path.join(self.subject.roi_t1_dir, "mask_t1_wm"),    self.hr2fmri_mat, self.subject.fmri_examplefunc, logFile=logFile)
+        check_apply_mat(os.path.join(self.subject.roi_fmri_dir, "t1_csf_fmri"),         os.path.join(self.subject.roi_t1_dir, "mask_t1_csf"),   self.hr2fmri_mat, self.subject.fmri_examplefunc, logFile=logFile)
+        check_apply_mat(os.path.join(self.subject.roi_fmri_dir, "t1_gm_fmri"),          os.path.join(self.subject.roi_t1_dir, "mask_t1_gm"),    self.hr2fmri_mat, self.subject.fmri_examplefunc, logFile=logFile)
+        check_apply_mat(os.path.join(self.subject.roi_fmri_dir, "t1_brain_fmri"),       self.subject.t1_brain_data,                             self.hr2fmri_mat, self.subject.fmri_examplefunc, logFile=logFile)
+        check_apply_mat(os.path.join(self.subject.roi_fmri_dir, "t1_brain_mask_fmri"),  self.subject.t1_brain_data_mask,                        self.hr2fmri_mat, self.subject.fmri_examplefunc, logFile=logFile)
 
         # mask & binarize
-        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_gm_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_gm_rs"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_wm_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_wm_rs"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_csf_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_csf_rs"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_brain_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_brain_rs"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_brain_mask_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_rs_dir, "mask_t1_brain_rs"), logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_gm_fmri")         + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_gm_fmri"),      logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_wm_fmri")         + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_wm_fmri"),      logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_csf_fmri")        + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_csf_fmri"),     logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_brain_fmri")      + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_brain_fmri"),   logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_brain_mask_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_brain_fmri"),   logFile=logFile)
 
     # DTI <-- (lin) -- HIGHRES -- (non-lin) --> STANDARD
     # creates  (18) :   dti2hr.mat, hr2dti.mat,     dti2std_warp, std2dti_warp  , dti2std_mat, std2dti_mat
@@ -562,44 +514,32 @@ class SubjectTransformsEx:
             return
 
         if self.subject.hasT2 is True:
-            print(self.subject.label + " ---------> STARTED : DTI--T2--HR--STD coregistration")
+            print(self.subject.label + " :STARTED transform_dti_t2: (DTI--T2--HR--STD coregistration)")
         else:
-            print(self.subject.label + " ---------> STARTED : DTI--HR--STD coregistration")
+            print(self.subject.label + " :STARTED transform_dti_t2 (DTI--HR--STD coregistration)")
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         self.subject.dti.get_nodiff()
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # DTI <------> HIGHRES (linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if os.path.exists(self.dti2hr_mat) is False:
-            rrun("flirt -in " + self.subject.dti_nodiff_brain_data + " -ref " + self.subject.t1_brain_data + " -omat " + self.dti2hr_mat +
-                " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 7 -interp trilinear", logFile=logFile)
+        check_flirt(self.dti2hr_mat,     self.subject.dti_nodiff_brain_data, self.subject.t1_brain_data, "-bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 7 -interp trilinear", logFile=logFile)
+        check_flirt(self.dtihead2hr_mat, self.subject.dti_nodiff_data,       self.subject.t1_brain_data, "-bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 7 -interp trilinear", logFile=logFile)
 
-        if os.path.exists(self.dtihead2hr_mat) is False:
-            rrun("flirt -in " + self.subject.dti_nodiff_data + " -ref " + self.subject.t1_data + " -omat " + self.dtihead2hr_mat +
-                " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 7 -interp trilinear", logFile=logFile)
-
-        if os.path.exists(self.hr2dti_mat) is False:
-            rrun("convert_xfm -omat " + self.hr2dti_mat + " -inverse " + self.dti2hr_mat, logFile=logFile)
+        check_invert_mat(self.hr2dti_mat, self.dti2hr_mat, logFile=logFile)
 
         if self.subject.hasT2 is False:
 
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # DTI <-- (lin) -- HIGHRES -- (non-lin) --> STANDARD
-            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            # -------------------------------------------------------------------------, ------------------------------------------------------------------------------------------------------------------
             # dti --> std
-            if imtest(self.dti2std_warp) is False:
-                rrun("convertwarp --ref=" + self.subject.std_head_img + " --premat=" + self.dtihead2hr_mat + " --warp1=" + self.hr2std_warp + " --out=" + self.dti2std_warp, logFile=logFile)
-
-            if os.path.exists(self.dti2std_mat) is False:
-                rrun("convert_xfm -omat " + self.dti2std_mat + " -concat " + self.dti2hr_mat + " " + self.hr2std_mat, logFile=logFile)
+            check_convert_warp_mw(self.dti2std_warp, self.dtihead2hr_mat, self.hr2std_warp, self.subject.std_head_img, logFile=logFile)
+            check_concat_mat(self.dti2std_mat, self.dti2hr_mat, self.hr2std_mat, logFile=logFile)
 
             # std --> dti
-            if imtest(self.std2dti_warp) is False:
-                rrun("invwarp -r " + self.subject.dti_nodiff_data  + " -w " + self.dti2std_warp + " -o " + self.std2dti_warp, logFile=logFile)
-
-            if os.path.exists(self.std2dti_mat) is False:
-                rrun("convert_xfm -omat " + self.std2dti_mat + " -inverse " + self.dti2std_mat)
+            check_invert_warp(self.std2dti_warp, self.dti2std_warp, self.subject.dti_nodiff_data, logFile=logFile)
+            check_invert_mat(self.std2dti_mat, self.dti2std_mat, logFile=logFile)
 
         else:
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -607,13 +547,8 @@ class SubjectTransformsEx:
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # t2 -> dti
             # linear
-            if os.path.exists(self.t22dti_mat) is False:
-                rrun("flirt -in " + self.subject.t2_brain_data + " -ref " + self.subject.dti_nodiff_brain_data + " -omat " + self.t22dti_mat +
-                    " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
-
-            if os.path.exists(self.t2head2dti_mat) is False:
-                rrun("flirt -in " + self.subject.t2_data + " -ref " + self.subject.dti_nodiff_data + " -omat " + self.t2head2dti_mat +
-                    " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
+            check_flirt(self.t22dti_mat,     self.subject.t2_brain_data,    self.subject.dti_nodiff_brain_data, " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
+            check_flirt(self.t2head2dti_mat, self.subject.t2_data,          self.subject.dti_nodiff_data,       " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
 
             # non-linear
             if imtest(self.t22dti_warp) is False:
@@ -621,23 +556,19 @@ class SubjectTransformsEx:
 
             # dti -> t2
             # linear
-            if os.path.exists(self.dti2t2_mat) is False:
-                rrun("convert_xfm -omat " + self.dti2t2_mat + " -inverse " + self.t22dti_mat, logFile=logFile)
+            check_invert_mat(self.dti2t2_mat, self.t22dti_mat, logFile=logFile)
+
             # non-linear
-            if imtest(self.dti2t2_warp) is False:
-                rrun("invwarp -r " + self.subject.dti_nodiff_data + " -w " + self.t22dti_warp + " -o " + self.dti2t2_warp, logFile=logFile)
+            check_invert_warp(self.dti2t2_warp, self.t22dti_warp, self.subject.dti_nodiff_data, logFile=logFile)
 
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # T2 <------> HIGHRES (linear)
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # t2 -> hr linear
-            if os.path.exists(self.t22hr_mat) is False:
-                rrun("flirt -in " + self.subject.t2_brain_data + " -ref " + self.subject.t1_brain_data + " -omat " + self.t22hr_mat +
-                    " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
+            check_flirt(self.t22hr_mat, self.subject.t2_brain_data, self.subject.t1_brain_data, " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear", logFile=logFile)
 
             # hr -> t2 linear
-            if os.path.exists(self.hr2t2_mat) is False:
-                rrun("convert_xfm -omat " + self.hr2t2_mat + " -inverse " + self.t22hr_mat, logFile=logFile)
+            check_invert_mat(self.hr2t2_mat, self.t22hr_mat, logFile=logFile)
 
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # DTI <-- (non-lin) -- t2 -- (lin) -- HIGHRES
@@ -652,36 +583,23 @@ class SubjectTransformsEx:
             # T2 <------> STD
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # t2 --> std
-            if imtest(self.t22std_warp) is False:
-                rrun("convertwarp --ref=" + self.subject.std_head_img + " --premat=" + self.t22hr_mat +" --warp1=" + self.hr2std_warp + " --out=" + self.t22std_warp, logFile=logFile)
-
-            if imtest(self.t22std_mat) is False:
-                rrun("convert_xfm -concat " + self.t22hr_mat + " " + self.hr2std_mat + " -omat " + self.t22std_mat, logFile=logFile)
+            check_convert_warp_mw(self.t22std_warp, self.t22hr_mat, self.hr2std_warp, self.subject.std_head_img, logFile=logFile)
+            check_concat_mat(self.t22std_mat, self.t22hr_mat, self.hr2std_mat, logFile=logFile)
 
             # std --> t2
-            if imtest(self.std2t2_warp) is False:
-                rrun("invwarp -r " + self.subject.t2_data + " -w " + self.t22std_warp + " -o " + self.std2t2_warp, logFile=logFile)
-
-            if imtest(self.std2t2_mat) is False:
-                rrun("convert_xfm -inverse -omat " + self.std2t2_mat + " " + self.t22std_mat)
+            check_invert_warp(self.std2t2_warp, self.t22std_warp, self.subject.t2_data, logFile=logFile)
+            check_invert_mat(self.std2t2_mat, self.t22std_mat, logFile=logFile)
 
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # DTI <-- (non-lin) -- t2 -- (lin) -- HIGHRES -- (non-lin) --> STANDARD
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-            # overwrites
             # dti --> std
-            if imtest(self.dti2std_warp) is False:
-                rrun("convertwarp --ref=" + self.subject.std_head_img + " --warp1=" + self.dti2t2_warp + " --midmat=" + self.t22hr_mat + " --warp2=" + self.hr2std_warp + " --out=" + self.dti2std_warp, logFile=logFile)
-
-            if os.path.exists(self.dti2std_mat) is False:
-                rrun("convert_xfm -omat " + self.dti2std_mat + " -concat " + self.dti2hr_mat + " " + self.hr2std_mat, logFile=logFile)
+            check_convert_warp_wmw(self.dti2std_warp, self.dti2t2_warp, self.t22hr_mat, self.hr2std_warp, self.subject.std_head_img, logFile=logFile)
+            check_concat_mat(self.dti2std_mat, self.dti2hr_mat, self.hr2std_mat, logFile=logFile)
 
             # std --> dti
-            if imtest(self.std2dti_warp) is False:
-                rrun("invwarp -r " + self.subject.dti_nodiff_data + " -w " + self.dti2std_warp + " -o " + self.std2dti_warp, logFile=logFile)
-
-            if os.path.exists(self.std2dti_mat) is False:
-                rrun("convert_xfm -omat " + self.std2dti_mat + " -inverse " + self.dti2std_mat)
+            check_invert_warp(self.std2dti_warp, self.dti2std_warp, self.subject.dti_nodiff_data, logFile=logFile)
+            check_invert_mat(self.std2dti_mat, self.dti2std_mat, logFile=logFile)
 
     # it creates (4): rs2fmri_mat , fmri2rs_mat
     #                 rs2fmri_warp, fmri2rs_warp
@@ -689,19 +607,333 @@ class SubjectTransformsEx:
 
         if self.subject.hasFMRI and self.subject.hasRS:
 
-            if os.path.isfile(self.rs2fmri_mat) is False:
-                rrun("convert_xfm -concat " + self.rs2hr_mat + " " + self.hr2fmri_mat + " -omat " + self.rs2fmri_mat, logFile=logFile)
-
-            if os.path.exists(self.fmri2rs_mat) is False:
-                rrun("convert_xfm -inverse -omat " + self.fmri2rs_mat + " " + self.rs2fmri_mat)
+            check_concat_mat(self.rs2fmri_mat, self.rs2hr_mat, self.hr2fmri_mat, logFile=logFile)
+            check_invert_mat(self.fmri2rs_mat, self.rs2fmri_mat, logFile=logFile)
 
             # non-linear   rs <--(hr)--> std <--(hr)--> fmri
-            if imtest(self.rs2fmri_warp) is False:
-                rrun("convertwarp --ref=" + self.subject.fmri_examplefunc + " --warp1=" + self.rs2std_warp + " --warp2=" + self.std2fmri_warp + " --out=" + self.rs2fmri_warp, logFile=logFile)
+            check_convert_warp_ww(self.rs2fmri_warp, self.rs2std_warp, self.std2fmri_warp, self.subject.fmri_examplefunc, logFile=logFile)
+            check_invert_warp(self.fmri2rs_warp, self.rs2fmri_warp, self.subject.fmri_examplefunc, logFile=logFile)
 
-            if imtest(self.fmri2rs_warp) is False:
-                rrun("invwarp -r " + self.subject.fmri_examplefunc + " -w " + self.rs2fmri_warp + " -o " + self.fmri2rs_warp, logFile=logFile)
+    # ==================================================================================================================================================
+    # GENERIC ROI TRANSFORMS
+    # ==================================================================================================================================================
+    # path_type =   "standard"      : a roi name, located in the default folder (subjectXX/s1/roi/reg_YYY/INPUTPATH),
+    #	            "rel"			: a path relative to SUBJECT_DIR (subjectXX/s1/INPUTPATH)
+    #               "abs"			: a full path (INPUTPATH)
+    # outdir    =   ""              : save it into roi/reg_... folders
+    #               dir path        : save to outdir
+    # std_img                       : can be specified a different templete.
+    #                                 it must be in 2x2x2 for std transformation and 4x4x4 for std4 ones. correctness is here checked
+    #                                 user must provide (in a same folder) the following images:
+    #                                       -> stdimg, stdimg_brain, stdimg_brain_mask_dil
+    #                                       -> stdimg4, stdimg4_brain, stdimg4_brain_mask_dil
+    # in linear transf, it must be betted (must contain the "_brain" text) in non-linear is must be a full head image.
+    def transform_roi(self, regtype, pathtype="standard", outdir="", outname="", mask="", orf="", thresh=0, islin=True, rois=[]):
 
+        # ===========================================================
+        # SANITY CHECK
+        # ===========================================================
+        if outdir != "":
+            if os.path.isdir(outdir) is False:
+                print("ERROR in transform_roi: given outdir (" + outdir + ") is not a folder.....exiting")
+                return
+
+        if mask != "":
+            if imtest(mask) is False:
+                print("ERROR: mask image file (" + mask + ") do not exist......exiting")
+                return
+
+        if len(rois) == 0:
+            print("Input ROI list is empty......exiting")
+            return
+
+        try:
+            bool(self.linear_registration_type[regtype])
+        except Exception as e:
+            print("ERROR in transform_roi: given regtype (" + regtype + ") is not valid.....exiting")
+            return
+        # ===========================================================
+        from_space  = regtype.split("TO")[0]
+        to_space    = regtype.split("TO")[1]
+        # ===========================================================
+        print("registration_type " + regtype + ", do_linear = " + str(islin))
+
+        for roi in rois:
+
+            roi_name = os.path.basename(roi)
+            print("converting " + roi_name)
+
+            # ----------------------------------------------------------------------------------------------------------
+            # SET INPUT
+            # ----------------------------------------------------------------------------------------------------------
+            if   pathtype == "abs":
+                 input_roi = roi
+            elif pathtype == "rel":
+                 input_roi = os.path.join(self.subject.dir, roi)
+            else:
+                # is a roi name
+                if from_space   == "hr":
+                    input_roi = os.path.join(self.subject.roi_t1_dir, roi_name)
+                elif from_space == "rs":
+                    input_roi = os.path.join(self.subject.roi_rs_dir, roi_name)
+                elif from_space == "fmri":
+                    input_roi = os.path.join(self.subject.roi_fmri_dir, roi_name)
+                elif from_space == "dti":
+                    input_roi = os.path.join(self.subject.roi_dti_dir, roi_name)
+                elif from_space == "t2":
+                    input_roi = os.path.join(self.subject.roi_t2_dir, roi_name)
+                elif from_space == "std":
+                    input_roi = os.path.join(self.subject.roi_std_dir, roi_name)
+                elif from_space == "std4":
+                    input_roi = os.path.join(self.subject.roi_std4_dir, roi_name)
+
+            if imtest(input_roi) is False:
+                print("error......input_roi (" + input_roi + ") is missing....exiting")
+                return
+            # ----------------------------------------------------------------------------------------------------------
+            # SET OUTPUT
+            # ----------------------------------------------------------------------------------------------------------
+            if outname != "":
+                name = outname
+            else:
+                name = roi_name
+
+            if outdir == "":
+                if to_space == "hr":
+                    output_roi = os.path.join(self.subject.roi_t1_dir, name + "_" + to_space)
+                elif to_space == "rs":
+                    output_roi = os.path.join(self.subject.roi_rs_dir, name + "_" + to_space)
+                elif to_space == "fmri":
+                    output_roi = os.path.join(self.subject.roi_fmri_dir, name + "_" + to_space)
+                elif to_space == "dti":
+                    output_roi = os.path.join(self.subject.roi_dti_dir, name + "_" + to_space)
+                elif to_space == "t2":
+                    output_roi = os.path.join(self.subject.roi_t2_dir, name + "_" + to_space)
+                elif to_space == "std":
+                    output_roi = os.path.join(self.subject.roi_std_dir, name + "_" + to_space)
+                elif to_space == "std4":
+                    output_roi = os.path.join(self.subject.roi_std4_dir, name + "_" + to_space)
+            else:
+                output_roi = os.path.join(outdir, name + "_" + to_space)
+
+            # ----------------------------------------------------------------------------------------------------------
+            # TRANSFORM !!!!
+            # ----------------------------------------------------------------------------------------------------------
+            if regtype == "std2std4":
+                rrun("flirt -in " + input_roi + " -ref " + self.subject.std4_img + " -out " + output_roi + " -applyisoxfm 4")
+            elif regtype == "std42std":
+                rrun("flirt -in " + input_roi + " -ref " + self.subject.std_img  + " -out " + output_roi + " -applyisoxfm 2")
+            else:
+                if islin:
+                    mat, ref = self.linear_registration_type[regtype]()
+                    check_apply_mat(output_roi, input_roi, mat, ref, overwrite=True)
+                else:
+                    # is non linear (actually, when non linear reg exist, it can be linear)
+                    warp, ref = self.non_linear_registration_type[regtype]()
+                    if imtest(warp) is False:
+                        check_apply_mat(output_roi, input_roi, warp, ref, overwrite=True)
+                    else:
+                        check_apply_warp(output_roi, input_roi, warp, ref, overwrite=True)
+            # ----------------------------------------------------------------------------------------------------------
+            # THRESHOLD
+            # ----------------------------------------------------------------------------------------------------------
+            if thresh > 0:
+                output_roi_name     = os.path.basename(output_roi)
+                output_input_roi    = os.path.dirname(output_roi)
+
+                rrun("fslmaths " + output_roi + " -thr " + str(thresh) + " -bin " + os.path.join(output_input_roi, "mask_" + output_roi_name))
+                v1 = rrun("fslstats " + os.path.join(output_input_roi, "mask_" + output_roi_name) + " -V")[0]
+
+                if v1 == 0:
+                    if orf != "":
+                        print("subj: " + self.subject.label + ", roi: " + roi_name + " ... is empty, thr: " + str(thresh))  # TODO: print to file
+
+            return output_roi
+
+
+    # ==================================================================================================================
+    # the following methods return the mat/warp of the given transformation and the reference image
+    # ==================================================================================================================
+
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # TO HR (from rs, fmri, dti, t2, std, std4)
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def transform_nl_std2hr(self):
+        return self.std2hr_warp, self.subject.t1_data
+    def transform_l_std2hr(self):
+        return self.std2hr_mat, self.subject.t1_brain_data
+
+    def transform_nl_std42hr(self):
+        return self.std42hr_warp, self.subject.t1_data
+    def transform_l_std42hr(self):
+        return self.std42hr.mat, self.subject.t1_brain_data
+
+    def transform_nl_rs2hr(self):
+        print("WARNING calling transform_l_rs2hr instead of transform_nl_rs2hr")
+        return self.transform_l_rs2hr()
+    def transform_l_rs2hr(self):
+        return self.rs2hr_mat, self.subject.t1_brain_data
+
+    def transform_nl_fmri2hr(self):
+        print("WARNING calling transform_l_fmri2hr instead of transform_nl_fmri2hr")
+        return self.transform_l_fmri2hr()
+    def transform_l_fmri2hr(self):
+        return self.fmri2hr.mat, self.subject.t1_brain_data
+
+    def transform_nl_dti2hr(self):
+        if self.subject.hasT2 is True:
+            return self.dti2hr_warp, self.subject.t1_data
+        else:
+            print("WARNING calling transform_l_dti2hr instead of transform_nl_dti2hr")
+            return transform_l_dti2hr(self)
+    def transform_l_dti2hr(self):
+        return self.dti2hr_mat, self.subject.t1_brain_data
+
+    def transform_nl_t22hr(self):
+        print("WARNING calling transform_l_t22hr instead of transform_nl_t22hr")
+        return self.transform_l_t22hr()
+    def transform_l_t22hr(self):
+        return self.t22hr_mat, self.subject.t1_brain_data
+
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # TO RS (from hr, fmri, std, std4)
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def transform_nl_std2rs(self):
+        return self.std2rs_warp, self.subject.rs_examplefunc
+    def transform_l_std2rs(self):
+        return self.std2rs_mat, self.subject.rs_examplefunc
+
+    def transform_nl_std42rs(self):
+        return self.std42rs_warp, self.subject.rs_examplefunc
+    def transform_l_std42rs(self):
+        return self.std42rs.mat, self.subject.rs_examplefunc
+
+    def transform_nl_hr2rs(self):
+        print("WARNING: transform_nl_hr2rs calls transform_l_hr2rs ")
+        return self.transform_l_hr2rs()
+    def transform_l_hr2rs(self):
+        return self.hr2rs_mat, self.subject.rs_examplefunc
+
+    def transform_nl_fmri2rs(self):
+        return self.fmri2rs_warp, self.subject.rs_examplefunc
+    def transform_l_fmri2rs(self):
+        return self.rs2fmri_mat, self.subject.rs_examplefunc
+
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # TO FMRI (from hr, std, std4)
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def transform_nl_std2fmri(self):
+        return self.std2fmri_warp, self.subject.fmri_examplefunc
+    def transform_l_std2fmri(self):
+        return self.std2fmri.mat, self.subject.roi_fmri_dir
+
+    def transform_nl_std42fmri(self):
+        return self.std42fmri_warp, self.subject.fmri_examplefunc
+    def transform_l_std42fmri(self):
+        return self.std42fmri.mat, self.subject.fmri_examplefunc
+
+    def transform_nl_hr2fmri(self):
+        return transform_l_hr2fmri()
+    def transform_l_hr2fmri(self):
+        return self.hr2fmri_mat, self.subject.fmri_examplefunc
+
+    def transform_nl_rs2fmri(self):
+        return self.rs2fmri_warp, self.subject.fmri_examplefunc
+    def transform_l_rs2fmri(self):
+        return self.fmri2rs_mat, self.subject.rs_examplefunc
+
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # TO STD (from std4, hr, rs, fmri, dti, t2)
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def transform_nl_hr2std(self):
+        return self.hr2std_warp, self.subject.std_img
+    def transform_l_hr2std(self):
+        return self.hr2std_mat, self.subject.std_img
+
+    def transform_nl_rs2std(self):
+        return self.rs2std_warp, self.subject.std_head_img
+    def transform_l_rs2std(self):
+        return self.rs2std_mat, self.subject.std_img
+
+    def transform_nl_fmri2std(self):
+        return self.fmri2std_warp, self.subject.std_head_img
+    def transform_l_fmri2std(self):
+        return self.rs2std_mat, self.subject.std_img
+
+    def transform_nl_dti2std(self):
+        return self.dti2std_warp, self.subject.std_head_img
+    def transform_l_dti2std(self):
+        return self.dti2std_mat, self.subject.std_img
+
+    def transform_nl_t22std(self):
+        return self.t22std_warp, self.subject.std_head_img
+    def transform_l_t22std(self):
+        return self.t22std_mat, self.subject.std_img
+
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # TO STD4 (from std, hr, rs, fmri)
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def transform_nl_hr2std4(self):
+        return self.hr2std4_warp, self.subject.std4_head_img
+    def transform_l_hr2std4(self):
+        return self.hr2std4_mat, self.subject.std4_img
+
+    def transform_nl_rs2std4(self):
+        return self.rs2std4_warp, self.subject.std4_head_img
+    def transform_l_rs2std4(self):
+        return self.rs2std4_mat, self.subject.std4_img
+
+    def transform_nl_fmri2std4(self):
+        return self.rs2std4_warp, self.subject.std4_head_img
+    def transform_l_fmri2std4(self):
+        return self.fmri2std4_mat, self.subject.std4_img
+
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # TO DTI (from std, hr, t2)
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def transform_nl_std2dti(self):
+        return self.std2dti_warp, self.subject.dti_nodiff_data
+    def transform_l_std2dti(self):
+        return self.std2dti_mat, self.subject.dti_nodiff_brain_data
+
+        # ==============================================================================================================
+
+    def transform_nl_hr2dti(self):
+        if self.subject.hasT2 is True and imtest(self.hr2dti_warp) is True:
+            return self.hr2dti_warp, self.subject.dti_nodiff_data
+        else:
+            print("did not find the non linear registration from HR 2 DTI, I concat hr---(NL)--->std  with std ---(LIN)---> dti used a linear one")
+            return transform_l_hr2dti()
+    def transform_l_hr2dti(self):
+        return self.hr2dti_mat, self.subject.dti_nodiff_brain_data
+
+    def transform_nl_t22dti(self):
+        return self.t22dti_warp, self.subject.dti_nodiff_data
+    def transform_l_t22dti(self):
+        return self.t22dti_mat, self.subject.dti_nodiff_brain_data
+
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # TO T2 (from std, hr, dti)
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    def transform_nl_std2t2(self):
+        return self.dti2t2_warp, self.subject.dti_nodiff_brain_data
+    def transform_l_std2t2(self):
+        return self.dti2t2_mat, self.subject.t2_brain_data
+
+    def transform_nl_hr2t2(self):
+        print("WARNING calling transform_l_hr2t2 instead of transform_nl_hr2t2")
+        return self.transform_l_hr2t2()
+    def transform_l_hr2t2(self):
+        return self.hr2t2_mat, self.subject.t2_brain_data
+
+    def transform_nl_dti2t2(self):
+        return self.dti2t2_warp, self.subject.dti_nodiff_brain_data
+    def transform_l_dti2t2(self):
+        return self.dti2t2_mat, self.subject.t2_brain_data
+
+    # ==============================================================================================================
+    # methods to check coregistration of multiple images
+    # ==============================================================================================================
     # this method takes base images (t1/t1_brain, epi_example_function, dti_nodiff/dti_nodiff_brain, t2/t2_brain) and coregister to all other modalities and standard
     # creates up to 14 folders, 7 for linear and 7 for non linear transformation towards the 7 different space (hr, rs, frmi, dti, t2, std, std4)
     # user can select from which seq to which seq create the transforms
@@ -929,7 +1161,7 @@ class SubjectTransformsEx:
                     self.transform_roi("dtiTOt2", pathtype="abs", outdir=nl_t2, outname=self.subject.label + "_nodif_data", islin=False, rois=[self.subject.dti_nodiff_data])
                     self.transform_roi("dtiTOt2", pathtype="abs", outdir=l_t2, outname=self.subject.label + "_nodif_brain_data", islin=True, rois=[self.subject.dti_nodiff_brain_data])
 
-    # open fsleyes with all sequence coregistered to given seq = [t1, t2, dti, rs, fmri, std, std4]
+    # open fsleyes with a sequences list coregistered to one given seq = [t1, t2, dti, rs, fmri, std, std4]
     def view_space_images(self, seq, _from=None):
 
         outdir = os.path.join(self.subject.roi_dir, "check_coregistration", seq)
@@ -1139,724 +1371,4 @@ class SubjectTransformsEx:
 
         os.system("fsleyes " + outdir + "/*.* &")
 
-    # ==================================================================================================================================================
-    # GENERIC ROI TRANSFORMS
-    # ==================================================================================================================================================
-    # path_type =   "standard"      : a roi name, located in the default folder (subjectXX/s1/roi/reg_YYY/INPUTPATH),
-    #	            "rel"			: a path relative to SUBJECT_DIR (subjectXX/s1/INPUTPATH)
-    #               "abs"			: a full path (INPUTPATH)
-    # outdir    =   ""              : save it into roi/reg_... folders
-    #               dir path        : save to outdir
-    # std_img                       : can be specified a different templete.
-    #                                 it must be in 2x2x2 for std transformation and 4x4x4 for std4 ones. correctness is here checked
-    #                                 user must provide (in a same folder) the following images:
-    #                                       -> stdimg, stdimg_brain, stdimg_brain_mask_dil
-    #                                       -> stdimg4, stdimg4_brain, stdimg4_brain_mask_dil
-    # in linear transf, it must be betted (must contain the "_brain" text) in non-linear is must be a full head image.
-    def transform_roi(self, regtype, pathtype="standard", outdir="", outname="", mask="", orf="", thresh=0, islin=True, rois=[]):
-
-        # ===========================================================
-        # SANITY CHECK
-        # ===========================================================
-        if outdir != "":
-            if os.path.isdir(outdir) is False:
-                print("ERROR in transform_roi: given outdir (" + outdir + ") is not a folder.....exiting")
-                return
-
-        if mask != "":
-            if imtest(mask) is False:
-                print("ERROR: mask image file (" + mask + ") do not exist......exiting")
-                return
-
-        if len(rois) == 0:
-            print("Input ROI list is empty......exiting")
-            return
-
-        try:
-            bool(self.linear_registration_type[regtype])
-        except Exception as e:
-            print("ERROR in transform_roi: given regtype (" + regtype + ") is not valid.....exiting")
-            return
-        # ===========================================================
-
-        from_space  = regtype.split("TO")[0]
-        to_space    = regtype.split("TO")[1]
-
-        # ===========================================================
-        # CHECK STANDARD IMAGES (4mm_brain, 2mm_brain, 4mm_head, 2mm_head)
-        # ===========================================================
-        # if islin:
-        #     if "std4" in regtype:
-        #         std_img = self._global.fsl_std_mni_4mm_brain
-        #     else:
-        #         std_img = self._global.fsl_std_mni_2mm_brain
-        # else:
-        #     if "std4" in regtype:
-        #         std_img = self._global.fsl_std_mni_4mm_head
-        #     else:
-        #         std_img = self._global.fsl_std_mni_2mm_head
-        #
-        # else:
-        #
-        #     if imtest(stdimg) is False:
-        #         print("ERROR: given standard image file (" + stdimg + ") does not exist......exiting")
-        #         return
-        #
-        #     imgdir              = os.path.dirname(stdimg)
-        #     std_img_label       = remove_ext(os.path.basename(stdimg))  # "pediatric" with or without brain
-        #     std_img_label       = std_img_label.replace("_brain", "")   # "pediatric" (without "_brain")
-        #
-        #     # check resolution
-        #     res = read_header(stdimg, ["dx"])["dx"]
-        #     if "std4" in regtype:
-        #         if res != "4":
-        #             print("ERROR: user pretended to make a transformation toward the std4 space but given template resolution does not match")
-        #             return
-        #     else:
-        #         if "std" in regtype:
-        #             if res != "2":
-        #                 print("ERROR: user pretended to make a transformation toward the std space but given template resolution does not match")
-        #                 return
-        #
-        #     if islin:
-        #         if "std4" in regtype:
-        #             std_img = os.path.join(imgdir, std_img_label + "4_brain")       # "pediatric4_brain"
-        #         else:
-        #             std_img = os.path.join(imgdir, std_img_label + "_brain")        # "pediatric_brain"
-        #     else:
-        #         if "std4" in regtype:
-        #             std_img = os.path.join(imgdir, std_img_label + "4")             # "pediatric4"
-        #         else:
-        #             std_img = os.path.join(imgdir, std_img_label)                   # "pediatric"
-
-        # ==============================================================================================================
-        print("registration_type " + regtype + ", do_linear = " + str(islin))
-
-        for roi in rois:
-
-            roi_name = os.path.basename(roi)
-            print("converting " + roi_name)
-
-            # ----------------------------------------------------------------------------------------------------------
-            # SET INPUT
-            # ----------------------------------------------------------------------------------------------------------
-            if   pathtype == "abs":
-                 input_roi = roi
-            elif pathtype == "rel":
-                 input_roi = os.path.join(self.subject.dir, roi)
-            else:
-                # is a roi name
-                if from_space   == "hr":
-                    input_roi = os.path.join(self.subject.roi_t1_dir, roi_name)
-                elif from_space == "rs":
-                    input_roi = os.path.join(self.subject.roi_rs_dir, roi_name)
-                elif from_space == "fmri":
-                    input_roi = os.path.join(self.subject.roi_fmri_dir, roi_name)
-                elif from_space == "dti":
-                    input_roi = os.path.join(self.subject.roi_dti_dir, roi_name)
-                elif from_space == "t2":
-                    input_roi = os.path.join(self.subject.roi_t2_dir, roi_name)
-                elif from_space == "std":
-                    input_roi = os.path.join(self.subject.roi_std_dir, roi_name)
-                elif from_space == "std4":
-                    input_roi = os.path.join(self.subject.roi_std4_dir, roi_name)
-
-            if imtest(input_roi) is False:
-                print("error......input_roi (" + input_roi + ") is missing....exiting")
-                return
-            # ----------------------------------------------------------------------------------------------------------
-            # SET OUTPUT
-            # ----------------------------------------------------------------------------------------------------------
-            if outname != "":
-                name = outname
-            else:
-                name = roi_name
-
-            if outdir == "":
-                if to_space == "hr":
-                    output_roi = os.path.join(self.subject.roi_t1_dir, name + "_" + to_space)
-                elif to_space == "rs":
-                    output_roi = os.path.join(self.subject.roi_rs_dir, name + "_" + to_space)
-                elif to_space == "fmri":
-                    output_roi = os.path.join(self.subject.roi_fmri_dir, name + "_" + to_space)
-                elif to_space == "dti":
-                    output_roi = os.path.join(self.subject.roi_dti_dir, name + "_" + to_space)
-                elif to_space == "t2":
-                    output_roi = os.path.join(self.subject.roi_t2_dir, name + "_" + to_space)
-                elif to_space == "std":
-                    output_roi = os.path.join(self.subject.roi_std_dir, name + "_" + to_space)
-                elif to_space == "std4":
-                    output_roi = os.path.join(self.subject.roi_std4_dir, name + "_" + to_space)
-            else:
-                output_roi = os.path.join(outdir, name + "_" + to_space)
-
-            # ----------------------------------------------------------------------------------------------------------
-            # TRANSFORM !!!!
-            # ----------------------------------------------------------------------------------------------------------
-            if islin:
-                self.linear_registration_type[regtype](input_roi, output_roi)
-            else:
-                # is non linear
-                self.non_linear_registration_type[regtype](input_roi, output_roi)
-
-            # ----------------------------------------------------------------------------------------------------------
-            # THRESHOLD
-            # ----------------------------------------------------------------------------------------------------------
-            if thresh > 0:
-                output_roi_name     = os.path.basename(output_roi)
-                output_input_roi    = os.path.dirname(output_roi)
-
-                rrun("fslmaths " + output_roi + " -thr " + str(thresh) + " -bin " + os.path.join(output_input_roi, "mask_" + output_roi_name))
-                v1 = rrun("fslstats " + os.path.join(output_input_roi, "mask_" + output_roi_name) + " -V")[0]
-
-                if v1 == 0:
-                    if orf != "":
-                        print("subj: " + self.subject.label + ", roi: " + roi_name + " ... is empty, thr: " + str(thresh))  # TODO: print to file
-
-            return output_roi
-
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # TO HR (from rs, fmri, dti, t2, std, std4)
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    def transform_nl_std2hr(self, input_roi, output_roi):
-
-        warp = self.std2hr_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.t1_data + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_std2hr(self, input_roi, output_roi):
-
-        mat = self.std2hr_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_std42hr(self, input_roi, output_roi):
-
-        warp = self.std42hr_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.t1_data + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_std42hr(self, input_roi, output_roi):
-
-        mat = self.std42hr.mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_rs2hr(self, input_roi, output_roi):
-
-        if imtest(self.std2hr_warp) is False:
-            print("ERROR: transformation warp " + self.std2hr_warp + " is missing...exiting transform roi")
-            return ""
-        if os.path.exists(self.rs2std_mat) is False:
-            print("ERROR: transformation matrix " + self.rs2std_mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.t1_data + " -o " + output_roi + " --premat=" + self.rs2std_mat + " --warp=" + self.std2hr_warp)
-    def transform_l_rs2hr(self, input_roi, output_roi):
-
-        mat = self.rs2hr_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_fmri2hr(self, input_roi, output_roi):
-
-        if imtest(self.std2hr_warp) is False:
-            print("ERROR: transformation warp " + self.std2hr_warp + " is missing...exiting transform roi")
-            return ""
-        if os.path.exists(self.fmri2std_mat) is False:
-            print("ERROR: transformation matrix " + self.fmri2std_mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.t1_data + " -o " + output_roi + " --premat=" + self.fmri2std_mat + " --warp=" + self.std2hr_warp)
-    def transform_l_fmri2hr(self, input_roi, output_roi):
-
-        mat = self.fmri2hr.mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_dti2hr(self, input_roi, output_roi):
-
-        if self.subject.hasT2 is True:
-            if imtest(self.dti2hr_warp) is False:
-                print("ERROR: transformation warp " + self.dti2hr_warp + " is missing...exiting transform roi")
-                return ""
-            rrun("applywarp -i " + input_roi + " -r " + self.subject.t1_data + " -o " + output_roi + " --warp=" + self.dti2hr_warp)
-        else:
-
-            if imtest(self.std2hr_warp) is False:
-                print("ERROR: transformation warp " + self.std2hr_warp + " is missing...exiting transform roi")
-                return ""
-            if os.path.exists(self.dti2std_mat) is False:
-                print("ERROR: transformation matrix " + self.dti2std_mat + " is missing...exiting transform roi")
-                return ""
-
-            rrun("applywarp -i " + input_roi + " -r " + self.subject.t1_data + " -o " + output_roi + " --premat=" + self.dti2std_mat + " --warp=" + self.std2hr_warp)
-    def transform_l_dti2hr(self, input_roi, output_roi):
-
-        if os.path.exists(self.dti2hr_mat) is False:
-            print("ERROR: transformation matrix " + self.dti2hr_mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + self.dti2hr_mat + " -interp trilinear")
-
-    def transform_nl_t22hr(self, input_roi, output_roi):
-        print("WARNING calling transform_l_t22hr instead of transform_nl_t22hr")
-        return self.transform_l_t22hr(input_roi, output_roi)
-    def transform_l_t22hr(self, input_roi, output_roi):
-
-        if os.path.exists(self.t22hr_mat) is False:
-            print("ERROR: transformation matrix " + self.t22hr_mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.t1_brain_data + " -out " + output_roi + " -applyxfm -init " + self.t22hr_mat + " -interp trilinear")
-
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # TO RS (from hr, fmri, std, std4)
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    def transform_nl_std2rs(self, input_roi, output_roi):
-
-        warp = self.std2rs_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.rs_examplefunc + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_std2rs(self, input_roi, output_roi):
-
-        mat = self.std2rs_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + mat)
-
-    def transform_nl_std42rs(self, input_roi, output_roi):
-
-        warp = self.std42rs_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.rs_examplefunc + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_std42rs(self, input_roi, output_roi):
-
-        mat = self.std42rs.mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + mat)
-
-    def transform_nl_hr2rs(self, input_roi, output_roi):
-        print("WARNING: transform_nl_hr2rs calls transform_l_hr2rs ")
-        self.transform_l_hr2rs(input_roi, output_roi)
-    def transform_l_hr2rs(self, input_roi, output_roi):
-
-        mat  = self.hr2rs_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_fmri2rs(self, input_roi, output_roi):
-
-        if imtest(self.fmri2rs_warp) is False:
-            print("ERROR: transformation warp " + self.fmri2rs_warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.rs_examplefunc + " -o " + output_roi + " --warp=" + self.fmri2rs_warp)
-    def transform_l_fmri2rs(self, input_roi, output_roi):
-
-        mat  = os.path.join(self.subject.roi_rs_dir, "fmri2rs.mat")
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # TO FMRI (from hr, std, std4)
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    def transform_nl_std2fmri(self, input_roi, output_roi):
-
-        warp = self.std2fmri_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.fmri_examplefunc + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_std2fmri(self, input_roi, output_roi):
-
-        mat = self.std2fmri.mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.roi_fmri_dir + " -out " + output_roi + " -applyxfm -init " + mat)
-
-    def transform_nl_std42fmri(self, input_roi, output_roi):
-
-        warp = self.std42fmri_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.fmri_examplefunc + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_std42fmri(self, input_roi, output_roi):
-
-        mat = self.std42fmri.mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.fmri_examplefunc + " -out " + output_roi + " -applyxfm -init " + mat)
-
-    def transform_nl_hr2fmri(self, input_roi, output_roi):
-
-        if imtest(self.hr2std_warp) is False:
-            print("ERROR: transformation warp " + self.hr2std_warp + " is missing...exiting transform roi")
-            return ""
-        if os.path.exists(self.std2fmri_mat) is False:
-            print("ERROR: transformation warp " + self.std2fmri_mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.fmri_examplefunc + " -o " + output_roi + " --warp=" + self.hr2std_warp + " --postmat=" + self.std2fmri_mat)
-    def transform_l_hr2fmri(self, input_roi, output_roi):
-
-        mat  = os.path.join(self.subject.roi_fmri_dir, "hr2fmri.mat")
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.fmri_examplefunc + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_rs2fmri(self, input_roi, output_roi):
-
-        warp = self.rs2fmri_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.fmri_examplefunc + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_rs2fmri(self, input_roi, output_roi):
-
-        mat  = self.fmri2rs_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.rs_examplefunc + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # TO STD (from std4, hr, rs, fmri, dti, t2)
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    def transform_nl_std42std(self, input_roi, output_roi):
-        return self.transform_l_std42std(input_roi, output_roi)
-    def transform_l_std42std(self, input_roi, output_roi):
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.std4_img + " -out " + output_roi + " -applyisoxfm 2")
-
-    def transform_nl_hr2std(self, input_roi, output_roi):
-
-        warp = self.hr2std_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.std_img + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_hr2std(self, input_roi, output_roi):
-
-        mat = self.hr2std_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.std_img + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_rs2std(self, input_roi, output_roi):
-
-        warp = self.rs2std_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.std_head_img + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_rs2std(self, input_roi, output_roi):
-
-        mat = self.rs2std_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.std_img + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_fmri2std(self, input_roi, output_roi):
-
-        warp = self.fmri2std_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.std_head_img + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_fmri2std(self, input_roi, output_roi):
-
-        mat = self.rs2std_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.std_img + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_dti2std(self, input_roi, output_roi):
-
-        warp = self.dti2std_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.std_head_img + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_dti2std(self, input_roi, output_roi):
-
-        mat = self.dti2std_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.std_img + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_t22std(self, input_roi, output_roi):
-
-        warp = self.t22std_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.std_head_img + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_t22std(self, input_roi, output_roi):
-
-        mat = self.t22std_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.std_img + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # TO STD4 (from std, hr, rs, fmri)
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    def transform_nl_std2std4(self, input_roi, output_roi):
-        return self.transform_l_std2std4(input_roi, output_roi)
-    def transform_l_std2std4(self, input_roi, output_roi):
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.std4_img + " -out " + output_roi + " -applyisoxfm 4")
-
-    def transform_nl_hr2std4(self, input_roi, output_roi):
-
-        warp = self.hr2std4_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.std4_head_img + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_hr2std4(self, input_roi, output_roi):
-
-        mat = self.hr2std4_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.std4_img + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_rs2std4(self, input_roi, output_roi):
-
-        warp = self.rs2std4_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.std4_head_img + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_rs2std4(self, input_roi, output_roi):
-
-        mat = self.rs2std4_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.std4_img + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_fmri2std4(self, input_roi, output_roi):
-
-        warp = self.rs2std4_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.std4_head_img + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_fmri2std4(self, input_roi, output_roi):
-
-        mat = self.fmri2std4_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.std4_img + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # TO DTI (from std, hr, t2)
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    def transform_nl_std2dti(self, input_roi, output_roi):
-
-        warp = self.std2dti_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + os.path.join(self.subject.roi_dti_dir, "nodif_brain") + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_std2dti(self, input_roi, output_roi):
-
-        mat = self.std2dti_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.dti_nodiff_brain_data + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-        # ==============================================================================================================
-
-    def transform_nl_hr2dti(self, input_roi, output_roi):
-
-        if self.subject.hasT2 is True and imtest(self.hr2dti_warp) is True:
-            if imtest(self.hr2dti_warp) is False:
-                print("ERROR: transformation warp " + self.hr2dti_warp + " is missing...exiting transform roi")
-                return ""
-
-            rrun("applywarp -i " + input_roi + " -r " + self.subject.dti_nodiff_data + " -o " + output_roi + " --warp=" + self.hr2dti_warp)
-        else:
-            print("did not find the non linear registration from HR 2 DTI, I concat hr---(NL)--->std  with std ---(LIN)---> dti used a linear one")
-
-            if imtest(self.hr2std_warp) is False:
-                print("ERROR: transformation warp " + self.hr2std_warp + " is missing...exiting transform roi")
-                return ""
-            if os.path.exists(self.std2dti_mat) is False:
-                print("ERROR: transformation matrix " + self.std2dti_mat + " is missing...exiting transform roi")
-                return ""
-
-            rrun("applywarp -i " + input_roi + " -r " + self.subject.dti_nodiff_data + " -o " + output_roi + " --warp=" + self.hr2std_warp + " --postmat=" + self.std2dti_mat)
-    def transform_l_hr2dti(self, input_roi, output_roi):
-
-        if os.path.exists(self.hr2dti_mat) is False:
-            print("ERROR: transformation matrix " + self.hr2dti_mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.dti_nodiff_brain_data + " -out " + output_roi + " -applyxfm -init " + self.hr2dti_mat + " -interp trilinear")
-
-    def transform_nl_t22dti(self, input_roi, output_roi):
-
-        warp = self.t22dti_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.dti_nodiff_data + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_t22dti(self, input_roi, output_roi):
-
-        mat = self.t22dti_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.dti_nodiff_brain_data + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # TO T2 (from std, hr, dti)
-    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    def transform_nl_std2t2(self, input_roi, output_roi):
-
-        warp = self.dti2t2_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.dti_nodiff_brain_data + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_std2t2(self, input_roi, output_roi):
-
-        mat = self.dti2t2_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.t2_brain_data + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_hr2t2(self, input_roi, output_roi):
-        print("WARNING calling transform_l_hr2t2 instead of transform_nl_hr2t2")
-        return self.transform_l_hr2t2(input_roi, output_roi)
-    def transform_l_hr2t2(self, input_roi, output_roi):
-
-        mat = self.hr2t2_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.t2_brain_data + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
-    def transform_nl_dti2t2(self, input_roi, output_roi):
-
-        warp = self.dti2t2_warp
-        if imtest(warp) is False:
-            print("ERROR: transformation warp " + warp + " is missing...exiting transform roi")
-            return ""
-
-        rrun("applywarp -i " + input_roi + " -r " + self.subject.dti_nodiff_brain_data + " -o " + output_roi + " --warp=" + warp)
-    def transform_l_dti2t2(self, input_roi, output_roi):
-
-        mat = self.dti2t2_mat
-        if os.path.exists(mat) is False:
-            print("ERROR: transformation matrix " + mat + " is missing...exiting transform roi")
-            return ""
-
-        rrun("flirt -in " + input_roi + " -ref " + self.subject.t2_brain_data + " -out " + output_roi + " -applyxfm -init " + mat + " -interp trilinear")
-
     # ==============================================================================================================
-
-
-    # def transform_nl_rs2dti(self, input_roi, output_roi, std_img, epi_label="rs", std_img_label="std"):
-    #     print("registration type: epi2dti NOT SUPPORTED...exiting")
-    #     return ""
-    #
-    # def transform_l_rs2dti(self, input_roi, output_roi, std_img, epi_label="rs"):
-    #     print("registration type: epi2dti NOT SUPPORTED...exiting")
-    #     return ""
-
-    # def transform_nl_fmri2dti(self, input_roi, output_roi, std_img, epi_label="rs", std_img_label="std"):
-    #     print("registration type: epi2dti NOT SUPPORTED...exiting")
-    #     return ""
-    #
-    # def transform_l_fmri2dti(self, input_roi, output_roi, std_img, epi_label="rs"):
-    #     print("registration type: epi2dti NOT SUPPORTED...exiting")
-    #     return ""
-
-    # def transform_nl_dti2fmri(self, input_roi, output_roi):
-    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
-    #
-    # def transform_l_dti2fmri(self, input_roi, output_roi):
-    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
-
-
-    # def transform_nl_dti2rs(self, input_roi, output_roi):
-    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
-    #
-    # def transform_l_dti2rs(self, input_roi, output_roi):
-    #     print("registration type: dti2epi NOT SUPPORTED...exiting")
