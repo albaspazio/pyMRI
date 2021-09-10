@@ -21,10 +21,10 @@ def tabbed_file_with_header2dict_list(filepath):
                 header = row
             else:
                 data_row = {}
-                cnt=0
+                cnt = 0
                 for elem in row:
                     data_row[header[cnt]] = elem
-                    cnt = cnt+1
+                    cnt = cnt + 1
                 data.append(data_row)
 
         return data
@@ -36,7 +36,6 @@ def get_dict_column(dic, colname):
 
 
 def get_filtered_dict_column(dic, colname, filt_col="", filter=None):
-
     if filt_col != "":
         res = []
         if filter is not None and isinstance(filter, list):
@@ -57,7 +56,6 @@ def get_filtered_dict_column(dic, colname, filt_col="", filter=None):
 # creates a dictionary with subj label as key and data columns as a dictionary
 # returns   { "label1":{"col1", ..., "colN"}, "label2":{"col1", ..., "colN"}, .....}
 def tabbed_file_with_header2subj_dic(filepath):
-
     data = {}
     if os.path.exists(filepath) is False:
         print("ERROR in tabbed_file_with_header2subj_dic, given filepath param (" + filepath + ") is not a file")
@@ -70,20 +68,19 @@ def tabbed_file_with_header2subj_dic(filepath):
                 header = row
             else:
                 data_row = {}
-                cnt=0
+                cnt = 0
                 for elem in row:
                     if cnt == 0:
                         subj_lab = elem
                     else:
                         data_row[header[cnt]] = elem
-                    cnt = cnt+1
+                    cnt = cnt + 1
                 data[subj_lab] = data_row
         return data
 
 
 # returns the header of a tabbed file as a list
 def get_header_of_tabbed_file(filepath):
-
     if os.path.exists(filepath) is False:
         print("ERROR in get_header_of_tabbed_file, given filepath param (" + filepath + ") is not a file")
         return []
@@ -99,7 +96,6 @@ def get_header_of_tabbed_file(filepath):
 
 # returns a filtered matrix [subj x colnames]
 def get_filtered_subj_dict_columns(dic, colnames, subj_labels, sort=False):
-
     res = []
     lab = []
     for subj in subj_labels:
@@ -112,7 +108,8 @@ def get_filtered_subj_dict_columns(dic, colnames, subj_labels, sort=False):
             lab.append(subj)
 
         except KeyError:
-            print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+            print(
+                "Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
             return
 
     if sort is True:
@@ -127,7 +124,6 @@ def get_filtered_subj_dict_columns(dic, colnames, subj_labels, sort=False):
 # - [values]
 # - [labels]
 def get_filtered_subj_dict_column(dic, colname, subjects_label, sort=False):
-
     res = []
     lab = []
     for subj in subjects_label:
@@ -136,7 +132,8 @@ def get_filtered_subj_dict_column(dic, colname, subjects_label, sort=False):
             res.append(colvalue)
             lab.append(subj)
         except KeyError:
-            print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+            print(
+                "Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
             return
 
     if sort is True:
@@ -151,13 +148,12 @@ def get_filtered_subj_dict_column(dic, colname, subjects_label, sort=False):
 # - [values]
 # - [labels]
 def get_filtered_subj_dict_column_by_value(dic, colname, value, operation="=", subjects_label=None, sort=False):
-
     res = []
     lab = []
     for subj in subjects_label:
         try:
             colvalue = typeUnknown(dic[subj][colname])
-            if operation == "=" or operation == "==" :
+            if operation == "=" or operation == "==":
                 if colvalue == value:
                     res.append(colvalue)
                     lab.append(subj)
@@ -179,7 +175,8 @@ def get_filtered_subj_dict_column_by_value(dic, colname, value, operation="=", s
                     lab.append(subj)
 
         except KeyError:
-            print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+            print(
+                "Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
             return
 
     if sort is True:
@@ -193,8 +190,8 @@ def get_filtered_subj_dict_column_by_value(dic, colname, value, operation="=", s
 # returns two vectors filtered by [subj labels] & whether value is within value1/2
 # - [values]
 # - [labels]
-def get_filtered_subj_dict_column_within_values(dic, colname, value1, value2, operation="<>", subjects_label=None, sort=False):
-
+def get_filtered_subj_dict_column_within_values(dic, colname, value1, value2, operation="<>", subjects_label=None,
+                                                sort=False):
     res = []
     lab = []
     for subj in subjects_label:
@@ -218,7 +215,8 @@ def get_filtered_subj_dict_column_within_values(dic, colname, value1, value2, op
                     lab.append(subj)
 
         except KeyError:
-            print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+            print(
+                "Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
             return
 
     if sort is True:
@@ -227,6 +225,7 @@ def get_filtered_subj_dict_column_within_values(dic, colname, value1, value2, op
         lab = reorder_list(lab, sort_schema)
 
     return res, lab
+
 
 # =====================================================================================
 # ACCESSORY
@@ -264,7 +263,6 @@ def list2spm_text_column(datalist, ndecimals=3):
 
 # read the output file of fslmeants, create subjlabel and value columns
 def process_results(filepath, subjs_list, outname, dataprecision='.3f'):
-
     list_str = []
     if os.path.exists(filepath) is False:
         print("ERROR in get_header_of_tabbed_file, given filepath param (" + filepath + ") is not a file")
@@ -296,7 +294,9 @@ def process_results2tp(fname, subjs_list, outname, dataprecision=".3f"):
 
     list_str = []
     for i in range(int(nsubj / 2)):
-        list_str.append(subjs_list[i] + "\t" + format(float(content[i]), dataprecision) + "\t" + format(float(content[i + int(nsubj / 2)]), dataprecision) + "\t" + format(float(content[i + int(nsubj / 2)]) - float(content[i]), dataprecision))
+        list_str.append(subjs_list[i] + "\t" + format(float(content[i]), dataprecision) + "\t" + format(
+            float(content[i + int(nsubj / 2)]), dataprecision) + "\t" + format(
+            float(content[i + int(nsubj / 2)]) - float(content[i]), dataprecision))
 
     row = "\n".join(list_str)
     with open(outname, "w") as fout:
@@ -307,7 +307,6 @@ def process_results2tp(fname, subjs_list, outname, dataprecision=".3f"):
 
 # read the three values within ICV-SPM file and return their sum
 def get_icv_spm_file(filepath):
-
     with open(filepath) as f:
         content = f.readlines()
 

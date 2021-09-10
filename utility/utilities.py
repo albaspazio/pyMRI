@@ -6,7 +6,6 @@ import tempfile
 
 
 def gunzip(src, dest, replace=False):
-
     fp = open(dest, "wb")
     with gzip.open(src, "rb") as f:
         bindata = f.read()
@@ -18,7 +17,6 @@ def gunzip(src, dest, replace=False):
 
 
 def compress(src, dest, replace=False):
-
     fp = open(src, "rb")
     with gzip.open(dest, "wb") as f:
         f.write(fp.read())
@@ -58,8 +56,8 @@ def sed_inplace(filename, pattern, repl):
 
 # get the sorting schema of a list(e.g [2,3,1,4,5] => [2,0,1,3,4]
 def argsort(seq):
-    #http://stackoverflow.com/questions/3382352/equivalent-of-numpy-argsort-in-basic-python/3382369#3382369
-    #by unutbu
+    # http://stackoverflow.com/questions/3382352/equivalent-of-numpy-argsort-in-basic-python/3382369#3382369
+    # by unutbu
     return sorted(range(len(seq)), key=seq.__getitem__)
 
 
@@ -93,9 +91,9 @@ def copytree(src, dst, symlinks=False, ignore=None):
         else:
             shutil.copy2(s, d)
 
+
 # read a file where each line is a string and returns them as list (pruning the '\n')
 def read_list_from_file(srcfile):
-
     with open(srcfile, 'r') as f:
         str = f.readlines()
 

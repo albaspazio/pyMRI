@@ -35,13 +35,13 @@ class SubjectsDataDict:
                     header = row
                 else:
                     data_row = {}
-                    cnt=0
+                    cnt = 0
                     for elem in row:
                         if cnt == 0:
                             subj_lab = elem
                         else:
                             data_row[header[cnt]] = elem
-                        cnt = cnt+1
+                        cnt = cnt + 1
                     self.data[subj_lab] = data_row
                     self.labels.append(subj_lab)
 
@@ -69,7 +69,8 @@ class SubjectsDataDict:
                 res.append(colvalue)
                 lab.append(subj)
             except KeyError:
-                print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+                print(
+                    "Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
                 return
 
         if sort is True:
@@ -99,7 +100,8 @@ class SubjectsDataDict:
                 lab.append(subj)
 
             except KeyError:
-                print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+                print(
+                    "Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
                 return
 
         if sort is True:
@@ -123,7 +125,7 @@ class SubjectsDataDict:
         for subj in subj_labels:
             try:
                 colvalue = typeUnknown(self.data[subj][colname])
-                if operation == "=" or operation == "==" :
+                if operation == "=" or operation == "==":
                     if colvalue == value:
                         res.append(colvalue)
                         lab.append(subj)
@@ -145,7 +147,8 @@ class SubjectsDataDict:
                         lab.append(subj)
 
             except KeyError:
-                print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
+                print(
+                    "Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
                 return
 
         if sort is True:
@@ -187,7 +190,8 @@ class SubjectsDataDict:
                         lab.append(subj)
 
             except KeyError:
-                print("Error in get_filtered_column: given subject (" + subj + ") is not present in the given list...returning.....")
+                print(
+                    "Error in get_filtered_column: given subject (" + subj + ") is not present in the given list...returning.....")
                 return
 
         if sort is True:

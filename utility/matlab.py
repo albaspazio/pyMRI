@@ -1,13 +1,12 @@
-import matlab.engine.engineerror
-import matlab.engine
 # from matlab.engine import
 import os
-import io
+
+import matlab.engine
+import matlab.engine.engineerror
 
 
 # start a new matlab session (if no session are active) or connect to the first one available or return None.
 def start_matlab(paths2add=[], conn2first=True):
-
     existing_sessions = matlab.engine.find_matlab()
 
     if len(existing_sessions) > 0:
@@ -28,7 +27,6 @@ def start_matlab(paths2add=[], conn2first=True):
 
 
 def call_matlab_function(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
-
     if eng is None:
         engine = start_matlab(standard_paths)
         if engine is None:
@@ -51,7 +49,6 @@ def call_matlab_function(func, standard_paths=[], params="", logfile=None, enden
 
 
 def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
-
     if eng is None:
         engine = start_matlab(standard_paths)
         if engine is None:
@@ -80,7 +77,6 @@ def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None,
 
 # subcase of call_matlab_function_noret: call a SPM batch file that does not return anything
 def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True, eng=None):
-
     batch_file = os.path.basename(os.path.splitext(func)[0])
     # err = io.StringIO
 
@@ -111,9 +107,6 @@ def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True, 
         print(e)
         exit()
 
-
-
-
     #
     # def _execute_sync(self, code):
     #     out = io.StringIO()
@@ -130,12 +123,6 @@ def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True, 
     #     self.Print(stdout)
     #
     #
-
-
-
-
-
-
 
 # attempt to create a multipurpose method that receive a list of functions/params/return types
 # def call_matlab_function(functions, params, standard_paths, logfile=None, endengine=True):

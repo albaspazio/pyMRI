@@ -13,11 +13,10 @@ directories. It currently only contains one function:
    tempdir
 """
 
-
+import contextlib
 import os
 import shutil
 import tempfile
-import contextlib
 
 
 @contextlib.contextmanager

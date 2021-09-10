@@ -1,14 +1,15 @@
 import os
 import sys
-from numpy import arange, concatenate, array
 from shutil import copyfile, rmtree
 
+from numpy import arange, concatenate, array
+
 from Global import Global
+from group.Stats import Stats
 from myfsl.utils.run import rrun
 from utility.images import imtest, imcp, is_image, remove_ext, imcp_notexisting, immv
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
 from utility.utilities import sed_inplace, gunzip, compress, copytree, get_filename
-from group.Stats import Stats
 
 
 class SubjectEpi:
@@ -24,12 +25,12 @@ class SubjectEpi:
     def get_example_function(self, seq="rs", logFile=None):
 
         if seq == "rs":
-            exfun   = self.subject.rs_examplefunc
-            data    = self.subject.rs_data
+            exfun = self.subject.rs_examplefunc
+            data = self.subject.rs_data
             m_exfun = self.subject.rs_examplefunc_mask
         else:
-            exfun   = self.subject.fmri_examplefunc
-            data    = self.subject.fmri_data
+            exfun = self.subject.fmri_examplefunc
+            data = self.subject.fmri_data
             m_exfun = self.subject.fmri_examplefunc_mask
 
         if imtest(exfun) is False:
@@ -39,7 +40,8 @@ class SubjectEpi:
 
             rrun("imrm " + data + "prefiltered_func_data*", logFile=logFile)
 
-            rrun("fslmaths " + exfun + " -bin " + m_exfun, logFile=logFile)  # create example_function mask (a -thr 0.01/0.1 could have been used to further reduce it)
+            rrun("fslmaths " + exfun + " -bin " + m_exfun,
+                 logFile=logFile)  # create example_function mask (a -thr 0.01/0.1 could have been used to further reduce it)
 
         return exfun
 
@@ -74,12 +76,15 @@ class SubjectEpi:
         else:
             central_vol = epi_ref_vol
 
-        rrun("fslselectvols -i " + self.subject.fmri_data + " -o " + self.subject.fmri_data + "_ref" + " --vols=" + str(central_vol))
+        rrun("fslselectvols -i " + self.subject.fmri_data + " -o " + self.subject.fmri_data + "_ref" + " --vols=" + str(
+            central_vol))
 
         # 3
-        rrun("fslmerge -t " + self.subject.fmri_data + "_PE_ref_merged" + " " + self.subject.fmri_data + "_ref" + " " + ref_image_pe + "_ref")
+        rrun(
+            "fslmerge -t " + self.subject.fmri_data + "_PE_ref_merged" + " " + self.subject.fmri_data + "_ref" + " " + ref_image_pe + "_ref")
         # 4 —assumes merged epi volumes appear in the same order as acqparams.txt (--datain)
-        rrun("topup --imain=" + self.subject.fmri_data + "_PE_ref_merged" + " --datain=" + self.subject.fmri_acq_params + " --config=b02b0.cnf --out=" + self.subject.fmri_data + "_PE_ref_topup" + " --iout=" + self.subject.fmri_data + "_PE_ref_topup_corrected")
+        rrun(
+            "topup --imain=" + self.subject.fmri_data + "_PE_ref_merged" + " --datain=" + self.subject.fmri_acq_params + " --config=b02b0.cnf --out=" + self.subject.fmri_data + "_PE_ref_topup" + " --iout=" + self.subject.fmri_data + "_PE_ref_topup_corrected")
 
         # 5 -motion correction using central_vol
         self.subject.epi_spm_motioncorrection(central_vol)
@@ -89,18 +94,19 @@ class SubjectEpi:
                  replace=True)  # zip rSUBJ-fmri.nii => rSUBJ-fmri.nii.gz
 
         # 6 —again these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
-        rrun("applytopup --imain=" + self.subject.fmri_data_mc + " --topup=" + self.subject.fmri_data + "_PE_ref_topup" + " --datain=" + self.subject.fmri_acq_params + " --inindex=1 --method=jac --interp=spline --out=" + self.subject.fmri_data_mc)
+        rrun(
+            "applytopup --imain=" + self.subject.fmri_data_mc + " --topup=" + self.subject.fmri_data + "_PE_ref_topup" + " --datain=" + self.subject.fmri_acq_params + " --inindex=1 --method=jac --interp=spline --out=" + self.subject.fmri_data_mc)
 
     # model can be:  a fullpath, a filename (string) located in project's glm_template_dir
     def fsl_feat(self, epi_label, in_file_name, out_dir_name, model, do_initreg=False, std_image="", tr="", te=""):
 
         if epi_label == "rs":
-            epi_dir     = self.subject.rs_dir
+            epi_dir = self.subject.rs_dir
         elif epi_label.startswith("fmri"):
-            epi_dir     = self.subject.fmri_dir
+            epi_dir = self.subject.fmri_dir
 
-        out_dir     = os.path.join(epi_dir, out_dir_name)
-        epi_image   = os.path.join(epi_dir, in_file_name)
+        out_dir = os.path.join(epi_dir, out_dir_name)
+        epi_image = os.path.join(epi_dir, in_file_name)
 
         # default params:
         if imtest(epi_image) is False:
@@ -165,12 +171,12 @@ class SubjectEpi:
     def aroma(self, epi_label, input_dir, md="", mc="", aff="", warp="", ofn="ica_aroma", upsampling=0, logFile=None):
 
         if epi_label == "rs":
-            aroma_dir           = self.subject.rs_aroma_dir
-            regstd_aroma_dir    = self.subject.rs_regstd_aroma_dir
+            aroma_dir = self.subject.rs_aroma_dir
+            regstd_aroma_dir = self.subject.rs_regstd_aroma_dir
 
         elif epi_label.startswith("fmri"):
-            aroma_dir           = self.subject.fmri_aroma_dir
-            regstd_aroma_dir    = self.subject.fmri_regstd_aroma_dir
+            aroma_dir = self.subject.fmri_aroma_dir
+            regstd_aroma_dir = self.subject.fmri_regstd_aroma_dir
         else:
             print("ERROR in epi.aroma epi_label was not recognized")
             return
@@ -182,11 +188,13 @@ class SubjectEpi:
 
         # CHECK FILE EXISTENCE #.feat
         if os.path.isdir(input_dir) is False:
-            print("error in epi_aroma for subject: " + self.subject.label + ": you specified an incorrect folder name (" + input_dir + ")......exiting")
+            print(
+                "error in epi_aroma for subject: " + self.subject.label + ": you specified an incorrect folder name (" + input_dir + ")......exiting")
             return
 
         print("running AROMA for subject " + self.subject.label)
-        rrun("python2.7 " + self._global.ica_aroma_script + " -feat " + input_dir + " -out " + aroma_dir, logFile=logFile)
+        rrun("python2.7 " + self._global.ica_aroma_script + " -feat " + input_dir + " -out " + aroma_dir,
+             logFile=logFile)
 
         if upsampling > 0:
             os.makedirs(regstd_aroma_dir, exist_ok=True)
@@ -197,25 +205,40 @@ class SubjectEpi:
 
             # upsampling of standard
             # 		                    run ${FSLDIR}/bin/flirt  -ref                   $input_feat_dir/reg/standard     -in                 $input_feat_dir/reg/standard       -out $RS_REGSTD_AROMA_DIR/standard                      -applyisoxfm $UPSAMPLING_FACTOR  #4
-            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(input_dir, "reg", "standard") + " -in " + os.path.join(input_dir, "reg", "standard") + " -out " + os.path.join(regstd_aroma_dir, "standard") + " -applyisoxfm " + str(upsampling), logFile=logFile)
+            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(input_dir, "reg",
+                                                                                       "standard") + " -in " + os.path.join(
+                input_dir, "reg", "standard") + " -out " + os.path.join(regstd_aroma_dir,
+                                                                        "standard") + " -applyisoxfm " + str(
+                upsampling), logFile=logFile)
             # 		                    run ${FSLDIR}/bin/flirt  -ref                $RS_REGSTD_AROMA_DIR/standard       -in                  $input_feat_dir/reg/highres       -out $RS_REGSTD_AROMA_DIR/bg_image                     -applyxfm -init $input_feat_dir/reg/highres2standard.mat                       -interp sinc -datatype float
-            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join(input_dir, "reg", "highres") + " -out " + os.path.join(regstd_aroma_dir, "bg_image") + " -applyxfm -init " + os.path.join(input_dir, "reg", "highres2standard.mat") + " -interp sinc -datatype float", logFile=logFile)
+            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir,
+                                                                                       "standard") + " -in " + os.path.join(
+                input_dir, "reg", "highres") + " -out " + os.path.join(regstd_aroma_dir,
+                                                                       "bg_image") + " -applyxfm -init " + os.path.join(
+                input_dir, "reg", "highres2standard.mat") + " -interp sinc -datatype float", logFile=logFile)
             # 		                    run ${FSLDIR}/bin/flirt  -ref               $RS_REGSTD_AROMA_DIR/standard        -in                $RS_AROMA_DIR/denoised_func_data_nonaggr       -out                $RS_REGSTD_AROMA_DIR/filtered_func_data       -applyxfm -init                 $input_feat_dir/reg/example_func2standard.mat       -interp trilinear -datatype float
-            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join( aroma_dir, "denoised_func_data_nonaggr") + " -out " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -applyxfm -init " + os.path.join(input_dir, "reg", "example_func2standard.mat") + " -interp trilinear -datatype float", logFile=logFile)
+            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir,
+                                                                                       "standard") + " -in " + os.path.join(
+                aroma_dir, "denoised_func_data_nonaggr") + " -out " + os.path.join(regstd_aroma_dir,
+                                                                                   "filtered_func_data") + " -applyxfm -init " + os.path.join(
+                input_dir, "reg", "example_func2standard.mat") + " -interp trilinear -datatype float", logFile=logFile)
             # 		                    run ${FSLDIR}/bin/fslmaths                 $RS_REGSTD_AROMA_DIR/filtered_func_data       -Tstd -bin                $RS_REGSTD_AROMA_DIR/mask       -odt char
-            rrun(os.path.join(self._global.fsl_bin, "fslmaths") + " " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -Tstd -bin " + os.path.join(regstd_aroma_dir, "mask") + " -odt char", logFile=logFile)
+            rrun(os.path.join(self._global.fsl_bin, "fslmaths") + " " + os.path.join(regstd_aroma_dir,
+                                                                                     "filtered_func_data") + " -Tstd -bin " + os.path.join(
+                regstd_aroma_dir, "mask") + " -odt char", logFile=logFile)
 
     def remove_nuisance(self, in_img_name, out_img_name, epi_label="rs", ospn="", hpfsec=100):
 
         if epi_label == "rs":
-            in_img          = os.path.join(self.subject.rs_dir, in_img_name)
-            out_img         = os.path.join(self.subject.rs_dir, out_img_name)
-            series_wm       = self.subject.rs_series_wm + ospn + ".txt"
-            series_csf      = self.subject.rs_series_csf + ospn + ".txt"
-            output_series   = os.path.join(self.subject.rs_series_dir, "nuisance_timeseries" + ospn + ".txt")
+            in_img = os.path.join(self.subject.rs_dir, in_img_name)
+            out_img = os.path.join(self.subject.rs_dir, out_img_name)
+            series_wm = self.subject.rs_series_wm + ospn + ".txt"
+            series_csf = self.subject.rs_series_csf + ospn + ".txt"
+            output_series = os.path.join(self.subject.rs_series_dir, "nuisance_timeseries" + ospn + ".txt")
 
         if imtest(in_img) is False:
-            print('ERROR in epi_resting_nuisance of subject ' + self.subject.label + ". input image (" + in_img + ") is missing")
+            print(
+                'ERROR in epi_resting_nuisance of subject ' + self.subject.label + ". input image (" + in_img + ") is missing")
             return
 
         tr = float(rrun('fslval ' + in_img + ' pixdim4'))
@@ -236,7 +259,8 @@ class SubjectEpi:
             self.subject.transform.transform_roi("hrTOrs", "abs", rois=[self.subject.t1_segment_csf_ero_path])
 
         rrun("fslmeants -i " + in_img + " -o " + series_wm + " -m " + self.subject.rs_mask_t1_wmseg4nuis + " --no_bin")
-        rrun("fslmeants -i " + in_img + " -o " + series_csf + " -m " + self.subject.rs_mask_t1_csfseg4nuis + " --no_bin")
+        rrun(
+            "fslmeants -i " + in_img + " -o " + series_csf + " -m " + self.subject.rs_mask_t1_csfseg4nuis + " --no_bin")
 
         if os.path.isfile(series_csf) and os.path.isfile(series_wm):
             os.system("paste " + series_wm + " " + series_csf + " > " + output_series)
@@ -372,10 +396,14 @@ class SubjectEpi:
         imcp(ref_image_pe, temp_epi_pe)
         os.system('gzip -d -k ' + temp_epi_pe + '.nii.gz')
         os.system('gzip -d -k ' + temp_epi + '.nii.gz')
-        self.subject.epi_spm_motioncorrection(ref_volume_pe, temp_epi_pe, temp_epi, spm_template_name="spm_fmri_realign_estimate_to_given_vol")
+        self.subject.epi_spm_motioncorrection(ref_volume_pe, temp_epi_pe, temp_epi,
+                                              spm_template_name="spm_fmri_realign_estimate_to_given_vol")
 
         # 3: call matlab function that calculates best volume:
-        best_vol = call_matlab_function("least_mov", [self._global.spm_functions_dir], "\"" + os.path.join(self.subject.fmri_dir, "temp_distorsion_mc", 'rp_' + self.subject.fmri_image_label + "_pe" + '.txt' + "\""))[1]
+        best_vol = call_matlab_function("least_mov", [self._global.spm_functions_dir],
+                                        "\"" + os.path.join(self.subject.fmri_dir, "temp_distorsion_mc",
+                                                            'rp_' + self.subject.fmri_image_label + "_pe" + '.txt' + "\""))[
+            1]
         rmtree(temp_distorsion_mc)
 
         return best_vol
@@ -531,7 +559,8 @@ class SubjectEpi:
         if lvl == Global.CLEANUP_LVL_MED:
             # copy melodic report i
             os.makedirs(self.subject.rs_melic_dir)
-            rrun("mv " + self.subject.rs_default_mel_dir + "/filtered_func_data_ica.ica/report" + " " + self.subject.rs_melic_dir)
+            rrun(
+                "mv " + self.subject.rs_default_mel_dir + "/filtered_func_data_ica.ica/report" + " " + self.subject.rs_melic_dir)
 
             rrun("rm -rf " + self.subject.rs_default_mel_dir)
             os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_melodic_image_label))
@@ -554,50 +583,50 @@ class SubjectEpi:
     # take the reg_standard output of feat/melodic, convert to std4 and copy to resting/reg_std folder
     def adopt_rs_preproc_folderoutput(self, proc_folder):
 
-        in_img      = os.path.join(proc_folder, "reg_standard", "filtered_func_data")
-        in_mask     = os.path.join(proc_folder, "reg_standard", "mask")
-        in_bgimage  = os.path.join(proc_folder, "reg_standard", "bg_image")
+        in_img = os.path.join(proc_folder, "reg_standard", "filtered_func_data")
+        in_mask = os.path.join(proc_folder, "reg_standard", "mask")
+        in_bgimage = os.path.join(proc_folder, "reg_standard", "bg_image")
 
         self.subject.transform.transform_roi("stdTOstd4", "abs", rois=[in_img, in_mask, in_bgimage])
 
-        in_img4     = os.path.join(self.subject.roi_std4_dir, "filtered_func_data_std4")
-        in_mask4    = os.path.join(self.subject.roi_std4_dir, "mask_std4")
+        in_img4 = os.path.join(self.subject.roi_std4_dir, "filtered_func_data_std4")
+        in_mask4 = os.path.join(self.subject.roi_std4_dir, "mask_std4")
         in_bgimage4 = os.path.join(self.subject.roi_std4_dir, "bg_image_std4")
 
-        immv(in_img4    , self.subject.rs_final_regstd_image)
-        imcp(in_mask4   , self.subject.rs_final_regstd_mask)
+        immv(in_img4, self.subject.rs_final_regstd_image)
+        imcp(in_mask4, self.subject.rs_final_regstd_mask)
         imcp(in_bgimage4, self.subject.rs_final_regstd_bgimage)
 
     def reg_copy_feat(self, epi_label, std_image=""):
 
         if epi_label == "rs":
-            epi_image       = self.subject.rs_data
-            epi_dir         = self.subject.rs_dir
-            out_dir         = os.path.join(epi_dir, "resting.feat")
-            exfun           = self.subject.rs_examplefunc
-            reg_dir         = self.subject.roi_rs_dir
+            epi_image = self.subject.rs_data
+            epi_dir = self.subject.rs_dir
+            out_dir = os.path.join(epi_dir, "resting.feat")
+            exfun = self.subject.rs_examplefunc
+            reg_dir = self.subject.roi_rs_dir
 
-            std2epi_warp    = self.subject.std2rs_warp
-            epi2std_warp    = self.subject.rs2std_warp
+            std2epi_warp = self.subject.std2rs_warp
+            epi2std_warp = self.subject.rs2std_warp
 
-            std2epi_mat     = self.subject.std2rs_mat
-            epi2std_mat     = self.subject.rs2std_mat
+            std2epi_mat = self.subject.std2rs_mat
+            epi2std_mat = self.subject.rs2std_mat
 
-            epi2hr_mat      = self.subject.rs2hr_mat
-            hr2epi_mat      = self.subject.hr2rs_mat
+            epi2hr_mat = self.subject.rs2hr_mat
+            hr2epi_mat = self.subject.hr2rs_mat
 
         elif epi_label.startswith("fmri"):
-            epi_image       = os.path.join(self.subject.fmri_dir, self.subject.label + "-" + epi_label)
-            epi_dir         = self.subject.fmri_dir
-            out_dir         = os.path.join(epi_dir, epi_label + ".feat")
-            exfun           = self.subject.fmri_examplefunc
-            reg_dir         = self.subject.roi_fmri_dir
+            epi_image = os.path.join(self.subject.fmri_dir, self.subject.label + "-" + epi_label)
+            epi_dir = self.subject.fmri_dir
+            out_dir = os.path.join(epi_dir, epi_label + ".feat")
+            exfun = self.subject.fmri_examplefunc
+            reg_dir = self.subject.roi_fmri_dir
 
-            std2epi_warp    = self.subject.std2fmri_warp
-            epi2std_warp    = self.subject.fmri2std_warp
+            std2epi_warp = self.subject.std2fmri_warp
+            epi2std_warp = self.subject.fmri2std_warp
 
-            std2epi_mat     = self.subject.std2fmri_mat
-            epi2std_mat     = self.subject.fmri2std_mat
+            std2epi_mat = self.subject.std2fmri_mat
+            epi2std_mat = self.subject.fmri2std_mat
 
             epi2hr_mat = self.subject.fmri2hr_mat
             hr2epi_mat = self.subject.hr2fmri_mat
@@ -624,15 +653,18 @@ class SubjectEpi:
         imcp_notexisting(os.path.join(out_dir, "reg", "highres2standard_warp"), self.subject.hr2std_warp)
 
         if imtest(self.subject.std2hr_warp) is False:
-            rrun(os.path.join(self._global.fsl_bin, "invwarp") + " -w " + self.subject.hr2std_warp + " -o " + self.subject.std2hr_warp + " -r " + self.subject.t1_brain_data)
+            rrun(os.path.join(self._global.fsl_bin,
+                              "invwarp") + " -w " + self.subject.hr2std_warp + " -o " + self.subject.std2hr_warp + " -r " + self.subject.t1_brain_data)
 
         # epi -> highres -> standard
         if imtest(epi2std_warp) is False:
-            rrun(os.path.join(self._global.fsl_bin, "convertwarp") + " --ref=" + std_image + " --premat=" + epi2hr_mat + " --warp1=" + self.subject.hr2std_warp + " --out=" + epi2std_warp)
+            rrun(os.path.join(self._global.fsl_bin,
+                              "convertwarp") + " --ref=" + std_image + " --premat=" + epi2hr_mat + " --warp1=" + self.subject.hr2std_warp + " --out=" + epi2std_warp)
 
         # invwarp: standard -> highres -> epi
         if imtest(std2epi_warp) is False:
-            rrun(os.path.join(self._global.fsl_bin, "invwarp") + " -w " + epi2std_warp + " -o " + std2epi_warp + " -r " + exfun)
+            rrun(os.path.join(self._global.fsl_bin,
+                              "invwarp") + " -w " + epi2std_warp + " -o " + std2epi_warp + " -r " + exfun)
 
     # ===============================================================================
     # SBFC

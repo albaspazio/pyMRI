@@ -1,15 +1,16 @@
 import os
 
-class FslSwitcher:
 
+class FslSwitcher:
     dir = ""
     fsl_ver = ""
 
     def activate_fsl_version(self, argument):
         """Dispatch method"""
         method_name = 'ver_' + str(argument)
-        method = getattr(self, method_name, lambda: self.unknown_version())        # Get the method from 'self'. Default to a lambda.
-        method()         # Call the method as we return it
+        method = getattr(self, method_name,
+                         lambda: self.unknown_version())  # Get the method from 'self'. Default to a lambda.
+        method()  # Call the method as we return it
         self.send_cmd()
         return "using fsl " + self.fsl_ver
 

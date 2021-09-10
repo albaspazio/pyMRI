@@ -1,12 +1,14 @@
-import sys
 import os
 import subprocess
+import sys
+
 from myfsl.utils.run import rrun
 from utility.images import imtest
 
-#===============================================================================================================================
+
+# ===============================================================================================================================
 # some run functions
-#===============================================================================================================================
+# ===============================================================================================================================
 # run plain os.system command
 def runsystem(cmd, logFile=None):
     os.system(cmd)
@@ -26,12 +28,11 @@ def run_notexisting_img(img, cmd, logFile=None):
         rrun(cmd, logFile=logFile)
 
 
-#===============================================================================================================================
+# ===============================================================================================================================
 # DEPRECATED run bash commands, i use the rrun function (modified version of the fsl's run function
-#===============================================================================================================================
+# ===============================================================================================================================
 # run fsl (default) or generic command and return exception
 def run(cmd, logFile=None, is_fsl=True):
-
     if is_fsl is True:
         fsl_bin = os.path.join(os.getenv('FSLDIR'), "bin")
         cmdstr = os.path.join(fsl_bin, cmd)
@@ -57,6 +58,8 @@ def run(cmd, logFile=None, is_fsl=True):
         if logFile is not None:
             print(errstring, file=logFile)
         raise Exception(errstring)
+
+
 #
 # run a fsl (default) or generic pipe command
 def runpipe(cmd, logFile=None, is_fsl=True):
@@ -83,7 +86,6 @@ def runpipe(cmd, logFile=None, is_fsl=True):
         if logFile is not None:
             print(errstring, file=logFile)
         raise Exception(errstring)
-
 
 # run fsl (default) or generic command and return cmd values (typically fslstats)
 # def runreturn(cmd, params, logFile=None, is_fsl=True):

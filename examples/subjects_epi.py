@@ -1,5 +1,3 @@
-import os
-
 from Global import Global
 from Project import Project
 
@@ -19,16 +17,16 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # HEADER
     # ======================================================================================================================
-    proj_dir    = "/media/campus/SeagateBackupPlusDrive/MRI/projects/bisection_pisa"
-    project     = Project(proj_dir, globaldata)
-    SESS_ID     = 1
-    num_cpu     = 4
+    proj_dir = "/media/campus/SeagateBackupPlusDrive/MRI/projects/bisection_pisa"
+    project = Project(proj_dir, globaldata)
+    SESS_ID = 1
+    num_cpu = 4
     group_label = "single"
 
     # ======================================================================================================================
     # PROCESSING
     # ======================================================================================================================
-    kwparams    = []
+    kwparams = []
 
     epi_names = ["bis1", "bis2", "bis3", "loc1", "loc2"]
     epi_names_ex = ["bis1", "bis2", "bis3", "loc1", "loc3"]
@@ -55,7 +53,6 @@ if __name__ == "__main__":
     # for s in subjects:
     #     # print(s.label + "\t" + str(fslfun.get_image_dimension(s.t1_data)))
     #     print(s.label + "\t" + str(fslfun.read_header(s.t1_data, ["nx","ny","nz","dx","dy","dz","descrip"])))
-
 
     # ---------------------------------------------------------------------------------------------------------------------
     # MERGE NIFTI

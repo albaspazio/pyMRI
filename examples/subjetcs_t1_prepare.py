@@ -1,5 +1,3 @@
-import os
-
 from Global import Global
 from Project import Project
 
@@ -19,25 +17,24 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # HEADER
     # ======================================================================================================================
-    proj_dir    = "/data/MRI/projects/T15"
-    project     = Project(proj_dir, globaldata)
-    SESS_ID     = 1
+    proj_dir = "/data/MRI/projects/T15"
+    project = Project(proj_dir, globaldata)
+    SESS_ID = 1
     group_label = "controls_test"
 
     # ======================================================================================================================
     # PROCESSING
     # ======================================================================================================================
-    
+
     # subject = Subject("test", 1, project)
     # subject.create_file_system()
     # subject.mpr2nifti(subject.t1_dir, 1)
 
-    subjects    = project.load_subjects(group_label, SESS_ID)
+    subjects = project.load_subjects(group_label, SESS_ID)
 
-    subject     = subjects[0]
+    subject = subjects[0]
     # hdr = fslfun.read_header(subject.t1_data)
     # print(str(fslfun.get_image_dimension(subject.t1_data)))
-
 
     # subject.reslice_image("sag->axial")
     # subject.anatomical_processing_prebet()

@@ -8,27 +8,27 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # check global data and external toolboxes
     # ======================================================================================================================
-    fsl_code            = "601"
+    fsl_code = "601"
     try:
         globaldata = Global(fsl_code)
-        
+
     except Exception as e:
         print(e)
         exit()
-        
+
     # ======================================================================================================================
     # HEADER
     # ======================================================================================================================
-    proj_dir    = "/data/MRI/projects/T15"
-    project     = Project(proj_dir, globaldata)
-    SESS_ID     = 1
-    num_cpu     = 8
+    proj_dir = "/data/MRI/projects/T15"
+    project = Project(proj_dir, globaldata)
+    SESS_ID = 1
+    num_cpu = 8
     group_label = "all"
 
     # ======================================================================================================================
     # PROCESSING
     # ======================================================================================================================
-    kwparams    = []
+    kwparams = []
 
     # ---------------------------------------------------------------------------------------------------------------------
     # CREATE FILE SYSTEM
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     # CONVERT 2 NIFTI
     # ---------------------------------------------------------------------------------------------------------------------
     # for p in range(len(subjects)):
-        # kwparams.append({"extpath":"/data/MRI/projects/T3/" + subjects[p].label, "cleanup":0})
+    # kwparams.append({"extpath":"/data/MRI/projects/T3/" + subjects[p].label, "cleanup":0})
     # project.run_subjects_methods("mpr2nifti", kwparams, project.get_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
@@ -93,18 +93,20 @@ if __name__ == "__main__":
     # subjects    = project.load_subjects(group_label, SESS_ID)
     # project.run_subjects_methods("spm_segment", [{"do_overwrite":True, "do_bet_overwrite":False, "set_origin":True}], project.get_subjects_labels(), nthread=1)
 
-
     # ---------------------------------------------------------------------------------------------------------------------
     # CAT SEGMENTATION & THICKNESS
     # ---------------------------------------------------------------------------------------------------------------------
     # the proj_script/mpr/spm/batch folder must be already in the matlab path
     # it may over-ride both BET and FS skull-stripping results
     # default usage analyzes in parallel num_cpu subjects using one CPU for each.
-    segmentation_template   = os.path.join(project.group_analysis_dir, "templates", "com", "mw_com_prior_Age_0070.nii")
-    coregistration_template = os.path.join(project.group_analysis_dir, "templates", "com", "mw_com_Template_1_Age_0070.nii")
-    calc_surfaces           = 1
-    subjects                = project.load_subjects(group_label, SESS_ID)
-    project.run_subjects_methods("cat_segment", [{"do_overwrite":True, "seg_templ":segmentation_template, "coreg_templ":coregistration_template, "calc_surfaces":calc_surfaces, "num_proc":1}], project.get_loaded_subjects_labels(), nthread=num_cpu)
+    segmentation_template = os.path.join(project.group_analysis_dir, "templates", "com", "mw_com_prior_Age_0070.nii")
+    coregistration_template = os.path.join(project.group_analysis_dir, "templates", "com",
+                                           "mw_com_Template_1_Age_0070.nii")
+    calc_surfaces = 1
+    subjects = project.load_subjects(group_label, SESS_ID)
+    project.run_subjects_methods("cat_segment", [
+        {"do_overwrite": True, "seg_templ": segmentation_template, "coreg_templ": coregistration_template,
+         "calc_surfaces": calc_surfaces, "num_proc": 1}], project.get_loaded_subjects_labels(), nthread=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM TISSUE VOLUMES
@@ -138,5 +140,3 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
     # project.run_subjects_methods("finalize", [], project.get_subjects_labels(), nthread=num_cpu)
-
-

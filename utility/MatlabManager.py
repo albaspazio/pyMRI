@@ -1,21 +1,18 @@
-import subprocess
-from random import random, randint
-
-import matlab.engine.engineerror
-import matlab.engine
 # from matlab.engine import
 import os
-import io
+import subprocess
+from random import randint
 
-from myfsl.utils.run import rrun
+import matlab.engine
+import matlab.engine.engineerror
 
 
 class MatlabManager:
+    SESSION_NEW_PERSISTENT = 1
+    SESSION_NEW_NOTSHARED = 2
+    SESSION_REUSE_FIRST = 3
+    SESSION_REUSE_NAME = 4
 
-    SESSION_NEW_PERSISTENT  = 1
-    SESSION_NEW_NOTSHARED   = 2
-    SESSION_REUSE_FIRST     = 3
-    SESSION_REUSE_NAME      = 4
     # start a new matlab session or connect to an existing one:
     #   persistent=False : start a new NOT-SHARED one if not existing or connect to an existing SHARED (given by conn2existing) or the first available
     #   persistent=True  :
@@ -27,13 +24,12 @@ class MatlabManager:
 
         if sess_type == MatlabManager.SESSION_NEW_PERSISTENT:
             if len(conn2existing) == 0:
-                conn2existing = "persistentSession" + str(randint(1,10000))
+                conn2existing = "persistentSession" + str(randint(1, 10000))
 
             # os.system('matlab -r \"matlab.engine.shareEngine(''' + conn2existing + ')\"')
             # os.system('matlab -r \"matlab.engine.shareEngine\"')
             # process = subprocess.run(['matlab', '-r', 'matlab.engine.shareEngine(\"' + conn2existing + '\")'])
             process = subprocess.run(['matlab', '-r \"matlab.engine.shareEngine\"'])
-
 
             # rrun("matlab -r \"matlab.engine.shareEngine(\'" + conn2existing + "\')\"")
             while True:
@@ -50,10 +46,10 @@ class MatlabManager:
             # try to reuse existing engine
             existing_sessions = matlab.engine.find_matlab()
             if len(existing_sessions) > 0:
-                eng = matlab.engine.connect_matlab(existing_sessions[0])    # reuse first
+                eng = matlab.engine.connect_matlab(existing_sessions[0])  # reuse first
                 print("reusing SHARED matlab session " + existing_sessions[0])
             else:
-                eng = matlab.engine.connect_matlab()                        # create new shared
+                eng = matlab.engine.connect_matlab()  # create new shared
                 print("new SHARED matlab session opened")
 
         elif sess_type == MatlabManager.SESSION_REUSE_NAME:
@@ -159,9 +155,6 @@ class MatlabManager:
             print(e)
             exit()
 
-
-
-
         #
         # def _execute_sync(self, code):
         #     out = io.StringIO()
@@ -178,12 +171,6 @@ class MatlabManager:
         #     self.Print(stdout)
         #
         #
-
-
-
-
-
-
 
     # attempt to create a multipurpose method that receive a list of functions/params/return types
     # def call_matlab_function(functions, params, standard_paths, logfile=None, endengine=True):

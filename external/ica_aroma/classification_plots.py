@@ -2,7 +2,6 @@ from __future__ import print_function
 
 
 def classification_plot(myinput, outDir):
-
     import pandas as pd
     import numpy as np
     import matplotlib as mpl
@@ -29,10 +28,10 @@ def classification_plot(myinput, outDir):
         for t in tmp[1:-1]:
             vals = t.split('\t')
             res.append([vals[1],
-                       float(vals[2]),
-                       float(vals[3]),
-                       float(vals[4]),
-                       float(vals[5])])
+                        float(vals[2]),
+                        float(vals[3]),
+                        float(vals[4]),
+                        float(vals[5])])
 
         if count == 0:
             df = pd.DataFrame.from_records(res)
@@ -51,14 +50,14 @@ def classification_plot(myinput, outDir):
     tmp = df.loc[df[0] == "True"]
     if len(tmp) < 3:
         df3 = pd.DataFrame.from_records([["True", 1., 1., 0., 0.],
-                                        ["True", 1., 1., 0., 0.],
-                                        ["True", 1., 1., 0., 0.]])
+                                         ["True", 1., 1., 0., 0.],
+                                         ["True", 1., 1., 0., 0.]])
         df = df.append(df3, ignore_index=True)
     tmp = df.loc[df[0] == "False"]
     if len(tmp) < 3:
         df3 = pd.DataFrame.from_records([["False", 0., 0., 0., 0.],
-                                        ["False", 0., 0., 0., 0.],
-                                        ["False", 0., 0., 0., 0.]])
+                                         ["False", 0., 0., 0., 0.],
+                                         ["False", 0., 0., 0., 0.]])
         df = df.append(df3, ignore_index=True)
 
     # rename columns
