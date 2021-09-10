@@ -7,14 +7,14 @@ from inspect import signature
 from copy import deepcopy
 
 from myfsl.utils.run import rrun
-from subject.Subject import Subject
+from subject.Subject import SubjectEx
 from utility.SubjectsDataDict import SubjectsDataDict
 from utility.images import imcp, imrm
 from utility.utilities import gunzip, compress, copytree
 from utility import import_data_file
 
 
-class Project:
+class ProjectEx:
 
     def __init__(self, folder, globaldata, data="data.dat"):
 
@@ -83,7 +83,7 @@ class Project:
         subjects = self.get_subjects_labels(group_label)
         subjs = []
         for subj in subjects:
-            subjs.append(Subject(subj, sess_id, self))
+            subjs.append(SubjectEx(subj, sess_id, self))
         return subjs
 
     # ==================================================================================================================
@@ -186,8 +186,6 @@ class Project:
         os.chdir(nl_std);   os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(nl_std, "slicesdir"), sd_nl_std)
         os.chdir(nl_std4);  os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(nl_std4, "slicesdir"), sd_nl_std4)
         os.chdir(nl_t2);    os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(nl_t2, "slicesdir"), sd_nl_t2)
-
-
 
     # create a folder where it copies the brain extracted from BET, FreeSurfer and SPM
     def compare_brain_extraction(self, tempdir, list_subj_label=None):

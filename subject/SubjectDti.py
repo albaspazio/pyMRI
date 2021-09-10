@@ -96,7 +96,7 @@ class SubjectDti:
         if use_gpu is True:
             gpu_str = " -gpu "
 
-        rrun("xtract -bpx " + bp_dir + " -out " + out_dir + " -stdwarp " + self.subject.std2dti_warp + " " + self.subject.dti2std_warp + gpu_str + refspace_str + " -species " + species, stop_on_error=False, logFile=logFile)
+        rrun("xtract -bpx " + bp_dir + " -out " + out_dir + " -stdwarp " + self.subject.transform.std2dti_warp + " " + self.subject.transform.dti2std_warp + gpu_str + refspace_str + " -species " + species, stop_on_error=False, logFile=logFile)
 
         self.xtract_check(out_dir)
         return out_dir
