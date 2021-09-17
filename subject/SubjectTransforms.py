@@ -31,7 +31,7 @@ from utility.transform_images import check_concat_mat, check_invert_mat, check_c
     check_flirt, check_apply_mat, check_convert_warp_wmw, check_convert_warp_ww, check_apply_warp
 
 
-class SubjectTransformsEx:
+class SubjectTransforms:
 
     def __init__(self, subject, _global):
 
@@ -241,7 +241,7 @@ class SubjectTransformsEx:
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # it creates (8) :  hr2std_mat,  std2hr_mat,  hr2std_warp,  std2hr_warp,            hrhead2std.mat
     #                   hr2std4_mat, std42hr_mat, hr2std4_warp, std42hr_warp,           hrhead2std4.mat
-    def transform_mpr(self, logFile=None):
+    def transform_mpr(self, overwrite=False, logFile=None):
 
         hrhead2std = os.path.join(self.subject.roi_std_dir, "hrhead2" + self.subject.std_img_label + ".mat")
         hrhead2std4 = os.path.join(self.subject.roi_std4_dir, "hrhead2" + self.subject.std_img_label + "4.mat")
@@ -261,24 +261,23 @@ class SubjectTransformsEx:
         # HIGHRES <--------> STANDARD
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # => hr2{std}.mat
-        check_flirt(self.hr2std_mat, self.subject.t1_brain_data, self.subject.std_img, logFile=logFile)
+        check_flirt(self.hr2std_mat, self.subject.t1_brain_data, self.subject.std_img, overwrite=overwrite, logFile=logFile)
 
         # => hrhead2{std}.mat
-        check_flirt(hrhead2std, self.subject.t1_data, self.subject.std_img, logFile=logFile)
+        check_flirt(hrhead2std, self.subject.t1_data, self.subject.std_img, overwrite=overwrite, logFile=logFile)
 
         # # => {std}2hr.mat
-        check_invert_mat(self.std2hr_mat, self.hr2std_mat, logFile=logFile)
+        check_invert_mat(self.std2hr_mat, self.hr2std_mat, overwrite=overwrite, logFile=logFile)
 
         # NON LINEAR
         # => hr2{std}_warp
         if imtest(self.hr2std_warp) is False:
-            rrun(
-                "fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + " --config=" + self._global.fsl_std_mni_2mm_cnf +
+            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + " --config=" + self._global.fsl_std_mni_2mm_cnf +
                 " --ref=" + self.subject.std_head_img + " --refmask=" + self.subject.std_img_mask_dil + " --warpres=10,10,10" +
-                " --cout=" + self.hr2std_warp + " --iout=" + self.hr2std_mat, logFile=logFile)
+                " --cout=" + self.hr2std_warp + " --iout=" + self.hr2std_mat, overwrite=overwrite, logFile=logFile)
 
         # => {std}2hr_warp
-        check_invert_warp(self.std2hr_warp, self.hr2std_warp, self.subject.t1_data, logFile=logFile)
+        check_invert_warp(self.std2hr_warp, self.hr2std_warp, self.subject.t1_data, overwrite=overwrite, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # HIGHRES <--------> STANDARD4
@@ -288,23 +287,23 @@ class SubjectTransformsEx:
 
         os.makedirs(self.subject.roi_std4_dir, exist_ok=True)
         # => hr2{std}4.mat
-        check_flirt(self.hr2std4_mat, self.subject.t1_brain_data, self.subject.std4_img, logFile=logFile)
+        check_flirt(self.hr2std4_mat, self.subject.t1_brain_data, self.subject.std4_img, overwrite=overwrite, logFile=logFile)
 
         # => hrhead2{std}4.mat
-        check_flirt(hrhead2std4, self.subject.t1_data, self.subject.std4_head_img, logFile=logFile)
+        check_flirt(hrhead2std4, self.subject.t1_data, self.subject.std4_head_img, overwrite=overwrite, logFile=logFile)
 
         # => {std}42hr.mat
-        check_invert_mat(self.std42hr_mat, self.hr2std4_mat, logFile=logFile)
+        check_invert_mat(self.std42hr_mat, self.hr2std4_mat, overwrite=overwrite, logFile=logFile)
 
         # NON LINEAR
         # => hr2{std}4_warp
         if imtest(self.hr2std4_warp) is False:
-            rrun(
-                "fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std4 + " --config=" + self._global.fsl_std_mni_4mm_cnf +
-                " --ref=" + self.subject.std4_head_img + " --refmask=" + self.subject.std4_img_mask_dil + " --warpres=10,10,10" + " --cout=" + self.hr2std4_warp)
+            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std4 + " --config=" + self._global.fsl_std_mni_4mm_cnf +
+                " --ref=" + self.subject.std4_head_img + " --refmask=" + self.subject.std4_img_mask_dil + " --warpres=10,10,10" + " --cout=" + self.hr2std4_warp,
+                 logFile=logFile)
 
         # => {std}42hr_warp
-        check_invert_warp(self.std42hr_warp, self.hr2std4_warp, self.subject.t1_data, logFile=logFile)
+        check_invert_warp(self.std42hr_warp, self.hr2std4_warp, self.subject.t1_data, overwrite=overwrite, logFile=logFile)
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # Calculate all the transforms involved in EPI processing.
@@ -312,7 +311,7 @@ class SubjectTransformsEx:
     # (17/7/21) bbr co-registration fails!!!
     # it creates (10) : example_func, rs2hr_mat , hr2rs_mat , rs2std_mat , std2rs_mat , rs2std4_mat , std42rs_mat
     #                                 rs2std_warp, std2rs_warp, rs2std4_warp, std42rs_warp
-    def transform_rs(self, do_bbr=False, wmseg="", logFile=None):
+    def transform_rs(self, do_bbr=False, wmseg="", overwrite=False, logFile=None):
 
         if wmseg == "":
             wmseg = self.subject.t1_segment_wm_bbr_path
@@ -339,7 +338,7 @@ class SubjectTransformsEx:
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if do_bbr is True:
             # BBR (taken from $FSLDIR/bin/epi_reg.sh)
-            check_flirt("init_" + self.rs2hr_mat, exfun, self.subject.t1_brain_data, params="-dof 6", logFile=logFile)
+            check_flirt("init_" + self.rs2hr_mat, exfun, self.subject.t1_brain_data, params="-dof 6", overwrite=overwrite, logFile=logFile)
 
             if imtest(wmseg) is False:
                 print("Running FAST segmentation for subj " + self.subject.label)
@@ -351,53 +350,51 @@ class SubjectTransformsEx:
 
             check_flirt(self.rs2hr_mat, exfun, self.subject.t1_brain_data,
                         params=" -dof 6 -cost bbr -wmseg " + wmseg + " -init " + "init_" + self.rs2hr_mat + " -schedule " + os.path.join(
-                            self.subject.fsl_dir, "etc", "flirtsch", "bbr.sch"), logFile=logFile)
+                            self.subject.fsl_dir, "etc", "flirtsch", "bbr.sch"), overwrite=overwrite, logFile=logFile)
 
             runsystem("rm " + "init_" + self.rs2hr_mat, logFile=logFile)
         else:  # NOT BBR
             check_flirt(self.rs2hr_mat, exfun, self.subject.t1_brain_data,
                         params=" -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear",
-                        logFile=logFile)
+                        overwrite=overwrite, logFile=logFile)
 
-        check_invert_mat(self.hr2rs_mat, self.rs2hr_mat, logFile=logFile)
+        check_invert_mat(self.hr2rs_mat, self.rs2hr_mat, overwrite=overwrite, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # RS <--> STANDARD (linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # => rs2std.mat
-        check_concat_mat(self.rs2std_mat, self.rs2hr_mat, self.hr2std_mat, logFile=logFile)
+        check_concat_mat(self.rs2std_mat, self.rs2hr_mat, self.hr2std_mat, overwrite=overwrite, logFile=logFile)
 
         # => std2rs.mat
-        check_invert_mat(self.std2rs_mat, self.rs2std_mat, logFile=logFile)
+        check_invert_mat(self.std2rs_mat, self.rs2std_mat, overwrite=overwrite, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # RS <--> STANDARD (non linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # => rs2std_warp
-        check_convert_warp_mw(self.rs2std_warp, self.rs2hr_mat, self.hr2std_warp, self.subject.std_head_img,
-                              logFile=logFile)
+        check_convert_warp_mw(self.rs2std_warp, self.rs2hr_mat, self.hr2std_warp, self.subject.std_head_img, overwrite=overwrite, logFile=logFile)
 
         # => std2rs_warp
-        check_invert_warp(self.std2rs_warp, self.rs2std_warp, self.subject.rs_examplefunc, logFile=logFile)
+        check_invert_warp(self.std2rs_warp, self.rs2std_warp, self.subject.rs_examplefunc, overwrite=overwrite, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # RS <-> STANDARD4 (linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # => rs2std4.mat
-        check_concat_mat(self.rs2std4_mat, self.rs2hr_mat, self.hr2std4_mat, logFile=logFile)
+        check_concat_mat(self.rs2std4_mat, self.rs2hr_mat, self.hr2std4_mat, overwrite=overwrite, logFile=logFile)
 
         # => std42rs.mat
-        check_invert_mat(self.std42rs_mat, self.rs2std4_mat, logFile=logFile)
+        check_invert_mat(self.std42rs_mat, self.rs2std4_mat, overwrite=overwrite, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # RS <-> STANDARD4 (non linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # => rs2std4_warp
-        check_convert_warp_mw(self.rs2std4_warp, self.rs2hr_mat, self.hr2std4_warp, self.subject.std4_head_img,
-                              logFile=logFile)
+        check_convert_warp_mw(self.rs2std4_warp, self.rs2hr_mat, self.hr2std4_warp, self.subject.std4_head_img, overwrite=overwrite, logFile=logFile)
 
         # => std42rs_warp
-        check_invert_warp(self.std42rs_warp, self.rs2std4_warp, exfun, logFile=logFile)
+        check_invert_warp(self.std42rs_warp, self.rs2std4_warp, exfun, overwrite=overwrite, logFile=logFile)
 
         # ------------------------------------------------------------------------------------------------------
         # various co-registration
@@ -405,17 +402,17 @@ class SubjectTransformsEx:
         # coregister fast-highres to rs
         check_apply_mat(os.path.join(self.subject.roi_rs_dir, "t1_wm_rs"),
                         os.path.join(self.subject.roi_t1_dir, "mask_t1_wm"), self.hr2rs_mat,
-                        self.subject.rs_examplefunc, logFile=logFile)
+                        self.subject.rs_examplefunc, overwrite=overwrite, logFile=logFile)
         check_apply_mat(os.path.join(self.subject.roi_rs_dir, "t1_csf_rs"),
                         os.path.join(self.subject.roi_t1_dir, "mask_t1_csf"), self.hr2rs_mat,
-                        self.subject.rs_examplefunc, logFile=logFile)
+                        self.subject.rs_examplefunc, overwrite=overwrite, logFile=logFile)
         check_apply_mat(os.path.join(self.subject.roi_rs_dir, "t1_gm_rs"),
                         os.path.join(self.subject.roi_t1_dir, "mask_t1_gm"), self.hr2rs_mat,
-                        self.subject.rs_examplefunc, logFile=logFile)
+                        self.subject.rs_examplefunc, overwrite=overwrite, logFile=logFile)
         check_apply_mat(os.path.join(self.subject.roi_rs_dir, "t1_brain_rs"), self.subject.t1_brain_data,
-                        self.hr2rs_mat, self.subject.rs_examplefunc, logFile=logFile)
+                        self.hr2rs_mat, self.subject.rs_examplefunc, overwrite=overwrite, logFile=logFile)
         check_apply_mat(os.path.join(self.subject.roi_rs_dir, "t1_brain_mask_rs"), self.subject.t1_brain_data_mask,
-                        self.hr2rs_mat, self.subject.rs_examplefunc, logFile=logFile)
+                        self.hr2rs_mat, self.subject.rs_examplefunc, overwrite=overwrite, logFile=logFile)
 
         # mask & binarize
         rrun("fslmaths " + os.path.join(self.subject.roi_rs_dir, "t1_gm_rs") + " -thr 0.2 -bin " + os.path.join(
@@ -431,7 +428,7 @@ class SubjectTransformsEx:
 
     # it creates (10) : example_func, fmri2hr_mat , hr2fmri_mat , fmri2std_mat , std2fmri_mat , fmri2std4_mat , std42fmri_mat
     #                                                             fmri2std_warp, std2fmri_warp, fmri2std4_warp, std42fmri_warp
-    def transform_fmri(self, do_bbr=False, wmseg="", logFile=None):
+    def transform_fmri(self, do_bbr=False, wmseg="", overwrite=False, logFile=None):
 
         if wmseg == "":
             wmseg = self.subject.t1_segment_wm_bbr_path
@@ -468,54 +465,54 @@ class SubjectTransformsEx:
                 runsystem("rm -rf " + temp_dir, logFile=logFile)
 
             check_flirt(self.fmri2hr_mat, exfun, self.subject.t1_brain_data,
-                        params=" -dof 6 -cost bbr -wmseg " + wmseg + " -init " + "init_" + self.fmri2hr_mat + " -schedule " + os.path.join(
-                            self.subject.fsl_dir, "etc", "flirtsch", "bbr.sch"), logFile=logFile)
+                        params=" -dof 6 -cost bbr -wmseg " + wmseg + " -init " + "init_" + self.fmri2hr_mat + " -schedule " + os.path.join(self.subject.fsl_dir, "etc", "flirtsch", "bbr.sch"),
+                        overwrite=overwrite, logFile=logFile)
 
             runsystem("rm " + "init_" + self.fmri2hr_mat, logFile=logFile)
         else:  # NOT BBR
             check_flirt(self.fmri2hr_mat, exfun, self.subject.t1_brain_data,
                         params=" -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear",
-                        logFile=logFile)
+                        overwrite=overwrite, logFile=logFile)
 
-        check_invert_mat(self.hr2fmri_mat, self.fmri2hr_mat, logFile=logFile)
+        check_invert_mat(self.hr2fmri_mat, self.fmri2hr_mat, overwrite=overwrite, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # fmri <--> STANDARD (linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # => fmri2std.mat
-        check_concat_mat(self.fmri2std_mat, self.fmri2hr_mat, self.hr2std_mat, logFile=logFile)
+        check_concat_mat(self.fmri2std_mat, self.fmri2hr_mat, self.hr2std_mat, overwrite=overwrite, logFile=logFile)
 
         # => std2fmri.mat
-        check_invert_mat(self.std2fmri_mat, self.fmri2std_mat, logFile=logFile)
+        check_invert_mat(self.std2fmri_mat, self.fmri2std_mat, overwrite=overwrite, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # fmri <--> STANDARD (non linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # => fmri2std_warp
         check_convert_warp_mw(self.fmri2std_warp, self.fmri2hr_mat, self.hr2std_warp, self.subject.std_head_img,
-                              logFile=logFile)
+                              overwrite=overwrite, logFile=logFile)
 
         # => std2fmri_warp
-        check_invert_warp(self.std2fmri_warp, self.fmri2std_warp, self.subject.fmri_examplefunc, logFile=logFile)
+        check_invert_warp(self.std2fmri_warp, self.fmri2std_warp, self.subject.fmri_examplefunc, overwrite=overwrite, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # fmri <-> STANDARD4 (linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # => fmri2std4.mat
-        check_concat_mat(self.fmri2std4_mat, self.fmri2hr_mat, self.hr2std4_mat, logFile=logFile)
+        check_concat_mat(self.fmri2std4_mat, self.fmri2hr_mat, self.hr2std4_mat, overwrite=overwrite, logFile=logFile)
 
         # => std42fmri.mat
-        check_invert_mat(self.std42fmri_mat, self.fmri2std4_mat, logFile=logFile)
+        check_invert_mat(self.std42fmri_mat, self.fmri2std4_mat, overwrite=overwrite, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # fmri <-> STANDARD4 (non linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # => fmri2std4_warp
         check_convert_warp_mw(self.fmri2std4_warp, self.fmri2hr_mat, self.hr2std4_warp, self.subject.std4_head_img,
-                              logFile=logFile)
+                              overwrite=overwrite, logFile=logFile)
 
         # => std42fmri_warp
-        check_invert_warp(self.std42fmri_warp, self.fmri2std4_warp, exfun, logFile=logFile)
+        check_invert_warp(self.std42fmri_warp, self.fmri2std4_warp, exfun, overwrite=overwrite, logFile=logFile)
 
         # ------------------------------------------------------------------------------------------------------
         # various co-registration
@@ -523,43 +520,37 @@ class SubjectTransformsEx:
         # coregister fast-highres to fmri
         check_apply_mat(os.path.join(self.subject.roi_fmri_dir, "t1_wm_fmri"),
                         os.path.join(self.subject.roi_t1_dir, "mask_t1_wm"), self.hr2fmri_mat,
-                        self.subject.fmri_examplefunc, logFile=logFile)
+                        self.subject.fmri_examplefunc, overwrite=overwrite, logFile=logFile)
         check_apply_mat(os.path.join(self.subject.roi_fmri_dir, "t1_csf_fmri"),
                         os.path.join(self.subject.roi_t1_dir, "mask_t1_csf"), self.hr2fmri_mat,
-                        self.subject.fmri_examplefunc, logFile=logFile)
+                        self.subject.fmri_examplefunc, overwrite=overwrite, logFile=logFile)
         check_apply_mat(os.path.join(self.subject.roi_fmri_dir, "t1_gm_fmri"),
                         os.path.join(self.subject.roi_t1_dir, "mask_t1_gm"), self.hr2fmri_mat,
-                        self.subject.fmri_examplefunc, logFile=logFile)
+                        self.subject.fmri_examplefunc, overwrite=overwrite, logFile=logFile)
         check_apply_mat(os.path.join(self.subject.roi_fmri_dir, "t1_brain_fmri"), self.subject.t1_brain_data,
-                        self.hr2fmri_mat, self.subject.fmri_examplefunc, logFile=logFile)
+                        self.hr2fmri_mat, self.subject.fmri_examplefunc, overwrite=overwrite, logFile=logFile)
         check_apply_mat(os.path.join(self.subject.roi_fmri_dir, "t1_brain_mask_fmri"), self.subject.t1_brain_data_mask,
-                        self.hr2fmri_mat, self.subject.fmri_examplefunc, logFile=logFile)
+                        self.hr2fmri_mat, self.subject.fmri_examplefunc, overwrite=overwrite, logFile=logFile)
 
         # mask & binarize
-        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_gm_fmri") + " -thr 0.2 -bin " + os.path.join(
-            self.subject.roi_fmri_dir, "mask_t1_gm_fmri"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_wm_fmri") + " -thr 0.2 -bin " + os.path.join(
-            self.subject.roi_fmri_dir, "mask_t1_wm_fmri"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_csf_fmri") + " -thr 0.2 -bin " + os.path.join(
-            self.subject.roi_fmri_dir, "mask_t1_csf_fmri"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_brain_fmri") + " -thr 0.2 -bin " + os.path.join(
-            self.subject.roi_fmri_dir, "mask_t1_brain_fmri"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir,
-                                        "t1_brain_mask_fmri") + " -thr 0.2 -bin " + os.path.join(
-            self.subject.roi_fmri_dir, "mask_t1_brain_fmri"), logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_gm_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_gm_fmri"), logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_wm_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_wm_fmri"), logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_csf_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_csf_fmri"), logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_brain_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_brain_fmri"), logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir,"t1_brain_mask_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_brain_fmri"), logFile=logFile)
 
     # DTI <-- (lin) -- HIGHRES -- (non-lin) --> STANDARD
     # creates  (18) :   dti2hr.mat, hr2dti.mat,     dti2std_warp, std2dti_warp  , dti2std_mat, std2dti_mat
     # and if has_T2 :   dti2t2.mat, t22dti.mat,     dti2t2_warp,  t22dti_warp   , t22hr.mat, hr2t2.mat,     t22std_warp,  std2t2_warp
     #                   dti2hr_warp, hr2dti_warp,
     #                   overwrites dti2std_warp, std2dti_warp
-    def transform_dti_t2(self, logFile=None):
+    def transform_dti_t2(self, ignore_t2=False, overwrite=False, logFile=None):
 
         check = self.subject.check_template()
         if check[0] != "":
             return
 
-        if self.subject.hasT2 is True:
+        if self.subject.hasT2 is True and ignore_t2 is False:
             print(self.subject.label + " :STARTED transform_dti_t2: (DTI--T2--HR--STD coregistration)")
         else:
             print(self.subject.label + " :STARTED transform_dti_t2 (DTI--HR--STD coregistration)")
@@ -571,28 +562,15 @@ class SubjectTransformsEx:
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         check_flirt(self.dti2hr_mat, self.subject.dti_nodiff_brain_data, self.subject.t1_brain_data,
                     "-bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 7 -interp trilinear",
-                    logFile=logFile)
-        check_flirt(self.dtihead2hr_mat, self.subject.dti_nodiff_data, self.subject.t1_brain_data,
+                    overwrite=overwrite, logFile=logFile)
+        check_flirt(self.dtihead2hr_mat, self.subject.dti_nodiff_data, self.subject.t1_data,
                     "-bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 7 -interp trilinear",
-                    logFile=logFile)
+                    overwrite=overwrite, logFile=logFile)
 
-        check_invert_mat(self.hr2dti_mat, self.dti2hr_mat, logFile=logFile)
+        check_invert_mat(self.hr2dti_mat, self.dti2hr_mat, overwrite=overwrite, logFile=logFile)
 
-        if self.subject.hasT2 is False:
+        if self.subject.hasT2 is True and ignore_t2 is False:
 
-            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-            # DTI <-- (lin) -- HIGHRES -- (non-lin) --> STANDARD
-            # -------------------------------------------------------------------------, ------------------------------------------------------------------------------------------------------------------
-            # dti --> std
-            check_convert_warp_mw(self.dti2std_warp, self.dtihead2hr_mat, self.hr2std_warp, self.subject.std_head_img,
-                                  logFile=logFile)
-            check_concat_mat(self.dti2std_mat, self.dti2hr_mat, self.hr2std_mat, logFile=logFile)
-
-            # std --> dti
-            check_invert_warp(self.std2dti_warp, self.dti2std_warp, self.subject.dti_nodiff_data, logFile=logFile)
-            check_invert_mat(self.std2dti_mat, self.dti2std_mat, logFile=logFile)
-
-        else:
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # DTI <--->  T2  linear and non-linear
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -600,23 +578,22 @@ class SubjectTransformsEx:
             # linear
             check_flirt(self.t22dti_mat, self.subject.t2_brain_data, self.subject.dti_nodiff_brain_data,
                         " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear",
-                        logFile=logFile)
+                        overwrite=overwrite, logFile=logFile)
             check_flirt(self.t2head2dti_mat, self.subject.t2_data, self.subject.dti_nodiff_data,
                         " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear",
-                        logFile=logFile)
+                        overwrite=overwrite, logFile=logFile)
 
             # non-linear
             if imtest(self.t22dti_warp) is False:
-                rrun(
-                    "fnirt --in=" + self.subject.t2_data + " --ref=" + self.subject.dti_nodiff_data + " --aff=" + self.t2head2dti_mat + " --cout=" + self.t22dti_warp,
-                    logFile=logFile)
+                rrun("fnirt --in=" + self.subject.t2_data + " --ref=" + self.subject.dti_nodiff_data + " --aff=" + self.t2head2dti_mat + " --cout=" + self.t22dti_warp,
+                    overwrite=overwrite, logFile=logFile)
 
             # dti -> t2
             # linear
-            check_invert_mat(self.dti2t2_mat, self.t22dti_mat, logFile=logFile)
+            check_invert_mat(self.dti2t2_mat, self.t22dti_mat, overwrite=overwrite, logFile=logFile)
 
             # non-linear
-            check_invert_warp(self.dti2t2_warp, self.t22dti_warp, self.subject.dti_nodiff_data, logFile=logFile)
+            check_invert_warp(self.dti2t2_warp, self.t22dti_warp, self.subject.dti_nodiff_data, overwrite=overwrite, logFile=logFile)
 
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # T2 <------> HIGHRES (linear)
@@ -624,60 +601,68 @@ class SubjectTransformsEx:
             # t2 -> hr linear
             check_flirt(self.t22hr_mat, self.subject.t2_brain_data, self.subject.t1_brain_data,
                         " -bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear",
-                        logFile=logFile)
+                        overwrite=overwrite, logFile=logFile)
 
             # hr -> t2 linear
-            check_invert_mat(self.hr2t2_mat, self.t22hr_mat, logFile=logFile)
+            check_invert_mat(self.hr2t2_mat, self.t22hr_mat, overwrite=overwrite, logFile=logFile)
 
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # DTI <-- (non-lin) -- t2 -- (lin) -- HIGHRES
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             if imtest(self.dti2hr_warp) is False:
-                rrun(
-                    "convertwarp --ref=" + self.subject.t1_data + " --warp1=" + self.dti2t2_warp + " --postmat=" + self.t22hr_mat + " --out=" + self.dti2hr_warp,
-                    logFile=logFile)
+                rrun("convertwarp --ref=" + self.subject.t1_data + " --warp1=" + self.dti2t2_warp + " --postmat=" + self.t22hr_mat + " --out=" + self.dti2hr_warp,
+                    overwrite=overwrite, logFile=logFile)
 
             if imtest(self.hr2dti_warp) is False:
-                rrun(
-                    "invwarp -r " + self.subject.dti_nodiff_data + " -w " + self.dti2hr_warp + " -o " + self.hr2dti_warp,
-                    logFile=logFile)
+                rrun("invwarp -r " + self.subject.dti_nodiff_data + " -w " + self.dti2hr_warp + " -o " + self.hr2dti_warp,
+                    overwrite=overwrite, logFile=logFile)
 
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # T2 <------> STD
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # t2 --> std
-            check_convert_warp_mw(self.t22std_warp, self.t22hr_mat, self.hr2std_warp, self.subject.std_head_img,
-                                  logFile=logFile)
-            check_concat_mat(self.t22std_mat, self.t22hr_mat, self.hr2std_mat, logFile=logFile)
+            check_convert_warp_mw(self.t22std_warp, self.t22hr_mat, self.hr2std_warp, self.subject.std_head_img, overwrite=overwrite, logFile=logFile)
+            check_concat_mat(self.t22std_mat, self.t22hr_mat, self.hr2std_mat, overwrite=overwrite, logFile=logFile)
 
             # std --> t2
-            check_invert_warp(self.std2t2_warp, self.t22std_warp, self.subject.t2_data, logFile=logFile)
-            check_invert_mat(self.std2t2_mat, self.t22std_mat, logFile=logFile)
+            check_invert_warp(self.std2t2_warp, self.t22std_warp, self.subject.t2_data, overwrite=overwrite, logFile=logFile)
+            check_invert_mat(self.std2t2_mat, self.t22std_mat, overwrite=overwrite, logFile=logFile)
 
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # DTI <-- (non-lin) -- t2 -- (lin) -- HIGHRES -- (non-lin) --> STANDARD
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # dti --> std
-            check_convert_warp_wmw(self.dti2std_warp, self.dti2t2_warp, self.t22hr_mat, self.hr2std_warp,
-                                   self.subject.std_head_img, logFile=logFile)
-            check_concat_mat(self.dti2std_mat, self.dti2hr_mat, self.hr2std_mat, logFile=logFile)
+            check_convert_warp_wmw(self.dti2std_warp, self.dti2t2_warp, self.t22hr_mat, self.hr2std_warp, self.subject.std_head_img, overwrite=overwrite, logFile=logFile)
+            check_concat_mat(self.dti2std_mat, self.dti2hr_mat, self.hr2std_mat, overwrite=overwrite, logFile=logFile)
 
             # std --> dti
-            check_invert_warp(self.std2dti_warp, self.dti2std_warp, self.subject.dti_nodiff_data, logFile=logFile)
-            check_invert_mat(self.std2dti_mat, self.dti2std_mat, logFile=logFile)
+            check_invert_warp(self.std2dti_warp, self.dti2std_warp, self.subject.dti_nodiff_data, overwrite=overwrite, logFile=logFile)
+            check_invert_mat(self.std2dti_mat, self.dti2std_mat, overwrite=overwrite, logFile=logFile)
+
+        else:
+
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            # DTI <-- (lin) -- HIGHRES -- (non-lin) --> STANDARD
+            # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            # dti --> std
+            check_convert_warp_mw(self.dti2std_warp, self.dtihead2hr_mat, self.hr2std_warp, self.subject.std_head_img, overwrite=overwrite, logFile=logFile)
+            check_concat_mat(self.dti2std_mat, self.dti2hr_mat, self.hr2std_mat, overwrite=overwrite, logFile=logFile)
+
+            # std --> dti
+            check_invert_warp(self.std2dti_warp, self.dti2std_warp, self.subject.dti_nodiff_data, overwrite=overwrite, logFile=logFile)
+            check_invert_mat(self.std2dti_mat, self.dti2std_mat, overwrite=overwrite, logFile=logFile)
 
     # it creates (4): rs2fmri_mat , fmri2rs_mat
     #                 rs2fmri_warp, fmri2rs_warp
-    def transform_extra(self, logFile=None):
+    def transform_extra(self, overwrite=False, logFile=None):
 
         if self.subject.hasFMRI and self.subject.hasRS:
-            check_concat_mat(self.rs2fmri_mat, self.rs2hr_mat, self.hr2fmri_mat, logFile=logFile)
-            check_invert_mat(self.fmri2rs_mat, self.rs2fmri_mat, logFile=logFile)
+            check_concat_mat(self.rs2fmri_mat, self.rs2hr_mat, self.hr2fmri_mat, overwrite=overwrite, logFile=logFile)
+            check_invert_mat(self.fmri2rs_mat, self.rs2fmri_mat, overwrite=overwrite, logFile=logFile)
 
             # non-linear   rs <--(hr)--> std <--(hr)--> fmri
-            check_convert_warp_ww(self.rs2fmri_warp, self.rs2std_warp, self.std2fmri_warp,
-                                  self.subject.fmri_examplefunc, logFile=logFile)
-            check_invert_warp(self.fmri2rs_warp, self.rs2fmri_warp, self.subject.fmri_examplefunc, logFile=logFile)
+            check_convert_warp_ww(self.rs2fmri_warp, self.rs2std_warp, self.std2fmri_warp, self.subject.fmri_examplefunc, overwrite=overwrite, logFile=logFile)
+            check_invert_warp(self.fmri2rs_warp, self.rs2fmri_warp, self.subject.fmri_examplefunc, overwrite=overwrite, logFile=logFile)
 
     # ==================================================================================================================================================
     # GENERIC ROI TRANSFORMS
@@ -693,8 +678,7 @@ class SubjectTransformsEx:
     #                                       -> stdimg, stdimg_brain, stdimg_brain_mask_dil
     #                                       -> stdimg4, stdimg4_brain, stdimg4_brain_mask_dil
     # in linear transf, it must be betted (must contain the "_brain" text) in non-linear is must be a full head image.
-    def transform_roi(self, regtype, pathtype="standard", outdir="", outname="", mask="", orf="", thresh=0, islin=True,
-                      rois=[]):
+    def transform_roi(self, regtype, pathtype="standard", outdir="", outname="", mask="", orf="", thresh=0, islin=True, rois=[]):
 
         # ===========================================================
         # SANITY CHECK
@@ -858,7 +842,7 @@ class SubjectTransformsEx:
             return self.dti2hr_warp, self.subject.t1_data
         else:
             print("WARNING calling transform_l_dti2hr instead of transform_nl_dti2hr")
-            return self.transform_l_dti2hr(self)
+            return self.transform_l_dti2hr()
 
     def transform_l_dti2hr(self):
         return self.dti2hr_mat, self.subject.t1_brain_data

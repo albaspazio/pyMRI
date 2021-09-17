@@ -8,12 +8,12 @@ from myfsl.utils.run import rrun
 from subject.SubjectDti import SubjectDti
 from subject.SubjectEpi import SubjectEpi
 from subject.SubjectMpr import SubjectMpr
-from subject.SubjectTransforms import SubjectTransformsEx
+from subject.SubjectTransforms import SubjectTransforms
 from utility.fslfun import runsystem
 from utility.images import imtest, immv, imcp, is_image, img_split_ext, remove_ext, read_header
 
 
-class SubjectEx:
+class Subject:
     TYPE_T1 = 1
     TYPE_RS = 2
     TYPE_FMRI = 3
@@ -39,7 +39,7 @@ class SubjectEx:
         self.set_templates(stdimg)
         self.set_properties(self.sessid)
 
-        self.transform = SubjectTransformsEx(self, self._global)
+        self.transform = SubjectTransforms(self, self._global)
         self.mpr = SubjectMpr(self, self._global)
         self.dti = SubjectDti(self, self._global)
         self.epi = SubjectEpi(self, self._global)

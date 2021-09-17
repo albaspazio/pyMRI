@@ -6,13 +6,13 @@ from copy import deepcopy
 from inspect import signature
 from threading import Thread
 
-from subject.Subject import SubjectEx
+from subject.Subject import Subject
 from utility.SubjectsDataDict import SubjectsDataDict
 from utility.images import imcp, imrm
 from utility.utilities import gunzip, compress
 
 
-class ProjectEx:
+class Project:
 
     def __init__(self, folder, globaldata, data="data.dat"):
 
@@ -81,7 +81,7 @@ class ProjectEx:
         subjects = self.get_subjects_labels(group_label)
         subjs = []
         for subj in subjects:
-            subjs.append(SubjectEx(subj, sess_id, self))
+            subjs.append(Subject(subj, sess_id, self))
         return subjs
 
     # ==================================================================================================================
@@ -141,7 +141,7 @@ class ProjectEx:
 
     def check_all_coregistration(self, subjects, outdir, num_cpu=1):
 
-        # self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir}], self.get_subjects_labels(), nthread=num_cpu)
+        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir}], self.get_subjects_labels(), nthread=num_cpu)
 
         l_t1 = os.path.join(outdir, "lin", "hr");   l_dti = os.path.join(outdir, "lin", "dti");     l_rs = os.path.join(outdir, "lin", "rs");   l_std = os.path.join(outdir, "lin", "std");     l_std4 = os.path.join(outdir, "lin", "std4");   l_t2 = os.path.join(outdir, "lin", "t2")
         nl_t1 = os.path.join(outdir, "nlin", "hr"); nl_dti = os.path.join(outdir, "nlin", "dti");   nl_rs = os.path.join(outdir, "nlin", "rs")  ;nl_std = os.path.join(outdir, "nlin", "std"); nl_std4 = os.path.join(outdir, "nlin", "std4");  nl_t2 = os.path.join(outdir, "nlin", "t2")
