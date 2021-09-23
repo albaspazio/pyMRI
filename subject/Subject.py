@@ -395,8 +395,8 @@ class Subject:
                  do_reorient=True, do_crop=True,
                  do_bet=True, betfparam=[0.5],
                  do_sienax=False, bet_sienax_param_string="-SNB -f 0.2",
-                 do_reg=True, do_nonlinreg=True,
-                 do_seg=True, do_spm_seg=False, spm_seg_over_bet=False, spm_seg_over_fs=False,  # over-ride bet an
+                 do_reg=True, do_nonlinreg=True, do_seg=True,
+                 do_spm_seg=False, spm_seg_over_bet=False, spm_seg_over_fs=False,  # over-ride bet an
                  do_cat_seg=False, cat_seg_over_bet=False, cat_seg_over_fs=False, cat_use_dartel=False,
                  do_cat_surf=True,  # over-ride bet an
                  do_cleanup=True, do_strongcleanup=False, do_overwrite=False,

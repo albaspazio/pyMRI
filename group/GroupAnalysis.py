@@ -1085,8 +1085,7 @@ class GroupAnalysis:
     def tbss_plot_clusterized_folder(self, in_clust_res_dir, datas, data_label, tbss_folder, modality="FA",
                                      subj_img_postfix="_FA_FA_to_target", ofn="res_"):
 
-        subjects_images = os.path.join(tbss_folder,
-                                       modality)  # folder containing tbss subjects' folder of that modality
+        subjects_images = os.path.join(tbss_folder, modality)  # folder containing tbss subjects' folder of that modality
         results_folder = os.path.join(tbss_folder, "results")
         os.makedirs(results_folder, exist_ok=True)
 
