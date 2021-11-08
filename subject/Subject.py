@@ -18,7 +18,8 @@ class Subject:
     TYPE_RS = 2
     TYPE_FMRI = 3
     TYPE_DTI = 4
-    TYPE_T2 = 5
+    TYPE_DTI_B0 = 5     # does not have bval/bvec
+    TYPE_T2 = 6
 
     def __init__(self, label, sessid, project, stdimg=""):
 
@@ -39,16 +40,17 @@ class Subject:
         self.set_templates(stdimg)
         self.set_properties(self.sessid)
 
-        self.transform = SubjectTransforms(self, self._global)
-        self.mpr = SubjectMpr(self, self._global)
-        self.dti = SubjectDti(self, self._global)
-        self.epi = SubjectEpi(self, self._global)
+        self.transform  = SubjectTransforms(self, self._global)
+        self.mpr        = SubjectMpr(self, self._global)
+        self.dti        = SubjectDti(self, self._global)
+        self.epi        = SubjectEpi(self, self._global)
 
-        self.hasT1 = imtest(self.t1_data)
-        self.hasRS = imtest(self.rs_data)
+        self.hasT1  = imtest(self.t1_data)
+        self.hasRS  = imtest(self.rs_data)
         self.hasDTI = imtest(self.dti_data)
-        self.hasT2 = imtest(self.t2_data)
-        self.hasFMRI = imtest(self.fmri_data)
+        self.hasT2  = imtest(self.t2_data)
+        self.hasFMRI= imtest(self.fmri_data)
+        self.hasWB  = imtest(self.wb_data)
 
     def get_properties(self, sess):
         return self.set_properties(sess, True)
@@ -128,6 +130,7 @@ class Subject:
         self.dti_rotated_bvec = os.path.join(self.dti_dir, self.label + "-dti_rotated.bvec")
 
         self.dti_data = os.path.join(self.dti_dir, self.dti_image_label)
+        self.dti_pa_data = os.path.join(self.dti_dir, self.dti_image_label + "_PA")
         self.dti_ec_data = os.path.join(self.dti_dir, self.dti_ec_image_label)
         self.dti_fit_data = os.path.join(self.dti_dir, self.dti_fit_label)
 
@@ -144,8 +147,10 @@ class Subject:
         # ------------------------------------------------------------------------------------------------------------------------
         self.rs_image_label = self.label + "-rs"
 
-        self.rs_dir = os.path.join(self.dir, "resting")
-        self.rs_data = os.path.join(self.rs_dir, self.rs_image_label)
+        self.rs_dir     = os.path.join(self.dir, "resting")
+        self.rs_data    = os.path.join(self.rs_dir, self.rs_image_label)
+        self.rs_pa_data = os.path.join(self.rs_dir, self.rs_image_label + "_PA")
+
         self.sbfc_dir = os.path.join(self.rs_dir, "sbfc")
         self.rs_series_dir = os.path.join(self.sbfc_dir, "series")
         self.rs_melic_dir = os.path.join(self.rs_dir, "melic")
@@ -171,10 +176,11 @@ class Subject:
         self.rs_post_nuisance_image_label = self.rs_image_label + "_preproc_aroma_nuisance"
         self.rs_post_nuisance_melodic_image_label = self.rs_image_label + "_preproc_aroma_nuisance_melodic"
 
-        self.rs_aroma_dir = os.path.join(self.rs_dir, "ica_aroma")
-        self.rs_aroma_image = os.path.join(self.rs_aroma_dir, "denoised_func_data_nonaggr")
-        self.rs_regstd_aroma_dir = os.path.join(self.rs_aroma_dir, "reg_standard")
-        self.rs_regstd_aroma_image = os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data")
+        self.rs_aroma_dir           = os.path.join(self.rs_dir, "ica_aroma")
+        self.rs_icafix_dir          = os.path.join(self.rs_dir, "ica_fix")
+        self.rs_aroma_image         = os.path.join(self.rs_aroma_dir, "denoised_func_data_nonaggr")
+        self.rs_regstd_aroma_dir    = os.path.join(self.rs_aroma_dir, "reg_standard")
+        self.rs_regstd_aroma_image  = os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data")
 
         self.rs_mask_t1_wmseg4nuis = os.path.join(self.roi_dir, "reg_rs", "mask_t1_wmseg4Nuisance_rs")
         self.rs_mask_t1_csfseg4nuis = os.path.join(self.roi_dir, "reg_rs", "mask_t1_csfseg4Nuisance_rs")
@@ -195,8 +201,10 @@ class Subject:
         # ------------------------------------------------------------------------------------------------------------------------
         self.fmri_image_label = self.label + "-fmri"
 
-        self.fmri_dir = os.path.join(self.dir, "fmri")
-        self.fmri_data = os.path.join(self.fmri_dir, self.fmri_image_label)
+        self.fmri_dir       = os.path.join(self.dir, "fmri")
+        self.fmri_data      = os.path.join(self.fmri_dir, self.fmri_image_label)
+        self.fmri_pa_data   = os.path.join(self.fmri_dir, self.fmri_image_label + "_PA")
+
         self.fmri_data_mc = os.path.join(self.fmri_dir, "r" + self.fmri_image_label)
         self.fmri_examplefunc = os.path.join(self.fmri_dir, "example_func")
         self.fmri_examplefunc_mask = os.path.join(self.fmri_dir, "mask_example_func")
@@ -204,10 +212,11 @@ class Subject:
         self.fmri_pe_data = os.path.join(self.fmri_dir, self.fmri_image_label + "_pe")
         self.fmri_acq_params = os.path.join(self.fmri_dir, "acqparams.txt")
 
-        self.fmri_aroma_dir = os.path.join(self.fmri_dir, "ica_aroma")
-        self.fmri_aroma_image = os.path.join(self.fmri_aroma_dir, "denoised_func_data_nonaggr")
-        self.fmri_regstd_aroma_dir = os.path.join(self.fmri_aroma_dir, "reg_standard")
-        self.fmri_regstd_aroma_image = os.path.join(self.fmri_regstd_aroma_dir, "filtered_func_data")
+        self.fmri_aroma_dir             = os.path.join(self.fmri_dir, "ica_aroma")
+        self.fmri_icafix_dir            = os.path.join(self.fmri_dir, "ica_fix")
+        self.fmri_aroma_image           = os.path.join(self.fmri_aroma_dir, "denoised_func_data_nonaggr")
+        self.fmri_regstd_aroma_dir      = os.path.join(self.fmri_aroma_dir, "reg_standard")
+        self.fmri_regstd_aroma_image    = os.path.join(self.fmri_regstd_aroma_dir, "filtered_func_data")
 
         # ------------------------------------------------------------------------------------------------------------------------
         # WB
@@ -299,7 +308,7 @@ class Subject:
         os.makedirs(self.roi_fmri_dir, exist_ok=True)
         os.makedirs(self.roi_t2_dir, exist_ok=True)
 
-    def check_images(self, t1=False, rs=False, dti=False, t2=False, fmri=False):
+    def check_images(self, t1=False, rs=False, dti=False, t2=False, fmri=None):
 
         missing_images = []
 
@@ -311,9 +320,12 @@ class Subject:
             if not imtest(self.rs_data):
                 missing_images.append("rs")
 
-        if fmri is True:
-            if not imtest(self.fmri_data):
-                missing_images.append("fmri")
+        if fmri is not None:
+
+            for s in fmri:
+                fmri_img = os.path.join(self.fmri_dir, self.label + s)
+                if imtest(fmri_img) is False:
+                    missing_images.append(fmri_img)
 
         if dti is True:
             if not imtest(self.dti_data):
@@ -413,14 +425,14 @@ class Subject:
                  xtract_meas="vol,prob,length,FA,MD,L1,L23",
                  do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0):
 
-        BET_F_VALUE_T2 = "0.5"
-        feat_preproc_model = os.path.join(self.project.script_dir, "glm", "templates", feat_preproc_model)
-        melodic_model = os.path.join(self.project.script_dir, "glm", "templates", mel_preproc_model)
+        BET_F_VALUE_T2      = "0.5"
+        feat_preproc_model  = os.path.join(self.project.script_dir, "glm", "templates", feat_preproc_model)
+        melodic_model       = os.path.join(self.project.script_dir, "glm", "templates", mel_preproc_model)
 
         # ==============================================================================================================================================================
         #  T1 data
         # ==============================================================================================================================================================
-        if os.path.exists(self.t1_dir):
+        if self.hasT1:
 
             os.makedirs(self.roi_t1_dir, exist_ok=True)
             os.makedirs(self.roi_std_dir, exist_ok=True)
@@ -483,7 +495,7 @@ class Subject:
         # ==============================================================================================================================================================
         # WB data
         # ==============================================================================================================================================================
-        if os.path.exists(self.wb_dir):
+        if self.hasWB:
             if imtest(self.wb_data) is True:
                 if imtest(self.wb_brain_data) is False:
                     print(self.label + " : bet on WB")
@@ -494,7 +506,7 @@ class Subject:
         # ==============================================================================================================================================================
         # preprocessing step considered valid (filtered_func_data, bg_image and mask)
         # is stored in resting/reg_std with a resolution of 4mm to be used for melodic group analysis
-        if os.path.exists(self.rs_dir):
+        if self.hasRS:
             os.makedirs(self.roi_rs_dir, exist_ok=True)
 
             if imtest(self.rs_data) is False:
@@ -519,43 +531,43 @@ class Subject:
                     if vol2remove > 0:
                         try:
                             immv(self.rs_data, self.rs_data + "_fullvol", logFile=log)
-                            rrun("fslroi " + self.rs_data + "_fullvol " + self.rs_data + " " + str(vol2remove) + " -1",
-                                 logFile=log)
+                            rrun("fslroi " + self.rs_data + "_fullvol " + self.rs_data + " " + str(vol2remove) + " -1", logFile=log)
                         except Exception as e:
                             print("UNRECOVERABLE ERROR: " + e)
                             immv(self.rs_data + "_fullvol", self.rs_data, logFile=log)
                             return
 
                 # ------------------------------------------------------------------------------------------------------
+                # susceptibility correction ?
+                # ------------------------------------------------------------------------------------------------------
+                if imtest(self.rs_pa_data):
+                    self.epi.topup_correction(self.rs_data, self.rs_pa_data, self.project.topup_rs_params, logFile=log)
+
+                # ------------------------------------------------------------------------------------------------------
                 # FEAT PRE PROCESSING  (hp filt, mcflirt, spatial smoothing, melodic exploration, NO REG)
                 # ------------------------------------------------------------------------------------------------------
-                preproc_img = os.path.join(self.rs_dir,
-                                           self.rs_post_preprocess_image_label)  # output image of first preproc resting.featfeat
-                filtfuncdata = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "filtered_func_data")
-                preproc_feat_dir = os.path.join(self.rs_dir, feat_preproc_odn + ".feat")  # /s1/resting/resting.feat
+                preproc_img         = os.path.join(self.rs_dir, self.rs_post_preprocess_image_label)  # output image of first preproc resting.featfeat
+                filtfuncdata        = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "filtered_func_data")
+                preproc_feat_dir    = os.path.join(self.rs_dir, feat_preproc_odn + ".feat")  # /s1/resting/resting.feat
                 if imtest(preproc_img) is False:
                     if os.path.isfile(feat_preproc_model + ".fsf") is False:
-                        print(
-                            "===========>>>> FEAT_PREPROC template file (" + self.label + " " + feat_preproc_model + ".fsf) is missing...skipping feat preprocessing")
+                        print("===========>>>> FEAT_PREPROC template file (" + self.label + " " + feat_preproc_model + ".fsf) is missing...skipping feat preprocessing")
                     else:
                         if os.path.isdir(preproc_feat_dir) is True:
                             rmtree(preproc_feat_dir, ignore_errors=True)
 
-                        self.epi.fsl_feat("rs", self.rs_image_label, "resting.feat", feat_preproc_model,
-                                          do_initreg=do_featinitreg, std_image=self.std_img)
+                        self.epi.fsl_feat("rs", self.rs_image_label, "resting.feat", feat_preproc_model, do_initreg=do_featinitreg, std_image=self.std_img)
                         imcp(filtfuncdata, preproc_img, logFile=log)
 
                 # calculate all trasformations once (I do it here after MCFLIRT acted on images)
-                self.transform.transform_rs(
-                    logFile=log)  # create self.subject.rs_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
+                self.transform.transform_rs(overwrite=do_overwrite, logFile=log)  # create self.subject.rs_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
 
                 # ------------------------------------------------------------------------------------------------------
                 # AROMA processing
                 # ------------------------------------------------------------------------------------------------------
-                preproc_aroma_img = os.path.join(self.rs_dir,
-                                                 self.rs_post_aroma_image_label)  # output image of aroma processing
-                preproc_feat_dir_melodic = os.path.join(preproc_feat_dir, "filtered_func_data.ica")
-                preproc_feat_dir_mc = os.path.join(preproc_feat_dir, "mc", "prefiltered_func_data_mcf.par")
+                preproc_aroma_img           = os.path.join(self.rs_dir, self.rs_post_aroma_image_label)  # output image of aroma processing
+                preproc_feat_dir_melodic    = os.path.join(preproc_feat_dir, "filtered_func_data.ica")
+                preproc_feat_dir_mc         = os.path.join(preproc_feat_dir, "mc", "prefiltered_func_data_mcf.par")
                 aff = self.transform.rs2hr_mat
 
                 try:
@@ -564,10 +576,8 @@ class Subject:
                             if os.path.isdir(self.rs_aroma_dir) is True:
                                 rmtree(self.rs_aroma_dir, ignore_errors=True)
 
-                            self.epi.aroma("rs", preproc_feat_dir, preproc_feat_dir_melodic, preproc_feat_dir_mc,
-                                           self.transform.rs2hr_mat, self.transform.hr2std_warp)
-                            imcp(self.rs_aroma_image, os.path.join(self.rs_dir, self.rs_post_aroma_image_label),
-                                 logFile=log)
+                            self.epi.aroma_feat("rs", preproc_feat_dir, preproc_feat_dir_mc, self.transform.rs2hr_mat, self.transform.hr2std_warp)
+                            imcp(self.rs_aroma_image, os.path.join(self.rs_dir, self.rs_post_aroma_image_label), logFile=log)
                     else:
                         imcp(preproc_img, preproc_aroma_img, logFile=log)
 
@@ -580,8 +590,7 @@ class Subject:
                 # ------------------------------------------------------------------------------------------------------
                 postnuisance = os.path.join(self.rs_dir, self.rs_post_nuisance_image_label)
                 if do_nuisance is True and imtest(postnuisance) is False:
-                    self.epi.remove_nuisance(self.rs_post_aroma_image_label, self.rs_post_nuisance_image_label,
-                                             hpfsec=hpfsec)
+                    self.epi.remove_nuisance(self.rs_post_aroma_image_label, self.rs_post_nuisance_image_label, hpfsec=hpfsec)
 
                 # ------------------------------------------------------------------------------------------------------
                 # MELODIC (ONLY new melodic exploration, NO : reg, hpf, smooth) .....doing another MC and HPF results seemed to improve...although they should not...something that should be investigated....
@@ -591,8 +600,7 @@ class Subject:
 
                 if imtest(postmel_img) is False and do_melodic is True:
                     if os.path.isfile(melodic_model + ".fsf") is False:
-                        print(
-                            "===========>>>> resting template file (" + self.label + " " + melodic_model + ".fsf) is missing...skipping 1st level resting")
+                        print("===========>>>> resting template file (" + self.label + " " + melodic_model + ".fsf) is missing...skipping 1st level resting")
                     else:
                         if os.path.isdir(mel_out_dir) is True:
                             rmtree(mel_out_dir, ignore_errors=True)
@@ -634,7 +642,7 @@ class Subject:
         # ==============================================================================================================================================================
         # T2 data
         # ==============================================================================================================================================================
-        if os.path.isdir(self.t2_dir) is True and imtest(self.t2_data) is True:
+        if self.hasT2:
 
             self.hasT2 = True
             os.makedirs(os.path.join(self.roi_dir, "reg_t2"), exist_ok=True)
@@ -646,7 +654,7 @@ class Subject:
         # ==============================================================================================================================================================
         # DTI data
         # ==============================================================================================================================================================
-        if os.path.isdir(self.dti_dir) is True:
+        if self.hasDTI:
 
             log_file = os.path.join(self.dti_dir, "log_dti_processing.txt")
             log = open(log_file, "a")
@@ -690,9 +698,8 @@ class Subject:
         # ==============================================================================================================================================================
         # FMRI DATA
         # ==============================================================================================================================================================
-        if self.hasFMRI is True:
-            self.transform.transform_fmri(
-                logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
+        if self.hasFMRI:
+            self.transform.transform_fmri(logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
 
         # ==============================================================================================================================================================
         # EXTRA
@@ -752,23 +759,24 @@ class Subject:
 
                     if ass['contains'] in name:
                         if ass['type'] == self.TYPE_T1:
-                            dest_file = os.path.join(self.t1_dir, self.t1_image_label + fullext)
+                            dest_file = os.path.join(self.t1_dir, self.label + ass['postfix'] + fullext)
                             os.rename(img, dest_file)
                         elif ass['type'] == self.TYPE_T2:
-                            dest_file = os.path.join(self.t2_dir, self.t2_image_label + fullext)
+                            dest_file = os.path.join(self.t2_dir, self.label + ass['postfix'] + fullext)
                             os.rename(img, dest_file)
                         elif ass['type'] == self.TYPE_RS:
-                            dest_file = os.path.join(self.rs_dir, self.rs_image_label + fullext)
+                            dest_file = os.path.join(self.rs_dir, self.label + ass['postfix'] + fullext)
                             os.rename(img, dest_file)
                         elif ass['type'] == self.TYPE_DTI:
-                            dest_file = os.path.join(self.dti_dir, self.dti_image_label + fullext)
+                            dest_file = os.path.join(self.dti_dir, self.label + ass['postfix'] + fullext)
                             os.rename(img, dest_file)
-                            os.rename(os.path.join(extpath, name_noext + '.bval'),
-                                      os.path.join(self.dti_dir, self.dti_image_label + '.bval'))
-                            os.rename(os.path.join(extpath, name_noext + '.bvec'),
-                                      os.path.join(self.dti_dir, self.dti_image_label + '.bvec'))
+                            os.rename(os.path.join(extpath, name_noext + '.bval'), os.path.join(self.dti_dir, self.label + ass['postfix'] + '.bval'))
+                            os.rename(os.path.join(extpath, name_noext + '.bvec'), os.path.join(self.dti_dir, self.label + ass['postfix'] + '.bvec'))
+                        elif ass['type'] == self.TYPE_DTI_B0:
+                            dest_file = os.path.join(self.dti_dir, self.label + ass['postfix'] + fullext)
+                            os.rename(img, dest_file)
                         elif ass['type'] == self.TYPE_FMRI:
-                            dest_file = os.path.join(self.fmri_dir, self.fmri_image_label + ass['extra'] + fullext)
+                            dest_file = os.path.join(self.fmri_dir, self.label + ass['postfix'] + fullext)
                             os.rename(img, dest_file)
 
             if cleanup == 1:

@@ -317,8 +317,7 @@ class SubjectTransforms:
             wmseg = self.subject.t1_segment_wm_bbr_path
         else:
             if imtest(wmseg) is False and do_bbr is True:
-                print(
-                    "ERROR: asked to run bbr, but the given wmseg file " + wmseg + ".nii.gz is not present...exiting transforms_mpr")
+                print("ERROR: asked to run bbr, but the given wmseg file " + wmseg + ".nii.gz is not present...exiting transforms_mpr")
                 return
 
         check = self.subject.check_template()
@@ -349,8 +348,8 @@ class SubjectTransforms:
                 runsystem("rm -rf " + temp_dir, logFile=logFile)
 
             check_flirt(self.rs2hr_mat, exfun, self.subject.t1_brain_data,
-                        params=" -dof 6 -cost bbr -wmseg " + wmseg + " -init " + "init_" + self.rs2hr_mat + " -schedule " + os.path.join(
-                            self.subject.fsl_dir, "etc", "flirtsch", "bbr.sch"), overwrite=overwrite, logFile=logFile)
+                        params=" -dof 6 -cost bbr -wmseg " + wmseg + " -init " + "init_" + self.rs2hr_mat + " -schedule " + os.path.join(self.subject.fsl_dir, "etc", "flirtsch", "bbr.sch"),
+                        overwrite=overwrite, logFile=logFile)
 
             runsystem("rm " + "init_" + self.rs2hr_mat, logFile=logFile)
         else:  # NOT BBR
@@ -434,8 +433,7 @@ class SubjectTransforms:
             wmseg = self.subject.t1_segment_wm_bbr_path
         else:
             if imtest(wmseg) is False and do_bbr is True:
-                print(
-                    "ERROR: asked to run bbr, but the given wmseg file " + wmseg + ".nii.gz is not present...exiting transforms_mpr")
+                print("ERROR: asked to run bbr, but the given wmseg file " + wmseg + ".nii.gz is not present...exiting transforms_mpr")
                 return
 
         check = self.subject.check_template()

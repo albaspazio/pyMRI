@@ -200,7 +200,7 @@ class GroupAnalysis:
             # ---------------------------------------------------------------------------
             # create template files
             # ---------------------------------------------------------------------------
-            out_batch_job, out_batch_start = self.create_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
 
             # ---------------------------------------------------------------------------
             # stats dir
@@ -322,7 +322,7 @@ class GroupAnalysis:
             # ---------------------------------------------------------------------------
             # create template files
             # ---------------------------------------------------------------------------
-            out_batch_job, out_batch_start = self.create_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
 
             # ---------------------------------------------------------------------------
             # stats dir
@@ -431,7 +431,7 @@ class GroupAnalysis:
             # ---------------------------------------------------------------------------
             # create template files
             # ---------------------------------------------------------------------------
-            out_batch_job, out_batch_start = self.create_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
 
             # ---------------------------------------------------------------------------
             #
@@ -515,7 +515,7 @@ class GroupAnalysis:
             # ---------------------------------------------------------------------------
             # create template files
             # ---------------------------------------------------------------------------
-            out_batch_job, out_batch_start = self.create_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
 
             # ---------------------------------------------------------------------------
             # stats dir
@@ -560,18 +560,15 @@ class GroupAnalysis:
             # check whether adding a covariate
             # ---------------------------------------------------------------------------
             if cov_name != "":
-                Stats.spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, self.project, cov_name,
-                                                    cov_interaction, data_file)
+                Stats.spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, self.project, cov_name, cov_interaction, data_file)
             else:
-                sed_inplace(out_batch_job, "<COV_STRING>",
-                            "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
+                sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
             # ---------------------------------------------------------------------------
             #
             # ---------------------------------------------------------------------------
             print("running SPM batch template: " + statsdir)
-            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir],
-                                       endengine=False)
+            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=False)
 
             # ---------------------------------------------------------------------------
             # estimate surface model in cat 12.6
@@ -857,35 +854,6 @@ class GroupAnalysis:
         except Exception as e:
             traceback.print_exc()
             print(e)
-
-    # returns out_batch_job
-    def create_batch_files(self, templfile_noext, seq):
-
-        input_batch_name = ntpath.basename(templfile_noext)
-
-        # set dirs
-        spm_script_dir = os.path.join(self.project.script_dir, seq, "spm")
-        out_batch_dir = os.path.join(spm_script_dir, "batch")
-
-        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-
-        if os.path.exists(templfile_noext) is True:
-            in_batch_job = templfile_noext
-        else:
-            in_batch_job = os.path.join(self._global.spm_templates_dir, templfile_noext + "_job.m")
-
-        out_batch_start = os.path.join(out_batch_dir, "create_" + input_batch_name + "_start.m")
-        out_batch_job = os.path.join(out_batch_dir, "create_" + input_batch_name + ".m")
-
-        # set job file
-        copyfile(in_batch_job, out_batch_job)
-
-        # set start file
-        copyfile(in_batch_start, out_batch_start)
-        sed_inplace(out_batch_start, "X", "1")
-        sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
-
-        return out_batch_job, out_batch_start
 
     # ---------------------------------------------------
     def group_melodic(self, out_dir_name, subjects, tr):

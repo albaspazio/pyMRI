@@ -2,14 +2,17 @@ import json
 import math
 import os
 import shutil
+import ntpath
+
 from copy import deepcopy
 from inspect import signature
 from threading import Thread
+from shutil import copyfile
 
 from subject.Subject import Subject
 from utility.SubjectsDataDict import SubjectsDataDict
 from utility.images import imcp, imrm
-from utility.utilities import gunzip, compress
+from utility.utilities import gunzip, compress, sed_inplace
 
 
 class Project:
@@ -19,25 +22,32 @@ class Project:
         if not os.path.exists(folder):
             raise Exception("PROJECT_DIR not defined.....exiting")
 
-        self.dir = folder
-        self.label = os.path.basename(self.dir)
+        self.dir        = folder
+        self.label      = os.path.basename(self.dir)
+        self.name       = os.path.basename(self.dir)
 
-        self.name = os.path.basename(self.dir)
-        self.subjects_dir = os.path.join(self.dir, "subjects")
+        self.subjects_dir       = os.path.join(self.dir, "subjects")
         self.group_analysis_dir = os.path.join(self.dir, "group_analysis")
-        self.script_dir = os.path.join(self.dir, "script")
+        self.script_dir         = os.path.join(self.dir, "script")
 
         self.glm_template_dir = os.path.join(self.script_dir, "glm", "templates")
 
-        self.melodic_templates_dir = os.path.join(self.group_analysis_dir, "resting", "group_templates")
-        self.melodic_dr_dir = os.path.join(self.group_analysis_dir, "resting", "dr")
+        self.resting_dir            = os.path.join(self.group_analysis_dir, "resting")
+        self.mpr_dir                = os.path.join(self.group_analysis_dir, "mpr")
 
-        self.sbfc_dir = os.path.join(self.group_analysis_dir, "sbfc")
-        self.mpr_dir = os.path.join(self.group_analysis_dir, "mpr")
+        self.melodic_templates_dir  = os.path.join(self.resting_dir, "group_templates")
+        self.melodic_dr_dir         = os.path.join(self.resting_dir, "dr")
+        self.sbfc_dir               = os.path.join(self.resting_dir, "sbfc")
 
-        self.vbm_dir = os.path.join(self.mpr_dir, "vbm")
+        self.vbm_dir                = os.path.join(self.mpr_dir, "vbm")
+        self.ct_dir                 = os.path.join(self.mpr_dir, "ct")
 
         self.tbss_dir = os.path.join(self.group_analysis_dir, "tbss")
+
+        self.topup_dti_params       = os.path.join(self.script_dir, "topup_acqpar_dti.txt")
+        self.topup_rs_params        = os.path.join(self.script_dir, "topup_acqpar_rs.txt")
+        self.topup_epi_params       = os.path.join(self.script_dir, "topup_acqpar_fmri.txt")
+        self.eddy_index             = os.path.join(self.script_dir, "eddy_index.txt")
 
         self._global = globaldata
 
@@ -143,6 +153,12 @@ class Project:
 
         if subjs_labels is None:
             subjs_labels = self.get_subjects_labels()
+
+        if _from is None:
+            _from = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]
+
+        if _to is None:
+            _to = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]
 
         self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir, "_from":_from, "_to":_to}], subjs_labels, nthread=num_cpu)
 
@@ -328,6 +344,38 @@ class Project:
                     data) + ") is neither a dict nor a string")
                 return None
 
+    # returns out_batch_job
+    def create_batch_files(self, templfile_noext, seq, prefix=""):
+
+        if prefix != "":
+            prefix = prefix + "_"
+
+        input_batch_name = ntpath.basename(templfile_noext)
+
+        # set dirs
+        spm_script_dir = os.path.join(self.script_dir, seq, "spm")
+        out_batch_dir = os.path.join(spm_script_dir, "batch")
+
+        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+
+        if os.path.exists(templfile_noext) is True:
+            in_batch_job = templfile_noext
+        else:
+            in_batch_job = os.path.join(self._global.spm_templates_dir, templfile_noext + "_job.m")
+
+        out_batch_start = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + "_start.m")
+        out_batch_job = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + ".m")
+
+        # set job file
+        copyfile(in_batch_job, out_batch_job)
+
+        # set start file
+        copyfile(in_batch_start, out_batch_start)
+        sed_inplace(out_batch_start, "X", "1")
+        sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
+
+        return out_batch_job, out_batch_start
+
     # ==================================================================================================================
     # MULTICORE PROCESSING
     # ==================================================================================================================
@@ -359,12 +407,11 @@ class Project:
 
         # if no params are given, create a nsubj list of None
         if len(kwparams) == 0:
-            if nparams > 0:
-                print("ERROR in run_subjects_methods: given params list is empty, while method needs " + str(
-                    nparams) + " params")
-                return
-            else:
-                kwparams = [None] * nsubj
+            # if nparams > 0:
+            #     print("ERROR in run_subjects_methods: given params list is empty, while method needs " + str(nparams) + " params")
+            #     return
+            # else:
+            kwparams = [None] * nsubj
 
         nprocesses = len(kwparams)
 

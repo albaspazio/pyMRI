@@ -6,7 +6,7 @@
 %%
 matlabbatch{1}.spm.spatial.realign.estwrite.data = {
                                                     {
-                                                    '<REF_IMAGE,refvol>'            %% <-- we change the input filenames we selected in batch mode
+                                                    '<REF_IMAGE,refvol>'
                                                     '<TO_ALIGN_IMAGES,1-n_vols>'
                                                     }
                                                     }';

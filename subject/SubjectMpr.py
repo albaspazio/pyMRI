@@ -90,8 +90,8 @@ class SubjectMpr:
             log = open(logfile, "a")
 
             # copy original image to anat dir
-            if imtest(T1) is False:
-                rrun("fslmaths " + inputimage + " " + T1, logFile=log)
+            # if imtest(T1) is False:
+            rrun("fslmaths " + inputimage + " " + T1, logFile=log)
 
             # cp lesionmask to anat dir then (even it does not exist) update variable lesionmask=os.path.join(anatdir, "lesionmask")
             if use_lesionmask is True:
@@ -1051,6 +1051,27 @@ class SubjectMpr:
         call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine,
                              eng=eng)
 
+    def cat_extract_roi_based_surface(self, atlases=None):
+
+        if atlases is None:
+            atlases = ["aparc_HCP_MMP1", "aparc_DK40", "aparc_a2009s"]
+
+        _atlases = ""
+        for atlas in atlases:
+            _atlases = _atlases + "\'" + os.path.join(self._global.cat_dir, "atlases_surfaces", "lh." + atlas + ".freesurfer.annot") + "\'" + "\n"
+
+        out_batch_job, out_batch_start = self.subject.project.create_batch_files("cat_extract_roi_based_surface", "mpr", self.subject.label)
+
+        left_thick_img = os.path.join(self.subject.t1_cat_surface_dir, "lh.thickness.T1_" + self.subject.label)
+        if os.path.exists(left_thick_img) is False:
+            print("ERROR in cat_extract_roi_based_surface of subj " + self.subject.label + ", missing left thickness surface")
+            return
+
+        sed_inplace(out_batch_job, "<LH_TCK_IMAGES>", "\'" + left_thick_img + "\'")
+        sed_inplace(out_batch_job, "<ATLASES>", _atlases)
+
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir])
+
     def spm_tissue_volumes(self, spm_template_name="spm_icv_template", endengine=True, eng=None):
 
         seg_mat = os.path.join(self.subject.t1_spm_dir, "T1_biascorr_" + self.subject.label + "_seg8.mat")
@@ -1454,16 +1475,13 @@ class SubjectMpr:
             print(e)
 
     # FreeSurfer recon-all
-    def fs_reconall(self, step="-all", do_overwrite=False, backtransfparams=" RL PA IS "):
+    def fs_reconall(self, step="-all", do_overwrite=False, backtransfparams=" RL PA IS ", numcpu=1):
 
         # check whether skipping
-        if step == "-all" and imtest(
-                os.path.join(self.subject.t1_dir, "freesurfer", "aparc+aseg.nii.gz")) is True and do_overwrite is False:
+        if step == "-all" and imtest(os.path.join(self.subject.t1_dir, "freesurfer", "aparc+aseg.nii.gz")) is True and do_overwrite is False:
             return
 
-        if step == "-autorecon1" and imtest(
-                os.path.join(self.subject.t1_dir, "freesurfer", "mri",
-                             "brainmask.mgz")) is True and do_overwrite is False:
+        if step == "-autorecon1" and imtest(os.path.join(self.subject.t1_dir, "freesurfer", "mri", "brainmask.mgz")) is True and do_overwrite is False:
             return
 
         try:
@@ -1480,31 +1498,25 @@ class SubjectMpr:
 
             rrun("mri_convert " + self.subject.t1_data + ".nii.gz " + self.subject.t1_data + ".mgz", logFile=log)
 
-            os.environ['OLD_SUBJECTS_DIR'] = os.environ['SUBJECTS_DIR']
+            try:
+                os.environ['OLD_SUBJECTS_DIR'] = os.environ['SUBJECTS_DIR']
+            except Exception as e:
+                pass
+
             os.environ['SUBJECTS_DIR'] = self.subject.t1_dir
 
-            rrun("recon-all -subject freesurfer" + " -i " + self.subject.t1_data + ".mgz " + step, logFile=log)
+            rrun("recon-all -subject freesurfer" + " -i " + self.subject.t1_data + ".mgz " + step + " -threads " + str(numcpu), logFile=log)
 
             # calculate linear trasf to move coronal-conformed T1 back to original reference (specified by backtransfparams)
             # I convert T1.mgz => nii.gz, then I swapdim to axial and coregister to t1_data
             rrun("mri_convert " + self.subject.t1_fs_data + ".mgz " + self.subject.t1_fs_data + ".nii.gz")
-            rrun(
-                "fslswapdim " + self.subject.t1_fs_data + ".nii.gz" + backtransfparams + self.subject.t1_fs_data + "_orig.nii.gz")
-            rrun(
-                "flirt -in " + self.subject.t1_fs_data + "_orig.nii.gz" + " -ref " + self.subject.t1_data + " -omat " + os.path.join(
-                    self.subject.t1_fs_mri_dir,
-                    "fscor2t1.mat") + " -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+            rrun("fslswapdim " + self.subject.t1_fs_data + ".nii.gz" + backtransfparams + self.subject.t1_fs_data + "_orig.nii.gz")
+            rrun("flirt -in " + self.subject.t1_fs_data + "_orig.nii.gz" + " -ref " + self.subject.t1_data + " -omat " + os.path.join(self.subject.t1_fs_mri_dir, "fscor2t1.mat") + " -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
             imrm([self.subject.t1_fs_data + ".nii.gz", self.subject.t1_fs_data + "_orig.nii.gz"])
 
             if step == "-all":
-                rrun("mri_convert " + os.path.join(self.subject.t1_dir, "freesurfer", "mri",
-                                                   "aparc+aseg.mgz") + " " + os.path.join(self.subject.t1_dir,
-                                                                                          "freesurfer",
-                                                                                          "aparc+aseg.nii.gz"),
-                     logFile=log)
-                rrun("mri_convert " + os.path.join(self.subject.t1_dir, "freesurfer", "mri",
-                                                   "aseg.mgz") + " " + os.path.join(self.subject.t1_dir, "freesurfer",
-                                                                                    "aseg.nii.gz"), logFile=log)
+                rrun("mri_convert " + os.path.join(self.subject.t1_dir, "freesurfer", "mri", "aparc+aseg.mgz") + " " + os.path.join(self.subject.t1_dir, "freesurfer", "aparc+aseg.nii.gz"), logFile=log)
+                rrun("mri_convert " + os.path.join(self.subject.t1_dir, "freesurfer", "mri", "aseg.mgz") + " " + os.path.join(self.subject.t1_dir, "freesurfer", "aseg.nii.gz"), logFile=log)
                 os.system("rm " + self.subject.dti_data + ".mgz")
 
             os.environ['SUBJECTS_DIR'] = os.environ['OLD_SUBJECTS_DIR']

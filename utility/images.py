@@ -278,20 +278,23 @@ def read_header(file, list_field=None):
         return attribs_dict
 
 
-def remove_slices(self, numslice2remove=1, whichslices2remove="updown", remove_dimension="axial"):
-    nslices = int(rrun("fslval " + self.epi_data + " dim3"))
+def remove_slices(inputimg, numslice2remove=1, whichslices2remove="updown", remove_dimension="axial"):
+    nslices = int(rrun("fslval " + inputimg + " dim3"))
 
     dim_str = ""
     if remove_dimension == "axial":
         if whichslices2remove == "updown":
-            dim_str = " 0 -1 0 -1 " + str(numslice2remove) + " " + str(nslices - 2 * numslice2remove)
+            dim_str = " 0 -1 0 -1 " + str(numslice2remove) + " " + str(nslices - numslice2remove)
+        else:
+            print("ERROR in remove_slices, presently it removes only in the axial (z) dimension") # TODO
+            return
+            # dim_str = " 0 -1 0 -1 " + "0 " + str(numslice2remove) + " " + str(nslices - 2 * numslice2remove)
+    else:
+        print("ERROR in remove_slices, presently it removes only in the axial (z) dimension")
+        return
 
-    imcp(self.epi_data, self.epi_data + "_full")
-    rrun('fslroi ' + self.epi_data + " " + self.epi_data + dim_str)
-
-    # lo faccio anche per pepolar
-    imcp(self.epi_pe_data, self.epi_pe_data + "_full")
-    rrun('fslroi ' + self.epi_pe_data + " " + self.epi_pe_data + dim_str)
+    imcp(inputimg, remove_ext(inputimg) + "_full")
+    rrun('fslroi ' + inputimg + " " + inputimg + dim_str)
 
 
 # divide the tbss mean skeleton in images according to a given atlas file (where each volume is specific tract)
