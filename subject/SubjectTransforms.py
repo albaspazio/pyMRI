@@ -243,7 +243,7 @@ class SubjectTransforms:
     #                   hr2std4_mat, std42hr_mat, hr2std4_warp, std42hr_warp,           hrhead2std4.mat
     def transform_mpr(self, overwrite=False, logFile=None):
 
-        hrhead2std = os.path.join(self.subject.roi_std_dir, "hrhead2" + self.subject.std_img_label + ".mat")
+        hrhead2std  = os.path.join(self.subject.roi_std_dir, "hrhead2" + self.subject.std_img_label + ".mat")
         hrhead2std4 = os.path.join(self.subject.roi_std4_dir, "hrhead2" + self.subject.std_img_label + "4.mat")
 
         check = self.subject.check_template()
@@ -643,11 +643,12 @@ class SubjectTransforms:
             # DTI <-- (lin) -- HIGHRES -- (non-lin) --> STANDARD
             # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # dti --> std
-            check_convert_warp_mw(self.dti2std_warp, self.dtihead2hr_mat, self.hr2std_warp, self.subject.std_head_img, overwrite=overwrite, logFile=logFile)
+            # check_convert_warp_mw(self.dti2std_warp, self.dtihead2hr_mat, self.hr2std_warp, self.subject.std_head_img, overwrite=overwrite, logFile=logFile)
+            check_convert_warp_mw(self.dti2std_warp, self.dti2hr_mat, self.hr2std_warp, self.subject.std_img, overwrite=True, logFile=logFile)
             check_concat_mat(self.dti2std_mat, self.dti2hr_mat, self.hr2std_mat, overwrite=overwrite, logFile=logFile)
 
             # std --> dti
-            check_invert_warp(self.std2dti_warp, self.dti2std_warp, self.subject.dti_nodiff_data, overwrite=overwrite, logFile=logFile)
+            check_invert_warp(self.std2dti_warp, self.dti2std_warp, self.subject.dti_nodiff_data, overwrite=True, logFile=logFile)
             check_invert_mat(self.std2dti_mat, self.dti2std_mat, overwrite=overwrite, logFile=logFile)
 
     # it creates (4): rs2fmri_mat , fmri2rs_mat

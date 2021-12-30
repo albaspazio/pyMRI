@@ -11,6 +11,7 @@ from subject.SubjectMpr import SubjectMpr
 from subject.SubjectTransforms import SubjectTransforms
 from utility.fslfun import runsystem
 from utility.images import imtest, immv, imcp, is_image, img_split_ext, remove_ext, read_header
+from utility.utilities import extractall_zip
 
 
 class Subject:
@@ -62,49 +63,49 @@ class Subject:
 
         self.dir = os.path.join(self.project.subjects_dir, self.label, "s" + str(sess))
 
-        self.roi_dir = os.path.join(self.dir, "roi")
-        self.roi_t1_dir = os.path.join(self.roi_dir, "reg_t1")
-        self.roi_rs_dir = os.path.join(self.roi_dir, "reg_rs")
-        self.roi_fmri_dir = os.path.join(self.roi_dir, "reg_fmri")
-        self.roi_dti_dir = os.path.join(self.roi_dir, "reg_dti")
-        self.roi_t2_dir = os.path.join(self.roi_dir, "reg_t2")
+        self.roi_dir        = os.path.join(self.dir, "roi")
+        self.roi_t1_dir     = os.path.join(self.roi_dir, "reg_t1")
+        self.roi_rs_dir     = os.path.join(self.roi_dir, "reg_rs")
+        self.roi_fmri_dir   = os.path.join(self.roi_dir, "reg_fmri")
+        self.roi_dti_dir    = os.path.join(self.roi_dir, "reg_dti")
+        self.roi_t2_dir     = os.path.join(self.roi_dir, "reg_t2")
 
-        self.roi_std_dir = os.path.join(self.roi_dir, "reg_" + self.std_img_label)
-        self.roi_std4_dir = os.path.join(self.roi_dir, "reg_" + self.std_img_label + "4")
+        self.roi_std_dir    = os.path.join(self.roi_dir, "reg_" + self.std_img_label)
+        self.roi_std4_dir   = os.path.join(self.roi_dir, "reg_" + self.std_img_label + "4")
 
         # ------------------------------------------------------------------------------------------------------------------------
         # T1/MPR
         # ------------------------------------------------------------------------------------------------------------------------
         self.t1_image_label = self.label + "-t1"
 
-        self.t1_dir = os.path.join(self.dir, "mpr")
-        self.t1_anat_dir = os.path.join(self.t1_dir, "anat")
-        self.fast_dir = os.path.join(self.t1_dir, "fast")
-        self.first_dir = os.path.join(self.t1_dir, "first")
-        self.sienax_dir = os.path.join(self.t1_dir, "sienax")
-        self.t1_fs_dir = os.path.join(self.t1_dir, "freesurfer")
-        self.t1_fs_mri_dir = os.path.join(self.t1_fs_dir, "mri")
-        self.t1_spm_dir = os.path.join(self.t1_dir, "spm")
-        self.t1_cat_dir = os.path.join(self.t1_dir, "cat")
+        self.t1_dir         = os.path.join(self.dir, "mpr")
+        self.t1_anat_dir    = os.path.join(self.t1_dir, "anat")
+        self.fast_dir       = os.path.join(self.t1_dir, "fast")
+        self.first_dir      = os.path.join(self.t1_dir, "first")
+        self.sienax_dir     = os.path.join(self.t1_dir, "sienax")
+        self.t1_fs_dir      = os.path.join(self.t1_dir, "freesurfer")
+        self.t1_fs_mri_dir  = os.path.join(self.t1_fs_dir, "mri")
+        self.t1_spm_dir     = os.path.join(self.t1_dir, "spm")
+        self.t1_cat_dir     = os.path.join(self.t1_dir, "cat")
 
-        self.t1_data = os.path.join(self.t1_dir, self.t1_image_label)
-        self.t1_brain_data = os.path.join(self.t1_dir, self.t1_image_label + "_brain")
-        self.t1_brain_data_mask = os.path.join(self.t1_dir, self.t1_image_label + "_brain_mask")
-        self.t1_fs_brainmask_data = os.path.join(self.t1_fs_dir, "mri", "brainmask")
-        self.t1_fs_data = os.path.join(self.t1_fs_dir, "mri", "T1")  # T1 coronal [1x1x1] after conform
+        self.t1_data                = os.path.join(self.t1_dir, self.t1_image_label)
+        self.t1_brain_data          = os.path.join(self.t1_dir, self.t1_image_label + "_brain")
+        self.t1_brain_data_mask     = os.path.join(self.t1_dir, self.t1_image_label + "_brain_mask")
+        self.t1_fs_brainmask_data   = os.path.join(self.t1_fs_dir, "mri", "brainmask")
+        self.t1_fs_data             = os.path.join(self.t1_fs_dir, "mri", "T1")  # T1 coronal [1x1x1] after conform
 
         self.first_all_none_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_none_origsegs")
         self.first_all_fast_origsegs = os.path.join(self.first_dir, self.t1_image_label + "_all_fast_origsegs")
 
-        self.t1_segment_gm_path = os.path.join(self.roi_t1_dir, "mask_t1_gm")
-        self.t1_segment_wm_path = os.path.join(self.roi_t1_dir, "mask_t1_wm")
-        self.t1_segment_csf_path = os.path.join(self.roi_t1_dir, "mask_t1_csf")
-        self.t1_segment_wm_bbr_path = os.path.join(self.roi_t1_dir, "wmseg4bbr")
-        self.t1_segment_wm_ero_path = os.path.join(self.roi_t1_dir, "mask_t1_wmseg4Nuisance")
-        self.t1_segment_csf_ero_path = os.path.join(self.roi_t1_dir, "mask_t1_csfseg4Nuisance")
+        self.t1_segment_gm_path         = os.path.join(self.roi_t1_dir, "mask_t1_gm")
+        self.t1_segment_wm_path         = os.path.join(self.roi_t1_dir, "mask_t1_wm")
+        self.t1_segment_csf_path        = os.path.join(self.roi_t1_dir, "mask_t1_csf")
+        self.t1_segment_wm_bbr_path     = os.path.join(self.roi_t1_dir, "wmseg4bbr")
+        self.t1_segment_wm_ero_path     = os.path.join(self.roi_t1_dir, "mask_t1_wmseg4Nuisance")
+        self.t1_segment_csf_ero_path    = os.path.join(self.roi_t1_dir, "mask_t1_csfseg4Nuisance")
 
-        self.t1_cat_surface_dir = os.path.join(self.t1_cat_dir, "surf")
-        self.t1_cat_resampled_surface = os.path.join(self.t1_cat_surface_dir,
+        self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
+        self.t1_cat_resampled_surface   = os.path.join(self.t1_cat_surface_dir,
                                                      "s15.mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
         self.t1_cat_resampled_surface_longitudinal = os.path.join(self.t1_cat_surface_dir,
                                                                   "s15.mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
@@ -114,25 +115,26 @@ class Subject:
         # ------------------------------------------------------------------------------------------------------------------------
         # DTI
         # ------------------------------------------------------------------------------------------------------------------------
-        self.dti_image_label = self.label + "-dti"
+        self.dti_image_label    = self.label + "-dti"
         self.dti_ec_image_label = self.dti_image_label + "_ec"
-        self.dti_fit_label = self.dti_image_label + "_fit"
+        self.dti_fit_label      = self.dti_image_label + "_fit"
 
-        self.dti_dir = os.path.join(self.dir, "dti")
-        self.bedpost_X_dir = os.path.join(self.dti_dir, "bedpostx")
-        self.probtrackx_dir = os.path.join(self.dti_dir, "probtrackx")
-        self.trackvis_dir = os.path.join(self.dti_dir, "trackvis")
-        self.tv_matrices_dir = os.path.join(self.dti_dir, "tv_matrices")
-        self.dti_xtract_dir = os.path.join(self.dti_dir, "xtract")
+        self.dti_dir            = os.path.join(self.dir, "dti")
+        self.bedpost_X_dir      = os.path.join(self.dti_dir, "bedpostx")
+        self.probtrackx_dir     = os.path.join(self.dti_dir, "probtrackx")
+        self.trackvis_dir       = os.path.join(self.dti_dir, "trackvis")
+        self.tv_matrices_dir    = os.path.join(self.dti_dir, "tv_matrices")
+        self.dti_xtract_dir     = os.path.join(self.dti_dir, "xtract")
 
-        self.dti_bval = os.path.join(self.dti_dir, self.label + "-dti.bval")
-        self.dti_bvec = os.path.join(self.dti_dir, self.label + "-dti.bvec")
-        self.dti_rotated_bvec = os.path.join(self.dti_dir, self.label + "-dti_rotated.bvec")
+        self.dti_bval           = os.path.join(self.dti_dir, self.label + "-dti.bval")
+        self.dti_bvec           = os.path.join(self.dti_dir, self.label + "-dti.bvec")
+        self.dti_rotated_bvec   = os.path.join(self.dti_dir, self.label + "-dti_rotated.bvec")
+        self.dti_eddyrotated_bvec = os.path.join(self.dti_dir, self.label + "-dti_ec.eddy_rotated_bvecs")
 
-        self.dti_data = os.path.join(self.dti_dir, self.dti_image_label)
-        self.dti_pa_data = os.path.join(self.dti_dir, self.dti_image_label + "_PA")
-        self.dti_ec_data = os.path.join(self.dti_dir, self.dti_ec_image_label)
-        self.dti_fit_data = os.path.join(self.dti_dir, self.dti_fit_label)
+        self.dti_data           = os.path.join(self.dti_dir, self.dti_image_label)
+        self.dti_pa_data        = os.path.join(self.dti_dir, self.dti_image_label + "_PA")
+        self.dti_ec_data        = os.path.join(self.dti_dir, self.dti_ec_image_label)
+        self.dti_fit_data       = os.path.join(self.dti_dir, self.dti_fit_label)
 
         self.dti_nodiff_data = os.path.join(self.roi_dti_dir, "nodif")
         self.dti_nodiff_brain_data = os.path.join(self.roi_dti_dir, "nodif_brain")
@@ -150,6 +152,7 @@ class Subject:
         self.rs_dir     = os.path.join(self.dir, "resting")
         self.rs_data    = os.path.join(self.rs_dir, self.rs_image_label)
         self.rs_pa_data = os.path.join(self.rs_dir, self.rs_image_label + "_PA")
+        self.rs_pa_data2= os.path.join(self.rs_dir, self.rs_image_label + "_PA2")
 
         self.sbfc_dir = os.path.join(self.rs_dir, "sbfc")
         self.rs_series_dir = os.path.join(self.sbfc_dir, "series")
@@ -335,6 +338,9 @@ class Subject:
             if not imtest(self.t2_data):
                 missing_images.append("t2")
 
+        if len(missing_images) > 0:
+            missing_images.insert(0, "---------------------------------------------------------------> " + self.label)
+
         print(missing_images)
 
         return missing_images
@@ -408,21 +414,19 @@ class Subject:
                  do_bet=True, betfparam=[0.5],
                  do_sienax=False, bet_sienax_param_string="-SNB -f 0.2",
                  do_reg=True, do_nonlinreg=True, do_seg=True,
-                 do_spm_seg=False, spm_seg_over_bet=False, spm_seg_over_fs=False,  # over-ride bet an
-                 do_cat_seg=False, cat_seg_over_bet=False, cat_seg_over_fs=False, cat_use_dartel=False,
-                 do_cat_surf=True,  # over-ride bet an
+                 do_spm_seg=False, spm_seg_over_bet=False, spm_seg_over_fs=False,
+                 do_cat_seg=False, cat_seg_over_bet=False, cat_seg_over_fs=False, cat_use_dartel=False, do_cat_surf=True,
                  do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
                  use_lesionmask=False, lesionmask="lesionmask",
                  do_freesurfer=False,
                  do_first=False, first_struct="", first_odn="",
-                 do_epirm2vol=0, do_aroma=True, do_nuisance=True, hpfsec=100,
+                 do_epirm2vol=0, do_susc_corr=False, do_aroma=True, do_nuisance=True, hpfsec=100,
                  feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
                  do_featinitreg=False,
                  do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False,
                  replace_std_filtfun=False,
                  do_dtifit=True, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
-                 do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False,
-                 xtract_meas="vol,prob,length,FA,MD,L1,L23",
+                 do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",
                  do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0):
 
         BET_F_VALUE_T2      = "0.5"
@@ -540,8 +544,8 @@ class Subject:
                 # ------------------------------------------------------------------------------------------------------
                 # susceptibility correction ?
                 # ------------------------------------------------------------------------------------------------------
-                if imtest(self.rs_pa_data):
-                    self.epi.topup_correction(self.rs_data, self.rs_pa_data, self.project.topup_rs_params, logFile=log)
+                if imtest(self.rs_pa_data) and do_susc_corr is True:
+                    self.epi.topup_correction(self.rs_data, self.rs_pa_data2, self.project.topup_rs_params, logFile=log)
 
                 # ------------------------------------------------------------------------------------------------------
                 # FEAT PRE PROCESSING  (hp filt, mcflirt, spatial smoothing, melodic exploration, NO REG)
@@ -666,10 +670,7 @@ class Subject:
                 self.dti.ec_fit()
 
                 # create L23 image
-                rrun("fslmaths " + os.path.join(self.dti_dir, self.dti_fit_label) + "_L2 -add " + os.path.join(
-                    self.dti_dir, self.dti_fit_label + "_L3") + " -div 2 " + os.path.join(self.dti_dir,
-                                                                                          self.dti_fit_label + "_L23"),
-                     logFile=log)
+                rrun("fslmaths " + os.path.join(self.dti_dir, self.dti_fit_label) + "_L2 -add " + os.path.join(self.dti_dir, self.dti_fit_label + "_L3") + " -div 2 " + os.path.join(self.dti_dir,self.dti_fit_label + "_L23"),logFile=log)
 
             os.makedirs(self.roi_dti_dir, exist_ok=True)
 
@@ -726,14 +727,18 @@ class Subject:
     # 8	Converted some but not all of the input DICOMs
     # 9	Unable to rename files (result of dcm2niix -r y ~/in)
 
-    def renameNifti(self, extpath, associations, options="-z o -f %f_%p_%t_%s_%d ", cleanup=0):
+    def renameNifti(self, extpath, associations, options="-z o -f %f_%p_%t_%s_%d ", cleanup=0, convert=True, rename=True):
 
         try:
             if "." in extpath:
                 print("ERROR : input path " + str(extpath) + " cannot contain dots !!!")
                 return
 
-            rrun("dcm2niix " + options + extpath)  # it returns :. usefs coXXXXXX, oXXXXXXX and XXXXXXX images
+            if convert is True:
+                rrun("dcm2niix " + options + extpath)  # it returns :. usefs coXXXXXX, oXXXXXXX and XXXXXXX images
+
+            if rename is False:
+                return
 
             files = glob.glob(os.path.join(extpath, "*"))
 
@@ -848,4 +853,7 @@ class Subject:
         rrun("fslmerge " + dimension + " " + outputname + " " + " ".join(input_files))
         os.chdir(cur_dir)
 
+    def unzip_data(self, src_zip, dest_dir, replace=True):
+        extractall_zip(src_zip, dest_dir, replace)
+        pass
     # ==================================================================================================================================================

@@ -97,11 +97,9 @@ def check_convert_warp_ww(owarp, iwarp1, iwarp2, ref, overwrite=False, logFile=N
 def check_convert_warp_mw(owarp, premat, iwarp, ref, overwrite=False, logFile=None):
     if imtest(owarp) is False or overwrite is True:
         if imtest(iwarp) is False or os.path.exists(premat) is False or imtest(ref) is False:
-            raise Exception(
-                "ERROR in chech_convert_warp_mw, input warp (" + iwarp + ") or pre mat (" + premat + ") or ref (" + ref + ") does not exist")
+            raise Exception("ERROR in chech_convert_warp_mw, input warp (" + iwarp + ") or pre mat (" + premat + ") or ref (" + ref + ") does not exist")
         else:
-            rrun("convertwarp --ref=" + ref + " --premat=" + premat + " --warp1=" + iwarp + " --out=" + owarp,
-                 logFile=logFile)
+            rrun("convertwarp --ref=" + ref + " --premat=" + premat + " --warp1=" + iwarp + " --out=" + owarp, logFile=logFile)
 
 
 def check_apply_warp(oimg, iimg, warp, ref, overwrite=False, logFile=None):

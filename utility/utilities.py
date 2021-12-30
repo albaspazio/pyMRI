@@ -3,6 +3,22 @@ import os
 import re
 import shutil
 import tempfile
+import zipfile
+
+
+def extractall_zip(src, dest, replace=True):
+
+    if os.path.exists(dest):
+        if replace is True:
+            os.removedirs(dest)
+        else:
+            return
+    os.makedirs(dest, exist_ok=True)
+
+    print("start unzipping " + src)
+    with zipfile.ZipFile(src, 'r') as zip_ref:
+        zip_ref.extractall(dest)
+    print("finished unzipping " + src)
 
 
 def gunzip(src, dest, replace=False):

@@ -226,7 +226,7 @@ class Project:
     # prepare_mpr_for_setorigin1 and prepare_mpr_for_setorigin2 are to be used in conjunction
     # the former make a backup and unzip the original file,
     # the latter zip and clean up
-    def prepare_mpr_for_setorigin1(self, group_label, sess_id=1, replaceOrig=False):
+    def prepare_mpr_for_setorigin1(self, group_label, sess_id=1, replaceOrig=False, overwrite=False):
         subjects = self.load_subjects(group_label, sess_id)
         for subj in subjects:
 
@@ -234,6 +234,11 @@ class Project:
                 imcp(subj.t1_data, subj.t1_data + "_old_origin")
 
             niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
+
+            if os.path.exists(niifile) is True and overwrite is False:
+                print("skipping prepare_mpr_for_setorigin1 for subj " + subj.label)
+                continue
+
             gunzip(subj.t1_data + ".nii.gz", niifile)
             print("unzipped " + subj.label + " mri")
 

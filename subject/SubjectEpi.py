@@ -52,7 +52,7 @@ class SubjectEpi:
     # 4: run topup using ref, acq params; used_templates: "_topup"
     # 5: (optionally) do motion correction with the chosen volume
     # 6: applytopup --> choose images whose distortion we want to correct
-    def topup_correction(self, in_ap_img, in_pa_img, acq_params, ap_ref_vol=-1, pa_ref_vol=-1, motion_corr=False, logFile=None):
+    def topup_correction(self, in_ap_img, in_pa_img, acq_params, ap_ref_vol=-1, pa_ref_vol=-1, config="b02b0.cnf", motion_corr=False, logFile=None):
 
         #  /a/b/c/name.ext
         input_dir   = os.path.dirname(in_ap_img)    # /a/b/c
@@ -88,7 +88,7 @@ class SubjectEpi:
         rrun("fslmerge -t " + ap_pa_ref + " " + ap_ref + " " + pa_ref)
 
         # 4 —assumes merged epi volumes appear in the same order as acqparams.txt (--datain)
-        rrun("topup --imain=" + ap_pa_ref + " --datain=" + acq_params + " --config=b02b0.cnf --out=" + ap_pa_ref_topup, logFile=logFile) # + " --iout=" + self.subject.fmri_data + "_PE_ref_topup_corrected")
+        rrun("topup --imain=" + ap_pa_ref + " --datain=" + acq_params + " --config=" + config + " --out=" + ap_pa_ref_topup, logFile=logFile) # + " --iout=" + self.subject.fmri_data + "_PE_ref_topup_corrected")
 
         img2correct = in_ap_img
         # 5 -motion correction using central_vol

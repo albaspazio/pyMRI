@@ -540,22 +540,19 @@ class SubjectMpr:
             c3img = os.path.join(self.subject.t1_spm_dir, "c3T1_" + self.subject.label + ".nii")
 
             rrun("fslmaths " + c1img + " -add " + c2img + " -thr 0.1 -fillh " + brain_mask, logFile=log)
-            rrun("fslmaths " + c1img + " -add " + c2img + " -add " + c3img + " -thr 0.1 -bin " + skullstripped_mask,
-                 logFile=log)
+            rrun("fslmaths " + c1img + " -add " + c2img + " -add " + c3img + " -thr 0.1 -bin " + skullstripped_mask, logFile=log)
 
             # this codes have two aims:
             # 1) it resets like in the original image the dt header parameters that spm set to 0.
             #    otherwise it fails some operations like fnirt as it sees the mask and the brain data of different dimensions
             # 2) changing image origin in spm, changes how fsleyes display the image. while, masking in this ways, everything goes right
             rrun("fslmaths " + srcinputimage + ".nii.gz" + " -mas " + brain_mask + " -bin " + brain_mask)
-            rrun(
-                "fslmaths " + srcinputimage + ".nii.gz" + " -mas " + skullstripped_mask + " -bin " + skullstripped_mask)
+            rrun("fslmaths " + srcinputimage + ".nii.gz" + " -mas " + skullstripped_mask + " -bin " + skullstripped_mask)
 
             if add_bet_mask is True:
 
                 if imtest(os.path.join(self.subject.t1_anat_dir, "T1_biascorr_brain_mask")) is True:
-                    rrun("fslmaths " + brain_mask + " -add " + os.path.join(self.subject.t1_anat_dir,
-                                                                            "T1_biascorr_brain_mask") + " -bin " + brain_mask)
+                    rrun("fslmaths " + brain_mask + " -add " + os.path.join(self.subject.t1_anat_dir, "T1_biascorr_brain_mask") + " -bin " + brain_mask)
                 elif imtest(self.subject.t1_brain_data_mask) is True:
                     rrun("fslmaths " + brain_mask + " -add " + self.subject.t1_brain_data_mask + " " + brain_mask)
                 else:
@@ -1340,54 +1337,30 @@ class SubjectMpr:
             print("starting t1_post_processing", file=log)
             print("******************************************************************", file=log)
 
-            run_notexisting_img(self.subject.t1_data + "_orig",
-                                "immv " + self.subject.t1_data + " " + self.subject.t1_data + "_orig", logFile=log)
+            run_notexisting_img(self.subject.t1_data + "_orig", "immv " + self.subject.t1_data + " " + self.subject.t1_data + "_orig", logFile=log)
             run_notexisting_img(self.subject.t1_data, "imcp " + T1 + "_biascorr " + self.subject.t1_data, logFile=log)
-            run_notexisting_img(self.subject.t1_brain_data,
-                                "imcp " + T1 + "_biascorr_brain " + self.subject.t1_brain_data, logFile=log)
-            run_notexisting_img(self.subject.t1_brain_data + "_mask",
-                                "imcp " + T1 + "_biascorr_brain_mask " + self.subject.t1_brain_data + "_mask",
-                                logFile=log)
+            run_notexisting_img(self.subject.t1_brain_data, "imcp " + T1 + "_biascorr_brain " + self.subject.t1_brain_data, logFile=log)
+            run_notexisting_img(self.subject.t1_brain_data + "_mask", "imcp " + T1 + "_biascorr_brain_mask " + self.subject.t1_brain_data + "_mask", logFile=log)
 
             os.makedirs(self.subject.fast_dir, exist_ok=True)
 
             mass_images_move(os.path.join(anatdir, "*fast*"), self.subject.fast_dir, logFile=log)
 
-            run_notexisting_img(T1 + "_fast_pve_1",
-                                "imcp " + os.path.join(self.subject.fast_dir, T1_label + "_fast_pve_1 " + anatdir),
-                                logFile=log)  # this file is tested by subject_t1_processing to skip the fast step. so by copying it back, I allow such skip.
+            run_notexisting_img(T1 + "_fast_pve_1", "imcp " + os.path.join(self.subject.fast_dir, T1_label + "_fast_pve_1 " + anatdir), logFile=log)  # this file is tested by subject_t1_processing to skip the fast step. so by copying it back, I allow such skip.
 
-            run_notexisting_img(self.subject.t1_segment_csf_path, "fslmaths " + os.path.join(self.subject.fast_dir,
-                                                                                             T1_label + "_fast_seg") + " -thr 1 -uthr 1 " + self.subject.t1_segment_csf_path,
-                                logFile=log)
-            run_notexisting_img(self.subject.t1_segment_gm_path, "fslmaths " + os.path.join(self.subject.fast_dir,
-                                                                                            T1_label + "_fast_seg") + " -thr 2 -uthr 2 " + self.subject.t1_segment_gm_path,
-                                logFile=log)
-            run_notexisting_img(self.subject.t1_segment_wm_path, "fslmaths " + os.path.join(self.subject.fast_dir,
-                                                                                            T1_label + "_fast_seg") + " -thr 3 " + self.subject.t1_segment_wm_path,
-                                logFile=log)
+            run_notexisting_img(self.subject.t1_segment_csf_path, "fslmaths " + os.path.join(self.subject.fast_dir, T1_label + "_fast_seg") + " -thr 1 -uthr 1 " + self.subject.t1_segment_csf_path, logFile=log)
+            run_notexisting_img(self.subject.t1_segment_gm_path, "fslmaths " + os.path.join(self.subject.fast_dir, T1_label + "_fast_seg") + " -thr 2 -uthr 2 " + self.subject.t1_segment_gm_path, logFile=log)
+            run_notexisting_img(self.subject.t1_segment_wm_path, "fslmaths " + os.path.join(self.subject.fast_dir, T1_label + "_fast_seg") + " -thr 3 " + self.subject.t1_segment_wm_path, logFile=log)
 
-            run_notexisting_img(self.subject.t1_segment_csf_ero_path, "fslmaths " + os.path.join(self.subject.fast_dir,
-                                                                                                 T1_label + "_fast_pve_0 -thr 1 -uthr 1 " + self.subject.t1_segment_csf_ero_path),
-                                logFile=log)
-            run_notexisting_img(self.subject.t1_segment_wm_bbr_path, "fslmaths " + os.path.join(self.subject.fast_dir,
-                                                                                                T1_label + "_fast_pve_2 -thr 0.5 -bin " + self.subject.t1_segment_wm_bbr_path),
-                                logFile=log)
-            run_notexisting_img(self.subject.t1_segment_wm_ero_path, "fslmaths " + os.path.join(self.subject.fast_dir,
-                                                                                                T1_label + "_fast_pve_2 -ero " + self.subject.t1_segment_wm_ero_path),
-                                logFile=log)
+            run_notexisting_img(self.subject.t1_segment_csf_ero_path, "fslmaths " + os.path.join(self.subject.fast_dir, T1_label + "_fast_pve_0 -thr 1 -uthr 1 " + self.subject.t1_segment_csf_ero_path), logFile=log)
+            run_notexisting_img(self.subject.t1_segment_wm_bbr_path, "fslmaths " + os.path.join(self.subject.fast_dir, T1_label + "_fast_pve_2 -thr 0.5 -bin " + self.subject.t1_segment_wm_bbr_path), logFile=log)
+            run_notexisting_img(self.subject.t1_segment_wm_ero_path, "fslmaths " + os.path.join(self.subject.fast_dir, T1_label + "_fast_pve_2 -ero " + self.subject.t1_segment_wm_ero_path), logFile=log)
 
             mass_images_move(os.path.join(anatdir, "*_to_MNI*"), self.subject.roi_std_dir, logFile=log)
             mass_images_move(os.path.join(anatdir, "*_to_T1*"), self.subject.roi_t1_dir, logFile=log)
 
-            run_move_notexisting_img(os.path.join(self.subject.roi_t1_dir, "std2hr_warp"),
-                                     "immv " + os.path.join(self.subject.roi_t1_dir,
-                                                            "MNI_to_T1_nonlin_field") + " " + os.path.join(
-                                         self.subject.roi_t1_dir, "std2hr_warp"), logFile=log)
-            run_move_notexisting_img(os.path.join(self.subject.roi_std_dir, "hr2std_warp"),
-                                     "immv " + os.path.join(self.subject.roi_std_dir,
-                                                            "T1_to_MNI_nonlin_field") + " " + os.path.join(
-                                         self.subject.roi_std_dir, "hr2std_warp"), logFile=log)
+            run_move_notexisting_img(os.path.join(self.subject.roi_t1_dir, "std2hr_warp"), "immv " + os.path.join(self.subject.roi_t1_dir, "MNI_to_T1_nonlin_field") + " " + os.path.join(self.subject.roi_t1_dir, "std2hr_warp"), logFile=log)
+            run_move_notexisting_img(os.path.join(self.subject.roi_std_dir, "hr2std_warp"), "immv " + os.path.join(self.subject.roi_std_dir, "T1_to_MNI_nonlin_field") + " " + os.path.join(self.subject.roi_std_dir, "hr2std_warp"), logFile=log)
 
             # first has been removed from the standard t1_processing pipeline
             # mkdir -p $FIRST_DIR
@@ -1529,20 +1502,19 @@ class SubjectMpr:
     # check whether substituting bet brain with the one created by freesurfer.
     # fs mask is usually bigger then fsl/spm brain, so may need some erosion
     # since the latter op create holes within the image. I create a mask with the latter and the bet mask (which must be coregistered since fs ones are coronal)
-    def use_fs_brainmask(self, backtransfparams=" RL PA IS ", erosiontype=" -kernel boxv 5 ", is_interactive=True,
-                         do_clean=True):
+    def use_fs_brainmask(self, backtransfparams=" RL PA IS ", erosiontype=" -kernel boxv 5 ", is_interactive=True, do_clean=True):
 
         # convert fs brainmask to nii.gz => move to the same orientation as working image (usually axial) => erode it
-        rrun(
-            "mri_convert " + self.subject.t1_fs_brainmask_data + ".mgz " + self.subject.t1_fs_brainmask_data + ".nii.gz")
-        rrun(
-            "fslswapdim " + self.subject.t1_fs_brainmask_data + ".nii.gz" + backtransfparams + self.subject.t1_fs_brainmask_data + "_orig.nii.gz")
-        rrun(
-            "fslmaths " + self.subject.t1_fs_brainmask_data + "_orig.nii.gz" + erosiontype + " -ero " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
+        rrun("mri_convert " + self.subject.t1_fs_brainmask_data + ".mgz " + self.subject.t1_fs_brainmask_data + ".nii.gz")
+        rrun("fslswapdim " + self.subject.t1_fs_brainmask_data + ".nii.gz" + backtransfparams + self.subject.t1_fs_brainmask_data + "_orig.nii.gz")
+
+        if erosiontype != "":
+            rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig.nii.gz" + erosiontype + " -ero " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
+        else:
+            imcp(self.subject.t1_fs_brainmask_data + "_orig.nii.gz", self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
 
         if is_interactive is True:
-            rrun(
-                "fsleyes " + self.subject.t1_data + " " + self.subject.t1_brain_data + " " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
+            rrun("fsleyes " + self.subject.t1_data + " " + self.subject.t1_brain_data + " " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz", stop_on_error=False)
 
             do_substitute = input("do you want to substitute bet image with this one? press y or n\n : ")
 
@@ -1553,26 +1525,26 @@ class SubjectMpr:
             self.use_fs_brainmask_exec(do_clean)
 
         if do_clean is True:
-            imrm([self.subject.t1_fs_brainmask_data + ".nii.gz", self.subject.t1_fs_brainmask_data + "_orig.nii.gz",
+            imrm([self.subject.t1_fs_brainmask_data + ".nii.gz",
+                  self.subject.t1_fs_brainmask_data + "_orig.nii.gz",
                   self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz"])
 
-    def use_fs_brainmask_exec(self, do_clean=True):
+    def use_fs_brainmask_exec(self, add_previous=False, do_clean=True):
 
         # I may have manually edited self.t1_fs_brainmask + "_orig_ero.nii.gz"
         # although is at the same reference as working image, it still have to be co-registered
         # 1) I move this orig brainmask to the same space as t1 and t1_brain, applying the coronalconformed->original transformation to eroded brainmask_orig
-        rrun(
-            "flirt -in " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz" + " -ref " + self.subject.t1_data + " -out " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -applyxfm -init " + os.path.join(
-                self.subject.t1_fs_mri_dir, "fscor2t1.mat") + " -interp trilinear")
+        rrun("flirt -in " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz" + " -ref " + self.subject.t1_data + " -out " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -applyxfm -init " + os.path.join(self.subject.t1_fs_mri_dir, "fscor2t1.mat") + " -interp trilinear")
 
-        # => I create its mask (with holes) and add to the bet's one (assumed as smaller but without holes)
-        rrun(
-            "fslmaths " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -bin -add " + self.subject.t1_brain_data_mask + " -bin " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz")
+        if add_previous is True:
+            # => I create its mask (with holes) and add to the bet's one (assumed as smaller but without holes)
+            rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -bin -add " + self.subject.t1_brain_data_mask + " -bin " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz")
+        else:
+            # => just fill holes
+            rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -fillh -bin " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz")
 
-        imcp(self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz",
-             self.subject.t1_brain_data_mask)  # substitute bet mask with this one
-        rrun(
-            "fslmaths " + self.subject.t1_data + " -mas " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz" + " " + self.subject.t1_brain_data)
+        imcp(self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz", self.subject.t1_brain_data_mask)  # substitute bet mask with this one
+        rrun("fslmaths " + self.subject.t1_data + " -mas " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz" + " " + self.subject.t1_brain_data)
 
         if do_clean is True:
             imrm([self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz"])
