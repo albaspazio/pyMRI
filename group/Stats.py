@@ -84,18 +84,12 @@ class Stats:
         conditions_string = ""
         for c in range(1, len(conditions) + 1):
             onsets = import_data_file.list2spm_text_column(conditions[c - 1]["onsets"])  # ends with a "\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(
-                c) + ").name = \'" + conditions[c - 1]["name"] + "\';" + "\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(
-                c) + ").onset = [" + onsets + "];\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(
-                c) + ").tmod = 0;\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(
-                c) + ").duration = " + str(conditions[c - 1]["duration"]) + ";\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(
-                c) + ").pmod = struct('name', {}, 'param', {}, 'poly', {});\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(
-                c) + ").orth = 1;\n"
+            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").name = \'" + conditions[c - 1]["name"] + "\';" + "\n"
+            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").onset = [" + onsets + "];\n"
+            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").tmod = 0;\n"
+            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").duration = " + str(conditions[c - 1]["duration"]) + ";\n"
+            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").pmod = struct('name', {}, 'param', {}, 'poly', {});\n"
+            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").orth = 1;\n"
 
         sed_inplace(out_batch_job, "<CONDITION_STRING>", conditions_string)
 

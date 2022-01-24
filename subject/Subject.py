@@ -167,12 +167,9 @@ class Subject:
 
         self.rs_final_regstd_dir = os.path.join(self.rs_dir, "reg_" + self.std_img_label)
 
-        self.rs_final_regstd_image = os.path.join(self.rs_final_regstd_dir,
-                                                  "filtered_func_data")  # image after first preprocessing, aroma and nuisance regression.
-        self.rs_final_regstd_mask = os.path.join(self.rs_final_regstd_dir,
-                                                 "mask")  # image after first preprocessing, aroma and nuisance regression.
-        self.rs_final_regstd_bgimage = os.path.join(self.rs_final_regstd_dir,
-                                                    "bg_image")  # image after first preprocessing, aroma and nuisance regression.
+        self.rs_final_regstd_image = os.path.join(self.rs_final_regstd_dir, "filtered_func_data")  # image after first preprocessing, aroma and nuisance regression.
+        self.rs_final_regstd_mask = os.path.join(self.rs_final_regstd_dir, "mask")  # image after first preprocessing, aroma and nuisance regression.
+        self.rs_final_regstd_bgimage = os.path.join(self.rs_final_regstd_dir, "bg_image")  # image after first preprocessing, aroma and nuisance regression.
 
         self.rs_post_preprocess_image_label = self.rs_image_label + "_preproc"
         self.rs_post_aroma_image_label = self.rs_image_label + "_preproc_aroma"
@@ -208,7 +205,7 @@ class Subject:
         self.fmri_data      = os.path.join(self.fmri_dir, self.fmri_image_label)
         self.fmri_pa_data   = os.path.join(self.fmri_dir, self.fmri_image_label + "_PA")
 
-        self.fmri_data_mc = os.path.join(self.fmri_dir, "r" + self.fmri_image_label)
+        self.fmri_data_mc = os.path.join(self.fmri_dir, "ra" + self.fmri_image_label)   # assumes motion correction after slice timings
         self.fmri_examplefunc = os.path.join(self.fmri_dir, "example_func")
         self.fmri_examplefunc_mask = os.path.join(self.fmri_dir, "mask_example_func")
 
@@ -275,13 +272,11 @@ class Subject:
 
             self.std_head_img = os.path.join(imgdir, self.std_img_label)  # "pediatric"
             self.std_img = os.path.join(imgdir, self.std_img_label + "_brain")  # "pediatric_brain"
-            self.std_img_mask_dil = os.path.join(imgdir,
-                                                 self.std_img_label + "_brain_mask_dil")  # "pediatric_brain_mask_dil"
+            self.std_img_mask_dil = os.path.join(imgdir, self.std_img_label + "_brain_mask_dil")  # "pediatric_brain_mask_dil"
 
             self.std4_head_img = os.path.join(imgdir, self.std_img_label + "4")  # "pediatric4"
             self.std4_img = os.path.join(imgdir, self.std_img_label + "4_brain")  # "pediatric4_brain"
-            self.std4_img_mask_dil = os.path.join(imgdir,
-                                                  self.std_img_label + "4_brain_mask_dil")  # "pediatric4_brain_mask_dil"
+            self.std4_img_mask_dil = os.path.join(imgdir, self.std_img_label + "4_brain_mask_dil")  # "pediatric4_brain_mask_dil"
 
             if imtest(self.std_head_img) is False or imtest(self.std_img) is False or imtest(
                     self.std4_head_img) is False or imtest(self.std4_img) is False:

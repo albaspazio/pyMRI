@@ -8,7 +8,7 @@ matlabbatch{1}.spm.temporal.st.scans = {
                                         {
                                         '<FMRI_IMAGES>'
                                         }
-                                        }';
+                                        };
 %%
 
 matlabbatch{1}.spm.temporal.st.nslices = <NUM_SLICES>;

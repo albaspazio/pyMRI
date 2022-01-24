@@ -14,7 +14,6 @@ IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".i
 # FOLDERS, NAME, EXTENSIONS,
 # ===============================================================================================================================
 
-
 # get the whole extension  (e.g. abc.nii.gz => nii.gz )
 def img_split_ext(img, img_formats=IMAGE_FORMATS):
     fullext = ""
@@ -26,6 +25,7 @@ def img_split_ext(img, img_formats=IMAGE_FORMATS):
     return [filename, fullext]
 
 
+# suitable for images (with double extension e.g.: /a/b/c/name.nii.gz)
 def imgparts(img):
     if os.path.isdir(img):
         return [img, "", ""]
@@ -60,8 +60,7 @@ def imtest(image_path):
 
     fileparts = img_split_ext(image_path)
 
-    if os.path.isfile(fileparts[0] + ".nii") or os.path.isfile(fileparts[0] + ".nii.gz") or os.path.isfile(
-            fileparts[0] + ".mgz"):
+    if os.path.isfile(fileparts[0] + ".nii") or os.path.isfile(fileparts[0] + ".nii.gz") or os.path.isfile(fileparts[0] + ".mgz"):
         return True
 
     if os.path.isfile(fileparts[0] + ".mnc") or os.path.isfile(fileparts[0] + ".mnc.gz"):
@@ -277,14 +276,14 @@ def read_header(file, list_field=None):
     else:
         return attribs_dict
 
-
+# remove numslice2remove up and down (fslroi wants, for each dimension, first slice to keep and number of slices to keep)
 def remove_slices(inputimg, numslice2remove=1, whichslices2remove="updown", remove_dimension="axial"):
     nslices = int(rrun("fslval " + inputimg + " dim3"))
 
     dim_str = ""
     if remove_dimension == "axial":
         if whichslices2remove == "updown":
-            dim_str = " 0 -1 0 -1 " + str(numslice2remove) + " " + str(nslices - numslice2remove)
+            dim_str = " 0 -1 0 -1 " + str(numslice2remove) + " " + str(nslices - 2*numslice2remove)
         else:
             print("ERROR in remove_slices, presently it removes only in the axial (z) dimension") # TODO
             return

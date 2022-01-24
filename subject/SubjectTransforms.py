@@ -241,7 +241,7 @@ class SubjectTransforms:
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # it creates (8) :  hr2std_mat,  std2hr_mat,  hr2std_warp,  std2hr_warp,            hrhead2std.mat
     #                   hr2std4_mat, std42hr_mat, hr2std4_warp, std42hr_warp,           hrhead2std4.mat
-    def transform_mpr(self, overwrite=False, logFile=None):
+    def transform_mpr(self, overwrite=False, usehead_nl=True, logFile=None):
 
         hrhead2std  = os.path.join(self.subject.roi_std_dir, "hrhead2" + self.subject.std_img_label + ".mat")
         hrhead2std4 = os.path.join(self.subject.roi_std4_dir, "hrhead2" + self.subject.std_img_label + "4.mat")
@@ -264,17 +264,22 @@ class SubjectTransforms:
         check_flirt(self.hr2std_mat, self.subject.t1_brain_data, self.subject.std_img, overwrite=overwrite, logFile=logFile)
 
         # => hrhead2{std}.mat
-        check_flirt(hrhead2std, self.subject.t1_data, self.subject.std_img, overwrite=overwrite, logFile=logFile)
+        check_flirt(hrhead2std, self.subject.t1_data, self.subject.std_head_img, overwrite=overwrite, logFile=logFile)
 
         # # => {std}2hr.mat
         check_invert_mat(self.std2hr_mat, self.hr2std_mat, overwrite=overwrite, logFile=logFile)
 
         # NON LINEAR
         # => hr2{std}_warp
-        if imtest(self.hr2std_warp) is False:
-            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + " --config=" + self._global.fsl_std_mni_2mm_cnf +
-                " --ref=" + self.subject.std_head_img + " --refmask=" + self.subject.std_img_mask_dil + " --warpres=10,10,10" +
-                " --cout=" + self.hr2std_warp + " --iout=" + self.hr2std_mat, overwrite=overwrite, logFile=logFile)
+        if imtest(self.hr2std_warp) is False or overwrite is True:
+            if usehead_nl is True:
+                rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + " --config=" + self._global.fsl_std_mni_2mm_cnf +
+                    " --ref=" + self.subject.std_head_img + " --refmask=" + self.subject.std_img_mask_dil + " --warpres=10,10,10" +
+                    " --cout=" + self.hr2std_warp, overwrite=overwrite, logFile=logFile)
+            else:
+                rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + self.hr2std_mat + " --config=" + self._global.fsl_std_mni_2mm_cnf +
+                    " --ref=" + self.subject.std_head_img + " --refmask=" + self.subject.std_img_mask_dil + " --warpres=10,10,10" +
+                    " --cout=" + self.hr2std_warp, overwrite=overwrite, logFile=logFile)
 
         # => {std}2hr_warp
         check_invert_warp(self.std2hr_warp, self.hr2std_warp, self.subject.t1_data, overwrite=overwrite, logFile=logFile)
@@ -1018,7 +1023,7 @@ class SubjectTransforms:
     # this method takes base images (t1/t1_brain, epi_example_function, dti_nodiff/dti_nodiff_brain, t2/t2_brain) and coregister to all other modalities and standard
     # creates up to 14 folders, 7 for linear and 7 for non linear transformation towards the 7 different space (hr, rs, frmi, dti, t2, std, std4)
     # user can select from which seq to which seq create the transforms
-    def test_all_coregistration(self, test_dir, _from=None, _to=None, extended=False):
+    def test_all_coregistration(self, test_dir, _from=None, _to=None, extended=False, overwrite=False):
 
         if _from is None:
             _from = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]

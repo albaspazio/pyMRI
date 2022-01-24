@@ -256,6 +256,7 @@ def rrun(*args, **kwargs):
         if logFile is not None:
             print(str, file=logFile)
 
+        print(str)
         if stop_on_error is True:
             raise RuntimeError(str)
 

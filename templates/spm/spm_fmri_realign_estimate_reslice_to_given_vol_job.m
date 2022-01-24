@@ -7,7 +7,7 @@
 matlabbatch{1}.spm.spatial.realign.estwrite.data = {
                                                     {
                                                     '<REF_IMAGE,refvol>'
-                                                    '<TO_ALIGN_IMAGES,1-n_vols>'
+                                                    <TO_ALIGN_IMAGES,1-n_vols>
                                                     }
                                                     }';
 matlabbatch{1}.spm.spatial.realign.estwrite.eoptions.quality = 0.9;

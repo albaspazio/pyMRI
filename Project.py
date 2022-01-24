@@ -46,7 +46,7 @@ class Project:
 
         self.topup_dti_params       = os.path.join(self.script_dir, "topup_acqpar_dti.txt")
         self.topup_rs_params        = os.path.join(self.script_dir, "topup_acqpar_rs.txt")
-        self.topup_epi_params       = os.path.join(self.script_dir, "topup_acqpar_fmri.txt")
+        self.topup_fmri_params      = os.path.join(self.script_dir, "topup_acqpar_fmri.txt")
         self.eddy_index             = os.path.join(self.script_dir, "eddy_index.txt")
 
         self._global = globaldata
@@ -149,7 +149,7 @@ class Project:
 
         return incomplete_subjects
 
-    def check_all_coregistration(self, outdir, subjs_labels=None, _from=None, _to=None, num_cpu=1):
+    def check_all_coregistration(self, outdir, subjs_labels=None, _from=None, _to=None, num_cpu=1, overwrite=False):
 
         if subjs_labels is None:
             subjs_labels = self.get_subjects_labels()
@@ -160,7 +160,7 @@ class Project:
         if _to is None:
             _to = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]
 
-        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir, "_from":_from, "_to":_to}], subjs_labels, nthread=num_cpu)
+        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir, "_from":_from, "_to":_to, "overwrite":overwrite}], subjs_labels, nthread=num_cpu)
 
         if "hr" in _to:
             l_t1 = os.path.join(outdir, "lin", "hr");            nl_t1 = os.path.join(outdir, "nlin", "hr")
@@ -360,6 +360,8 @@ class Project:
         # set dirs
         spm_script_dir = os.path.join(self.script_dir, seq, "spm")
         out_batch_dir = os.path.join(spm_script_dir, "batch")
+
+        os.makedirs(out_batch_dir, exist_ok=True)
 
         in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
 

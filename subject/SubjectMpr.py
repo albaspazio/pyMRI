@@ -1199,31 +1199,21 @@ class SubjectMpr:
 
                     print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                     print(self.subject.label + " :Performing tissue-imgtype segmentation")
-                    rrun(
-                        "fslmaths " + T1 + "_biascorr_brain" + " -mas " + lesionmaskinv + " " + T1 + "_biascorr_maskedbrain",
-                        logFile=log)
-                    rrun("fast -o " + T1 + "_fast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(
-                        niter) + " " + T1 + "_biascorr_maskedbrain", logFile=log)
+                    rrun("fslmaths " + T1 + "_biascorr_brain" + " -mas " + lesionmaskinv + " " + T1 + "_biascorr_maskedbrain", logFile=log)
+                    rrun("fast -o " + T1 + "_fast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " " + T1 + "_biascorr_maskedbrain", logFile=log)
                     immv(T1 + "_biascorr", T1 + "_biascorr_init", logFile=log)
                     rrun("fslmaths " + T1 + "_fast_restore " + T1 + "_biascorr_brain", logFile=log)  # overwrite brain
 
                     # extrapolate bias field and apply to the whole head image
-                    rrun(
-                        "fslmaths " + T1 + "_biascorr_brain_mask -mas " + lesionmaskinv + " " + T1 + "_biascorr_brain_mask2",
-                        logFile=log)
+                    rrun("fslmaths " + T1 + "_biascorr_brain_mask -mas " + lesionmaskinv + " " + T1 + "_biascorr_brain_mask2", logFile=log)
                     # rrun("fslmaths " + self.t1_brain_data_mask + " -mas " + lesionmaskinv + " " + T1 + "_biascorr_brain_mask2",logFile=log)
-                    rrun(
-                        "fslmaths " + T1 + "_biascorr_init -div " + T1 + "_fast_restore -mas " + T1 + "_biascorr_brain_mask2 " + T1 + "_fast_totbias",
-                        logFile=log)
+                    rrun("fslmaths " + T1 + "_biascorr_init -div " + T1 + "_fast_restore -mas " + T1 + "_biascorr_brain_mask2 " + T1 + "_fast_totbias", logFile=log)
                     rrun("fslmaths " + T1 + "_fast_totbias -sub 1 " + T1 + "_fast_totbias", logFile=log)
-                    rrun(
-                        "fslsmoothfill -i " + T1 + "_fast_totbias -m " + T1 + "_biascorr_brain_mask2 -o " + T1 + "_fast_bias",
-                        logFile=log)
+                    rrun("fslsmoothfill -i " + T1 + "_fast_totbias -m " + T1 + "_biascorr_brain_mask2 -o " + T1 + "_fast_bias", logFile=log)
                     rrun("fslmaths " + T1 + "_fast_bias -add 1 " + T1 + "_fast_bias", logFile=log)
                     rrun("fslmaths " + T1 + "_fast_totbias -add 1 " + T1 + "_fast_totbias", logFile=log)
                     # run $FSLDIR/bin/fslmaths " + T1 + "_fast_totbias -sub 1 -mas " + T1 + "_biascorr_brain_mask2 -dilall -add 1 " + T1 + "_fast_bias # alternative to fslsmoothfill", logFile=log)
-                    rrun("fslmaths " + T1 + "_biascorr_init -div " + T1 + "_fast_bias " + T1 + "_biascorr",
-                         logFile=log)  # overwrite full image
+                    rrun("fslmaths " + T1 + "_biascorr_init -div " + T1 + "_fast_bias " + T1 + "_biascorr", logFile=log)  # overwrite full image
 
                     imcp(T1 + "_biascorr_brain", self.subject.t1_brain_data)
                     imcp(T1 + "_biascorr", self.subject.t1_data)
@@ -1239,11 +1229,7 @@ class SubjectMpr:
                                 logFile=log)
                         else:
                             if imtest(os.path.join(self.subject.roi_std_dir, "hr2std_warp")) is True:
-                                rrun("applywarp -i " + T1 + "_biascorr -w " + os.path.join(self.subject.roi_std_dir,
-                                                                                           "hr2std_warp") + " -r " + os.path.join(
-                                    self.subject.fsl_data_std_dir,
-                                    "MNI152_" + T1_label + "_2mm") + " -o " + T1 + "_to_MNI_nonlin --interp=spline",
-                                     logFile=log)
+                                rrun("applywarp -i " + T1 + "_biascorr -w " + os.path.join(self.subject.roi_std_dir, "hr2std_warp") + " -r " + os.path.join(self.subject.fsl_data_std_dir,"MNI152_" + T1_label + "_2mm") + " -o " + T1 + "_to_MNI_nonlin --interp=spline", logFile=log)
                             else:
                                 print(
                                     "WARNING in postbet: either " + T1 + "_to_MNI_nonlin_field" + " or " + os.path.join(
@@ -1541,10 +1527,10 @@ class SubjectMpr:
             rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -bin -add " + self.subject.t1_brain_data_mask + " -bin " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz")
         else:
             # => just fill holes
-            rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -fillh -bin " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz")
+            rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -bin -fillh " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz")
 
         imcp(self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz", self.subject.t1_brain_data_mask)  # substitute bet mask with this one
-        rrun("fslmaths " + self.subject.t1_data + " -mas " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz" + " " + self.subject.t1_brain_data)
+        rrun("fslmaths " + self.subject.t1_data + " -mas " + self.subject.t1_brain_data_mask + " " + self.subject.t1_brain_data)
 
         if do_clean is True:
             imrm([self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz"])
