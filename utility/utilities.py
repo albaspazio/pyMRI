@@ -116,3 +116,21 @@ def read_list_from_file(srcfile):
     for s in range(len(str)):
         str[s] = str[s].strip()
     return str
+
+
+def fillnumber2fourdigits(num):
+
+    if num > 9999:
+        print("Error in fillnumber2fourdigits, given number is > 9999")
+        return
+
+    if num < 10:
+        str_num = "000" + str(num)
+    elif 9 < num < 100:
+        str_num = "00" + str(num)
+    elif 99 < num < 1000:
+        str_num = "0" + str(num)
+    else:
+        str_num = str(num)
+
+    return str_num

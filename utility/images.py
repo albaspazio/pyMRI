@@ -1,11 +1,14 @@
+import collections
 import glob
 import json
 import ntpath
 import os
+import shutil
 import xml.etree.ElementTree as ET
 from shutil import copyfile, move
 
 from myfsl.utils.run import rrun
+from utility.utilities import fillnumber2fourdigits
 
 IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".img", ".nii", ".mgz"]
 
@@ -15,6 +18,7 @@ IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".i
 # ===============================================================================================================================
 
 # get the whole extension  (e.g. abc.nii.gz => nii.gz )
+# return [path/filename_noext, ext]
 def img_split_ext(img, img_formats=IMAGE_FORMATS):
     fullext = ""
     for imgext in img_formats:
@@ -26,6 +30,7 @@ def img_split_ext(img, img_formats=IMAGE_FORMATS):
 
 
 # suitable for images (with double extension e.g.: /a/b/c/name.nii.gz)
+# return [folder, filename, ext]
 def imgparts(img):
     if os.path.isdir(img):
         return [img, "", ""]
@@ -33,7 +38,7 @@ def imgparts(img):
     parts = img_split_ext(img)
     return [ntpath.dirname(parts[0]), ntpath.basename(parts[0]), parts[1]]
 
-
+# return imgname_noext
 def imgname(img):
     namepath = img_split_ext(img)[0]
     return ntpath.basename(namepath)
@@ -195,25 +200,45 @@ def mass_images_move(wildcardsource, destdir, logFile=None):
 # ===============================================================================================================================
 # utilities
 # ===============================================================================================================================
+def getnvol(image):
+    return int(rrun("fslnvols " + image).split('\n')[0])
 
-def immerge(out_img, premerge_labels):
+
+def immerge(out_img, premerge_labels=None):
     seq_string = " "
-    for seq in premerge_labels:
-        seq_string = seq_string + out_img + "_" + seq + " "
 
-    rrun('fslmerge -t ' + out_img + " " + seq_string)
+    if premerge_labels is None:
+        seq_string = "./*"
+    elif isinstance(premerge_labels, str):
+        seq_string = premerge_labels + "*"
+    elif isinstance(premerge_labels, collections.Sequence):
+        for seq in premerge_labels:
+            seq_string = seq_string + out_img + "_" + seq + " "
+    else:
+        print("Error in immerge, given premerge_labels is not in a correct format")
+        return
+
+    os.system("fslmerge -t " + out_img + " " + seq_string)
+    # rrun("fslmerge -t " + out_img + " " + seq_string)
 
 
-def imsplit(in_img, subdirmame=""):
+def imsplit(in_img, templabel=None, subdirmame=""):
+
     folder = os.path.dirname(in_img)
-    label = imgparts(in_img)[1]
+
+    if templabel is None:
+        label = imgparts(in_img)[1]
+    else:
+        label = templabel
 
     currdir = os.getcwd()
     outdir = os.path.join(folder, subdirmame)
     os.makedirs(outdir, exist_ok=True)
     os.chdir(outdir)
-    rrun('fslsplit ' + in_img + " " + label + "_" + " -t")
+    rrun('fslsplit ' + in_img + " " + label + " -t")
     os.chdir(currdir)
+
+    return outdir,  label
 
 
 def quick_smooth(inimg, outimg, logFile=None):
@@ -345,3 +370,31 @@ def mask_tbss_skeleton_folder_atlas(skel_templ, atlas_dir, thr=0.95):
         rrun("fslmaths " + skel_templ + " -mas " + tempmask + " -bin " + finalmask)
 
         imrm(tempmask)
+
+
+# preserve given volumes
+def filter_volumes(four_d_image, vols2keep, filtered_image):
+
+    outdir, outprefix   = imsplit(four_d_image, "temp_")
+    nvols               = getnvol(four_d_image)
+
+    tempdir = os.path.join(outdir, "tempXXXX")
+    os.makedirs(tempdir, exist_ok=True)
+
+    for i in range(0, nvols):
+        if i in vols2keep:
+            strnum = fillnumber2fourdigits(i)
+            immv(os.path.join(outdir, "temp_" + strnum), os.path.join(tempdir, "temp_" + strnum))
+
+    currdir = os.getcwd()
+
+    os.chdir(tempdir)
+    immerge(filtered_image)
+
+    shutil.rmtree(tempdir)
+    os.chdir(currdir)
+    os.system("rm " + os.path.join(outdir, "temp_*"))
+
+
+
+

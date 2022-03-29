@@ -11,8 +11,7 @@ class Stats:
     # get cov values from many groups and concat them into a single vector
     # interaction=1 : no interaction, otherwise specify factors (1-based + 1, e.g. first factor = 2)
     @staticmethod
-    def spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, project, cov_name, cov_interaction=1,
-                                      datafile=None):
+    def spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, project, cov_name, cov_interaction=1, datafile=None):
 
         cov = []
         for grp in groups_labels:
@@ -29,8 +28,7 @@ class Stats:
     # get cov values from many groups and concat them into a single vector
     # interaction=1 : no interaction, otherwise specify factors (1-based + 1, e.g. first factor = 2)
     @staticmethod
-    def spm_stats_add_manycov_1group(out_batch_job, group_label, project, cov_names, cov_interaction=None,
-                                     datafile=None):
+    def spm_stats_add_manycov_1group(out_batch_job, group_label, project, cov_names, cov_interaction=None, datafile=None):
 
         cov_string = ""
         ncov = len(cov_names)
@@ -50,12 +48,9 @@ class Stats:
 
             cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id + 1) + ").c = "
             cov_string = cov_string + "[" + str_cov + "];\n"
-            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(
-                cov_id + 1) + ").cname = '" + cov_name + "';\n"
-            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(
-                cov_id + 1) + ").iCFI = " + str(cov_interaction[cov_id]) + ";\n"
-            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(
-                cov_id + 1) + ").iCC = 1;\n"
+            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id + 1) + ").cname = '" + cov_name + "';\n"
+            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id + 1) + ").iCFI = " + str(cov_interaction[cov_id]) + ";\n"
+            cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id + 1) + ").iCC = 1;\n"
 
         sed_inplace(out_batch_job, "<COV_STRING>", cov_string)
 
@@ -117,19 +112,13 @@ class Stats:
             weight_str_pos = weight_str_pos + " 1"
             weight_str_neg = weight_str_neg + " -1"
 
-            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(
-                2 * (cov_id + 1) - 1) + "}.tcon.name = \'" + cov_name + " pos\';\n"
-            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(
-                2 * (cov_id + 1) - 1) + "}.tcon.weights = [" + weight_str_pos + "];\n"
-            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(
-                2 * (cov_id + 1) - 1) + "}.tcon.sessrep = 'none';\n"
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2 * (cov_id + 1) - 1) + "}.tcon.name = \'" + cov_name + " pos\';\n"
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2 * (cov_id + 1) - 1) + "}.tcon.weights = [" + weight_str_pos + "];\n"
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2 * (cov_id + 1) - 1) + "}.tcon.sessrep = 'none';\n"
 
-            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(
-                2 * (cov_id + 1)) + "}.tcon.name = \'" + cov_name + " neg\';\n"
-            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(
-                2 * (cov_id + 1)) + "}.tcon.weights = [" + weight_str_neg + "];\n"
-            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(
-                2 * (cov_id + 1)) + "}.tcon.sessrep = 'none';\n"
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2 * (cov_id + 1)) + "}.tcon.name = \'" + cov_name + " neg\';\n"
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2 * (cov_id + 1)) + "}.tcon.weights = [" + weight_str_neg + "];\n"
+            contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2 * (cov_id + 1)) + "}.tcon.sessrep = 'none';\n"
 
         sed_inplace(out_batch_job, "<CONTRASTS>", contr_str)
 
@@ -137,36 +126,26 @@ class Stats:
     # mult_corr = "FWE" | "FDR" | "none"
     # cluster_extend = "none" | "en_corr" | "en_nocorr"
     @staticmethod
-    def cat_replace_results_trasformation_string(out_batch_job, cmd_id=3, mult_corr="FWE", pvalue=0.05,
-                                                 cluster_extend="none"):
+    def cat_replace_results_trasformation_string(out_batch_job, cmd_id=3, mult_corr="FWE", pvalue=0.05, cluster_extend="none"):
 
         if mult_corr == "FWE":
-            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(
-                cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";")
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";")
         elif mult_corr == "FDR":
-            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(
-                cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fdr.thresh05 = " + str(pvalue) + ";")
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fdr.thresh05 = " + str(pvalue) + ";")
         elif mult_corr == "none":
-            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(
-                cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.uncorr.thresh001 = " + str(
-                pvalue) + ";")
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.uncorr.thresh001 = " + str(pvalue) + ";")
         else:
-            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(
-                cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";")
+            sed_inplace(out_batch_job, "<CAT_T_CONV_THRESHOLD>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";")
 
         if cluster_extend == "none":
-            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>",
-                        "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;")
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>","matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;")
         elif mult_corr == "en_corr":
-            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(
-                cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 1;")
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 1;")
         elif mult_corr == "en_nocorr":
-            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(
-                cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 0;")
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>", "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 0;")
         else:
             print("warning in cat_replace_results_trasformation_string...unrecognized cluster_extend in Tsurf transf")
-            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>",
-                        "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;")
+            sed_inplace(out_batch_job, "<CAT_T_CONV_CLUSTER>","matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;")
 
     # parse a series of spm-output csv files and report info of those voxels/cluster associated to the given cluster
     # set    set cluster         cluster         cluster cluster peak            peak            peak    peak    peak
@@ -187,16 +166,9 @@ class Stats:
 
                 if data_row[2] != "":
                     curr_cluster = curr_cluster + 1
-                    clusters.append(Cluster(curr_cluster, float(data_row[2]), float(data_row[3]), int(data_row[4]),
-                                            float(data_row[5]),
-                                            Peak(float(data_row[6]), float(data_row[7]), float(data_row[8]),
-                                                 float(data_row[9]), float(data_row[10]),
-                                                 int(data_row[11]), int(data_row[12]), int(data_row[13]))))
+                    clusters.append(Cluster(curr_cluster, float(data_row[2]), float(data_row[3]), int(data_row[4]),float(data_row[5]),Peak(float(data_row[6]), float(data_row[7]), float(data_row[8]),float(data_row[9]), float(data_row[10]),int(data_row[11]), int(data_row[12]), int(data_row[13]))))
                 else:
-                    clusters[curr_cluster].add_peak(
-                        Peak(float(data_row[6]), float(data_row[7]), float(data_row[8]), float(data_row[9]),
-                             float(data_row[10]),
-                             int(data_row[11]), int(data_row[12]), int(data_row[13])))
+                    clusters[curr_cluster].add_peak(Peak(float(data_row[6]), float(data_row[7]), float(data_row[8]), float(data_row[9]),float(data_row[10]),int(data_row[11]), int(data_row[12]), int(data_row[13])))
 
         return clusters
 
@@ -212,8 +184,7 @@ class Stats:
             print("Error in create_surface_mask_from_volume_mask: input ref_surf does not exist")
             return
 
-        call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths,
-                                   "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
+        call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths,"'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
 
 
 class Peak:

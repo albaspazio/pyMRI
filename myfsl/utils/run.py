@@ -189,6 +189,8 @@ def rrun(*args, **kwargs):
                      - cmd:    If ``True``, the command itself is logged to the
                                standard output stream(s).
 
+    :arg stop_on_error:    Allow to continue in case of error
+
     :returns:      If ``submit`` is provided, the return value of
                    :func:`.fslsub` is returned. Otherwise returns a single
                    value or a tuple, based on the based on the ``stdout``,

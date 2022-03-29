@@ -85,13 +85,13 @@ class Project:
         self.nsubj = len(self.subjects)
         return self.subjects
 
-    # returns a list of subjects instances
+    # create and returns a list of subjects instances
     def get_subjects(self, group_label, sess_id=1):
 
         subjects = self.get_subjects_labels(group_label)
         subjs = []
-        for subj in subjects:
-            subjs.append(Subject(subj, sess_id, self))
+        for subj_lab in subjects:
+            subjs.append(Subject(subj_lab, sess_id, self))
         return subjs
 
     # ==================================================================================================================
@@ -160,7 +160,7 @@ class Project:
         if _to is None:
             _to = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]
 
-        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir, "_from":_from, "_to":_to, "overwrite":overwrite}], subjs_labels, nthread=num_cpu)
+        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir, "_from":_from, "_to":_to, "overwrite":overwrite}], subjs_labels, ncore=num_cpu)
 
         if "hr" in _to:
             l_t1 = os.path.join(outdir, "lin", "hr");            nl_t1 = os.path.join(outdir, "nlin", "hr")
@@ -205,23 +205,27 @@ class Project:
             os.chdir(nl_t2);    os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(nl_t2, "slicesdir"), sd_nl_t2)
 
     # create a folder where it copies the brain extracted from BET, FreeSurfer and SPM
-    def compare_brain_extraction(self, tempdir, list_subj_label=None):
+    def compare_brain_extraction(self, outdir, list_subj_label=None):
 
         if list_subj_label is None or list_subj_label == "":
 
             if len(self.subjects) == 0:
-                print(
-                    "ERROR in compare_brain_extraction: no subjects are loaded and input subjects list label is empty")
+                print("ERROR in compare_brain_extraction: no subjects are loaded and input subjects list label is empty")
                 return
             else:
                 subjs = self.subjects
         else:
             subjs = self.get_subjects_labels(list_subj_label)
 
-        os.makedirs(tempdir, exist_ok=True)
+        os.makedirs(outdir, exist_ok=True)
 
         for subj in subjs:
-            subj.compare_brain_extraction(tempdir)
+            subj.compare_brain_extraction(outdir)
+
+        olddir = os.getcwd()
+        os.chdir(outdir)
+        os.system("slicesdir ./*.nii.gz")
+        os.chdir(olddir)
 
     # prepare_mpr_for_setorigin1 and prepare_mpr_for_setorigin2 are to be used in conjunction
     # the former make a backup and unzip the original file,
@@ -251,26 +255,6 @@ class Project:
             compress(niifile, subj.t1_data + ".nii.gz")
             imrm([niifile])
             print("zipped " + subj.label + " mri")
-
-    # works with already converted and renames images
-    # - subj.t1_data
-    # - t1_cat_dir
-    def mpr_setorigin(self, group_label, sess_id=1, replaceOrig=False):
-        subjects = self.load_subjects(group_label, sess_id)
-        for subj in subjects:
-
-            if replaceOrig is False:
-                imcp(subj.t1_data, subj.t1_data + "_old_origin")
-
-            niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
-            gunzip(subj.t1_data + ".nii.gz", niifile)
-
-            # call_matlab_function_noret("spm_display_image", [self._global.spm_functions_dir], "\'" + niifile + "\'", endengine=False)
-            input("press any key to continue")
-
-            imrm([subj.t1_data + ".nii.gz"])
-            compress(niifile, subj.t1_data + ".nii.gz")
-            imrm([niifile])
 
     # ==================================================================================================================
     # GET SUBJECTS DATA
@@ -388,25 +372,36 @@ class Project:
     # ==================================================================================================================
     # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subj_labels) > 1 ...pass that same kwparams[0] to all subjects
     # if subj_labels is not given...use the loaded subjects
-    def run_subjects_methods(self, method_type, method_name, kwparams, subj_labels=None, nthread=1):
+    def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, subj_labels=None):
+
+        if method_type != "" and method_type != "mpr" and method_type != "dti" and method_type != "epi" and method_type != "transform":
+            print("ERROR in run_subjects_methods: the method type does not correspond to any of the allowed values (\"\", mpr, epi, dti, transform")
+            return
 
         # check subjects
         if subj_labels is None:
             subj_labels = self.get_loaded_subjects_labels()
+        else:
+            if isinstance(subj_labels, list) is False:
+                print("ERROR in run_subjects_methods: the given subj_labels param is not a list")
+                return
+            else:
+                if isinstance(subj_labels[0], str) is False:
+                    print("ERROR in run_subjects_methods: the given subj_labels param is not a string list, first value is: " + str(subj_labels[0]))
+                    return
+
         nsubj = len(subj_labels)
         if nsubj == 0:
             print("ERROR in run_subjects_methods: subject list is empty")
             return
 
         # check number of NECESSARY (without a default value) method params
-        subj = self.get_subject_by_label(subj_labels[0])
-
+        subj = self.get_subject_by_label(subj_labels[0])    # subj appear unused, but is instead used in the eval()
         if method_type == "":
             method = eval("subj." + method_name)
         else:
             method = eval("subj." + method_type + "." + method_name)
-
-        sig = signature(method)
+        sig     = signature(method)
         nparams = len(sig.parameters)  # parameters that need a value
         for p in sig.parameters:
             if sig.parameters[p].default is not None:
@@ -431,7 +426,7 @@ class Project:
                 return
         # here nparams is surely == nsubj
 
-        numblocks = math.ceil(nprocesses / nthread)  # num of processing blocks (threads)
+        numblocks = math.ceil(nprocesses / ncore)  # num of processing blocks (threads)
 
         subjects = []
         processes = []
@@ -449,7 +444,7 @@ class Project:
             subjects[curr_block].append(subj_labels[proc])
 
             proc4block = proc4block + 1
-            if proc4block == nthread:
+            if proc4block == ncore:
                 curr_block = curr_block + 1
                 proc4block = 0
 

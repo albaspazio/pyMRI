@@ -36,7 +36,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------------------------------
     # load whole list & create its file system
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("create_file_system", [], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("create_file_system", [], ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # CONVERT 2 NIFTI
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # for p in range(len(subjects)):
     #     for e in range(len(epi_names)):
     #         kwparams.append({"extpath":"/media/Data/Projects/fMRI_Pisa/epidata/" + subjects[p].label + "/" + epi_names[e], "cleanup":0, "session_label":epi_names[e]})
-    # project.run_subjects_methods("epi2nifti", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("epi2nifti", kwparams, ncore=num_cpu)
     #
     # # ---------------------------------------------------------------------------------------------------------------------
     # PRINT HEADER
@@ -58,10 +58,10 @@ if __name__ == "__main__":
     # MERGE NIFTI
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("epi_merge", [{"premerge_labels":epi_names}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("epi_merge", [{"premerge_labels":epi_names}], ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # FIND THE EPI VOLUME CLOSEST TO PEPOLAR VOLUME AND USE IT TO CORRECT EPI DISTORSION
     # ---------------------------------------------------------------------------------------------------------------------
     subjects = project.load_subjects(group_label, SESS_ID)
-    project.run_subjects_methods("epi_pepolar_correction", [], project.get_loaded_subjects_labels(), nthread=num_cpu)
+    project.run_subjects_methods("epi_pepolar_correction", [], project.get_loaded_subjects_labels(), ncore=num_cpu)

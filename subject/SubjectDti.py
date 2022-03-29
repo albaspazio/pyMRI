@@ -5,8 +5,6 @@ from shutil import copyfile
 from myfsl.utils.run import rrun
 from utility.images import imtest, imcp
 from utility.utilities import write_text_file
-from utility.images import remove_slices
-
 
 class SubjectDti:
 
@@ -27,41 +25,28 @@ class SubjectDti:
             rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3",
                  logFile=logFile)  # also creates dti_nodiff_brain_mask_data
 
-    # use_ec = True: eddycorrect, False: eddy
-    def ec_fit(self, use_ec=True, logFile=None):
+    # eddy correction when PA sequence is not available
+    def eddy_correct(self, overwrite=False, logFile=None):
 
         if imtest(self.subject.dti_data) is False:
+            print("WARNING in dti eddy_correct of subject: " + self.subject.label + ",dti image is missing...skipping subject")
             return
 
         rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1", logFile=logFile)
         rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
 
-        if imtest(self.subject.dti_ec_data) is False:
+        if imtest(self.subject.dti_ec_data) is False or overwrite is True:
             print("starting eddy_correct on " + self.subject.label)
             rrun("eddy_correct " + self.subject.dti_data + " " + self.subject.dti_ec_data + " 0", logFile=logFile)
 
-        if use_ec is True:
-            rotated_bvec = self.subject.dti_rotated_bvec
-            if os.path.exists(self.subject.dti_rotated_bvec) is False:
-                os.system("bash fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_ec_data + ".ecclog")
-                # rrun("fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_ec_data + ".ecclog", logFile=logFile)
-        else:
-            rotated_bvec = self.subject.dti_eddyrotated_bvec
-            if os.path.exists(self.subject.dti_eddyrotated_bvec) is False:
-                print("Error in ec_fit....exiting")
-                return
+            os.system("bash fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_ec_data + ".ecclog")
 
-        if imtest(self.subject.dti_fit_data) is False:
-            print("starting DTI fit on " + self.subject.label)
-            rrun("dtifit --sse -k " + self.subject.dti_ec_data + " -o " + self.subject.dti_fit_data + " -m " + self.subject.dti_nodiff_brainmask_data + " -r " + rotated_bvec + " -b " + self.subject.dti_bval,
-                logFile=logFile)
-
-        if imtest(self.subject.dti_ec_data + "_L23") is False:
-            rrun(
-                "fslmaths " + self.subject.dti_fit_data + "_L2" + " -add " + self.subject.dti_fit_data + "_L3" + " -div 2 " + self.subject.dti_fit_data + "_L23",
-                logFile=logFile)
-
+    # perform eddy correction, finally writes  .._ec.nii.gz &  .._-dti_rotated.bvec
     def eddy(self, exe_ver="eddy_openmp", acq_params=None, config="b02b0_1.cnf", estmove=True, slice2vol=6, rep_out="both", json=None, logFile=None):
+
+        if imtest(self.subject.dti_data) is False:
+            print("WARNING in dti eddy of subject: " + self.subject.label + ",dti image is missing...skipping subject")
+            return
 
         if acq_params is None:
             acq_params = self.subject.project.topup_dti_params
@@ -74,6 +59,11 @@ class SubjectDti:
             print("ERROR in eddy of subject: " + self.subject.label + ", eddy_index file does not exist, exiting.....")
             return
 
+        if imtest(self.subject.dti_data) is False:
+            return
+        else:
+            if imtest(self.subject.dti_pa_data) is False:
+                print("ERROR in eddy, PA sequence is not available, cannot do eddy")
         # ----------------------------------------------------------------
         # parameters
         if estmove is True:
@@ -103,13 +93,9 @@ class SubjectDti:
             print("ERROR in eddy of subject: " + self.subject.label + ", eddy exe version (" + exe_ver + ") does not exist, exiting.....")
             return
 
-        # check whether images number are all even, correct it
-        # nslices = int(rrun("fslval " + self.subject.dti_data + " dim3"))
-        # if (nslices % 2) != 0:
-        #     remove_slices(self.subject.dti_data, 1)     # removes first axial slice
-        # nslices = int(rrun("fslval " + self.subject.dti_pa_data + " dim3"))
-        # if (nslices % 2) != 0:
-        #     remove_slices(self.subject.dti_pa_data, 1)     # removes first axial slice
+        # NO NEED ANYMORE....using b02b0_1.cnf : check whether images number are all even, correct it
+        # nslices = int(rrun("fslval " + self.subject.dti_data + " dim3"))      # if (nslices % 2) != 0:       #     remove_slices(self.subject.dti_data, 1)     # removes first axial slice
+        # nslices = int(rrun("fslval " + self.subject.dti_pa_data + " dim3"))   # if (nslices % 2) != 0:        #     remove_slices(self.subject.dti_pa_data, 1)     # removes first axial slice
 
         a2p_bo              = os.path.join(self.subject.dti_dir, "a2p_b0")
         p2a_bo              = os.path.join(self.subject.dti_dir, "p2a_b0")
@@ -120,25 +106,46 @@ class SubjectDti:
         eddy_corrected_data = os.path.join(self.subject.dti_dir, self.subject.dti_ec_image_label)
 
         # create an image with the 2 b0s with opposite directions
-        # rrun("fslroi " + self.subject.dti_data + " " + a2p_bo + " 0 1")
-        # rrun("fslroi " + self.subject.dti_pa_data + " " + p2a_bo + " 0 1")
-        # rrun("fslmerge -t " + a2p_p2a_bo + " " + a2p_bo + " " + p2a_bo)
+        rrun("fslroi " + self.subject.dti_data + " " + a2p_bo + " 0 1", logFile=logFile)
+        rrun("fslroi " + self.subject.dti_pa_data + " " + p2a_bo + " 0 1", logFile=logFile)
+        rrun("fslmerge -t " + a2p_p2a_bo + " " + a2p_bo + " " + p2a_bo, stop_on_error=False)
 
-        # rrun("topup --imain=" + a2p_p2a_bo + " --datain=" + acq_params + " --config=" + config + " --out=" +  topup_results  + " --iout=" +  hifi_b0)
+        rrun("topup --imain=" + a2p_p2a_bo + " --datain=" + acq_params + " --config=" + config + " --out=" +  topup_results  + " --iout=" +  hifi_b0, logFile=logFile)
 
-        # rrun("fslmaths " + hifi_b0 + " -Tmean " + hifi_b0)
-        # rrun("bet " + hifi_b0 + " " + hifi_b0 + "_brain -m")
+        rrun("fslmaths " + hifi_b0 + " -Tmean " + hifi_b0, logFile=logFile)
+        rrun("bet " + hifi_b0 + " " + hifi_b0 + "_brain -m", logFile=logFile)
 
-        # nvols_dti = int(rrun("fslnvols " + self.subject.dti_data))
-        # indx=""
-        # for i in range(0, nvols_dti):
-        #     indx=indx + "1 "
-        # write_text_file(index_file, indx)
+        nvols_dti = int(rrun("fslnvols " + self.subject.dti_data))
+        indx=""
+        for i in range(0, nvols_dti):
+            indx=indx + "1 "
+        write_text_file(index_file, indx)
 
-        rrun(exe_ver + " --imain=" +  self.subject.dti_data + " --mask=" + hifi_b0 + "_brain_mask --acqp=" + acq_params + " --index=" + index_file + " --bvecs=" + self.subject.dti_bvec + " --bvals=" + self.subject.dti_bval + " --topup=" + topup_results + " --out=" + eddy_corrected_data + str_estmove + str_slice2vol + str_json + str_rep_out)
+        rrun(exe_ver + " --imain=" +  self.subject.dti_data + " --mask=" + hifi_b0 + "_brain_mask --acqp=" + acq_params + " --index=" + index_file + " --bvecs=" + self.subject.dti_bvec + " --bvals=" + self.subject.dti_bval +
+                       " --topup=" + topup_results + " --out=" + eddy_corrected_data + str_estmove + str_slice2vol + str_json + str_rep_out, logFile=logFile)
 
-    def probtrackx(self):
-        pass
+        os.rename(self.subject.dti_eddyrotated_bvec, self.subject.dti_rotated_bvec)
+
+    # use_ec = True: eddycorrect, False: eddy
+    def fit(self, logFile=None):
+
+        if imtest(self.subject.dti_data) is False:
+            print("WARNING in dti fit of subject: " + self.subject.label + ",dti image is missing...skipping subject")
+            return
+
+        if os.path.exists(self.subject.dti_rotated_bvec) is False:
+            print("ERROR in dti fit of subject: " + self.subject.label + ",rotated bvec file is not available..did you run either eddy_correct or eddy?...skipping subject")
+            return
+
+        rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1", logFile=logFile)
+        rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
+
+        if imtest(self.subject.dti_fit_data) is False:
+            print("starting DTI fit on " + self.subject.label)
+            rrun("dtifit --sse -k " + self.subject.dti_ec_data + " -o " + self.subject.dti_fit_data + " -m " + self.subject.dti_nodiff_brainmask_data + " -r " + self.subject.dti_rotated_bvec + " -b " + self.subject.dti_bval, logFile=logFile)
+
+        if imtest(self.subject.dti_ec_data + "_L23") is False:
+            rrun("fslmaths " + self.subject.dti_fit_data + "_L2" + " -add " + self.subject.dti_fit_data + "_L3" + " -div 2 " + self.subject.dti_fit_data + "_L23", logFile=logFile)
 
     def bedpostx(self, out_dir_name="bedpostx", use_gpu=False, logFile=None):
 
@@ -171,13 +178,17 @@ class SubjectDti:
         #     print("ERROR in bedpostx_gpu....something went wrong in bedpostx")
         #     return
 
+    def probtrackx(self):
+        pass
+
     def xtract(self, outdir_name="xtract", bedpostx_dirname="bedpostx", refspace="native", use_gpu=False, species="HUMAN", logFile=None):
 
         bp_dir = os.path.join(self.subject.dti_dir, bedpostx_dirname)
         out_dir = os.path.join(self.subject.dti_dir, outdir_name)
 
-        refspace_str = " -native "
-        if refspace != "native":
+        if refspace == "native":
+            refspace_str = " -native -stdwarp " + self.subject.transform.std2dti_warp + " " + self.subject.transform.dti2std_warp + " "
+        else:
             # TODO: split refspace by space, check if the two elements are valid files
             refspace_str = " -ref " + refspace + " "
 
@@ -185,9 +196,7 @@ class SubjectDti:
         if use_gpu is True:
             gpu_str = " -gpu "
 
-        rrun(
-            "xtract -bpx " + bp_dir + " -out " + out_dir + " -stdwarp " + self.subject.transform.std2dti_warp + " " + self.subject.transform.dti2std_warp + gpu_str + refspace_str + " -species " + species,
-            stop_on_error=False, logFile=logFile)
+        rrun("xtract -bpx " + bp_dir + " -out " + out_dir + gpu_str + refspace_str + " -species " + species, stop_on_error=False, logFile=logFile)
 
         self.xtract_check(out_dir)
         return out_dir

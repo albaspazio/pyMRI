@@ -10,7 +10,7 @@ import numpy
 from group.Stats import Stats
 from myfsl.utils.run import rrun
 from utility import import_data_file, plot_data
-from utility.images import imcp, imtest, immv, imrm, remove_ext
+from utility.images import imcp, imtest, immv, imrm, remove_ext, filter_volumes
 from utility.import_data_file import get_header_of_tabbed_file, get_icv_spm_file
 from utility.matlab import call_matlab_spmbatch
 from utility.utilities import sed_inplace
@@ -30,8 +30,7 @@ class GroupAnalysis:
     # create a folder name and its subfolders : subjects (normalized images), flowfields, stats
     # RC1_IMAGES:    {  '/media/data/MRI/projects/ELA/subjects/0202/s1/mpr/rc20202-t1.nii,1'
     #                   '/media/data/MRI/projects/ELA/subjects/0503/s1/mpr/rc20503-t1.nii,1'}
-    def create_vbm_spm_template_normalize(self, name, subjs, sess_id=1,
-                                          spm_template_name="spm_dartel_createtemplate_normalize"):
+    def create_vbm_spm_template_normalize(self, name, subjs, sess_id=1, spm_template_name="spm_dartel_createtemplate_normalize"):
 
         self.subjects_list = subjs
         self.working_dir = os.path.join(self.project.vbm_dir, name)
@@ -634,19 +633,16 @@ class GroupAnalysis:
 
             # check whether adding a covariate
             if cov_name != "":
-                Stats.spm_stats_add_1cov_manygroups(out_batch_job, [grp1_label, grp2_label], self.project, cov_name,
-                                                    cov_interaction, data_file)
+                Stats.spm_stats_add_1cov_manygroups(out_batch_job, [grp1_label, grp2_label], self.project, cov_name, cov_interaction, data_file)
             else:
-                sed_inplace(out_batch_job, "<COV_STRING>",
-                            "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
+                sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
             # set start file
             copyfile(in_batch_start, out_batch_start)
             sed_inplace(out_batch_start, "X", "1")
             sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
 
-            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir],
-                                       endengine=False)
+            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=False)
 
             # model estimate
             print("estimating surface model")
@@ -848,8 +844,7 @@ class GroupAnalysis:
                 call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir,
                                                        self._global.spm_dir])  # open a new session and then end it
             else:
-                call_matlab_spmbatch(out_batch_start,
-                                     endengine=False)  # I assume that the caller will end the matlab session and def dir have been already specified
+                call_matlab_spmbatch(out_batch_start, endengine=False)  # I assume that the caller will end the matlab session and def dir have been already specified
 
         except Exception as e:
             traceback.print_exc()
@@ -1090,11 +1085,29 @@ class GroupAnalysis:
                         n_tracts = n_tracts + 1
             str_data = str_data + "\n"
 
-        for t in range(len(tracts_labels)):
-            fig_file = os.path.join(results_folder, tracts_labels[t] + "_" + data_label + ".png")
-            plot_data.scatter_plot_dataserie(datas[0], tracts_data[t], fig_file)
+        # for t in range(len(tracts_labels)):
+        #     fig_file = os.path.join(results_folder, tracts_labels[t] + "_" + data_label + ".png")
+        #     plot_data.scatter_plot_dataserie(datas[0], tracts_data[t], fig_file)
 
         res_file = os.path.join(results_folder, "scatter_tracts_" + modality + "_" + data_label + ".dat")
 
         with open(res_file, "w") as f:
             f.write(str_data)
+
+    # create a new tbss analysis folder (only stats one), filtering an existing analysis folder
+    def create_analysis_folder_from_existing(self, src_folder, new_folder, subj_labels_list, modalities=["FA", "MD", "L1", "L23"]):
+
+        # create new folder
+        new_stats_folder = os.path.join(new_folder, "stats")
+        os.makedirs(new_stats_folder, exist_ok=True)
+
+        for mod in modalities:
+            orig_image = os.path.join(src_folder, "stats", "all_" + mod + "_skeletonised")
+            dest_image = os.path.join(new_folder, "stats", "all_" + mod + "_skeletonised")
+
+            orig_mean_image = os.path.join(src_folder, "stats", "mean_" + mod + "_skeleton_mask")
+            dest_mean_image = os.path.join(new_folder, "stats", "mean_" + mod + "_skeleton_mask")
+
+            filter_volumes(orig_image, subj_labels_list, dest_image)
+
+            imcp(orig_mean_image, dest_mean_image)

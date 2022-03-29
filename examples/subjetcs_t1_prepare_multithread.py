@@ -35,14 +35,14 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------------------------------
     # load whole list & create its file system
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("create_file_system", [], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("create_file_system", [], ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # CONVERT 2 NIFTI
     # ---------------------------------------------------------------------------------------------------------------------
     # for p in range(len(subjects)):
     # kwparams.append({"extpath":"/data/MRI/projects/T3/" + subjects[p].label, "cleanup":0})
-    # project.run_subjects_methods("mpr2nifti", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("mpr2nifti", kwparams, ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # PRINT HEADER
@@ -55,26 +55,26 @@ if __name__ == "__main__":
     # RESLICING
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("reslice_image", [{"dir":"sag->axial"}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("reslice_image", [{"dir":"sag->axial"}], ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # PRE BET
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("prebet", [], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("prebet", [], ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # FREESURFER 1: autorecon1
     # ---------------------------------------------------------------------------------------------------------------------
     # talairach transf, conforming, skull-stripping
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("fs_reconall", [{"step":"-autorecon1"}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("fs_reconall", [{"step":"-autorecon1"}], ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # BET
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("bet", [{"do_reg":True, "betfparam":[0.5]}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("bet", [{"do_reg":True, "betfparam":[0.5]}], ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM SEGMENTATION
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     # the proj_script/mpr/spm/batch folder must be already in the matlab path
     # it may over-ride both BET and FS skull-stripping results
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("spm_segment", [{"do_overwrite":True, "do_bet_overwrite":True}], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("spm_segment", [{"do_overwrite":True, "do_bet_overwrite":True}], ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM SEGMENTATION INTERACTIVE (SET ORIGIN BEFORE)
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     # the proj_script/mpr/spm/batch folder must be already in the matlab path
     # it may over-ride both BET and FS skull-stripping results
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("spm_segment", [{"do_overwrite":True, "do_bet_overwrite":False, "set_origin":True}], project.get_subjects_labels(), nthread=1)
+    # project.run_subjects_methods("spm_segment", [{"do_overwrite":True, "do_bet_overwrite":False, "set_origin":True}], ncore=1)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # CAT SEGMENTATION & THICKNESS
@@ -106,13 +106,13 @@ if __name__ == "__main__":
     subjects = project.load_subjects(group_label, SESS_ID)
     project.run_subjects_methods("cat_segment", [
         {"do_overwrite": True, "seg_templ": segmentation_template, "coreg_templ": coregistration_template,
-         "calc_surfaces": calc_surfaces, "num_proc": 1}], project.get_loaded_subjects_labels(), nthread=num_cpu)
+         "calc_surfaces": calc_surfaces, "num_proc": 1}], project.get_loaded_subjects_labels(), ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM TISSUE VOLUMES
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("spm_tissue_volumes", [], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("spm_tissue_volumes", [], ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # COMPARE BRAIN EXTRACTION
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     # INTERACTIVE FREESURFER BRAIN SELECTION (check whether using freesurfer brainmask in place of BET one)
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("use_fs_brainmask", [{"do_clean":True}], project.get_subjects_labels(), nthread=1)
+    # project.run_subjects_methods("use_fs_brainmask", [{"do_clean":True}], ncore=1)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # POST BET
@@ -133,10 +133,10 @@ if __name__ == "__main__":
     # kwparams    = []
     # for s in range(len(subjects)):
     #     kwparams.append({"do_nonlinreg":True, "betfparam":0.5, "do_overwrite":True})
-    # project.run_subjects_methods("postbet", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("postbet", kwparams, ncore=num_cpu)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # POST ANATOMICAL PROCESSING
     # ---------------------------------------------------------------------------------------------------------------------
     # subjects    = project.load_subjects(group_label, SESS_ID)
-    # project.run_subjects_methods("finalize", [], project.get_subjects_labels(), nthread=num_cpu)
+    # project.run_subjects_methods("finalize", [], ncore=num_cpu)

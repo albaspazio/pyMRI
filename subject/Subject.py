@@ -306,6 +306,19 @@ class Subject:
         os.makedirs(self.roi_fmri_dir, exist_ok=True)
         os.makedirs(self.roi_t2_dir, exist_ok=True)
 
+    def rename(self, new_label, session_id=1):
+
+        for path, subdirs, files in os.walk(self.dir):
+            for name in files:
+                if (self.label in name):
+                    file_path = os.path.join(path, name)
+                    new_name = os.path.join(path, name.replace(self.label, new_label))
+                    os.rename(file_path, new_name)
+
+        os.makedirs(os.path.join(self.project.dir, "subjects", new_label))
+        os.rename(self.dir, os.path.join(self.project.dir, "subjects", new_label, "s" + str(session_id)))
+        rmtree(os.path.join(self.project.dir, "subjects", self.label))
+
     def check_images(self, t1=False, rs=False, dti=False, t2=False, fmri=None):
 
         missing_images = []
@@ -402,25 +415,25 @@ class Subject:
     # ==================================================================================================================================================
     # WELCOME
     # ==================================================================================================================================================
-
     def wellcome(self, do_anat=True, odn="anat", imgtype=1, smooth=10,
                  biascorr_type=SubjectMpr.BIAS_TYPE_STRONG,
                  do_reorient=True, do_crop=True,
                  do_bet=True, betfparam=[0.5],
                  do_sienax=False, bet_sienax_param_string="-SNB -f 0.2",
                  do_reg=True, do_nonlinreg=True, do_seg=True,
-                 do_spm_seg=False, spm_seg_over_bet=False, spm_seg_over_fs=False,
-                 do_cat_seg=False, cat_seg_over_bet=False, cat_seg_over_fs=False, cat_use_dartel=False, do_cat_surf=True,
+                 do_spm_seg=False, spm_seg_templ="", spm_seg_over_bet=False,
+                 do_cat_seg=False, cat_seg_over_bet=False, cat_use_dartel=False, do_cat_surf=True,
+                 do_cat_seg_long=False, cat_long_sessions=[1],
                  do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
                  use_lesionmask=False, lesionmask="lesionmask",
-                 do_freesurfer=False,
+                 do_freesurfer=False, do_complete_fs=False, fs_seg_over_bet=False,
                  do_first=False, first_struct="", first_odn="",
                  do_epirm2vol=0, do_susc_corr=False, do_aroma=True, do_nuisance=True, hpfsec=100,
                  feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
                  do_featinitreg=False,
                  do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False,
-                 replace_std_filtfun=False,
-                 do_dtifit=True, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
+                 replace_std_filtfun=True,
+                 do_dtifit=True, do_pa_eddy=False, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
                  do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",
                  do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0):
 
@@ -457,16 +470,34 @@ class Subject:
                         odn=odn,
                         do_bet_overwrite=spm_seg_over_bet,
                         do_overwrite=do_overwrite,
+                        seg_templ=spm_seg_templ,
                         spm_template_name="spm_segment_tissuevolume")
 
                 if do_cat_seg is True:
                     self.mpr.cat_segment(
                         odn=odn,
-                        do_bet_overwrite=cat_seg_over_bet,
                         do_overwrite=do_overwrite,
                         spm_template_name=self._global.cat_template_name,
                         use_dartel=cat_use_dartel,
                         calc_surfaces=do_cat_surf)
+
+                if do_cat_seg_long is True:
+                    self.mpr.cat_segment_longitudinal(
+                        cat_long_sessions,
+                        do_overwrite=do_overwrite,
+                        spm_template_name=self._global.cat_template_name,
+                        use_dartel=cat_use_dartel,
+                        calc_surfaces=do_cat_surf)
+
+                if do_freesurfer is True:
+                    if do_complete_fs is True:
+                        fs_step = "-all"
+                    else:
+                        fs_step = "-autorecon1"
+                    self.mpr.fs_reconall(step=fs_step, do_overwrite=do_overwrite)
+
+                    if fs_seg_over_bet is True:
+                        self.mpr.use_fs_brainmask()
 
                 self.mpr.postbet(
                     odn=odn, imgtype=imgtype, smooth=smooth,
@@ -487,9 +518,6 @@ class Subject:
             if do_first is True:
                 if imtest(self.first_all_fast_origsegs) is False and imtest(self.first_all_none_origsegs) is False:
                     self.mpr.first(first_struct, odn=first_odn)
-
-            if do_freesurfer is True:
-                self.mpr.fs_reconall()
 
         # ==============================================================================================================================================================
         # WB data
@@ -588,8 +616,12 @@ class Subject:
                 # do nuisance removal (WM, CSF & highpass temporal filtering)....create the following file: $RS_IMAGE_LABEL"_preproc_aroma_nuisance"
                 # ------------------------------------------------------------------------------------------------------
                 postnuisance = os.path.join(self.rs_dir, self.rs_post_nuisance_image_label)
-                if do_nuisance is True and imtest(postnuisance) is False:
-                    self.epi.remove_nuisance(self.rs_post_aroma_image_label, self.rs_post_nuisance_image_label, hpfsec=hpfsec)
+                if do_nuisance is True:
+                    if imtest(postnuisance) is False:
+                        self.epi.remove_nuisance(self.rs_post_aroma_image_label, self.rs_post_nuisance_image_label, hpfsec=hpfsec)
+                else:
+                    imcp(preproc_aroma_img, postnuisance)
+
 
                 # ------------------------------------------------------------------------------------------------------
                 # MELODIC (ONLY new melodic exploration, NO : reg, hpf, smooth) .....doing another MC and HPF results seemed to improve...although they should not...something that should be investigated....
@@ -612,29 +644,28 @@ class Subject:
                 # ------------------------------------------------------------------------------------------------------
                 # CREATE STANDARD 4MM IMAGES FOR MELODIC
                 # ------------------------------------------------------------------------------------------------------
-                # mask from preproc feat
-                mask = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "mask")
-                if imtest(self.rs_final_regstd_mask + "_mask") is False:
-                    self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[mask])
-                    imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask", logFile=log)
+                if replace_std_filtfun is True:
+                    # mask from preproc feat
+                    mask = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "mask")
+                    if imtest(self.rs_final_regstd_mask + "_mask") is False:
+                        self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[mask])
+                        imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask", logFile=log)
 
-                # mask from example_function (the one used to calculate all the co-registrations)
-                if imtest(self.rs_final_regstd_mask) is False:
-                    self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[self.rs_examplefunc_mask])
-                    imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask,
-                         logFile=log)
+                    # mask from example_function (the one used to calculate all the co-registrations)
+                    if imtest(self.rs_final_regstd_mask) is False:
+                        self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[self.rs_examplefunc_mask])
+                        imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask,
+                             logFile=log)
 
-                # brain
-                if imtest(self.rs_final_regstd_bgimage) is False:
-                    self.transform.transform_roi("hrTOstd4", "abs", islin=False, rois=[self.t1_brain_data])
-                    imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"),
-                         self.rs_final_regstd_bgimage, logFile=log)
+                    # brain
+                    if imtest(self.rs_final_regstd_bgimage) is False:
+                        self.transform.transform_roi("hrTOstd4", "abs", islin=False, rois=[self.t1_brain_data])
+                        imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage, logFile=log)
 
-                # functional data
-                if imtest(self.rs_final_regstd_image) is False:
-                    self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[postnuisance])
-                    immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"),
-                         self.rs_final_regstd_image, logFile=log)
+                    # functional data
+                    if imtest(self.rs_final_regstd_image) is False:
+                        self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[postnuisance])
+                        immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image, logFile=log)
 
                 log.close()
 
@@ -662,7 +693,13 @@ class Subject:
 
             if imtest(os.path.join(self.dti_dir, self.dti_fit_label + "_FA")) is False and do_dtifit is True:
                 print("===========>>>> " + self.label + " : dtifit")
-                self.dti.ec_fit()
+
+                if do_pa_eddy is False:
+                    self.dti.eddy_correct(do_overwrite, log)
+                else:
+                    self.dti.eddy(logFile=log)
+
+                self.dti.fit(log)
 
                 # create L23 image
                 rrun("fslmaths " + os.path.join(self.dti_dir, self.dti_fit_label) + "_L2 -add " + os.path.join(self.dti_dir, self.dti_fit_label + "_L3") + " -div 2 " + os.path.join(self.dti_dir,self.dti_fit_label + "_L23"),logFile=log)
@@ -679,15 +716,13 @@ class Subject:
 
             if do_xtract is True:
                 if imtest(os.path.join(self.dti_dir, bedpost_odn, "mean_S0samples")) is False:
-                    print(
-                        "subj " + self.label + " ,you requested the xtract tractorgraphy, but bedpostx was not performed.....skipping")
+                    print("subj " + self.label + " ,you requested the xtract tractorgraphy, but bedpostx was not performed.....skipping")
                 else:
                     self.dti.xtract(xtract_odn, bedpost_odn, xtract_refspace, xtract_gpu)
                     self.dti.xtract_stats(xtract_odn, xtract_refspace, xtract_meas)
 
             if do_struct_conn is True and os.path.isfile(os.path.join(self.tv_matrices_dir, "fa_AM.mat")) is False:
-                self.dti.conn_matrix(struct_conn_atlas_path,
-                                     struct_conn_atlas_nroi)  # . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_conn_matrix.sh $SUBJ_NAME $PROJ_DIR
+                self.dti.conn_matrix(struct_conn_atlas_path, struct_conn_atlas_nroi)  # . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_conn_matrix.sh $SUBJ_NAME $PROJ_DIR
 
             log.close()
 
