@@ -8,6 +8,8 @@ from utility.utilities import sed_inplace
 
 class Stats:
 
+    #=====================================================================================================================================================
+    #region COVARIATES
     # get cov values from many groups and concat them into a single vector
     # interaction=1 : no interaction, otherwise specify factors (1-based + 1, e.g. first factor = 2)
     @staticmethod
@@ -71,6 +73,8 @@ class Stats:
     #     cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov.iCC = 1;"
     #     sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
 
+    #endregion
+
     # create spm fmri 1st level contrasts onsets
     # conditions is a dictionary list with field: [name, onsets, duration]
     @staticmethod
@@ -88,6 +92,70 @@ class Stats:
 
         sed_inplace(out_batch_job, "<CONDITION_STRING>", conditions_string)
 
+    #======================================================================================================================================================
+    #region FACTDES
+
+    @staticmethod
+    def spm_get_factdes_masking_cat(out_batch_job, athresh=0.2, expl_mask="", idstep=1):
+
+        masking =   "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.masking.tm.tma.athresh = " + str(athresh) + ";\n" \
+                    "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.masking.im = 1;\n" \
+                    "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.masking.em = {'" + expl_mask + "'};"
+        sed_inplace(out_batch_job, "<FACTDES_MASKING>", masking)
+
+    @staticmethod
+    def spm_get_factdes_masking_vbm(out_batch_job, expl_mask="", idstep=1):
+
+        masking =   "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.masking.tm.tm_none = 1;\n" \
+                    "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.masking.im = 1;\n" \
+                    "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.masking.em = {'" + expl_mask + "'};"
+        sed_inplace(out_batch_job, "<FACTDES_MASKING>", masking)
+
+    @staticmethod
+    def spm_get_factdes_global_vbm(out_batch_job, icv_scores, idstep=1):
+
+        glob =      "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalc.g_user.global_uval = [" + icv_scores + "];\n" \
+                    "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;\n" \
+                    "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.glonorm = 2;"
+        sed_inplace(out_batch_job, "<FACTDES_GLOBAL>", glob)
+
+    @staticmethod
+    def spm_get_factdes_global_cat(out_batch_job, idstep=1):
+
+        glob =      "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalc.g_omit = 1;\n" \
+                    "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;\n" \
+                    "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.glonorm = 1;"
+        sed_inplace(out_batch_job, "<FACTDES_GLOBAL>", glob)
+
+    #endregion
+
+    #======================================================================================================================================================
+    #region CHECK REVIEW
+    @staticmethod
+    def spm_get_cat_check(out_batch_job, idstep=2):
+
+        return  "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.spmmat(1) = cfg_dep(\'Factorial design specification: SPM.mat File\', substruct(\'.\', 'val', '{}', {1}, \'.\', \'val\', '{}', {1}, \'.\', \'val\', \'{}\', {1}), substruct(\'.\', \'spmmat\'));\n" \
+                "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.check_SPM_cov.do_check_cov.use_unsmoothed_data = 1;\n" \
+                "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.check_SPM_cov.do_check_cov.adjust_data = 1;\n" \
+                "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.check_SPM_cov.do_check_cov.outdir = {\'\'};\n" \
+                "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.check_SPM_cov.do_check_cov.fname = \'CATcheckdesign_\';\n" \
+                "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.check_SPM_cov.do_check_cov.save = 0;\n" \
+                "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.check_SPM_ortho = 1;\n"
+        sed_inplace(out_batch_job, "<FACTDES_GLOBAL>", glob)
+
+        return string
+
+    @staticmethod
+    def spm_get_review_model(out_batch_job, string, idstep=2):
+
+        return  "matlabbatch{2}.spm.stats.review.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));\n" \
+                "matlabbatch{2}.spm.stats.review.display.matrix = 1;\n" \
+                "matlabbatch{2}.spm.stats.review.print = 'ps';\n"
+
+    #endregion
+
+    #======================================================================================================================================================
+    #region CONTRASTS
     # create multregr contrasts for spm and cat
     @staticmethod
     def replace_1group_multregr_contrasts(out_batch_job, cov_names, tool="spm"):
@@ -121,6 +189,8 @@ class Stats:
             contr_str = contr_str + "matlabbatch{1}." + con_str + "{" + str(2 * (cov_id + 1)) + "}.tcon.sessrep = 'none';\n"
 
         sed_inplace(out_batch_job, "<CONTRASTS>", contr_str)
+
+    #endregion
 
     # replace CAT results trasformation string
     # mult_corr = "FWE" | "FDR" | "none"

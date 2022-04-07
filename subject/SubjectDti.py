@@ -1,5 +1,6 @@
 import csv
 import os
+import shutil
 from shutil import copyfile
 
 from myfsl.utils.run import rrun
@@ -154,6 +155,10 @@ class SubjectDti:
 
         os.makedirs(bp_dir, exist_ok=True)
 
+        if imtest(self.subject.dti_ec_data) is False:
+            print("WARNING in bedpostx: ec data of subject " + self.subject.label + " is missing.....skipping subject")
+            return
+
         imcp(self.subject.dti_ec_data, os.path.join(bp_dir, "data"), logFile=logFile)
         imcp(self.subject.dti_nodiff_brainmask_data, os.path.join(bp_dir, "nodif_brain_mask"), logFile=logFile)
         copyfile(self.subject.dti_bval, os.path.join(bp_dir, "bvals"))
@@ -170,13 +175,13 @@ class SubjectDti:
         else:
             rrun("bedpostx " + bp_dir + " -n 3 -w 1 -b 1000", logFile=logFile)
 
-        # if imtest(os.path.join(bp_out_dir, self.subject.dti_bedpostx_mean_S0_label)):
-        #     shutil.move(bp_out_dir, os.path.join(self.subject.dti_dir, out_dir_name))
-        #     os.removedirs(bp_dir)
+        if imtest(os.path.join(bp_out_dir, self.subject.dti_bedpostx_mean_S0_label)):
+            shutil.move(bp_out_dir, os.path.join(self.subject.dti_dir, out_dir_name))
+            os.removedirs(bp_dir)
 
-        # else:
-        #     print("ERROR in bedpostx_gpu....something went wrong in bedpostx")
-        #     return
+        else:
+            print("ERROR in bedpostx_gpu....something went wrong in bedpostx")
+            return
 
     def probtrackx(self):
         pass

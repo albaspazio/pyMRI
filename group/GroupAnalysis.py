@@ -199,12 +199,8 @@ class GroupAnalysis:
                     return
 
             # ---------------------------------------------------------------------------
-            # create template files
-            # ---------------------------------------------------------------------------
             out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
 
-            # ---------------------------------------------------------------------------
-            # stats dir
             # ---------------------------------------------------------------------------
             statsdir = os.path.join(darteldir, "stats")
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -249,8 +245,7 @@ class GroupAnalysis:
                 gc_str = no_corr_str
             elif glob_calc == "":  # don't correct
                 gc_str = no_corr_str
-            elif isinstance(glob_calc,
-                            str) is True and data_file is not None:  # must be a column in the given data_file list of
+            elif isinstance(glob_calc, str) is True and data_file is not None:  # must be a column in the given data_file list of
 
                 icvs = []
                 for grp in groups_labels:
@@ -267,8 +262,7 @@ class GroupAnalysis:
                 Stats.spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, self.project, cov_name,
                                                     cov_interaction, data_file)
             else:
-                sed_inplace(out_batch_job, "<COV_STRING>",
-                            "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
+                sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
             # ---------------------------------------------------------------------------
             # explicit mask
@@ -300,7 +294,7 @@ class GroupAnalysis:
     def create_spm_vbm_dartel_stats_factdes_multregr(self, darteldir, grp_label, cov_names,
                                                      data_file=None, glob_calc="subj_icv", cov_interactions=None,
                                                      expl_mask="icv", sess_id=1,
-                                                     spm_template_name="spm_vbm_stats_multregr_design_estimate",
+                                                     spm_template_name="spm_stats_1group_multiregr_check_estimate",
                                                      spm_contrasts_template_name="",
                                                      mult_corr="FWE", pvalue=0.05, cluster_extend=0):
         try:
@@ -623,7 +617,7 @@ class GroupAnalysis:
     #
     def create_cat_thickness_stats_factdes_1group_multregr(self, statsdir, grp_label, cov_names, anal_name,
                                                            cov_interactions=None, data_file=None, sess_id=1,
-                                                           spm_template_name="cat_thickness_stats_1group_multiregr_check_estimate",
+                                                           spm_template_name="spm_stats_1group_multiregr_check_estimate",
                                                            spm_contrasts_template_name="", mult_corr="FWE", pvalue=0.05,
                                                            cluster_extend=0):
         try:
