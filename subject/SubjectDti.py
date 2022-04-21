@@ -159,6 +159,8 @@ class SubjectDti:
             print("WARNING in bedpostx: ec data of subject " + self.subject.label + " is missing.....skipping subject")
             return
 
+        print("STARTING bedpostx on subject " + self.subject.label)
+
         imcp(self.subject.dti_ec_data, os.path.join(bp_dir, "data"), logFile=logFile)
         imcp(self.subject.dti_nodiff_brainmask_data, os.path.join(bp_dir, "nodif_brain_mask"), logFile=logFile)
         copyfile(self.subject.dti_bval, os.path.join(bp_dir, "bvals"))
@@ -201,6 +203,7 @@ class SubjectDti:
         if use_gpu is True:
             gpu_str = " -gpu "
 
+        print("STARTING xtract on subject " + self.subject.label)
         rrun("xtract -bpx " + bp_dir + " -out " + out_dir + gpu_str + refspace_str + " -species " + species, stop_on_error=False, logFile=logFile)
 
         self.xtract_check(out_dir)
