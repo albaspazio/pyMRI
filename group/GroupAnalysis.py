@@ -26,8 +26,8 @@ class GroupAnalysis:
         self.project        = proj
         self._global        = self.project._global
 
-    # ====================================================================================================================================================
-    # DATA PREPARATION
+    # ---------------------------------------------------
+    #region DATA PREPARATION
     # ====================================================================================================================================================
 
     # given a subjects list, it creates their template and project all the c1 images to its normalized version
@@ -174,8 +174,10 @@ class GroupAnalysis:
         with open(ofp, 'w', encoding='utf-8') as f:
             f.write(file_str)
 
+    # endregion =================================================================================================================================================
+
     # ---------------------------------------------------
-    # STATS - VBM
+    #region STATS - VBM
     # ---------------------------------------------------
 
     # params to replace: <STATS_DIR>, <GROUPS_IMAGES>, <COV1_LIST>, <COV1_NAME>, <ITV_SCORES>
@@ -205,12 +207,8 @@ class GroupAnalysis:
                     return
 
             # ---------------------------------------------------------------------------
-            # create template files
-            # ---------------------------------------------------------------------------
             out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
 
-            # ---------------------------------------------------------------------------
-            # stats dir
             # ---------------------------------------------------------------------------
             statsdir = os.path.join(darteldir, "stats")
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -271,8 +269,7 @@ class GroupAnalysis:
                 Stats.spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, self.project, cov_name,
                                                     cov_interaction, data_file)
             else:
-                sed_inplace(out_batch_job, "<COV_STRING>",
-                            "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
+                sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
             # ---------------------------------------------------------------------------
             # explicit mask
@@ -304,7 +301,7 @@ class GroupAnalysis:
     def create_spm_vbm_dartel_stats_factdes_multregr(self, darteldir, grp_label, cov_names,
                                                      data_file=None, glob_calc="subj_icv", cov_interactions=None,
                                                      expl_mask="icv", sess_id=1,
-                                                     spm_template_name="spm_vbm_stats_multregr_design_estimate",
+                                                     spm_template_name="spm_stats_1group_multiregr_check_estimate",
                                                      spm_contrasts_template_name="",
                                                      mult_corr="FWE", pvalue=0.05, cluster_extend=0):
         try:
@@ -373,8 +370,7 @@ class GroupAnalysis:
             # check whether adding a covariate
             # ---------------------------------------------------------------------------
             if len(cov_names) > 0:
-                Stats.spm_stats_add_manycov_1group(out_batch_job, grp_label, self.project, cov_names, cov_interactions,
-                                                   data_file)
+                Stats.spm_stats_add_manycov_1group(out_batch_job, grp_label, self.project, cov_names, cov_interactions, data_file)
             else:
                 print("ERROR : No covariates in a multiple regression")
                 return ""
@@ -396,8 +392,7 @@ class GroupAnalysis:
             # ---------------------------------------------------------------------------
             # call matlab
             # ---------------------------------------------------------------------------
-            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir],
-                                       endengine=False)
+            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=False)
 
             # check whether running a given contrasts batch. script must only modify SPM.mat file
             if spm_contrasts_template_name != "":
@@ -412,8 +407,10 @@ class GroupAnalysis:
             print(e)
             return ""
 
+    # endregion
+
     # ---------------------------------------------------
-    # STATS - SURFACES THICKNESS (CAT12)
+    #region STATS - SURFACES THICKNESS (CAT12)
     # ---------------------------------------------------
 
     # params to replace: <STATS_DIR>, <GROUPS_IMAGES>, <COV1_LIST>, <COV1_NAME>
@@ -424,7 +421,7 @@ class GroupAnalysis:
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
     def create_cat_thickness_stats_factdes_1Wanova(self, statsdir, groups_labels, cov_name, cov_interaction=1,
                                                    data_file=None, sess_id=1,
-                                                   spm_template_name="cat_thickness_stats_1Wanova_onlydesign",
+                                                   spm_template_name="cat_thickness_stats_1Wanova_check_estimate",
                                                    spm_contrasts_template_name=""):
 
         try:
@@ -447,8 +444,7 @@ class GroupAnalysis:
             cnt = 0
             for grp in groups_labels:
                 cnt = cnt + 1
-                cells_images = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(" + str(
-                    cnt) + ").scans = "
+                cells_images = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(" + str(cnt) + ").scans = "
 
                 subjs = self.project.get_subjects(grp, sess_id)
 
@@ -456,34 +452,20 @@ class GroupAnalysis:
                 for subj in subjs:
                     grp1_images = grp1_images + "\'" + subj.t1_cat_resampled_surface + "\'\r"
                 grp1_images = grp1_images + "\r};"
-
                 cells_images = cells_images + grp1_images + "\r"
+
             sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
 
             # ---------------------------------------------------------------------------
             # check whether adding a covariate
             # ---------------------------------------------------------------------------
             if cov_name != "":
-                Stats.spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, self.project, cov_name,
-                                                    cov_interaction, data_file)
+                Stats.spm_stats_add_1cov_manygroups(out_batch_job, groups_labels, self.project, cov_name, cov_interaction, data_file)
             else:
-                sed_inplace(out_batch_job, "<COV_STRING>",
-                            "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
+                sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
             # ---------------------------------------------------------------------------
-            #
-            # ---------------------------------------------------------------------------
-
-            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir],
-                                       endengine=False)
-
-            # ---------------------------------------------------------------------------
-            # estimate surface model in cat 12.6
-            # ---------------------------------------------------------------------------
-            if self._global.cat_version == "cat12.6":
-                # model estimate
-                print("estimating surface model")
-                eng.pymri_cat_surfaces_stat_spm(statsdir, nargout=0)
+            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=False)
 
             # ---------------------------------------------------------------------------
             # check whether running a given contrasts batch. script must only modify SPM.mat file
@@ -510,17 +492,13 @@ class GroupAnalysis:
     # cells is [factor][level][subjects_label]
     def create_cat_thickness_stats_factdes_2Wanova(self, statsdir, factors_labels, cells, cov_name="",
                                                    cov_interaction=1, data_file=None, sess_id=1,
-                                                   spm_template_name="cat_thickness_stats_2Wanova_onlydesign"):
+                                                   spm_template_name="cat_thickness_stats_2Wanova_check_estimate"):
 
         try:
-            # ---------------------------------------------------------------------------
             # create template files
-            # ---------------------------------------------------------------------------
             out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
 
-            # ---------------------------------------------------------------------------
             # stats dir
-            # ---------------------------------------------------------------------------
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
 
@@ -541,10 +519,8 @@ class GroupAnalysis:
             for f1 in range(0, nlevels[0]):
                 for f2 in range(0, nlevels[1]):
                     ncell = ncell + 1
-                    cells_images = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(" + str(
-                        ncell) + ").levels = [" + str(f1 + 1) + "\n" + str(f2 + 1) + "];\n"
-                    cells_images = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(" + str(
-                        ncell) + ").scans = {\n"
+                    cells_images = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(" + str(ncell) + ").levels = [" + str(f1 + 1) + "\n" + str(f2 + 1) + "];\n"
+                    cells_images = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(" + str(ncell) + ").scans = {\n"
 
                     subjs = self.project.get_subjects(cells[f1][f2], sess_id)
                     for subj in subjs:
@@ -572,14 +548,6 @@ class GroupAnalysis:
             eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=False)
 
             # ---------------------------------------------------------------------------
-            # estimate surface model in cat 12.6
-            # ---------------------------------------------------------------------------
-            if self._global.cat_version == "cat12.6":
-                # model estimate
-                print("estimating surface model")
-                eng.pymri_cat_surfaces_stat_spm(statsdir, nargout=0)
-
-            # ---------------------------------------------------------------------------
             eng.quit()
             return os.path.join(statsdir, "SPM.mat")
 
@@ -591,24 +559,20 @@ class GroupAnalysis:
     # GROUPx_IMAGES are :  'mpr/anat/cat_proc/surf/s15.mesh.thickness.resampled_32k.T1_XXXXXXXXXX.gii,1'
     def create_cat_thickness_stats_factdes_2samplesttest(self, statsdir, grp1_label, grp2_label, cov_name="",
                                                          cov_interaction=1, data_file=None, sess_id=1,
-                                                         spm_template_name="cat_thickness_stats_2samples_ttest_onlydesign",
-                                                         mult_corr="FWE", pvalue=0.05, cluster_extend=0, grp_labels=None):
-
+                                                         spm_template_name="cat_thickness_stats_2samples_ttest_check_estimate",
+                                                         mult_corr="FWE", pvalue=0.05, cluster_extend=0,
+                                                         grp_labels=None):
 
         try:
             if grp_labels is None:
                 grp_labels = ["g1", "g2"]
 
+            # create template files
+            out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
+
+            # stats dir
             os.makedirs(statsdir, exist_ok=True)
-            # set dirs
-            spm_script_dir = os.path.join(self.project.script_dir, "mpr", "spm")
-            out_batch_dir = os.path.join(spm_script_dir, "batch")
-
-            in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-            in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
-
-            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + ".m")
-            out_batch_job = os.path.join(out_batch_dir, spm_template_name + "_job.m")
+            sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
 
             # get subjects lists
             if isinstance(grp1_label, str):
@@ -631,7 +595,6 @@ class GroupAnalysis:
             grp2_images = grp2_images + "\r}"
 
             # set job file
-            copyfile(in_batch_job, out_batch_job)
             sed_inplace(out_batch_job, "<GROUP1_IMAGES>", grp1_images)
             sed_inplace(out_batch_job, "<GROUP2_IMAGES>", grp2_images)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -642,17 +605,7 @@ class GroupAnalysis:
             else:
                 sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
 
-            # set start file
-            copyfile(in_batch_start, out_batch_start)
-            sed_inplace(out_batch_start, "X", "1")
-            sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
-
-            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=False)
-
-            # model estimate
-            print("estimating surface model")
-            eng.pymri_cat_surfaces_stat_spm(statsdir, nargout=0)
-            eng.quit()
+            call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir])
 
             self.create_spm_stats_2samplesttest_contrasts_results(os.path.join(statsdir, "SPM.mat"),
                                                                   grp_labels[0] + " > " + grp_labels[1],
@@ -668,30 +621,18 @@ class GroupAnalysis:
             return ""
 
     #
-    def create_cat_thickness_stats_1group_multregr(self, statsdir, grp_label, cov_names, anal_name,
-                                                   cov_interactions=None, data_file=None, sess_id=1,
-                                                   spm_template_name="cat_thickness_stats_1group_multiregr_check_estimate",
-                                                   spm_contrasts_template_name="", mult_corr="FWE", pvalue=0.05,
-                                                   cluster_extend=0):
+    def create_cat_thickness_stats_factdes_1group_multregr(self, statsdir, grp_label, cov_names, anal_name,
+                                                           cov_interactions=None, data_file=None, sess_id=1,
+                                                           spm_template_name="spm_stats_1group_multiregr_check_estimate",
+                                                           spm_contrasts_template_name="", mult_corr="FWE", pvalue=0.05,
+                                                           cluster_extend=0):
         try:
+            # create template files
+            out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
+
+            # stats dir
             os.makedirs(statsdir, exist_ok=True)
-            # set dirs
-            spm_script_dir = os.path.join(self.project.script_dir, "mpr", "spm")
-            out_batch_dir = os.path.join(spm_script_dir, "batch")
-
-            in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-            in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
-
-            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + "_" + anal_name + ".m")
-            out_batch_job = os.path.join(out_batch_dir, spm_template_name + "_" + anal_name + "_job.m")
-
-            # set job file
-            copyfile(in_batch_job, out_batch_job)
-
-            # set start file
-            copyfile(in_batch_start, out_batch_start)
-            sed_inplace(out_batch_start, "X", "1")
-            sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
+            sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
 
             # ---------------------------------------------------------------------------
             # compose images string
@@ -704,8 +645,7 @@ class GroupAnalysis:
             # ---------------------------------------------------------------------------
             # check whether adding a covariate
             if len(cov_names) > 0:
-                Stats.spm_stats_add_manycov_1group(out_batch_job, grp_label, self.project, cov_names, cov_interactions,
-                                                   data_file)
+                Stats.spm_stats_add_manycov_1group(out_batch_job, grp_label, self.project, cov_names, cov_interactions, data_file)
             else:
                 print("ERROR : No covariates in a multiple regression")
                 return ""
@@ -713,13 +653,7 @@ class GroupAnalysis:
             sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
 
-            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir],
-                                       endengine=False)
-
-            if self._global.cat_version == "cat12.6":
-                # model estimate
-                print("estimating surface model")
-                eng.pymri_cat_surfaces_stat_spm(statsdir, nargout=0)
+            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=False)
 
             # check whether running a given contrasts batch. script must only modify SPM.mat file
             if spm_contrasts_template_name != "":
@@ -734,29 +668,20 @@ class GroupAnalysis:
             print(e)
             return ""
 
+    #endregion
+
     # ---------------------------------------------------
-    # STATS - GENERAL
-    # ---------------------------------------------------
+    #region CREATE CONTRASTS
 
     # calculate contrasts and report their results on a given, already estimated, SPM.mat
     # cluster_extend = "none" | "en_corr" | "en_nocorr"
     def create_spm_stats_2samplesttest_contrasts_results(self, spmmat, c1_name="A>B", c2_name="B>A",
                                                          spm_template_name="spm_stats_2samplesttest_contrasts_results",
-                                                         mult_corr="FWE", pvalue=0.05, cluster_extend=0):
-
+                                                         mult_corr="FWE", pvalue=0.05, cluster_extend="none"):
         try:
-            # set dirs
-            spm_script_dir = os.path.join(self.project.script_dir, "mpr", "spm")
-            out_batch_dir = os.path.join(spm_script_dir, "batch")
+            # create template files
+            out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
 
-            in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-            in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
-
-            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + ".m")
-            out_batch_job = os.path.join(out_batch_dir, spm_template_name + "_job.m")
-
-            # set job file
-            copyfile(in_batch_job, out_batch_job)
             sed_inplace(out_batch_job, "<SPM_MAT>", spmmat)
             sed_inplace(out_batch_job, "<STATS_DIR>", ntpath.dirname(spmmat))
             sed_inplace(out_batch_job, "<C1_NAME>", c1_name)
@@ -766,11 +691,6 @@ class GroupAnalysis:
             sed_inplace(out_batch_job, "<CLUSTER_EXTEND>", str(cluster_extend))
 
             Stats.cat_replace_results_trasformation_string(out_batch_job, 3, mult_corr, pvalue, cluster_extend)
-
-            # set start file
-            copyfile(in_batch_start, out_batch_start)
-            sed_inplace(out_batch_start, "X", "1")
-            sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
 
             call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir])
 
@@ -783,20 +703,10 @@ class GroupAnalysis:
     def create_cat_stats_1group_multregr_contrasts_results(self, spmmat, cov_names,
                                                            spm_template_name="cat_stats_contrasts_results",
                                                            mult_corr="FWE", pvalue=0.05, cluster_extend="none"):
-
         try:
-            # set dirs
-            spm_script_dir = os.path.join(self.project.script_dir, "mpr", "spm")
-            out_batch_dir = os.path.join(spm_script_dir, "batch")
+            # create template files
+            out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
 
-            in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-            in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
-
-            out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + ".m")
-            out_batch_job = os.path.join(out_batch_dir, spm_template_name + "_job.m")
-
-            # set job file
-            copyfile(in_batch_job, out_batch_job)
             sed_inplace(out_batch_job, "<SPM_MAT>", spmmat)
             sed_inplace(out_batch_job, "<STATS_DIR>", ntpath.dirname(spmmat))
 
@@ -806,11 +716,6 @@ class GroupAnalysis:
             sed_inplace(out_batch_job, "<PVALUE>", str(pvalue))
             sed_inplace(out_batch_job, "<CLUSTER_EXTEND>", str(cluster_extend))
 
-            # set start file
-            copyfile(in_batch_start, out_batch_start)
-            sed_inplace(out_batch_start, "X", "1")
-            sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
-
             call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir])
 
         except Exception as e:
@@ -819,35 +724,17 @@ class GroupAnalysis:
 
     # run a prebuilt batch file in a non-standard location, which only need to set the stat folder and SPM.mat path
     def create_spm_stats_predefined_contrasts_results(self, statsdir, spm_template_full_path_noext, eng=None):
-
         try:
+            # create template files
+            out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_full_path_noext, "mpr")
 
             spm_mat_path = os.path.join(statsdir, "SPM.mat")
-            input_batch_name = ntpath.basename(spm_template_full_path_noext)
 
-            # set dirs
-            spm_script_dir = os.path.join(self.project.script_dir, "mpr", "spm")
-            out_batch_dir = os.path.join(spm_script_dir, "batch")
-
-            in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-            in_batch_job = spm_template_full_path_noext + ".m"
-
-            out_batch_start = os.path.join(out_batch_dir, "create_" + input_batch_name + "_start.m")
-            out_batch_job = os.path.join(out_batch_dir, "create_" + input_batch_name + ".m")
-
-            # set job file
-            copyfile(in_batch_job, out_batch_job)
             sed_inplace(out_batch_job, "<SPM_MAT>", spm_mat_path)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
 
-            # set start file
-            copyfile(in_batch_start, out_batch_start)
-            sed_inplace(out_batch_start, "X", "1")
-            sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
-
             if eng is None:
-                call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir,
-                                                       self._global.spm_dir])  # open a new session and then end it
+                call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir])  # open a new session and then end it
             else:
                 call_matlab_spmbatch(out_batch_start, endengine=False)  # I assume that the caller will end the matlab session and def dir have been already specified
 
@@ -855,7 +742,10 @@ class GroupAnalysis:
             traceback.print_exc()
             print(e)
 
+    #endregion
+
     # ---------------------------------------------------
+    #region MELODIC
     def group_melodic(self, out_dir_name, subjects, tr):
 
         if os.path.exists(out_dir_name):
@@ -911,8 +801,10 @@ class GroupAnalysis:
         #
         pass
 
+    #endregion
+
     # ====================================================================================================================================================
-    # TBSS
+    #region TBSS
     # ====================================================================================================================================================
     # run tbss for FA
     def tbss_run_fa(self, group_label, odn, sessid=1, prepare=True, proc=True, postreg="S", prestat_thr=0.2):
@@ -1124,3 +1016,5 @@ class GroupAnalysis:
             filter_volumes(orig_image, subj_labels_list, dest_image)
 
             imcp(orig_mean_image, dest_mean_image)
+
+    #endregion
