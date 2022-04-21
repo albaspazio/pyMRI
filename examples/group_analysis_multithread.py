@@ -62,7 +62,7 @@ if __name__ == "__main__":
     # # test getting filtered data columns
     # datafile = os.path.join(project.script_dir, "data.dat")
     # data = import_data_file.read_tabbed_file_with_header(datafile)
-    # # age = import_data_file.get_dict_column(data, "age")
+    # # age = import_data_file.get_column(data, "age")
     # # age = import_data_file.get_filtered_dict_column(data, "age", "subj", project.get_list_by_label("test"))
     # age = import_data_file.get_filtered_dict_column(data, "age", "cat_dist", ['0'])
     # str = import_data_file.list2spm_text_column(age)

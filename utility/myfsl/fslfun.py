@@ -2,8 +2,8 @@ import os
 import subprocess
 import sys
 
-from myfsl.utils.run import rrun
-from utility.images import imtest
+from utility.myfsl.utils.run import rrun
+from utility.images.images import imtest
 
 
 # ===============================================================================================================================

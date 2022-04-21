@@ -4,9 +4,10 @@ import traceback
 from shutil import copyfile
 
 from Global import Global
-from myfsl.utils.run import rrun
-from utility.fslfun import run, run_notexisting_img, runpipe, run_move_notexisting_img
-from utility.images import imtest, immv, mass_images_move, imrm, imcp, quick_smooth, remove_ext
+from utility.myfsl.utils.run import rrun
+from utility.myfsl.fslfun import run
+from utility.myfsl.fslfun import run_notexisting_img, runpipe, run_move_notexisting_img
+from utility.images.images import imtest, immv, mass_images_move, imrm, imcp, quick_smooth, remove_ext
 from utility.matlab import call_matlab_spmbatch, call_matlab_function_noret
 from utility.utilities import sed_inplace, gunzip, write_text_file
 
@@ -1451,18 +1452,15 @@ class SubjectMpr:
         # I may have manually edited self.t1_fs_brainmask + "_orig_ero.nii.gz"
         # although is at the same reference as working image, it still have to be co-registered
         # 1) I move this orig brainmask to the same space as t1 and t1_brain, applying the coronalconformed->original transformation to eroded brainmask_orig
-        rrun(
-            "flirt -in " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz" + " -ref " + self.subject.t1_data + " -out " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -applyxfm -init " + os.path.join(
+        rrun("flirt -in " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz" + " -ref " + self.subject.t1_data + " -out " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -applyxfm -init " + os.path.join(
                 self.subject.t1_fs_mri_dir, "fscor2t1.mat") + " -interp trilinear")
 
         # => I create its mask (with holes) and add to the bet's one (assumed as smaller but without holes)
-        rrun(
-            "fslmaths " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -bin -add " + self.subject.t1_brain_data_mask + " -bin " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz")
+        rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -bin -add " + self.subject.t1_brain_data_mask + " -bin " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz")
 
         imcp(self.subject.t1_fs_brainmask_data + "_axial_ero_mask.nii.gz",
              self.subject.t1_brain_data_mask)  # substitute bet mask with this one
-        rrun(
-            "fslmaths " + self.subject.t1_data + " -mas " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz" + " " + self.subject.t1_brain_data)
+        rrun("fslmaths " + self.subject.t1_data + " -mas " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz" + " " + self.subject.t1_brain_data)
 
         if do_clean is True:
             imrm([self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz"])

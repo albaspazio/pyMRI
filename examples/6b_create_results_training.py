@@ -4,10 +4,12 @@ import traceback
 
 from Global import Global
 from Project import Project
-from myfsl.utils.run import rrun
-from utility import import_data_file
-from utility import plot_data
-from utility.fslfun import imtest, run_notexisting_img
+from data.SubjectsDataDict import SubjectsDataDict
+from data.utilities import process_results
+from utility.myfsl.fslfun import run_notexisting_img
+from utility.myfsl.utils.run import rrun
+from data import plot_data, utilities
+from utility.images.images import imtest
 
 if __name__ == "__main__":
 
@@ -79,7 +81,7 @@ if __name__ == "__main__":
         RESULTS4_OUT_DIR = os.path.join(DR_DIR, "results", "std4")
         std_MNI_2mm_brain = os.path.join(globaldata.fsl_data_std_dir, "MNI152_T1_2mm_brain")
 
-        subjects_data = import_data_file.tabbed_file_with_header2dict_list(os.path.join(project.dir, "data_2x56.txt"))
+        subjects_data = SubjectsDataDict(os.path.join(project.dir, "data_2x56.txt"))
 
         # -----------------------------------------------------
         # SBFC
@@ -167,12 +169,11 @@ if __name__ == "__main__":
                 print(maskname)
                 rrun("fslmeants -i " + ic_image + " -o " + raw_res_file_name + " -m " + maskpath)
                 # str_lists = process_results2tp(raw_res_file_name, subjects, res_file_name)
-                str_lists = import_data_file.process_results(raw_res_file_name, subjects, res_file_name)
+                str_lists = process_results(raw_res_file_name, subjects, res_file_name)
 
                 # plot_data.histogram_plot_2groups(str_lists, os.path.join(RESULTS4_OUT_DIR, "fig_" + roi["roi"] + "_" + roi["rsn"] + ".png"), "4", 1)
 
-                data = [float(d) * (-1) for d in import_data_file.get_dict_column(subjects_data,
-                                                                                  "T2NoGo")]  # NoGo are errors: I want hits..since data are demeaned I can just invert the sign
+                data = [float(d) * (-1) for d in subjects_data.get_column("T2NoGo")]  # NoGo are errors: I want hits..since data are demeaned I can just invert the sign
                 plot_data.scatter_plot_2groups(str_lists, data, os.path.join(RESULTS4_OUT_DIR,
                                                                              "fig_" + roi["roi"] + "_" + roi[
                                                                                  "rsn"] + ".png"), "4", 1,
@@ -201,8 +202,7 @@ if __name__ == "__main__":
                 pe = rrun("fslstats " + img + " -m -k " + res_mask)
                 sbfc_pe_train.append(float(pe))
 
-            data = [float(d) * (-1) for d in import_data_file.get_dict_column(subjects_data,
-                                                                              "T1NoGo")]  # NoGo are errors: I want hits..since data are demeaned I can just invert the sign
+            data = [float(d) * (-1) for d in subjects_data.get_column("T1NoGo")]  # NoGo are errors: I want hits..since data are demeaned I can just invert the sign
             plot_data.scatter_plot_dataserie(sbfc_pe_train, data[24:],
                                              os.path.join(RESULTS_SBFC_OUT_DIR, "fig_T1NoGo" + ".png"), "green",
                                              "training")

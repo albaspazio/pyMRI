@@ -1,7 +1,8 @@
 import csv
 
-from utility import import_data_file
-from utility.images import imtest
+from data import utilities
+from data.utilities import list2spm_text_column
+from utility.images.images import imtest
 from utility.matlab import call_matlab_function_noret
 from utility.utilities import sed_inplace
 
@@ -16,7 +17,7 @@ class Stats:
         cov = []
         for grp in groups_labels:
             cov = cov + project.get_filtered_column(cov_name, grp, datafile)[0]
-        str_cov = "\n" + import_data_file.list2spm_text_column(cov)  # ends with a "\n"
+        str_cov = "\n" + list2spm_text_column(cov)  # ends with a "\n"
 
         cov_string = "matlabbatch{1}.spm.stats.factorial_design.cov.c = "
         cov_string = cov_string + "[" + str_cov + "];\n"
@@ -44,7 +45,7 @@ class Stats:
         for cov_id in range(ncov):
             cov_name = cov_names[cov_id]
             cov = project.get_filtered_column(cov_names[cov_id], group_label, data=datafile)[0]
-            str_cov = "\n" + import_data_file.list2spm_text_column(cov)  # ends with a "\n"
+            str_cov = "\n" + list2spm_text_column(cov)  # ends with a "\n"
 
             cov_string = cov_string + "matlabbatch{1}.spm.stats.factorial_design.cov(" + str(cov_id + 1) + ").c = "
             cov_string = cov_string + "[" + str_cov + "];\n"
@@ -78,7 +79,7 @@ class Stats:
 
         conditions_string = ""
         for c in range(1, len(conditions) + 1):
-            onsets = import_data_file.list2spm_text_column(conditions[c - 1]["onsets"])  # ends with a "\n"
+            onsets = list2spm_text_column(conditions[c - 1]["onsets"])  # ends with a "\n"
             conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").name = \'" + conditions[c - 1]["name"] + "\';" + "\n"
             conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").onset = [" + onsets + "];\n"
             conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").tmod = 0;\n"

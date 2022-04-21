@@ -1,6 +1,6 @@
 from Global import Global
 from Project import Project
-from myfsl.utils.run import rrun
+from utility.myfsl.utils.run import rrun
 from utility import images
 
 if __name__ == "__main__":

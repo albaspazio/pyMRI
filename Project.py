@@ -10,8 +10,8 @@ from threading import Thread
 from shutil import copyfile
 
 from subject.Subject import Subject
-from utility.SubjectsDataDict import SubjectsDataDict
-from utility.images import imcp, imrm
+from data.SubjectsDataDict import SubjectsDataDict
+from utility.images.images import imcp, imrm
 from utility.utilities import gunzip, compress, sed_inplace
 
 
@@ -109,6 +109,9 @@ class Project:
                     for grp in self.subjects_lists["subjects"]:
                         if grp["label"] == group_label:
                             return grp["list"]
+                    print("ERROR in get_subjects_labels, given group_label does not exist in subjects_lists")
+                    return None
+
 
         except Exception as e:
             print("Error in get_subjectlabels")
@@ -160,7 +163,7 @@ class Project:
         if _to is None:
             _to = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]
 
-        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir, "_from":_from, "_to":_to, "overwrite":overwrite}], subjs_labels, ncore=num_cpu)
+        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir, "_from":_from, "_to":_to, "overwrite":overwrite}], ncore=num_cpu, subjs_labels=subjs_labels)
 
         if "hr" in _to:
             l_t1 = os.path.join(outdir, "lin", "hr");            nl_t1 = os.path.join(outdir, "nlin", "hr")
@@ -205,7 +208,7 @@ class Project:
             os.chdir(nl_t2);    os.system("slicesdir ./*.nii.gz");  shutil.move(os.path.join(nl_t2, "slicesdir"), sd_nl_t2)
 
     # create a folder where it copies the brain extracted from BET, FreeSurfer and SPM
-    def compare_brain_extraction(self, outdir, list_subj_label=None):
+    def compare_brain_extraction(self, outdir, list_subj_label=None, num_cpu=1):
 
         if list_subj_label is None or list_subj_label == "":
 
@@ -218,6 +221,8 @@ class Project:
             subjs = self.get_subjects_labels(list_subj_label)
 
         os.makedirs(outdir, exist_ok=True)
+
+        self.run_subjects_methods("mpr", "compare_brain_extraction", [{"tempdir":outdir}], ncore=num_cpu, subj_labels=list_subj_label)
 
         for subj in subjs:
             subj.compare_brain_extraction(outdir)

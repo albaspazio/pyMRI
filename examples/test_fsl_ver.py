@@ -1,6 +1,6 @@
 import os
 
-from utility import fsl_switcher
+from utility.myfsl import fsl_switcher
 
 if __name__ == "__main__":
     fslswitch = fsl_switcher()

@@ -2,8 +2,8 @@ import csv
 import os
 from shutil import copyfile
 
-from myfsl.utils.run import rrun
-from utility.images import imtest, imcp
+from utility.myfsl.utils.run import rrun
+from utility.images.images import imtest, imcp
 from utility.utilities import write_text_file
 
 class SubjectDti:

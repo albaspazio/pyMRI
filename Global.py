@@ -1,7 +1,8 @@
 import inspect
 import os
 
-from utility import fsl_switcher, import_data_file
+from data.utilities import read_varlist_file
+from utility.myfsl import fsl_switcher
 
 
 class Global:
@@ -30,7 +31,7 @@ class Global:
                 "ERROR. the file \"local.settings\" must be present in the framework root folder (" + self.framework_dir + ")\n" +
                 "copy and rename the file " + os.path.join(self.framework_dir, "examples", "local.settings") + " there and modify its content according to your local settings")
 
-        local_settings_data         = import_data_file.read_varlist_file(local_settings)
+        local_settings_data         = read_varlist_file(local_settings)
 
         self.spm_dir                = local_settings_data["spm_dir"]
         self.cat_version            = local_settings_data["cat_version"]

@@ -5,8 +5,8 @@ from shutil import copyfile
 
 from Global import Global
 from Project import Project
-from myfsl.utils.run import rrun
-from utility import import_data_file
+from data.SubjectsDataDict import SubjectsDataDict
+from utility.myfsl.utils.run import rrun
 
 if __name__ == "__main__":
 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
         RESULTS4_OUT_DIR = os.path.join(DR_DIR, "results", "std4")
         standard_MNI_2mm_brain = os.path.join(globaldata.fsl_data_std_dir, "MNI152_T1_2mm_brain")
 
-        subjects_data = import_data_file.tabbed_file_with_header2dict_list(os.path.join(project.dir, "data_2x56.txt"))
+        subjects_data = SubjectsDataDict(os.path.join(project.dir, "data_2x56.txt"))
 
         # create baseline images
         curdir = os.getcwd()

@@ -1,8 +1,8 @@
 import os
 
-from myfsl.utils.run import rrun
-from utility.fslfun import runsystem
-from utility.images import imtest, imcp
+from utility.myfsl.utils.run import rrun
+from utility.myfsl.fslfun import runsystem
+from utility.images.images import imtest, imcp
 # Class contains all the available transformations across different sequences.
 #
 # there can be 60 transformation among t1, t2, dti, rs, fmri, std, std4
@@ -27,7 +27,7 @@ from utility.images import imtest, imcp
 #   DTI   <----------> HR <---> STD
 #   DTI   <--> T2 <--> HR <---> STD
 #
-from utility.transform_images import check_concat_mat, check_invert_mat, check_convert_warp_mw, check_invert_warp, \
+from utility.images.transform_images import check_concat_mat, check_invert_mat, check_convert_warp_mw, check_invert_warp, \
     check_flirt, check_apply_mat, check_convert_warp_wmw, check_convert_warp_ww, check_apply_warp
 
 
@@ -54,8 +54,7 @@ class SubjectTransforms:
         self.fmri2hr_mat = os.path.join(self.subject.roi_t1_dir, "fmri2hr.mat")
 
         self.dti2hr_warp = os.path.join(self.subject.roi_t1_dir, "dti2hr_warp")  # when t2 is available
-        self.dti2hr_mat = os.path.join(self.subject.roi_t1_dir,
-                                       "dti2hr.mat")  # TODO: decide whether using direct or through-T2
+        self.dti2hr_mat  = os.path.join(self.subject.roi_t1_dir, "dti2hr.mat")  # TODO: decide whether using direct or through-T2
         self.dtihead2hr_mat = os.path.join(self.subject.roi_t1_dir, "dtihead2hr.mat")  #
 
         # self.t22hr_warp  does not exist
@@ -74,8 +73,7 @@ class SubjectTransforms:
         self.hr2rs_mat = os.path.join(self.subject.roi_rs_dir, "hr2rs.mat")
 
         self.fmri2rs_warp = os.path.join(self.subject.roi_rs_dir, "fmri2rs_warp")  # passing from hr and std
-        self.fmri2rs_mat = os.path.join(self.subject.roi_rs_dir,
-                                        "fmri2rs.mat")  # TODO: decide whether using direct or through-hr
+        self.fmri2rs_mat  = os.path.join(self.subject.roi_rs_dir, "fmri2rs.mat")  # TODO: decide whether using direct or through-hr
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # TO FMRI (from std, std4, hr, rs)
@@ -1059,27 +1057,21 @@ class SubjectTransforms:
 
             if "hr" in _from and "std" in _to:
                 self.transform_roi("hrTOstd", pathtype="abs", outdir=nl_std, islin=False, rois=[self.subject.t1_data])
-                self.transform_roi("hrTOstd", pathtype="abs", outdir=l_std, islin=True,
-                                   rois=[self.subject.t1_brain_data])
+                self.transform_roi("hrTOstd", pathtype="abs", outdir=l_std, islin=True, rois=[self.subject.t1_brain_data])
 
             if extended is True and "std" in _from and "hr" in _to:
-                self.transform_roi("stdTOhr", pathtype="abs", outdir=nl_t1, islin=False,
-                                   rois=[self.subject.std_head_img])
+                self.transform_roi("stdTOhr", pathtype="abs", outdir=nl_t1, islin=False, rois=[self.subject.std_head_img])
                 self.transform_roi("stdTOhr", pathtype="abs", outdir=l_t1, islin=True, rois=[self.subject.std_img])
 
             if self.subject.hasRS is True:  # connect HR with STD4
 
                 if "hr" in _from and "std4" in _to:
-                    self.transform_roi("hrTOstd4", pathtype="abs", outdir=nl_std4, islin=False,
-                                       rois=[self.subject.t1_data])
-                    self.transform_roi("hrTOstd4", pathtype="abs", outdir=l_std4, islin=True,
-                                       rois=[self.subject.t1_brain_data])
+                    self.transform_roi("hrTOstd4", pathtype="abs", outdir=nl_std4, islin=False, rois=[self.subject.t1_data])
+                    self.transform_roi("hrTOstd4", pathtype="abs", outdir=l_std4, islin=True, rois=[self.subject.t1_brain_data])
 
                 if extended is True and "std4" in _from and "hr" in _to:
-                    self.transform_roi("std4TOhr", pathtype="abs", outdir=nl_t1, islin=False,
-                                       rois=[self.subject.std4_head_img])
-                    self.transform_roi("std4TOhr", pathtype="abs", outdir=l_t1, islin=True,
-                                       rois=[self.subject.std4_img])
+                    self.transform_roi("std4TOhr", pathtype="abs", outdir=nl_t1, islin=False, rois=[self.subject.std4_head_img])
+                    self.transform_roi("std4TOhr", pathtype="abs", outdir=l_t1, islin=True, rois=[self.subject.std4_img])
         else:
             print("ERROR...T1 is missing......exiting")
             return

@@ -4,13 +4,13 @@ import traceback
 from copy import deepcopy
 from shutil import move, rmtree
 
-from myfsl.utils.run import rrun
+from utility.myfsl.utils.run import rrun
 from subject.SubjectDti import SubjectDti
 from subject.SubjectEpi import SubjectEpi
 from subject.SubjectMpr import SubjectMpr
 from subject.SubjectTransforms import SubjectTransforms
-from utility.fslfun import runsystem
-from utility.images import imtest, immv, imcp, is_image, img_split_ext, remove_ext, read_header
+from utility.myfsl.fslfun import runsystem
+from utility.images.images import imtest, immv, imcp, is_image, img_split_ext, remove_ext, read_header
 from utility.utilities import extractall_zip
 
 
@@ -105,10 +105,8 @@ class Subject:
         self.t1_segment_csf_ero_path    = os.path.join(self.roi_t1_dir, "mask_t1_csfseg4Nuisance")
 
         self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
-        self.t1_cat_resampled_surface   = os.path.join(self.t1_cat_surface_dir,
-                                                     "s15.mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
-        self.t1_cat_resampled_surface_longitudinal = os.path.join(self.t1_cat_surface_dir,
-                                                                  "s15.mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
+        self.t1_cat_resampled_surface   = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
+        self.t1_cat_resampled_surface_longitudinal = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
 
         self.t1_spm_icv_file = os.path.join(self.t1_spm_dir, "icv_" + self.label + ".dat")
 
@@ -167,17 +165,17 @@ class Subject:
 
         self.rs_final_regstd_dir = os.path.join(self.rs_dir, "reg_" + self.std_img_label)
 
-        self.rs_final_regstd_image = os.path.join(self.rs_final_regstd_dir, "filtered_func_data")  # image after first preprocessing, aroma and nuisance regression.
-        self.rs_final_regstd_mask = os.path.join(self.rs_final_regstd_dir, "mask")  # image after first preprocessing, aroma and nuisance regression.
-        self.rs_final_regstd_bgimage = os.path.join(self.rs_final_regstd_dir, "bg_image")  # image after first preprocessing, aroma and nuisance regression.
+        self.rs_final_regstd_image      = os.path.join(self.rs_final_regstd_dir, "filtered_func_data")  # image after first preprocessing, aroma and nuisance regression.
+        self.rs_final_regstd_mask       = os.path.join(self.rs_final_regstd_dir, "mask")  # image after first preprocessing, aroma and nuisance regression.
+        self.rs_final_regstd_bgimage    = os.path.join(self.rs_final_regstd_dir, "bg_image")  # image after first preprocessing, aroma and nuisance regression.
 
-        self.rs_post_preprocess_image_label = self.rs_image_label + "_preproc"
-        self.rs_post_aroma_image_label = self.rs_image_label + "_preproc_aroma"
-        self.rs_post_nuisance_image_label = self.rs_image_label + "_preproc_aroma_nuisance"
-        self.rs_post_nuisance_melodic_image_label = self.rs_image_label + "_preproc_aroma_nuisance_melodic"
+        self.rs_post_preprocess_image_label         = self.rs_image_label + "_preproc"
+        self.rs_post_aroma_image_label              = self.rs_image_label + "_preproc_aroma"
+        self.rs_post_nuisance_image_label           = self.rs_image_label + "_preproc_aroma_nuisance"
+        self.rs_post_nuisance_melodic_image_label   = self.rs_image_label + "_preproc_aroma_nuisance_melodic"
 
         self.rs_aroma_dir           = os.path.join(self.rs_dir, "ica_aroma")
-        self.rs_icafix_dir          = os.path.join(self.rs_dir, "ica_fix")
+        self.rs_fix_dir             = os.path.join(self.rs_dir, "fix")
         self.rs_aroma_image         = os.path.join(self.rs_aroma_dir, "denoised_func_data_nonaggr")
         self.rs_regstd_aroma_dir    = os.path.join(self.rs_aroma_dir, "reg_standard")
         self.rs_regstd_aroma_image  = os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data")

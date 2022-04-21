@@ -7,11 +7,12 @@ from shutil import copyfile, move
 import matlab.engine
 import numpy
 
+from data import plot_data
+from data.SubjectsDataDict import SubjectsDataDict
 from group.Stats import Stats
-from myfsl.utils.run import rrun
-from utility import import_data_file, plot_data
-from utility.images import imcp, imtest, immv, imrm, remove_ext, filter_volumes
-from utility.import_data_file import get_header_of_tabbed_file, get_icv_spm_file
+from utility.myfsl.utils.run import rrun
+from utility.images.images import imcp, imtest, immv, imrm, remove_ext, filter_volumes, get_image_nvoxels, get_image_mean, mask_image
+from data.utilities import list2spm_text_column, get_icv_spm_file
 from utility.matlab import call_matlab_spmbatch
 from utility.utilities import sed_inplace
 
@@ -19,8 +20,11 @@ from utility.utilities import sed_inplace
 class GroupAnalysis:
 
     def __init__(self, proj):
-        self.project = proj
-        self._global = self.project._global
+
+        self.subjects_list  = None
+        self.working_dir    = ""
+        self.project        = proj
+        self._global        = self.project._global
 
     # ====================================================================================================================================================
     # DATA PREPARATION
@@ -30,7 +34,7 @@ class GroupAnalysis:
     # create a folder name and its subfolders : subjects (normalized images), flowfields, stats
     # RC1_IMAGES:    {  '/media/data/MRI/projects/ELA/subjects/0202/s1/mpr/rc20202-t1.nii,1'
     #                   '/media/data/MRI/projects/ELA/subjects/0503/s1/mpr/rc20503-t1.nii,1'}
-    def create_vbm_spm_template_normalize(self, name, subjs, sess_id=1, spm_template_name="spm_dartel_createtemplate_normalize"):
+    def create_vbm_spm_template_normalize(self, name, subjs, spm_template_name="spm_dartel_createtemplate_normalize"):
 
         self.subjects_list = subjs
         self.working_dir = os.path.join(self.project.vbm_dir, name)
@@ -55,10 +59,8 @@ class GroupAnalysis:
         T1_images_1 = "{\r"
 
         for subj in self.subjects_list:
-            T1_darteled_images_1 = T1_darteled_images_1 + "\'" + os.path.join(subj.t1_spm_dir,
-                                                                              "rc1T1_" + subj.label + ".nii") + ",1\'\r"
-            T1_darteled_images_2 = T1_darteled_images_2 + "\'" + os.path.join(subj.t1_spm_dir,
-                                                                              "rc2T1_" + subj.label + ".nii") + ",1\'\r"
+            T1_darteled_images_1 = T1_darteled_images_1 + "\'" + os.path.join(subj.t1_spm_dir,"rc1T1_" + subj.label + ".nii") + ",1\'\r"
+            T1_darteled_images_2 = T1_darteled_images_2 + "\'" + os.path.join(subj.t1_spm_dir,"rc2T1_" + subj.label + ".nii") + ",1\'\r"
             T1_images_1 = T1_images_1 + "\'" + os.path.join(subj.t1_spm_dir, "c1T1_" + subj.label + ".nii") + "\'\r"
 
         T1_darteled_images_1 = T1_darteled_images_1 + "\r}"
@@ -91,8 +93,8 @@ class GroupAnalysis:
         stats_dir = os.path.join(vbmfsl_folder, "stats")
         struct_dir = os.path.join(vbmfsl_folder, "struct")
 
-        os.makedirs(stats_dir, exist_ok="True")
-        os.makedirs(struct_dir, exist_ok="True")
+        os.makedirs(stats_dir, exist_ok=True)
+        os.makedirs(struct_dir, exist_ok=True)
 
         for subj in subjs:
             imcp(os.path.join(smw_folder, "smwc1T1_biascorr_" + subj.label),
@@ -132,7 +134,7 @@ class GroupAnalysis:
             icv_file = os.path.join(subj.t1_spm_dir, "icv_" + subj.label + ".dat")
 
             with open(icv_file) as fp:
-                line = fp.readline()
+                fp.readline()
                 line = fp.readline().rstrip()
                 values = line.split(',')
 
@@ -144,13 +146,21 @@ class GroupAnalysis:
 
     # read xtract's stats.csv file of each subject in the given list and create a tabbed file (ofp) with given values/tract
     # calls the subject routine
-    def xtract_export_group_data(self, subjs, ofp, tracts=None, values=None, ifn="stats.csv"):
+    def xtract_export_group_data(self, subjs_or_group, ofp, tracts=None, values=None, ifn="stats.csv", sess_id=1):
 
         if tracts is None:
             tracts = self._global.dti_xtract_labels
 
         if values is None:
             values = ["mean_FA", "mean_MD"]
+
+        if isinstance(subjs_or_group[0], str):
+            subjs = self.project.get_subjects(subjs_or_group, sess_id)
+        elif isinstance(subjs_or_group, list):
+            subjs = subjs_or_group
+        else:
+            print("ERROR in xtract_export_group_data, given subjs params is neither a string nor a list")
+            return
 
         file_str = "subj\t"
         for tr in tracts:
@@ -185,15 +195,13 @@ class GroupAnalysis:
             # ---------------------------------------------------------------------------
             if data_file is not None:
                 if os.path.exists(data_file) is False:
-                    print("ERROR in create_spm_vbm_dartel_stats_factdes_1Wanova, given data_file (" + str(
-                        data_file) + ") does not exist......exiting")
+                    print("ERROR in create_spm_vbm_dartel_stats_factdes_1Wanova, given data_file (" + str(data_file) + ") does not exist......exiting")
                     return
 
-                header = get_header_of_tabbed_file(data_file)
+                header = SubjectsDataDict(data_file).get_header() #get_header_of_tabbed_file(data_file)
 
                 if cov_name in header is False:
-                    print(
-                        "ERROR in create_spm_vbm_dartel_stats_factdes_1Wanova, the given data_file does not contain all requested covariates")
+                    print("ERROR in create_spm_vbm_dartel_stats_factdes_1Wanova, the given data_file does not contain all requested covariates")
                     return
 
             # ---------------------------------------------------------------------------
@@ -247,14 +255,12 @@ class GroupAnalysis:
                 gc_str = no_corr_str
             elif glob_calc == "":  # don't correct
                 gc_str = no_corr_str
-            elif isinstance(glob_calc,
-                            str) is True and data_file is not None:  # must be a column in the given data_file list of
+            elif isinstance(glob_calc,str) is True and data_file is not None:  # must be a column in the given data_file list of
 
                 icvs = []
                 for grp in groups_labels:
                     icvs = icvs + self.project.get_filtered_column(glob_calc, self.project.get_subjects_labels(grp))
-                gc_str = user_corr_str1 + import_data_file.list2spm_text_column(
-                    icvs) + user_corr_str2  # list2spm_text_column ends with a "\n"
+                gc_str = user_corr_str1 + list2spm_text_column(icvs) + user_corr_str2  # list2spm_text_column ends with a "\n"
 
             sed_inplace(out_batch_job, "<GLOBAL_SCORES>", gc_str)
 
@@ -311,11 +317,10 @@ class GroupAnalysis:
                         data_file) + ") does not exist......exiting")
                     return
 
-                header = get_header_of_tabbed_file(data_file)
+                header = SubjectsDataDict(data_file).get_header() #get_header_of_tabbed_file()
 
                 if all(elem in header for elem in cov_names) is False:
-                    print(
-                        "ERROR in create_spm_vbm_dartel_stats_factdes_multregr, the given data_file does not contain all requested covariates")
+                    print("ERROR in create_spm_vbm_dartel_stats_factdes_multregr, the given data_file does not contain all requested covariates")
                     return
 
             # ---------------------------------------------------------------------------
@@ -358,11 +363,9 @@ class GroupAnalysis:
                 gc_str = no_corr_str
             elif glob_calc == "":  # don't correct
                 gc_str = no_corr_str
-            elif isinstance(glob_calc,
-                            str) is True and data_file is not None:  # must be a column in the given data_file list of
+            elif isinstance(glob_calc,str) is True and data_file is not None:  # must be a column in the given data_file list of
                 icv = self.project.get_filtered_column(glob_calc, self.project.get_subjects_labels(grp_label))
-                gc_str = user_corr_str1 + import_data_file.list2spm_text_column(
-                    icv) + user_corr_str2  # list2spm_text_column ends with a "\n"
+                gc_str = user_corr_str1 + list2spm_text_column(icv) + user_corr_str2  # list2spm_text_column ends with a "\n"
 
             sed_inplace(out_batch_job, "<GLOBAL_SCORES>", gc_str)
 
@@ -386,8 +389,7 @@ class GroupAnalysis:
                 sed_inplace(out_batch_job, "<EXPL_MASK>", "")
             else:
                 if imtest(expl_mask) is False:
-                    print(
-                        "ERROR in create_spm_vbm_dartel_stats_factdes_1Wanova, given explicit mask is not present....exiting")
+                    print("ERROR in create_spm_vbm_dartel_stats_factdes_1Wanova, given explicit mask is not present....exiting")
                     return
                 sed_inplace(out_batch_job, "<EXPL_MASK>", expl_mask + ",1")
 
@@ -590,10 +592,13 @@ class GroupAnalysis:
     def create_cat_thickness_stats_factdes_2samplesttest(self, statsdir, grp1_label, grp2_label, cov_name="",
                                                          cov_interaction=1, data_file=None, sess_id=1,
                                                          spm_template_name="cat_thickness_stats_2samples_ttest_onlydesign",
-                                                         mult_corr="FWE", pvalue=0.05, cluster_extend=0,
-                                                         grp_labels=["g1", "g2"]):
+                                                         mult_corr="FWE", pvalue=0.05, cluster_extend=0, grp_labels=None):
+
 
         try:
+            if grp_labels is None:
+                grp_labels = ["g1", "g2"]
+
             os.makedirs(statsdir, exist_ok=True)
             # set dirs
             spm_script_dir = os.path.join(self.project.script_dir, "mpr", "spm")
@@ -737,7 +742,7 @@ class GroupAnalysis:
     # cluster_extend = "none" | "en_corr" | "en_nocorr"
     def create_spm_stats_2samplesttest_contrasts_results(self, spmmat, c1_name="A>B", c2_name="B>A",
                                                          spm_template_name="spm_stats_2samplesttest_contrasts_results",
-                                                         mult_corr="FWE", pvalue=0.05, cluster_extend="none"):
+                                                         mult_corr="FWE", pvalue=0.05, cluster_extend=0):
 
         try:
             # set dirs
@@ -858,19 +863,17 @@ class GroupAnalysis:
 
         os.makedirs(out_dir_name)
 
-        subjs = ""
-        bg_images = ""
-        masks = ""
-
-        missing_data = ""
+        subjs           = ""
+        bgimages        = ""
+        masks           = ""
+        missing_data    = ""
 
         for s in subjects:
 
-            if imtest(s.rs_final_regstd_image) is True and imtest(s.rs_final_regstd_bgimage) and imtest(
-                    s.rs_final_regstd_bgimage):
-                subjs = subjs + " " + s.rs_final_regstd_image
-                bgimages = subjs + " " + s.rs_final_regstd_bgimage
-                masks = masks + " " + s.rs_final_regstd_mask
+            if imtest(s.rs_final_regstd_image) is True and imtest(s.rs_final_regstd_bgimage) and imtest(s.rs_final_regstd_bgimage):
+                subjs       = subjs + " " + s.rs_final_regstd_image
+                bgimages    = subjs + " " + s.rs_final_regstd_bgimage
+                masks       = masks + " " + s.rs_final_regstd_mask
             else:
                 missing_data = missing_data + s.label + " "
 
@@ -988,10 +991,16 @@ class GroupAnalysis:
             os.chdir(curr_dir)
 
     # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
-    def tbss_clusterize_results_by_atlas(self, tbss_result_image, tracts_labels, tracts_dir, out_folder,
-                                         log_file="log.txt", thr=0.95):
+    def tbss_clusterize_results_by_atlas(self, tbss_result_image, out_folder,
+                                         log_file="log.txt", tracts_labels=None, tracts_dir=None, thr=0.95):
 
         try:
+            if tracts_labels is None:
+                tracts_labels = self._global.dti_xtract_labels
+
+            if tracts_dir is None:
+                tracts_dir = self._global.dti_xtract_dir
+
             log = os.path.join(out_folder, log_file)
             tot_voxels = 0
             classified_tracts = []
@@ -999,25 +1008,23 @@ class GroupAnalysis:
 
             # ------------------------------------------------
             # threshold tbss input, copy to out_folder, get number of voxels
-            name = os.path.basename(tbss_result_image)
-            thr_input = os.path.join(out_folder, name)
+            name            = os.path.basename(tbss_result_image)
+            thr_input       = os.path.join(out_folder, name)
             rrun("fslmaths " + tbss_result_image + " -thr " + str(thr) + " -bin " + thr_input)
-            original_voxels = rrun("fslstats " + thr_input + " -V").strip().split(" ")[0]
+            original_voxels = get_image_nvoxels(thr_input)
 
             out_str = ""
             for tract in tracts_labels:
-                tr_img = os.path.join(tracts_dir, "FMRIB58_FA-skeleton_1mm_" + tract + "_mask")
-
-                tract_tot_voxels = int(rrun("fslstats " + tr_img + " -V").strip().split(" ")[0])
-
-                out_img = os.path.join(out_folder, "sk_" + tract)
+                tr_img              = os.path.join(tracts_dir, "FMRIB58_FA-skeleton_1mm_" + tract + "_mask")
+                tract_tot_voxels    = get_image_nvoxels(tr_img)
+                out_img             = os.path.join(out_folder, "sk_" + tract)
                 rrun("fslmaths " + thr_input + " -mas " + tr_img + " " + out_img)
 
-                res = rrun("fslstats " + out_img + " -V").strip().split(" ")[0]
-                if int(res) > 0:
-                    tot_voxels = tot_voxels + int(res)
-                    out_str = out_str + tract + "\t" + res + " out of " + str(tract_tot_voxels) + " voxels = " + str(
-                        round((int(res) * 100) / tract_tot_voxels, 2)) + " %" + "\n"
+                res                 = get_image_nvoxels(out_img)
+                if res > 0:
+                    tot_voxels = tot_voxels + res
+                    out_str = out_str + tract + "\t" + str(res) + " out of " + str(tract_tot_voxels) + " voxels = " + str(
+                        round((res * 100) / tract_tot_voxels, 2)) + " %" + "\n"
                     classified_tracts.append(out_img)
                 else:
                     imrm(out_img)
@@ -1030,54 +1037,54 @@ class GroupAnalysis:
                 cmd_str = cmd_str + " -sub " + img + " -bin "
             cmd_str = cmd_str + unclass_img
             rrun(cmd_str)
-            unclass_vox = rrun("fslstats " + unclass_img + " -V").strip().split(" ")[0]
+            unclass_vox = get_image_nvoxels(unclass_img)
 
             # ------------------------------------------------
             # write log file
-            out_str = out_str + "\n" + "\n" + "tot voxels = " + str(tot_voxels) + " out of " + str(
-                original_voxels) + "\n"
+            out_str = out_str + "\n" + "\n" + "tot voxels = " + str(tot_voxels) + " out of " + str(original_voxels) + "\n"
             out_str = out_str + "unclassified image has " + str(unclass_vox)
             with open(log, 'w', encoding='utf-8') as f:
                 f.write(out_str)
 
         except Exception as e:
-            e
+            print(e)
 
     # clust_res_dir: output folder of tbss's results clustering
     # datas is a tuple of two elements containing the list of values and subj_labels
-    def tbss_plot_clusterized_folder(self, in_clust_res_dir, datas, data_label, tbss_folder, modality="FA",
-                                     subj_img_postfix="_FA_FA_to_target", ofn="res_"):
+    # returns tracts_data
+    def tbss_summarize_clusterized_folder(self, in_clust_res_dir, datas, data_label, tbss_folder, modality="FA",
+                                          subj_img_postfix="_FA_FA_to_target", ofn="scatter_tracts_", doplot=False):
 
         subjects_images = os.path.join(tbss_folder, modality)  # folder containing tbss subjects' folder of that modality
-        results_folder = os.path.join(tbss_folder, "results")
+        results_folder  = os.path.join(tbss_folder, "results")
         os.makedirs(results_folder, exist_ok=True)
 
-        tracts_labels = []
+        tracts_labels   = []
         # compose header
         str_data = "subj\t" + data_label
         for entry in os.scandir(in_clust_res_dir):
             if not entry.name.startswith('.') and not entry.is_dir():
                 if entry.name.startswith("sk_"):
-                    lab = remove_ext(entry.name[3:])
+                    lab         = remove_ext(entry.name[3:])
                     tracts_labels.append(lab)
-                    str_data = str_data + "\t" + lab
+                    str_data    = str_data + "\t" + lab
         str_data = str_data + "\n"
 
         tracts_data = []
         [tracts_data.append([]) for t in range(len(tracts_labels))]
         nsubj = len(datas[0])
         for i in range(nsubj):
-            subj_label = datas[1][i]
-            subj_img = os.path.join(subjects_images, subj_label + "-dti_fit" + subj_img_postfix)
+            subj_label      = datas[1][i]
+            subj_img        = os.path.join(subjects_images, subj_label + "-dti_fit" + subj_img_postfix)
             subj_img_masked = subj_img + "_masked"
-            n_tracts = 0
-            str_data = str_data + subj_label + "\t" + str(datas[0][i])
+            n_tracts        = 0
+            str_data        = str_data + subj_label + "\t" + str(datas[0][i])
 
             for entry in os.scandir(in_clust_res_dir):
                 if not entry.name.startswith('.') and not entry.is_dir():
                     if entry.name.startswith("sk_"):
-                        rrun("fslmaths " + subj_img + " -mas " + entry.path + " " + subj_img_masked)
-                        val = float(rrun("fslstats " + subj_img_masked + " -M").strip())
+                        mask_image(subj_img, entry.path, subj_img_masked)
+                        val = get_image_mean(subj_img_masked)
                         imrm([subj_img_masked])
 
                         str_data = str_data + "\t" + str(val)
@@ -1085,17 +1092,23 @@ class GroupAnalysis:
                         n_tracts = n_tracts + 1
             str_data = str_data + "\n"
 
-        # for t in range(len(tracts_labels)):
-        #     fig_file = os.path.join(results_folder, tracts_labels[t] + "_" + data_label + ".png")
-        #     plot_data.scatter_plot_dataserie(datas[0], tracts_data[t], fig_file)
+        if doplot is True:
+            for t in range(len(tracts_labels)):
+                fig_file = os.path.join(results_folder, tracts_labels[t] + "_" + data_label + ".png")
+                plot_data.scatter_plot_dataserie(datas[0], tracts_data[t], fig_file)
 
-        res_file = os.path.join(results_folder, "scatter_tracts_" + modality + "_" + data_label + ".dat")
+        res_file = os.path.join(results_folder, ofn + modality + "_" + data_label + ".dat")
 
         with open(res_file, "w") as f:
             f.write(str_data)
 
+        return tracts_data
+
     # create a new tbss analysis folder (only stats one), filtering an existing analysis folder
-    def create_analysis_folder_from_existing(self, src_folder, new_folder, subj_labels_list, modalities=["FA", "MD", "L1", "L23"]):
+    def create_analysis_folder_from_existing(self, src_folder, new_folder, subj_labels_list, modalities=None):
+
+        if modalities is None:
+            modalities = ["FA", "MD", "L1", "L23"]
 
         # create new folder
         new_stats_folder = os.path.join(new_folder, "stats")

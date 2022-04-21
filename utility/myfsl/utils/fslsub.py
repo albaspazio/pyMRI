@@ -99,7 +99,7 @@ def submit(command,
     :return:             tuple of submitted job ids
     """
 
-    from pymri.fsl.utils.run import runfsl
+    from utility.myfsl.utils.run import runfsl
 
     base_cmd = ['fsl_sub']
 

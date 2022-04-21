@@ -5,10 +5,11 @@ from shutil import copyfile, rmtree
 from numpy import arange, concatenate, array
 
 from Global import Global
+from data.utilities import list2spm_text_column
 from group.Stats import Stats
-from myfsl.utils.run import rrun
-from utility import import_data_file
-from utility.images import imtest, imcp, is_image, remove_ext, imcp_notexisting, immv
+from utility.myfsl.utils.run import rrun
+from data import utilities
+from utility.images.images import imtest, imcp, is_image, remove_ext, imcp_notexisting, immv
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
 from utility.utilities import sed_inplace, gunzip, compress, copytree, get_filename
 
@@ -277,7 +278,7 @@ class SubjectEpi:
     def ica_fix(self, epi_label):
 
         if epi_label == "rs":
-            rs_icafix_dir       = self.subject.rs_icafix_dir
+            rs_icafix_dir       = self.subject.rs_fix_dir
             regstd_aroma_dir    = self.subject.rs_regstd_aroma_dir
 
         elif epi_label.startswith("fmri"):
@@ -679,18 +680,18 @@ class SubjectEpi:
             sed_inplace(out_batch_job, '<VOLS'+ str(s+1) + '>', epi_all_volumes)
             sed_inplace(out_batch_job, '<MOTION_PARAMS'+ str(s+1) + '>', rp_filenames[s])
 
-        sed_inplace(out_batch_job, '<COND11_ONSETS>', import_data_file.list2spm_text_column(conditions_lists[0][0][:]))
-        sed_inplace(out_batch_job, '<COND12_ONSETS>', import_data_file.list2spm_text_column(conditions_lists[0][1][:]))
+        sed_inplace(out_batch_job, '<COND11_ONSETS>', list2spm_text_column(conditions_lists[0][0][:]))
+        sed_inplace(out_batch_job, '<COND12_ONSETS>', list2spm_text_column(conditions_lists[0][1][:]))
 
-        sed_inplace(out_batch_job, '<COND21_ONSETS>', import_data_file.list2spm_text_column(conditions_lists[1][0][:]))
-        sed_inplace(out_batch_job, '<COND22_ONSETS>', import_data_file.list2spm_text_column(conditions_lists[1][1][:]))
+        sed_inplace(out_batch_job, '<COND21_ONSETS>', list2spm_text_column(conditions_lists[1][0][:]))
+        sed_inplace(out_batch_job, '<COND22_ONSETS>', list2spm_text_column(conditions_lists[1][1][:]))
 
-        sed_inplace(out_batch_job, '<COND31_ONSETS>', import_data_file.list2spm_text_column(conditions_lists[2][0][:]))
-        sed_inplace(out_batch_job, '<COND32_ONSETS>', import_data_file.list2spm_text_column(conditions_lists[2][1][:]))
+        sed_inplace(out_batch_job, '<COND31_ONSETS>', list2spm_text_column(conditions_lists[2][0][:]))
+        sed_inplace(out_batch_job, '<COND32_ONSETS>', list2spm_text_column(conditions_lists[2][1][:]))
 
-        sed_inplace(out_batch_job, '<COND41_ONSETS>', import_data_file.list2spm_text_column(conditions_lists[3][0][:]))
+        sed_inplace(out_batch_job, '<COND41_ONSETS>', list2spm_text_column(conditions_lists[3][0][:]))
 
-        sed_inplace(out_batch_job, '<COND51_ONSETS>', import_data_file.list2spm_text_column(conditions_lists[4][0][:]))
+        sed_inplace(out_batch_job, '<COND51_ONSETS>', list2spm_text_column(conditions_lists[4][0][:]))
 
         # Stats.spm_fmri_subj_stats_replace_conditions_string(out_batch_job, conditions_lists)
 

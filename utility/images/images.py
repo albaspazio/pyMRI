@@ -7,7 +7,7 @@ import shutil
 import xml.etree.ElementTree as ET
 from shutil import copyfile, move
 
-from myfsl.utils.run import rrun
+from utility.myfsl.utils.run import rrun
 from utility.utilities import fillnumber2fourdigits
 
 IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".img", ".nii", ".mgz"]
@@ -204,6 +204,21 @@ def getnvol(image):
     return int(rrun("fslnvols " + image).split('\n')[0])
 
 
+def get_image_nvoxels(image):
+    return int(rrun("fslstats " + image + " -V").strip().split(" ")[0])
+
+
+def get_image_volume(image):
+    return int(rrun("fslstats " + image + " -V").strip().split(" ")[1])
+
+
+def get_image_mean(image):
+    return float(rrun("fslstats " + image + " -M").strip())
+
+
+def mask_image(src, mask, out):
+    rrun("fslmaths " + src + " -mas " + mask + " " + out)
+
 def immerge(out_img, premerge_labels=None):
     seq_string = " "
 
@@ -337,7 +352,7 @@ def mask_tbss_skeleton_volumes_atlas(skel_templ, atlas_img, atlas_json):
 
     cnt = 1
     for roi in datas["data"]:
-        tempmask = os.path.join(out_dir, roi["lab"] + "_mask")
+        tempmask  = os.path.join(out_dir, roi["lab"] + "_mask")
         finalmask = os.path.join(out_dir, temp_name + "_" + roi["lab"] + "_mask")
 
         rrun("fslmaths " + atlas_img + " -thr " + str(cnt) + " -uthr " + str(cnt) + " -bin " + tempmask)

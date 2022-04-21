@@ -82,18 +82,6 @@ def reorder_list(list, neworder):
     return [list[i] for i in neworder]
 
 
-# transform properly a string containing a Int/Float/String
-def typeUnknown(s):
-    try:
-        ns = float(s)
-        if ns == round(ns):
-            return int(s)
-        else:
-            return ns
-    except ValueError:
-        return s
-
-
 def get_filename(fullpath):
     return os.path.splitext(os.path.basename(fullpath))[0]
 
@@ -134,3 +122,18 @@ def fillnumber2fourdigits(num):
         str_num = str(num)
 
     return str_num
+
+# if is a string => cast to int or float (when appropriate) or keep it string
+# if not         => don't do anything, return input param unchanged
+def string2num(string):
+    try:
+        if isinstance(string, str) is False:
+            return string
+
+        fl_string = float(string)
+        if round(fl_string) == fl_string:
+            return int(fl_string)
+        else:
+            return fl_string
+    except ValueError:
+        return string
