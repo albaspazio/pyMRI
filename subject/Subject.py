@@ -887,4 +887,49 @@ class Subject:
     def unzip_data(self, src_zip, dest_dir, replace=True):
         extractall_zip(src_zip, dest_dir, replace)
         pass
+
     # ==================================================================================================================================================
+    def can_run_analysis(self, analysis_type, analysis_params=None):
+
+        # T1
+        if analysis_type == "vbm_spm":
+            return imtest(os.path.join(self.t1_spm_dir, "rc1T1_" + self.label + ".nii")) and \
+                   imtest(os.path.join(self.t1_spm_dir, "rc2T1_" + self.label + ".nii")) and \
+                   imtest(os.path.join(self.t1_spm_dir, "c1T1_" + self.label + ".nii"))
+
+        # elif analysis_type == "vbm_fsl":
+        elif analysis_type == "ct":
+            return imtest(self.t1_cat_resampled_surface)
+        # DTI
+        elif analysis_type == "tbss":
+            if analysis_params is None:
+                analysis_params = ["FA", "MD", "L1", "L23"]
+
+            for ap in analysis_params:
+                src_img = os.path.join(self.dti_dir, self.dti_fit_label + "_" + ap)
+                if imtest(src_img) is False:
+                    return False
+            return True
+
+        elif analysis_type == "bedpost":
+            src_img = os.path.join(self.dti_dir, self.dti_ec_image_label)
+            return imtest(src_img) and os.path.exists(self.dti_rotated_bvec)
+
+        elif analysis_type == "xtract":
+            if analysis_params is None:
+                analysis_params = "bedpostx"
+
+            src_img = os.path.join(self.dti_dir, analysis_params, self.dti_bedpostx_mean_S0_label)
+            return imtest(src_img)
+
+        # RESTING
+        elif analysis_type == "melodic":
+            return imtest(self.rs_final_regstd_image) and imtest(self.rs_final_regstd_mask) and imtest(self.rs_final_regstd_bgimage)
+
+        elif analysis_type == "sbfc":
+            src_imgA = os.path.join(self.rs_dir, self.rs_post_nuisance_image_label)
+            src_imgB = os.path.join(self.rs_dir, self.rs_post_nuisance_melodic_image_label)
+            return imtest(src_imgA) or imtest(src_imgB
+                                              )
+        # elif analysis_type == "fmri":
+

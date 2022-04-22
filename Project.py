@@ -64,6 +64,7 @@ class Project:
         with open(os.path.join(self.script_dir, "subjects_lists.json")) as json_file:
             self.subjects_lists = json.load(json_file)
 
+        # load subjects data if possible
         self.data_file = ""
         self.data = {}
         # load data file if exist
@@ -74,6 +75,7 @@ class Project:
 
         if self.data_file != "":
             self.data = SubjectsDataDict(self.data_file)
+
 
     # loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
     # returns this list
@@ -96,7 +98,6 @@ class Project:
                     return subj.set_properties(sess, rollback=True)  # it returns a deepcopy of requested session
         return None
 
-
     # ==================================================================================================================
     #region GET SUBJECTS' LABELS or INSTANCES
     # ==================================================================================================================
@@ -108,6 +109,8 @@ class Project:
                 if len(subj_labels) == 0:
                     print("ERROR in validate_subjects, given grouplabel_or_subjlist is None and no group is loaded....exiting")
                     return []
+                else:
+                    return subj_labels
             elif isinstance(grouplabel_or_subjlist, str):  # must be a group_label and have its associated subjects list
                 return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, sess_id)
 
@@ -178,6 +181,25 @@ class Project:
                 incomplete_subjects.append({"label": subj.label, "images": missing})
 
         return incomplete_subjects
+
+    # check whether all subjects defined by given group_or_subjlabels have the necessary files to perform given analysis
+    # allowed analysis are: vbm_fsl, vbm_spm, ct, tbss, bedpost, xtract, melodic, sbfc, fmri
+    # returns a string with the subjects not ready
+    def can_run_analysis(self, analysis_type, analysis_params=None, group_or_subjlabels=None, sess_id=1):
+
+        invalid_subjs = ""
+        valid_subjs = self.get_subjects(group_or_subjlabels, sess_id)
+        for subj in valid_subjs:
+            if subj.can_run_analysis(analysis_type, analysis_params) is False:
+                invalid_subjs = invalid_subjs + subj.label + ", "
+
+        if len(invalid_subjs) > 0:
+            print("ERROR.... the following subjects prevent the completion of the " + analysis_type + " analysis: " + invalid_subjs)
+        else:
+            print("OK....... " + analysis_type + " analysis can be run")
+
+        return invalid_subjs
+
 
     def check_all_coregistration(self, outdir, subjs_labels=None, _from=None, _to=None, num_cpu=1, overwrite=False):
 
@@ -294,9 +316,9 @@ class Project:
     # ==================================================================================================================
     # returns a matrix (values x subjects) containing values of the requested columns of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_columns(self, columns_list, group_label, sort=False, data=None):
+    def get_filtered_columns(self, columns_list, grouplabel_or_subjlist, sort=False, data=None, sess_id=1):
 
-        subj_list = self.get_subjects_labels(group_label)
+        subj_list  = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
         valid_data = self.validate_data(data)
         if valid_data is not None:
             return valid_data.get_filtered_columns(columns_list, subj_list, sort)
@@ -307,10 +329,10 @@ class Project:
     # - [values]
     # - [labels]
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_column(self, column, group_label, sort=False, data=None):
+    def get_filtered_column(self, column, grouplabel_or_subjlist, sort=False, data=None, sess_id=1):
 
-        subj_list = self.get_subjects_labels(group_label)
-        valid_data = self.validate_data(data)
+        subj_list   = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
+        valid_data  = self.validate_data(data)
         if valid_data is not None:
             return valid_data.get_filtered_column(column, subj_list, sort)
         else:
@@ -318,10 +340,10 @@ class Project:
 
     # returns a vector (nsubj) containing values of the requested column of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_column_by_value(self, column, value, operation="=", group_label=None, sort=False, data=None):
+    def get_filtered_column_by_value(self, column, value, operation="=", grouplabel_or_subjlist=None, sort=False, data=None, sess_id=1):
 
-        subj_list = self.get_subjects_labels(group_label)
-        valid_data = self.validate_data(data)
+        subj_list   = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
+        valid_data  = self.validate_data(data)
         if valid_data is not None:
             return valid_data.get_filtered_column_by_value(column, value, "=", subj_list, sort)
         else:
@@ -330,11 +352,11 @@ class Project:
     # returns a vector (nsubj) containing values of the requested column of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
     # def get_filtered_column_by_value(self, column, value, operation="=", subjects_label=None, data=None):
-    def get_filtered_subj_dict_column_within_values(self, column, value1, value2, operation="<>", group_label=None,
-                                                    sort=False, data=None):
+    def get_filtered_subj_dict_column_within_values(self, column, value1, value2, operation="<>", grouplabel_or_subjlist=None,
+                                                    sort=False, data=None, sess_id=1):
 
-        subj_list = self.get_subjects_labels(group_label)
-        valid_data = self.validate_data(data)
+        subj_list   = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
+        valid_data  = self.validate_data(data)
         if valid_data is not None:
             return valid_data.get_filtered_column_within_values(column, value1, value2, operation, subj_list, sort)
         else:
@@ -348,8 +370,7 @@ class Project:
             if bool(self.data):
                 return self.data
             else:
-                print("ERROR in get_filtered_columns: given data param (" + str(
-                    data) + ") is neither a dict nor a string")
+                print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is neither a dict nor a string")
                 return None
         else:
             if isinstance(data, SubjectsDataDict):
@@ -358,12 +379,10 @@ class Project:
                 if os.path.exists(data) is True:
                     return SubjectsDataDict(data)
                 else:
-                    print("ERROR in get_filtered_columns: given data param (" + str(
-                        data) + ") is string that does not point to a valid file to load")
+                    print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is string that does not point to a valid file to load")
                     return None
             else:
-                print("ERROR in get_filtered_columns: given data param (" + str(
-                    data) + ") is neither a dict nor a string")
+                print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is neither a dict nor a string")
                 return None
 
     #endregion ==================================================================================================================
@@ -424,7 +443,7 @@ class Project:
             return
 
         # check number of NECESSARY (without a default value) method params
-        subj = self.get_subject_by_label(group_or_subjlabels[0])    # subj appear unused, but is instead used in the eval()
+        subj = self.get_subject_by_label(valid_subjlabels[0])    # subj appear unused, but is instead used in the eval()
         if method_type == "":
             method = eval("subj." + method_name)
         else:

@@ -36,20 +36,11 @@ class GroupAnalysis:
     #                   '/media/data/MRI/projects/ELA/subjects/0503/s1/mpr/rc20503-t1.nii,1'}
     def create_vbm_spm_template_normalize(self, name, subjs, spm_template_name="spm_dartel_createtemplate_normalize"):
 
-        self.subjects_list = subjs
-        self.working_dir = os.path.join(self.project.vbm_dir, name)
+        self.subjects_list  = subjs
+        self.working_dir    = os.path.join(self.project.vbm_dir, name)
 
-        # set dirs
-        spm_script_dir = os.path.join(self.project.script_dir, "mpr", "spm")
-        out_batch_dir = os.path.join(spm_script_dir, "batch")
+        out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
 
-        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-        in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
-
-        out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + ".m")
-        out_batch_job = os.path.join(out_batch_dir, spm_template_name + "_job.m")
-
-        os.makedirs(out_batch_dir, exist_ok=True)
         # =======================================================
         # START !!!!
         # =======================================================
@@ -61,28 +52,20 @@ class GroupAnalysis:
         for subj in self.subjects_list:
             T1_darteled_images_1 = T1_darteled_images_1 + "\'" + os.path.join(subj.t1_spm_dir,"rc1T1_" + subj.label + ".nii") + ",1\'\r"
             T1_darteled_images_2 = T1_darteled_images_2 + "\'" + os.path.join(subj.t1_spm_dir,"rc2T1_" + subj.label + ".nii") + ",1\'\r"
-            T1_images_1 = T1_images_1 + "\'" + os.path.join(subj.t1_spm_dir, "c1T1_" + subj.label + ".nii") + "\'\r"
+            T1_images_1          = T1_images_1 + "\'" + os.path.join(subj.t1_spm_dir, "c1T1_" + subj.label + ".nii") + "\'\r"
 
-        T1_darteled_images_1 = T1_darteled_images_1 + "\r}"
-        T1_darteled_images_2 = T1_darteled_images_2 + "\r}"
-        T1_images_1 = T1_images_1 + "\r}"
+        T1_darteled_images_1     = T1_darteled_images_1 + "\r}"
+        T1_darteled_images_2     = T1_darteled_images_2 + "\r}"
+        T1_images_1              = T1_images_1 + "\r}"
 
-        copyfile(in_batch_job, out_batch_job)
         sed_inplace(out_batch_job, "<RC1_IMAGES>", T1_darteled_images_1)
         sed_inplace(out_batch_job, "<RC2_IMAGES>", T1_darteled_images_2)
         sed_inplace(out_batch_job, "<C1_IMAGES>", T1_images_1)
         sed_inplace(out_batch_job, "<TEMPLATE_NAME>", name)
         sed_inplace(out_batch_job, "<TEMPLATE_ROOT_DIR>", self.project.vbm_dir)
 
-        copyfile(in_batch_start, out_batch_start)
-        sed_inplace(out_batch_start, "X", "1")
-        sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
-
-        eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir])
-        # eng = matlab.engine.start_matlab()
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir])
         print("running SPM batch template: " + name)
-        # eval("eng." + os.path.basename(os.path.splitext(out_batch_start)[0]) + "(nargout=0)")
-        # eng.quit()
 
         affine_trasf_mat = os.path.join(self.subjects_list[0].t1_spm_dir, name + "_6_2mni.mat")
         move(affine_trasf_mat, os.path.join(self.project.vbm_dir, name, "flowfields", name + "_6_2mni.mat"))

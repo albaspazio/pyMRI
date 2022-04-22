@@ -10,7 +10,7 @@ from shutil import copyfile, move
 from utility.myfsl.utils.run import rrun
 from utility.utilities import fillnumber2fourdigits
 
-IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".img", ".nii", ".mgz"]
+IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".img", ".nii", ".mgz", ".gii"]
 
 
 # ===============================================================================================================================
@@ -69,6 +69,9 @@ def imtest(image_path):
         return True
 
     if os.path.isfile(fileparts[0] + ".mnc") or os.path.isfile(fileparts[0] + ".mnc.gz"):
+        return True
+
+    if os.path.isfile(fileparts[0] + ".gii"):
         return True
 
     if not os.path.isfile(fileparts[0] + ".hdr") and not os.path.isfile(fileparts[0] + ".hdr.gz"):
