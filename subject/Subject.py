@@ -289,6 +289,9 @@ class Subject:
     # ==================================================================================================
     # GENERAL
     # ==================================================================================================
+    def exist(self):
+        return os.path.exists(self.dir)
+
     def create_file_system(self):
 
         os.makedirs(os.path.join(self.dir, "mpr"), exist_ok=True)
@@ -308,7 +311,7 @@ class Subject:
 
         for path, subdirs, files in os.walk(self.dir):
             for name in files:
-                if (self.label in name):
+                if self.label in name:
                     file_path = os.path.join(path, name)
                     new_name = os.path.join(path, name.replace(self.label, new_label))
                     os.rename(file_path, new_name)

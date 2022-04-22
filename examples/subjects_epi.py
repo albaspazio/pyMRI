@@ -64,4 +64,4 @@ if __name__ == "__main__":
     # FIND THE EPI VOLUME CLOSEST TO PEPOLAR VOLUME AND USE IT TO CORRECT EPI DISTORSION
     # ---------------------------------------------------------------------------------------------------------------------
     subjects = project.load_subjects(group_label, SESS_ID)
-    project.run_subjects_methods("epi_pepolar_correction", [], project.get_loaded_subjects_labels(), ncore=num_cpu)
+    # project.run_subjects_methods("epi_pepolar_correction", [], ncore=num_cpu, group_or_subjlabels=project.subjects_labels)

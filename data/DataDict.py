@@ -45,12 +45,12 @@ class DataDict:
         return [d[colname] for d in self.data]
 
 
-    def get_filtered_dict_column(self, colname, filt_col="", filter=None):
+    def get_filtered_dict_column(self, colname, filt_col="", filt=None):
         if filt_col != "":
             res = []
-            if filter is not None and isinstance(filter, list):
+            if filt is not None and isinstance(filt, list):
                 for d in self.data:
-                    if d[filt_col] in filter:
+                    if d[filt_col] in filt:
                         res.append(d[colname])
                 return res
             else:

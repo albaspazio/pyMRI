@@ -51,8 +51,9 @@ class Project:
 
         self._global = globaldata
 
-        self.subjects = []
-        self.nsubj = -1
+        self.subjects           = []
+        self.subjects_labels    = []
+        self.nsubj              = 0
 
         self.hasT1 = False
         self.hasRS = False
@@ -74,57 +75,16 @@ class Project:
         if self.data_file != "":
             self.data = SubjectsDataDict(self.data_file)
 
-    # ==================================================================================================================
-    # GET SUBJECTS' INSTANCES
-    # ==================================================================================================================
-    # loads a list of subjects instances in self.subjects
+    # loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
     # returns this list
-    def load_subjects(self, group_label, sess_id=1):
+    def load_subjects(self, group_or_subjlabels, sess_id=1):
 
-        self.subjects = self.get_subjects(group_label, sess_id)
-        self.nsubj = len(self.subjects)
+        self.subjects           = self.get_subjects(group_or_subjlabels, sess_id)
+
+        self.subjects_labels    = [subj.label for subj in self.subjects]
+        self.nsubj              = len(self.subjects)
         return self.subjects
 
-    # create and returns a list of subjects instances
-    def get_subjects(self, group_label, sess_id=1):
-
-        subjects = self.get_subjects_labels(group_label)
-        subjs = []
-        for subj_lab in subjects:
-            subjs.append(Subject(subj_lab, sess_id, self))
-        return subjs
-
-    # ==================================================================================================================
-    # GET SUBJECTS' LABELS
-    # ==================================================================================================================
-    # retrieve a specific list of subjects' labels
-    def get_subjects_labels(self, group_label=None):
-        try:
-            if group_label is None:
-                return self.get_loaded_subjects_labels()
-            else:
-                if isinstance(group_label, list):
-                    return group_label
-                else:
-                    for grp in self.subjects_lists["subjects"]:
-                        if grp["label"] == group_label:
-                            return grp["list"]
-                    print("ERROR in get_subjects_labels, given group_label does not exist in subjects_lists")
-                    return None
-
-
-        except Exception as e:
-            print("Error in get_subjectlabels")
-            return []
-
-    # get the list of loaded subjects' labels
-    def get_loaded_subjects_labels(self):
-        subjs = []
-        for subj in self.subjects:
-            subjs.append(subj.label)
-        return subjs
-
-    # ---------------------------------------------------------
     # get a deepcopy of subject with given label
     def get_subject_by_label(self, subj_label, sess=1):
 
@@ -136,16 +96,83 @@ class Project:
                     return subj.set_properties(sess, rollback=True)  # it returns a deepcopy of requested session
         return None
 
-    def get_subjects_num(self):
-        return len(self.subjects)
 
     # ==================================================================================================================
-    # CHECK/PREPARE IMAGES
+    #region GET SUBJECTS' LABELS or INSTANCES
+    # ==================================================================================================================
+    # GROUP_LABEL or SUBLABELS LIST => VALID SUBLABELS LIST
+    def get_subjects_labels(self, grouplabel_or_subjlist=None, sess_id=1):
+        try:
+            if grouplabel_or_subjlist is None:
+                subj_labels = self.subjects_labels
+                if len(subj_labels) == 0:
+                    print("ERROR in validate_subjects, given grouplabel_or_subjlist is None and no group is loaded....exiting")
+                    return []
+            elif isinstance(grouplabel_or_subjlist, str):  # must be a group_label and have its associated subjects list
+                return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, sess_id)
+
+            elif isinstance(grouplabel_or_subjlist, list):
+                if isinstance(grouplabel_or_subjlist[0], str) is False:
+                    print("ERROR in get_subjects_labels: the given grouplabel_or_subjlist param is not a string list, first value is: " + str(grouplabel_or_subjlist[0]))
+                    return []
+                else:
+                    return self.__get_valid_subjlabels(grouplabel_or_subjlist, sess_id)
+            else:
+                print("ERROR in get_subjects_labels: the given grouplabel_or_subjlist param is not a valid param (None, string  or string list), is: " + str(grouplabel_or_subjlist))
+                return []
+
+        except Exception as e:
+            print("Error in get_subjectlabels, " + str(e))
+            return []
+
+    # GROUP_LABEL or SUBLABELS LIST => VALID SUBJECT INSTANCES LIST
+    # create and returns a list of valid subjects instances given a grouplabel or a subjlabels list
+    def get_subjects(self, group_or_subjlabels, sess_id=1):
+
+        valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, sess_id)
+        return self.__get_subjects_from_labels(valid_subj_labels, sess_id)
+    #endregion
+
+    # =========================================================================
+    #region PRIVATE VALIDATION ROUTINES
+    # =========================================================================
+
+    # GROUP_LAB => VALID SUBJLABELS LIST or []
+    # check whether all subjects belonging to the given group_label are valid
+    # returns such subject list if all valid
+    def __get_valid_subjlabels_from_group(self, group_label, sess_id=1):
+        for grp in self.subjects_lists["subjects"]:
+            if grp["label"] == group_label:
+                return self.__get_valid_subjlabels(grp["list"], sess_id)
+        print("ERROR in __get_valid_subjlabels_from_group, given group_label does not exist in subjects_lists")
+        return []
+
+    # SUBJLABELS LIST => VALID SUBJLABELS LIST or []
+    # check whether all subjects listed in subj_labels are valid
+    # returns given list if all valid
+    def __get_valid_subjlabels(self, subj_labels, sess_id=1):
+        for lab in subj_labels:
+            if Subject(lab, sess_id, self).exist() is False:
+                print("ERROR in __get_valid_subjlabels, the subject " + lab + " , present in given subj_labels (" + subj_labels + "), does not exist")
+                return []
+        return subj_labels
+
+    # SUBJLABELS LIST => VALID SUBJS INSTANCES or []
+    # create and returns a list of valid subjects instances given a subjlabels list
+    def __get_subjects_from_labels(self, subj_labels, sess_id=1):
+        if len(self.__get_valid_subjlabels(subj_labels)) == 0:
+            return []
+        return [Subject(subj_lab, sess_id, self) for subj_lab in subj_labels]
+
+    #endregion
+
+    # ==================================================================================================================
+    #region CHECK/PREPARE IMAGES
     # ==================================================================================================================
     def check_subjects_original_images(self):
 
         incomplete_subjects = []
-        for subj in self.subjects["subjects"]:
+        for subj in self.subjects:
             missing = subj.check_images(self.hasT1, self.hasRS, self.hasDTI, self.hasT2)
             if len(missing) > 0:
                 incomplete_subjects.append({"label": subj.label, "images": missing})
@@ -163,7 +190,7 @@ class Project:
         if _to is None:
             _to = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]
 
-        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir, "_from":_from, "_to":_to, "overwrite":overwrite}], ncore=num_cpu, subjs_labels=subjs_labels)
+        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir, "_from":_from, "_to":_to, "overwrite":overwrite}], ncore=num_cpu, group_or_subjlabels=subjs_labels)
 
         if "hr" in _to:
             l_t1 = os.path.join(outdir, "lin", "hr");            nl_t1 = os.path.join(outdir, "nlin", "hr")
@@ -222,7 +249,7 @@ class Project:
 
         os.makedirs(outdir, exist_ok=True)
 
-        self.run_subjects_methods("mpr", "compare_brain_extraction", [{"tempdir":outdir}], ncore=num_cpu, subj_labels=list_subj_label)
+        self.run_subjects_methods("mpr", "compare_brain_extraction", [{"tempdir":outdir}], ncore=num_cpu, group_or_subjlabels=list_subj_label)
 
         for subj in subjs:
             subj.compare_brain_extraction(outdir)
@@ -260,15 +287,16 @@ class Project:
             compress(niifile, subj.t1_data + ".nii.gz")
             imrm([niifile])
             print("zipped " + subj.label + " mri")
+    #endregion
 
     # ==================================================================================================================
-    # GET SUBJECTS DATA
+    #region GET SUBJECTS DATA
     # ==================================================================================================================
     # returns a matrix (values x subjects) containing values of the requested columns of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_columns(self, columns_list, subjects_label, sort=False, data=None):
+    def get_filtered_columns(self, columns_list, group_label, sort=False, data=None):
 
-        subj_list = self.get_subjects_labels(subjects_label)
+        subj_list = self.get_subjects_labels(group_label)
         valid_data = self.validate_data(data)
         if valid_data is not None:
             return valid_data.get_filtered_columns(columns_list, subj_list, sort)
@@ -279,9 +307,9 @@ class Project:
     # - [values]
     # - [labels]
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_column(self, column, subjects_label, sort=False, data=None):
+    def get_filtered_column(self, column, group_label, sort=False, data=None):
 
-        subj_list = self.get_subjects_labels(subjects_label)
+        subj_list = self.get_subjects_labels(group_label)
         valid_data = self.validate_data(data)
         if valid_data is not None:
             return valid_data.get_filtered_column(column, subj_list, sort)
@@ -290,9 +318,9 @@ class Project:
 
     # returns a vector (nsubj) containing values of the requested column of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_column_by_value(self, column, value, operation="=", subjects_label=None, sort=False, data=None):
+    def get_filtered_column_by_value(self, column, value, operation="=", group_label=None, sort=False, data=None):
 
-        subj_list = self.get_subjects_labels(subjects_label)
+        subj_list = self.get_subjects_labels(group_label)
         valid_data = self.validate_data(data)
         if valid_data is not None:
             return valid_data.get_filtered_column_by_value(column, value, "=", subj_list, sort)
@@ -302,10 +330,10 @@ class Project:
     # returns a vector (nsubj) containing values of the requested column of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
     # def get_filtered_column_by_value(self, column, value, operation="=", subjects_label=None, data=None):
-    def get_filtered_subj_dict_column_within_values(self, column, value1, value2, operation="<>", subjects_label=None,
+    def get_filtered_subj_dict_column_within_values(self, column, value1, value2, operation="<>", group_label=None,
                                                     sort=False, data=None):
 
-        subj_list = self.get_subjects_labels(subjects_label)
+        subj_list = self.get_subjects_labels(group_label)
         valid_data = self.validate_data(data)
         if valid_data is not None:
             return valid_data.get_filtered_column_within_values(column, value1, value2, operation, subj_list, sort)
@@ -338,6 +366,11 @@ class Project:
                     data) + ") is neither a dict nor a string")
                 return None
 
+    #endregion ==================================================================================================================
+
+    # ==================================================================================================================
+    # GROUP ANALYSIS ACCESSORY
+    # ==================================================================================================================
     # returns out_batch_job
     def create_batch_files(self, templfile_noext, seq, prefix=""):
 
@@ -377,31 +410,21 @@ class Project:
     # ==================================================================================================================
     # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subj_labels) > 1 ...pass that same kwparams[0] to all subjects
     # if subj_labels is not given...use the loaded subjects
-    def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, subj_labels=None):
+    def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, group_or_subjlabels=None):
 
         if method_type != "" and method_type != "mpr" and method_type != "dti" and method_type != "epi" and method_type != "transform":
             print("ERROR in run_subjects_methods: the method type does not correspond to any of the allowed values (\"\", mpr, epi, dti, transform")
             return
 
-        # check subjects
-        if subj_labels is None:
-            subj_labels = self.get_loaded_subjects_labels()
-        else:
-            if isinstance(subj_labels, list) is False:
-                print("ERROR in run_subjects_methods: the given subj_labels param is not a list")
-                return
-            else:
-                if isinstance(subj_labels[0], str) is False:
-                    print("ERROR in run_subjects_methods: the given subj_labels param is not a string list, first value is: " + str(subj_labels[0]))
-                    return
-
-        nsubj = len(subj_labels)
+        print("run_subjects_methods: validating given subjects")
+        valid_subjlabels    = self.get_subjects_labels(group_or_subjlabels)
+        nsubj               = len(valid_subjlabels)
         if nsubj == 0:
             print("ERROR in run_subjects_methods: subject list is empty")
             return
 
         # check number of NECESSARY (without a default value) method params
-        subj = self.get_subject_by_label(subj_labels[0])    # subj appear unused, but is instead used in the eval()
+        subj = self.get_subject_by_label(group_or_subjlabels[0])    # subj appear unused, but is instead used in the eval()
         if method_type == "":
             method = eval("subj." + method_name)
         else:
@@ -446,7 +469,7 @@ class Project:
         # divide nprocesses across numblocks
         for proc in range(nprocesses):
             processes[curr_block].append(kwparams[proc])
-            subjects[curr_block].append(subj_labels[proc])
+            subjects[curr_block].append(valid_subjlabels[proc])
 
             proc4block = proc4block + 1
             if proc4block == ncore:

@@ -1038,18 +1038,18 @@ class SubjectTransforms:
         # --------------------------------------------------------------
         if self.subject.hasT1 is True:
             #
-            nl_t1 = os.path.join(nldir, "hr");
-            nl_std = os.path.join(nldir, self.subject.std_img_label);
+            nl_t1 = os.path.join(nldir, "hr")
+            nl_std = os.path.join(nldir, self.subject.std_img_label)
             nl_std4 = os.path.join(nldir, self.subject.std_img_label + "4")
-            l_t1 = os.path.join(ldir, "hr");
-            l_std = os.path.join(ldir, self.subject.std_img_label);
+            l_t1 = os.path.join(ldir, "hr")
+            l_std = os.path.join(ldir, self.subject.std_img_label)
             l_std4 = os.path.join(ldir, self.subject.std_img_label + "4")
 
-            os.makedirs(nl_t1, exist_ok=True);
-            os.makedirs(nl_std, exist_ok=True);
+            os.makedirs(nl_t1, exist_ok=True)
+            os.makedirs(nl_std, exist_ok=True)
             os.makedirs(nl_std4, exist_ok=True)
-            os.makedirs(l_t1, exist_ok=True);
-            os.makedirs(l_std, exist_ok=True);
+            os.makedirs(l_t1, exist_ok=True)
+            os.makedirs(l_std, exist_ok=True)
             os.makedirs(l_std4, exist_ok=True)
 
             imcp(self.subject.t1_data, os.path.join(nl_t1, self.subject.t1_image_label))

@@ -106,7 +106,7 @@ if __name__ == "__main__":
     subjects = project.load_subjects(group_label, SESS_ID)
     project.run_subjects_methods("cat_segment", [
         {"do_overwrite": True, "seg_templ": segmentation_template, "coreg_templ": coregistration_template,
-         "calc_surfaces": calc_surfaces, "num_proc": 1}], project.get_loaded_subjects_labels(), ncore=num_cpu)
+         "calc_surfaces": calc_surfaces, "num_proc": 1}], ncore=num_cpu, group_or_subjlabels=project.loaded_subjects)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM TISSUE VOLUMES
