@@ -1,56 +1,58 @@
 import inspect
 import os
-from utility import fsl_switcher, import_data_file
+
+from data.utilities import read_varlist_file
+from utility.myfsl import fsl_switcher
 
 
 class Global:
 
-
     CLEANUP_LVL_MIN = 0
     CLEANUP_LVL_MED = 1
     CLEANUP_LVL_HI  = 1
-
 
     def __init__(self, fsl_ver, ignore_warnings=True):
 
         fslswitch = fsl_switcher.FslSwitcher()
         print(fslswitch.activate_fsl_version(fsl_ver))
 
-        self.ignore_warnings                = ignore_warnings
+        self.ignore_warnings = ignore_warnings
         # --------------------------------------------------------------------------------------------------------
         # determine framework folder
-        filename                            = inspect.getframeinfo(inspect.currentframe()).filename
-        self.framework_dir                  = os.path.dirname(os.path.abspath(filename))
+        filename            = inspect.getframeinfo(inspect.currentframe()).filename
+        self.framework_dir  = os.path.dirname(os.path.abspath(filename))
         # --------------------------------------------------------------------------------------------------------
         # READ local.settings and fill corresponding variables
-        local_settings = os.path.join(self.framework_dir, "local.settings")
+        local_settings      = os.path.join(self.framework_dir, "local.settings")
 
         # check its presence
         if os.path.isfile(local_settings) is False:
-            raise Exception("ERROR. the file \"local.settings\" must be present in the framework root folder (" + self.framework_dir + ")\n" +
-                            "copy and rename the file " + os.path.join(self.framework_dir, "examples", "local.settings") + " there and modify its content according to your local settings")
+            raise Exception(
+                "ERROR. the file \"local.settings\" must be present in the framework root folder (" + self.framework_dir + ")\n" +
+                "copy and rename the file " + os.path.join(self.framework_dir, "examples", "local.settings") + " there and modify its content according to your local settings")
 
-        local_settings_data = import_data_file.read_varlist_file(local_settings)
+        local_settings_data         = read_varlist_file(local_settings)
 
-        self.spm_dir                        = local_settings_data["spm_dir"]
-        self.cat_version                    = local_settings_data["cat_version"]
-        self.marsbar                        = local_settings_data["marsbar"]
-        self.global_data_templates          = local_settings_data["global_data_templates"]
-        self.ica_aroma_script               = local_settings_data["ica_aroma_script"]
-        self.trackvis_bin                   = local_settings_data["trackvis_bin"]
-        self.autoptx_script_dir             = local_settings_data["autoptx_script_dir"]
+        self.spm_dir                = local_settings_data["spm_dir"]
+        self.cat_version            = local_settings_data["cat_version"]
+        self.marsbar                = local_settings_data["marsbar"]
+        self.global_data_templates  = local_settings_data["global_data_templates"]
+        self.ica_aroma_script       = local_settings_data["ica_aroma_script"]
+        self.trackvis_bin           = local_settings_data["trackvis_bin"]
+        self.autoptx_script_dir     = local_settings_data["autoptx_script_dir"]
 
-        self.cat_foldername                 = self.cat_version.split('.')[0]
+        self.cat_foldername         = self.cat_version.split('.')[0]
+        self.cat_dir                = os.path.join(self.spm_dir, "toolbox", self.cat_foldername)
 
         self.check_paths()
         # --------------------------------------------------------------------------------------------------------
 
-        self.data_templates_dir             = os.path.join(self.framework_dir, "templates")
-        self.spm_templates_dir              = os.path.join(self.framework_dir, "templates", "spm")
-        self.spm_functions_dir              = os.path.join(self.framework_dir, "external", "matlab")
-        self.ica_aroma_script               = os.path.join(self.framework_dir, "external", "ica_aroma", "ICA_AROMA.py")
+        self.data_templates_dir     = os.path.join(self.framework_dir, "templates")
+        self.spm_templates_dir      = os.path.join(self.framework_dir, "templates", "spm")
+        self.spm_functions_dir      = os.path.join(self.framework_dir, "external", "matlab")
+        self.ica_aroma_script       = os.path.join(self.framework_dir, "external", "ica_aroma", "ICA_AROMA.py")
 
-        self.fsl_dir                        = os.getenv('FSLDIR')
+        self.fsl_dir = os.getenv('FSLDIR')
         if self.fsl_dir is None:
             print("FSLDIR is undefined")
             return
@@ -87,9 +89,12 @@ class Global:
 
         self.std_aal_atlas_2mm              = os.path.join(self.global_data_templates, "mpr", "aal_262_standard")
 
-        self.dti_xtract_labels              = ["af_l", "af_r", "ar_l", "ar_r", "atr_l", "atr_r", "cbd_l", "cbd_r", "cbp_l", "cbp_r", "cbt_l", "cbt_r", "cst_l", "cst_r", "fa_l", "fa_r", "fma", "fmi", "fx_l", "fx_r", "ilf_l", "ilf_r", "ifo_l", "ifo_r", "mcp", "mdlf_l", "mdlf_r", "or_l", "or_r", "str_l", "str_r", "slf1_l", "slf1_r", "slf2_l", "slf2_r", "slf3_l", "slf3_r", "ac", "uf_l", "uf_r", "vof_l", "vof_r", "cc"]
+        self.dti_xtract_labels              = ["af_l", "af_r", "ar_l", "ar_r", "atr_l", "atr_r", "cbd_l", "cbd_r", "cbp_l", "cbp_r",
+                                              "cbt_l", "cbt_r", "cst_l", "cst_r", "fa_l", "fa_r", "fma", "fmi", "fx_l", "fx_r",
+                                              "ilf_l", "ilf_r", "ifo_l", "ifo_r", "mcp", "mdlf_l", "mdlf_r", "or_l", "or_r",
+                                              "str_l", "str_r", "slf1_l", "slf1_r", "slf2_l", "slf2_r", "slf3_l", "slf3_r", "ac",
+                                              "uf_l", "uf_r", "vof_l", "vof_r", "cc"]
         self.dti_xtract_dir                 = os.path.join(self.framework_dir, "templates", "images", "xtract", "mean_skeleton")
-
 
     def check_paths(self):
 
@@ -101,7 +106,7 @@ class Global:
                 print("Warning: SPM has not been specified")
 
         if len(self.cat_version) > 0:
-            if os.path.isdir(os.path.join(self.spm_dir, "toolbox", self.cat_foldername)) is False:
+            if os.path.isdir(self.cat_dir) is False:
                 raise Exception("Error: CAT is not present")
         else:
             if not self.ignore_warnings:
@@ -135,4 +140,3 @@ class Global:
         #     else:
         #         self.marsbar_dir        = os.path.join(self.spm_dir, "toolbox", "marsbar")
         #         self.marsbar_spm_dir    = os.path.join(self.spm_dir, "toolbox", "marsbar", "spm5")
-

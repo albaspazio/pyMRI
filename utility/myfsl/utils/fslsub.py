@@ -38,18 +38,17 @@ Example usage, building a short pipeline::
    func_to_cmd
 """
 
-
-from six import string_types, BytesIO
-import subprocess as sp
-import os.path as op
 import glob
-import time
+import importlib
+import logging
+import os.path as op
 import pickle
+import subprocess as sp
 import sys
 import tempfile
-import logging
-import importlib
+import time
 
+from six import string_types, BytesIO
 
 log = logging.getLogger(__name__)
 
@@ -100,21 +99,21 @@ def submit(command,
     :return:             tuple of submitted job ids
     """
 
-    from pymri.fsl.utils.run import runfsl
+    from utility.myfsl.utils.run import runfsl
 
     base_cmd = ['fsl_sub']
 
     for flag, variable_name in [
-            ('-T', 'minutes'),
-            ('-q', 'queue'),
-            ('-a', 'architecture'),
-            ('-p', 'priority'),
-            ('-M', 'email'),
-            ('-N', 'job_name'),
-            ('-R', 'ram'),
-            ('-l', 'logdir'),
-            ('-m', 'mail_options'),
-            ('-z', 'output')]:
+        ('-T', 'minutes'),
+        ('-q', 'queue'),
+        ('-a', 'architecture'),
+        ('-p', 'priority'),
+        ('-M', 'email'),
+        ('-N', 'job_name'),
+        ('-R', 'ram'),
+        ('-l', 'logdir'),
+        ('-m', 'mail_options'),
+        ('-z', 'output')]:
         variable = locals()[variable_name]
         if variable:
             base_cmd.extend([flag, str(variable)])
@@ -135,7 +134,7 @@ def submit(command,
 
     base_cmd.append(command)
 
-    return (runfsl(*base_cmd).strip(), )
+    return (runfsl(*base_cmd).strip(),)
 
 
 def info(job_id):
@@ -204,7 +203,7 @@ def wait(job_ids):
                   before continuing
     """
     if isinstance(job_ids, string_types):
-        job_ids = (job_ids, )
+        job_ids = (job_ids,)
     start_time = time.time()
     for job_id in job_ids:
         log.debug('Waiting for job {}'.format(job_id))

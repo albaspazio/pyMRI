@@ -4,7 +4,9 @@
 
 from __future__ import division
 from __future__ import print_function
+
 from future import standard_library
+
 standard_library.install_aliases()
 from builtins import str
 from builtins import range
@@ -43,7 +45,8 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
     # When a MELODIC directory is specified,
     # check whether all needed files are present.
     # Otherwise... run MELODIC again
-    if len(melDir) != 0 and os.path.isfile(os.path.join(melDirIn, 'melodic_IC.nii.gz')) and os.path.isfile(os.path.join(melDirIn, 'melodic_FTmix')) and os.path.isfile(os.path.join(melDirIn, 'melodic_mix')):
+    if len(melDir) != 0 and os.path.isfile(os.path.join(melDirIn, 'melodic_IC.nii.gz')) and os.path.isfile(
+            os.path.join(melDirIn, 'melodic_FTmix')) and os.path.isfile(os.path.join(melDirIn, 'melodic_mix')):
 
         print('  - The existing/specified MELODIC directory will be used.')
 
@@ -54,7 +57,8 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
         if os.path.isdir(os.path.join(melDirIn, 'stats')):
             os.symlink(melDirIn, melDir)
         else:
-            print('  - The MELODIC directory does not contain the required \'stats\' folder. Mixture modeling on the Z-statistical maps will be run.')
+            print(
+                '  - The MELODIC directory does not contain the required \'stats\' folder. Mixture modeling on the Z-statistical maps will be run.')
 
             # Create symbolic links to the items in the specified melodic directory
             os.makedirs(melDir)
@@ -76,7 +80,8 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
             if not os.path.isdir(melDirIn):
                 print('  - The specified MELODIC directory does not exist. MELODIC will be run seperately.')
             else:
-                print('  - The specified MELODIC directory does not contain the required files to run ICA-AROMA. MELODIC will be run seperately.')
+                print(
+                    '  - The specified MELODIC directory does not contain the required files to run ICA-AROMA. MELODIC will be run seperately.')
 
         # Run MELODIC
         os.system(' '.join([os.path.join(fslDir, 'melodic'),
@@ -111,15 +116,15 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
 
         # Extract last spatial map within the thresh_zstat file
         os.system(' '.join([os.path.join(fslDir, 'fslroi'),
-                            zTemp,      # input
-                            zstat,      # output
-                            str(lenIC - 1),   # first frame
-                            '1']))      # number of frames
+                            zTemp,  # input
+                            zstat,  # output
+                            str(lenIC - 1),  # first frame
+                            '1']))  # number of frames
 
     # Merge and subsequently remove all mixture modeled Z-maps within the output directory
     os.system(' '.join([os.path.join(fslDir, 'fslmerge'),
-                        '-t',                       # concatenate in time
-                        melICthr,                   # output
+                        '-t',  # concatenate in time
+                        melICthr,  # output
                         os.path.join(outDir, 'thr_zstat????.nii.gz')]))  # inputs
 
     os.system('rm ' + os.path.join(outDir, 'thr_zstat????.nii.gz'))
@@ -145,7 +150,6 @@ def register2MNI(fslDir, inFile, outFile, affmat, warp):
     Output (within the requested output directory)
     ---------------------------------------------------------------------------------
     melodic_IC_mm_MNI2mm.nii.gz merged file containing the mixture modeling thresholded Z-statistical maps registered to MNI152 2mm """
-
 
     # Import needed modules
     import os
@@ -200,6 +204,7 @@ def register2MNI(fslDir, inFile, outFile, affmat, warp):
                             '--warp=' + warp,
                             '--premat=' + affmat,
                             '--interp=trilinear']))
+
 
 def cross_correlation(a, b):
     """Cross Correlations between columns of two matrices"""
@@ -271,8 +276,8 @@ def feature_time_series(melmix, mc):
         # Combined correlations between RP and IC time-series, squared and non squared
         correl_nonsquared = cross_correlation(mix[chosen_rows],
                                               rp_model[chosen_rows])
-        correl_squared = cross_correlation(mix[chosen_rows]**2,
-                                           rp_model[chosen_rows]**2)
+        correl_squared = cross_correlation(mix[chosen_rows] ** 2,
+                                           rp_model[chosen_rows] ** 2)
         correl_both = np.hstack((correl_squared, correl_nonsquared))
 
         # Maximum absolute temporal correlation for every IC
@@ -356,7 +361,7 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
     import subprocess
 
     # Get the number of ICs
-    numICs = int(subprocess.getoutput('%sfslinfo %s | grep dim4 | head -n1 | awk \'{print $2}\'' % (fslDir, melIC) ))
+    numICs = int(subprocess.getoutput('%sfslinfo %s | grep dim4 | head -n1 | awk \'{print $2}\'' % (fslDir, melIC)))
 
     # Loop over ICs
     edgeFract = np.zeros(numICs)
@@ -367,16 +372,16 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
 
         # Extract IC from the merged melodic_IC_thr2MNI2mm file
         os.system(' '.join([os.path.join(fslDir, 'fslroi'),
-                  melIC,
-                  tempIC,
-                  str(i),
-                  '1']))
+                            melIC,
+                            tempIC,
+                            str(i),
+                            '1']))
 
         # Change to absolute Z-values
         os.system(' '.join([os.path.join(fslDir, 'fslmaths'),
-                  tempIC,
-                  '-abs',
-                  tempIC]))
+                            tempIC,
+                            '-abs',
+                            tempIC]))
 
         # Get sum of Z-values within the total Z-map (calculate via the mean and number of non-zero voxels)
         totVox = int(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
@@ -558,7 +563,7 @@ def denoising(fslDir, inFile, outDir, melmix, denType, denIdx):
     if check == 1:
         # Put IC indices into a char array
         if denIdx.size == 1:
-            denIdxStrJoin = "%d"%(denIdx + 1)
+            denIdxStrJoin = "%d" % (denIdx + 1)
         else:
             denIdxStr = np.char.mod('%i', (denIdx + 1))
             denIdxStrJoin = ','.join(denIdxStr)
@@ -580,7 +585,8 @@ def denoising(fslDir, inFile, outDir, melmix, denType, denIdx):
                                 '--out=' + os.path.join(outDir, 'denoised_func_data_aggr.nii.gz'),
                                 '-a']))
     else:
-        print("  - None of the components were classified as motion, so no denoising is applied (a symbolic link to the input file will be created).")
+        print(
+            "  - None of the components were classified as motion, so no denoising is applied (a symbolic link to the input file will be created).")
         if (denType == 'nonaggr') or (denType == 'both'):
             os.symlink(inFile, os.path.join(outDir, 'denoised_func_data_nonaggr.nii.gz'))
         if (denType == 'aggr') or (denType == 'both'):

@@ -2,7 +2,9 @@
 
 # Import required modules
 from __future__ import print_function
+
 from future import standard_library
+
 standard_library.install_aliases()
 from builtins import str
 import os
@@ -16,9 +18,10 @@ cwd = os.path.realpath(os.path.curdir)
 scriptDir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(scriptDir)
 
-#-------------------------------------------- PARSER --------------------------------------------#
+# -------------------------------------------- PARSER --------------------------------------------#
 
-parser = argparse.ArgumentParser(description='Script to run ICA-AROMA v0.3 beta (\'ICA-based Automatic Removal Of Motion Artifacts\') on fMRI data. See the companion manual for further information.')
+parser = argparse.ArgumentParser(
+    description='Script to run ICA-AROMA v0.3 beta (\'ICA-based Automatic Removal Of Motion Artifacts\') on fMRI data. See the companion manual for further information.')
 
 # Required options
 reqoptions = parser.add_argument_group('Required arguments')
@@ -27,29 +30,40 @@ reqoptions.add_argument('-o', '-out', dest="outDir", required=True, help='Output
 # Required options in non-Feat mode
 nonfeatoptions = parser.add_argument_group('Required arguments - generic mode')
 nonfeatoptions.add_argument('-i', '-in', dest="inFile", required=False, help='Input file name of fMRI data (.nii.gz)')
-nonfeatoptions.add_argument('-mc', dest="mc", required=False, help='File name of the motion parameters obtained after motion realingment (e.g., FSL mcflirt). Note that the order of parameters does not matter, should your file not originate from FSL mcflirt. (e.g., /home/user/PROJECT/SUBJECT.feat/mc/prefiltered_func_data_mcf.par')
-nonfeatoptions.add_argument('-a', '-affmat', dest="affmat", default="", help='File name of the mat-file describing the affine registration (e.g., FSL FLIRT) of the functional data to structural space (.mat file). (e.g., /home/user/PROJECT/SUBJECT.feat/reg/example_func2highres.mat')
-nonfeatoptions.add_argument('-w', '-warp', dest="warp", default="", help='File name of the warp-file describing the non-linear registration (e.g., FSL FNIRT) of the structural data to MNI152 space (.nii.gz). (e.g., /home/user/PROJECT/SUBJECT.feat/reg/highres2standard_warp.nii.gz')
-nonfeatoptions.add_argument('-m', '-mask', dest="mask", default="", help='File name of the mask to be used for MELODIC (denoising will be performed on the original/non-masked input data)')
+nonfeatoptions.add_argument('-mc', dest="mc", required=False,
+                            help='File name of the motion parameters obtained after motion realingment (e.g., FSL mcflirt). Note that the order of parameters does not matter, should your file not originate from FSL mcflirt. (e.g., /home/user/PROJECT/SUBJECT.feat/mc/prefiltered_func_data_mcf.par')
+nonfeatoptions.add_argument('-a', '-affmat', dest="affmat", default="",
+                            help='File name of the mat-file describing the affine registration (e.g., FSL FLIRT) of the functional data to structural space (.mat file). (e.g., /home/user/PROJECT/SUBJECT.feat/reg/example_func2highres.mat')
+nonfeatoptions.add_argument('-w', '-warp', dest="warp", default="",
+                            help='File name of the warp-file describing the non-linear registration (e.g., FSL FNIRT) of the structural data to MNI152 space (.nii.gz). (e.g., /home/user/PROJECT/SUBJECT.feat/reg/highres2standard_warp.nii.gz')
+nonfeatoptions.add_argument('-m', '-mask', dest="mask", default="",
+                            help='File name of the mask to be used for MELODIC (denoising will be performed on the original/non-masked input data)')
 
 # Required options in Feat mode
 featoptions = parser.add_argument_group('Required arguments - FEAT mode')
-featoptions.add_argument('-f', '-feat', dest="inFeat", required=False, help='Feat directory name (Feat should have been run without temporal filtering and including registration to MNI152)')
+featoptions.add_argument('-f', '-feat', dest="inFeat", required=False,
+                         help='Feat directory name (Feat should have been run without temporal filtering and including registration to MNI152)')
 
 # Optional options
 optoptions = parser.add_argument_group('Optional arguments')
 optoptions.add_argument('-tr', dest="TR", help='TR in seconds', type=float)
-optoptions.add_argument('-den', dest="denType", default="nonaggr", help='Type of denoising strategy: \'no\': only classification, no denoising; \'nonaggr\': non-aggresssive denoising (default); \'aggr\': aggressive denoising; \'both\': both aggressive and non-aggressive denoising (seperately)')
-optoptions.add_argument('-md', '-meldir', dest="melDir", default="",help='MELODIC directory name, in case MELODIC has been run previously.')
-optoptions.add_argument('-dim', dest="dim", default=0, help='Dimensionality reduction into #num dimensions when running MELODIC (default: automatic estimation; i.e. -dim 0)', type=int)
-optoptions.add_argument('-ow', '-overwrite', dest="overwrite", action='store_true', help='Overwrite existing output', default=False)
-optoptions.add_argument('-np', '-noplots', dest="generate_plots", action='store_false', help='Plot component classification overview similar to plot in the main AROMA paper', default=True)
+optoptions.add_argument('-den', dest="denType", default="nonaggr",
+                        help='Type of denoising strategy: \'no\': only classification, no denoising; \'nonaggr\': non-aggresssive denoising (default); \'aggr\': aggressive denoising; \'both\': both aggressive and non-aggressive denoising (seperately)')
+optoptions.add_argument('-md', '-meldir', dest="melDir", default="",
+                        help='MELODIC directory name, in case MELODIC has been run previously.')
+optoptions.add_argument('-dim', dest="dim", default=0,
+                        help='Dimensionality reduction into #num dimensions when running MELODIC (default: automatic estimation; i.e. -dim 0)',
+                        type=int)
+optoptions.add_argument('-ow', '-overwrite', dest="overwrite", action='store_true', help='Overwrite existing output',
+                        default=False)
+optoptions.add_argument('-np', '-noplots', dest="generate_plots", action='store_false',
+                        help='Plot component classification overview similar to plot in the main AROMA paper',
+                        default=True)
 
 print('\n------------------------------- RUNNING ICA-AROMA ------------------------------- ')
 print('--------------- \'ICA-based Automatic Removal Of Motion Artifacts\' --------------- \n')
 
-
-#--------------------------------------- PARSE ARGUMENTS ---------------------------------------#
+# --------------------------------------- PARSE ARGUMENTS ---------------------------------------#
 args = parser.parse_args()
 
 # Define variables based on the type of input (i.e. Feat directory or specific input arguments), and check whether the specified files exist.
@@ -139,7 +153,7 @@ if cancel:
     print('\n----------------------------- ICA-AROMA IS CANCELED -----------------------------\n')
     exit()
 
-#------------------------------------------- PREPARE -------------------------------------------#
+# ------------------------------------------- PREPARE -------------------------------------------#
 
 # Define the FSL-bin directory
 fslDir = os.path.join(os.environ["FSLDIR"], 'bin', '')
@@ -170,7 +184,8 @@ else:
 if TR == 1:
     print('Warning! Please check whether the determined TR (of ' + str(TR) + 's) is correct!\n')
 elif TR == 0:
-    print('TR is zero. ICA-AROMA requires a valid TR and will therefore exit. Please check the header, or define the TR as an additional argument.\n----------------------------- ICA-AROMA IS CANCELED -----------------------------\n')
+    print(
+        'TR is zero. ICA-AROMA requires a valid TR and will therefore exit. Please check the header, or define the TR as an additional argument.\n----------------------------- ICA-AROMA IS CANCELED -----------------------------\n')
     exit()
 
 # Define/create mask. Either by making a copy of the specified mask, or by creating a new one.
@@ -191,14 +206,14 @@ else:
             os.remove(os.path.join(outDir, 'bet.nii.gz'))
     else:
         if args.inFeat:
-            print(' - No example_func was found in the Feat directory. A mask will be created including all voxels with varying intensity over time in the fMRI data. Please check!\n')
+            print(
+                ' - No example_func was found in the Feat directory. A mask will be created including all voxels with varying intensity over time in the fMRI data. Please check!\n')
         os.system(' '.join([os.path.join(fslDir, 'fslmaths'),
                             inFile,
                             '-Tstd -bin',
                             mask]))
 
-
-#---------------------------------------- Run ICA-AROMA ----------------------------------------#
+# ---------------------------------------- Run ICA-AROMA ----------------------------------------#
 
 print('Step 1) MELODIC')
 aromafunc.runICA(fslDir, inFile, outDir, melDir, mask, dim, TR)
@@ -225,9 +240,9 @@ motionICs = aromafunc.classification(outDir, maxRPcorr, edgeFract, HFC, csfFract
 
 if args.generate_plots:
     from classification_plots import classification_plot
+
     classification_plot(os.path.join(outDir, 'classification_overview.txt'),
                         outDir)
-
 
 if (denType != 'no'):
     print('Step 3) Data denoising')

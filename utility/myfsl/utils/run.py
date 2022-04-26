@@ -6,15 +6,18 @@
 #
 # Modified to serve pymri pipeline (January 2019)
 #
-# Author: Alberto Inuggi
+# Editor: Alberto Inuggi (last edit 02-09-21)
 #
 # changes:
 # 1) run function renamed to "rrun" and include a new kwargs  "logFile" containing the descriptor of the file to log to
 # 2) in case of error, rrun raise also the full stderr message (and log it to "logFile").
+# 3) added kwargs.get('stop_on_error', True) that, in case of error, may raises or not an exception that exit the processing
 #
-# rrun dosn't work with the following commands:
-# avscale " + T1 + "2std_skullcon.mat | grep Determinant | awk '{ print $3 }'
-# "fslreorient2std " + T1 + " > " + T1 + "_orig2std.mat"
+# rrun doesn't work with the following commands:
+# - avscale " + T1 + "2std_skullcon.mat | grep Determinant | awk '{ print $3 }'
+# - "fslreorient2std " + T1 + " > " + T1 + "_orig2std.mat"
+# - slicesdir
+
 """This module provides some functions for running shell commands.
 
 .. note:: The functions in this module are only known to work in Unix-like
@@ -29,31 +32,28 @@
    dryrun
 """
 
-
-import               sys
-import               logging
-import               warnings
-import               threading
-import               contextlib
-import               collections
-import subprocess as sp
-import os.path    as op
+import collections
+import contextlib
+import logging
 import os
-import               six
+import os.path    as op
+import subprocess as sp
+import sys
+import threading
+import warnings
+
+import six
 
 # from   fsl.utils.platform import platform as fslplatform
-import myfsl.utils.fslsub                   as fslsub
-import myfsl.utils.tempdir                  as tempdir
-
+import utility.myfsl.utils.fslsub as fslsub
+import utility.myfsl.utils.tempdir                  as tempdir
 
 log = logging.getLogger(__name__)
-
 
 DRY_RUN = False
 """If ``True``, the :func:`run` function will only log commands, but will not
 execute them.
 """
-
 
 FSL_PREFIX = None
 """Global override for the FSL executable location used by :func:`runfsl`. """
@@ -75,7 +75,7 @@ def dryrun(*args):
     """
     global DRY_RUN
 
-    oldval  = DRY_RUN
+    oldval = DRY_RUN
     DRY_RUN = True
 
     try:
@@ -103,6 +103,8 @@ def _prepareArgs(args):
 
 
 real_stdout = sys.stdout
+
+
 def _forwardStream(in_, *outs):
     """Creates and starts a daemon thread which forwards the given input stream
     to one or more output streams. Used by the :func:`run` function to redirect
@@ -123,8 +125,10 @@ def _forwardStream(in_, *outs):
     def realForward():
         for line in iter(in_.readline, b''):
             for i, o in enumerate(outs):
-                if 'b' in omodes[i]: o.write(line)
-                else:                o.write(line.decode('utf-8'))
+                if 'b' in omodes[i]:
+                    o.write(line)
+                else:
+                    o.write(line.decode('utf-8'))
 
     t = threading.Thread(target=realForward)
     t.daemon = True
@@ -185,6 +189,8 @@ def rrun(*args, **kwargs):
                      - cmd:    If ``True``, the command itself is logged to the
                                standard output stream(s).
 
+    :arg stop_on_error:    Allow to continue in case of error
+
     :returns:      If ``submit`` is provided, the return value of
                    :func:`.fslsub` is returned. Otherwise returns a single
                    value or a tuple, based on the based on the ``stdout``,
@@ -202,30 +208,29 @@ def rrun(*args, **kwargs):
                       DeprecationWarning)
         kwargs['exitcode'] = kwargs.get('exitcode', kwargs['ret'])
 
-    returnStdout   = kwargs.get('stdout',   True)
-    returnStderr   = kwargs.get('stderr',   False)
+    returnStdout = kwargs.get('stdout', True)
+    returnStderr = kwargs.get('stderr', False)
     returnExitcode = kwargs.get('exitcode', False)
-    submit         = kwargs.get('submit',   {})
-    stop_on_error  = kwargs.get('stop_on_error', True)
+    submit = kwargs.get('submit', {})
+    stop_on_error = kwargs.get('stop_on_error', True)
 
-
-    log            = kwargs.get('log',      {})
-    tee            = log   .get('tee',      False)
-    logStdout      = log   .get('stdout',   None)
-    logStderr      = log   .get('stderr',   None)
-    logCmd         = log   .get('cmd',      False)
+    log = kwargs.get('log', {})
+    tee = log.get('tee', False)
+    logStdout = log.get('stdout', None)
+    logStderr = log.get('stderr', None)
+    logCmd = log.get('cmd', False)
 
     # added to write cmd string, returns and error to the given file descriptor
-    logFile        = kwargs.get('logFile',  None)
+    logFile = kwargs.get('logFile', None)
 
-    args           = _prepareArgs(args)
+    args = _prepareArgs(args)
 
     if not bool(submit):
         submit = None
 
     if submit is not None:
-        returnStdout   = False
-        returnStderr   = False
+        returnStdout = False
+        returnStderr = False
         returnExitcode = False
 
         if submit is True:
@@ -253,6 +258,7 @@ def rrun(*args, **kwargs):
         if logFile is not None:
             print(str, file=logFile)
 
+        print(str)
         if stop_on_error is True:
             raise RuntimeError(str)
 
@@ -266,9 +272,10 @@ def rrun(*args, **kwargs):
     if logFile is not None:
         print(str, file=logFile)
 
-    if len(results) == 1: return results[0]
-    else:                 return tuple(results)
-
+    if len(results) == 1:
+        return results[0]
+    else:
+        return tuple(results)
 
 
 def _dryrun(submit, returnStdout, returnStderr, returnExitcode, *args):
@@ -280,15 +287,17 @@ def _dryrun(submit, returnStdout, returnStderr, returnExitcode, *args):
         return ('0',)
 
     results = []
-    stderr  = ''
-    stdout  = ' '.join(args)
+    stderr = ''
+    stdout = ' '.join(args)
 
     if returnStdout:   results.append(stdout)
     if returnStderr:   results.append(stderr)
     if returnExitcode: results.append(0)
 
-    if len(results) == 1: return results[0]
-    else:                 return tuple(results)
+    if len(results) == 1:
+        return results[0]
+    else:
+        return tuple(results)
 
 
 def _realrun(tee, logStdout, logStderr, logCmd, *args):
@@ -324,7 +333,7 @@ def _realrun(tee, logStdout, logStderr, logCmd, *args):
         stderrf = op.join(td, 'stderr')
 
         with open(stdoutf, 'wb') as stdout, \
-             open(stderrf, 'wb') as stderr:  # noqa
+                open(stderrf, 'wb') as stderr:  # noqa
 
             outstreams = [stdout]
             errstreams = [stderr]
@@ -362,12 +371,14 @@ def _realrun(tee, logStdout, logStderr, logCmd, *args):
             proc.communicate()
 
         # Read in the command's stdout/stderr
-        with open(stdoutf, 'rb') as f: stdout = f.read()
-        with open(stderrf, 'rb') as f: stderr = f.read()
+        with open(stdoutf, 'rb') as f:
+            stdout = f.read()
+        with open(stderrf, 'rb') as f:
+            stderr = f.read()
 
     exitcode = proc.returncode
-    stdout   = stdout.decode('utf-8')
-    stderr   = stderr.decode('utf-8')
+    stdout = stdout.decode('utf-8')
+    stderr = stderr.decode('utf-8')
 
     return stdout, stderr, exitcode
 
@@ -390,7 +401,7 @@ def runfsl(*args, **kwargs):
 
     prefix = op.join(os.getenv('FSLDIR'), "bin")
 
-    args    = _prepareArgs(args)
+    args = _prepareArgs(args)
     args[0] = op.join(prefix, args[0])
 
     return rrun(*args, **kwargs)

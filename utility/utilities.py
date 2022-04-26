@@ -3,10 +3,25 @@ import os
 import re
 import shutil
 import tempfile
+import zipfile
+
+
+def extractall_zip(src, dest, replace=True):
+
+    if os.path.exists(dest):
+        if replace is True:
+            os.removedirs(dest)
+        else:
+            return
+    os.makedirs(dest, exist_ok=True)
+
+    print("start unzipping " + src)
+    with zipfile.ZipFile(src, 'r') as zip_ref:
+        zip_ref.extractall(dest)
+    print("finished unzipping " + src)
 
 
 def gunzip(src, dest, replace=False):
-
     fp = open(dest, "wb")
     with gzip.open(src, "rb") as f:
         bindata = f.read()
@@ -18,7 +33,6 @@ def gunzip(src, dest, replace=False):
 
 
 def compress(src, dest, replace=False):
-
     fp = open(src, "rb")
     with gzip.open(dest, "wb") as f:
         f.write(fp.read())
@@ -58,26 +72,14 @@ def sed_inplace(filename, pattern, repl):
 
 # get the sorting schema of a list(e.g [2,3,1,4,5] => [2,0,1,3,4]
 def argsort(seq):
-    #http://stackoverflow.com/questions/3382352/equivalent-of-numpy-argsort-in-basic-python/3382369#3382369
-    #by unutbu
+    # http://stackoverflow.com/questions/3382352/equivalent-of-numpy-argsort-in-basic-python/3382369#3382369
+    # by unutbu
     return sorted(range(len(seq)), key=seq.__getitem__)
 
 
 # apply the given permutation to a list
 def reorder_list(list, neworder):
     return [list[i] for i in neworder]
-
-
-# transform properly a string containing a Int/Float/String
-def typeUnknown(s):
-    try:
-        ns = float(s)
-        if ns == round(ns):
-            return int(s)
-        else:
-            return ns
-    except ValueError:
-        return s
 
 
 def get_filename(fullpath):
@@ -93,12 +95,45 @@ def copytree(src, dst, symlinks=False, ignore=None):
         else:
             shutil.copy2(s, d)
 
+
 # read a file where each line is a string and returns them as list (pruning the '\n')
 def read_list_from_file(srcfile):
-
     with open(srcfile, 'r') as f:
         str = f.readlines()
 
     for s in range(len(str)):
         str[s] = str[s].strip()
     return str
+
+
+def fillnumber2fourdigits(num):
+
+    if num > 9999:
+        print("Error in fillnumber2fourdigits, given number is > 9999")
+        return
+
+    if num < 10:
+        str_num = "000" + str(num)
+    elif 9 < num < 100:
+        str_num = "00" + str(num)
+    elif 99 < num < 1000:
+        str_num = "0" + str(num)
+    else:
+        str_num = str(num)
+
+    return str_num
+
+# if is a string => cast to int or float (when appropriate) or keep it string
+# if not         => don't do anything, return input param unchanged
+def string2num(string):
+    try:
+        if isinstance(string, str) is False:
+            return string
+
+        fl_string = float(string)
+        if round(fl_string) == fl_string:
+            return int(fl_string)
+        else:
+            return fl_string
+    except ValueError:
+        return string

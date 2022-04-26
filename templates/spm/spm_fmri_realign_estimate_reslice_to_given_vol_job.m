@@ -6,8 +6,8 @@
 %%
 matlabbatch{1}.spm.spatial.realign.estwrite.data = {
                                                     {
-                                                    '<REF_IMAGE,refvol>'            %% <-- we change the input filenames we selected in batch mode
-                                                    '<TO_ALIGN_IMAGES,1-n_vols>'
+                                                    '<REF_IMAGE,refvol>'
+                                                    <TO_ALIGN_IMAGES,1-n_vols>
                                                     }
                                                     }';
 matlabbatch{1}.spm.spatial.realign.estwrite.eoptions.quality = 0.9;

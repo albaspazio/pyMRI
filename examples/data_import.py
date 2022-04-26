@@ -1,10 +1,9 @@
-import os
-
 from Global import Global
 from Project import Project
+from data.SubjectsDataDict import SubjectsDataDict
 
-from utility.import_data_file import *
-
+from data.utilities import *
+from utility.exceptions import SubjectListException
 
 if __name__ == "__main__":
 
@@ -14,36 +13,34 @@ if __name__ == "__main__":
     fsl_code = "601"
     try:
         globaldata = Global(fsl_code)
+
+        # ======================================================================================================================
+        # HEADER
+        # ======================================================================================================================
+        proj_dir = "/data/MRI/projects/T15"
+        project = Project(proj_dir, globaldata)
+        SESS_ID = 1
+        num_cpu = 1
+        group_label = "all_46_seq1"
+        subjects = project.load_subjects(group_label, SESS_ID)
+
+        datafile = os.path.join(project.script_dir, "data.dat")  # is a tab limited data matrix with a header in the first row
+        # ==================================================================================================================
+        # test getting filtered data columns
+        data = SubjectsDataDict(datafile)
+
+        age = data.get_column("age")
+        age = data.get_filtered_column("age", project.get_subjects_labels("test"))  # extract age from a subset of loaded subjects
+        age = data.get_filtered_column_by_value("cat_dist", 0)
+        age = data.get_filtered_column_within_values("age", 1800, 2500)
+        age_str = data.get_column_str("age")
+        print(age_str)
+
+    except SubjectListException as e:
+        print(e)
+        exit()
     except Exception as e:
         print(e)
         exit()
-
-    # ======================================================================================================================
-    # HEADER
-    # ======================================================================================================================
-    proj_dir    = "/data/MRI/projects/T15"
-    project     = Project(proj_dir, globaldata)
-    SESS_ID     = 1
-    num_cpu     = 1
-    group_label = "all"
-    subjects    = project.load_subjects(group_label, SESS_ID)
-
-    datafile    = os.path.join(project.script_dir, "data.dat")  # is a tab limited data matrix with a header in the first row
-    #==================================================================================================================
-    # test getting filtered data columns
-    data        = tabbed_file_with_header2dict_list(datafile)
-    age         = get_dict_column(data, "age")
-    age         = get_filtered_dict_column(data, "age", "subj", project.get_subjects_labels("test"))
-    age         = get_filtered_dict_column(data, "age", "cat_dist", ['0'])
-    str         = list2spm_text_column(age)
-
-    # create a convenient dictionary with each (unique) subject label as key and a dictionary of scores as value
-    data1       = tabbed_file_with_header2subj_dic(datafile)
-    matrix      = get_filtered_subj_dict_columns(data1, ["group", "age"], project.get_subjects_labels("single"))
-
-
-
-
-
 
 

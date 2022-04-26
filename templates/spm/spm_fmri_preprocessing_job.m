@@ -8,7 +8,7 @@ matlabbatch{1}.spm.spatial.realign.estwrite.data = {
                                                     {
                                                     '<FMRI_IMAGES>'
                                                     }
-                                                    }';
+                                                    };
 %%
 matlabbatch{1}.spm.spatial.realign.estwrite.eoptions.quality = 0.9;
 matlabbatch{1}.spm.spatial.realign.estwrite.eoptions.sep = 4;
