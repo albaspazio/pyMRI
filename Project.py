@@ -11,6 +11,7 @@ from shutil import copyfile
 
 from subject.Subject import Subject
 from data.SubjectsDataDict import SubjectsDataDict
+from utility.exceptions import SubjectListException
 from utility.images.images import imcp, imrm
 from utility.utilities import gunzip, compress, sed_inplace
 
@@ -55,14 +56,15 @@ class Project:
         self.subjects_labels    = []
         self.nsubj              = 0
 
-        self.hasT1 = False
-        self.hasRS = False
+        self.hasT1  = False
+        self.hasRS  = False
         self.hasDTI = False
-        self.hasT2 = False
+        self.hasT2  = False
 
         # load all available subjects list into self.subjects_lists
         with open(os.path.join(self.script_dir, "subjects_lists.json")) as json_file:
-            self.subjects_lists = json.load(json_file)
+            subjects            = json.load(json_file)
+            self.subjects_lists = subjects["subjects"]
 
         # load subjects data if possible
         self.data_file = ""
@@ -76,12 +78,16 @@ class Project:
         if self.data_file != "":
             self.data = SubjectsDataDict(self.data_file)
 
-
     # loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
     # returns this list
-    def load_subjects(self, group_or_subjlabels, sess_id=1):
+    def load_subjects(self, group_label, sess_id=1):
 
-        self.subjects           = self.get_subjects(group_or_subjlabels, sess_id)
+        try:
+            self.subjects           = self.get_subjects(group_label, sess_id)
+
+        except SubjectListException as e:
+            raise SubjectListException("load_subjects", e.param)    # send whether the group label was not present
+                                                                    # or one of the subjects was not valid
 
         self.subjects_labels    = [subj.label for subj in self.subjects]
         self.nsubj              = len(self.subjects)
@@ -103,38 +109,30 @@ class Project:
     # ==================================================================================================================
     # GROUP_LABEL or SUBLABELS LIST => VALID SUBLABELS LIST
     def get_subjects_labels(self, grouplabel_or_subjlist=None, sess_id=1):
-        try:
-            if grouplabel_or_subjlist is None:
-                subj_labels = self.subjects_labels
-                if len(subj_labels) == 0:
-                    print("ERROR in validate_subjects, given grouplabel_or_subjlist is None and no group is loaded....exiting")
-                    return []
-                else:
-                    return subj_labels
-            elif isinstance(grouplabel_or_subjlist, str):  # must be a group_label and have its associated subjects list
-                return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, sess_id)
-
-            elif isinstance(grouplabel_or_subjlist, list):
-                if isinstance(grouplabel_or_subjlist[0], str) is False:
-                    print("ERROR in get_subjects_labels: the given grouplabel_or_subjlist param is not a string list, first value is: " + str(grouplabel_or_subjlist[0]))
-                    return []
-                else:
-                    return self.__get_valid_subjlabels(grouplabel_or_subjlist, sess_id)
+        if grouplabel_or_subjlist is None:
+            if len(self.subjects_labels) == 0:
+                raise SubjectListException("get_subjects_labels", "given grouplabel_or_subjlist is None and no group is loaded")
             else:
-                print("ERROR in get_subjects_labels: the given grouplabel_or_subjlist param is not a valid param (None, string  or string list), is: " + str(grouplabel_or_subjlist))
-                return []
+                return self.subjects_labels         # if != form 0, they have been already validated
+        elif isinstance(grouplabel_or_subjlist, str):  # must be a group_label and have its associated subjects list
+            return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, sess_id)
 
-        except Exception as e:
-            print("Error in get_subjectlabels, " + str(e))
-            return []
+        elif isinstance(grouplabel_or_subjlist, list):
+            if isinstance(grouplabel_or_subjlist[0], str) is False:
+                raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a string list, first value is: " + str(grouplabel_or_subjlist[0]))
+            else:
+                return self.__get_valid_subjlabels(grouplabel_or_subjlist, sess_id)
+        else:
+            raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a valid param (None, string  or string list), is: " + str(grouplabel_or_subjlist))
 
     # GROUP_LABEL or SUBLABELS LIST => VALID SUBJECT INSTANCES LIST
     # create and returns a list of valid subjects instances given a grouplabel or a subjlabels list
     def get_subjects(self, group_or_subjlabels, sess_id=1):
-
         valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, sess_id)
         return self.__get_subjects_from_labels(valid_subj_labels, sess_id)
-    #endregion
+
+
+#endregion
 
     # =========================================================================
     #region PRIVATE VALIDATION ROUTINES
@@ -144,28 +142,25 @@ class Project:
     # check whether all subjects belonging to the given group_label are valid
     # returns such subject list if all valid
     def __get_valid_subjlabels_from_group(self, group_label, sess_id=1):
-        for grp in self.subjects_lists["subjects"]:
+        for grp in self.subjects_lists:
             if grp["label"] == group_label:
                 return self.__get_valid_subjlabels(grp["list"], sess_id)
-        print("ERROR in __get_valid_subjlabels_from_group, given group_label does not exist in subjects_lists")
-        return []
+        raise SubjectListException("__get_valid_subjlabels_from_group", "given group_label does not exist in subjects_lists")
 
     # SUBJLABELS LIST => VALID SUBJLABELS LIST or []
     # check whether all subjects listed in subj_labels are valid
     # returns given list if all valid
     def __get_valid_subjlabels(self, subj_labels, sess_id=1):
         for lab in subj_labels:
-            if Subject(lab, sess_id, self).exist() is False:
-                print("ERROR in __get_valid_subjlabels, the subject " + lab + " , present in given subj_labels (" + subj_labels + "), does not exist")
-                return []
+            if Subject(lab, self, sess_id).exist() is False:
+                raise SubjectListException("__get_valid_subjlabels", "given subject (" + lab + ") does not exist in file system")
         return subj_labels
 
     # SUBJLABELS LIST => VALID SUBJS INSTANCES or []
     # create and returns a list of valid subjects instances given a subjlabels list
     def __get_subjects_from_labels(self, subj_labels, sess_id=1):
-        if len(self.__get_valid_subjlabels(subj_labels)) == 0:
-            return []
-        return [Subject(subj_lab, sess_id, self) for subj_lab in subj_labels]
+        subj_labels = self.__get_valid_subjlabels(subj_labels)
+        return [Subject(subj_lab, self, sess_id) for subj_lab in subj_labels]
 
     #endregion
 
@@ -199,7 +194,6 @@ class Project:
             print("OK....... " + analysis_type + " analysis can be run")
 
         return invalid_subjs
-
 
     def check_all_coregistration(self, outdir, subjs_labels=None, _from=None, _to=None, num_cpu=1, overwrite=False):
 

@@ -22,7 +22,7 @@ class Subject:
     TYPE_DTI_B0 = 5     # does not have bval/bvec
     TYPE_T2 = 6
 
-    def __init__(self, label, sessid, project, stdimg=""):
+    def __init__(self, label, project, sessid, stdimg=""):
 
         self.label = label
         self.sessid = sessid
