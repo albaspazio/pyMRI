@@ -338,6 +338,28 @@ class SubjectEpi:
         os.remove(residual)
         os.remove(tempMean)
 
+    def create_regstd(self, postnuisance, feat_preproc_odn="resting", overwrite=False, islin=False, logFile=None):
+        # mask from preproc feat
+        mask = os.path.join(self.subject.rs_dir, feat_preproc_odn + ".feat", "mask")
+        if imtest(self.subject.rs_final_regstd_mask + "_mask") is False or overwrite is True:
+            self.subject.transform.transform_roi("rsTOstd4", "abs", islin=islin, rois=[mask])
+            imcp(os.path.join(self.subject.roi_std4_dir, "mask_std4"), self.subject.rs_final_regstd_mask + "_mask", logFile=logFile)
+
+        # mask from example_function (the one used to calculate all the co-registrations)
+        if imtest(self.subject.rs_final_regstd_mask) is False or overwrite is True:
+            self.subject.transform.transform_roi("rsTOstd4", "abs", islin=islin, rois=[self.subject.rs_examplefunc_mask])
+            imcp(os.path.join(self.subject.roi_std4_dir, "mask_example_func_std4"), self.subject.rs_final_regstd_mask, logFile=logFile)
+
+        # brain
+        if imtest(self.subject.rs_final_regstd_bgimage) is False or overwrite is True:
+            self.subject.transform.transform_roi("hrTOstd4", "abs", islin=islin, rois=[self.subject.t1_brain_data])
+            imcp(os.path.join(self.subject.roi_std4_dir, self.subject.t1_image_label + "_brain_std4"), self.subject.rs_final_regstd_bgimage, logFile=logFile)
+
+        # functional data
+        if imtest(self.subject.rs_final_regstd_image) is False or overwrite is True:
+            self.subject.transform.transform_roi("rsTOstd4", "abs", islin=islin, rois=[postnuisance])
+            immv(os.path.join(self.subject.roi_std4_dir, self.subject.rs_post_nuisance_image_label + "_std4"), self.subject.rs_final_regstd_image, logFile=logFile)
+
     def get_slicetiming_params(self, nslices, scheme=1, params=None):
 
         # =============Sequential ascending: 1=============

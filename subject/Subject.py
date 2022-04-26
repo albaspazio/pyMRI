@@ -646,27 +646,7 @@ class Subject:
                 # CREATE STANDARD 4MM IMAGES FOR MELODIC
                 # ------------------------------------------------------------------------------------------------------
                 if replace_std_filtfun is True:
-                    # mask from preproc feat
-                    mask = os.path.join(self.rs_dir, feat_preproc_odn + ".feat", "mask")
-                    if imtest(self.rs_final_regstd_mask + "_mask") is False:
-                        self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[mask])
-                        imcp(os.path.join(self.roi_std4_dir, "mask_std4"), self.rs_final_regstd_mask + "_mask", logFile=log)
-
-                    # mask from example_function (the one used to calculate all the co-registrations)
-                    if imtest(self.rs_final_regstd_mask) is False:
-                        self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[self.rs_examplefunc_mask])
-                        imcp(os.path.join(self.roi_std4_dir, "mask_example_func_std4"), self.rs_final_regstd_mask,
-                             logFile=log)
-
-                    # brain
-                    if imtest(self.rs_final_regstd_bgimage) is False:
-                        self.transform.transform_roi("hrTOstd4", "abs", islin=False, rois=[self.t1_brain_data])
-                        imcp(os.path.join(self.roi_std4_dir, self.t1_image_label + "_brain_std4"), self.rs_final_regstd_bgimage, logFile=log)
-
-                    # functional data
-                    if imtest(self.rs_final_regstd_image) is False:
-                        self.transform.transform_roi("rsTOstd4", "abs", islin=False, rois=[postnuisance])
-                        immv(os.path.join(self.roi_std4_dir, self.rs_post_nuisance_image_label + "_std4"), self.rs_final_regstd_image, logFile=log)
+                    self.epi.create_regstd(postnuisance, feat_preproc_odn, do_overwrite, log)
 
                 log.close()
 
