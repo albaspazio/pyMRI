@@ -300,10 +300,16 @@ class SubjectTransforms:
 
         # NON LINEAR
         # => hr2{std}4_warp
-        if imtest(self.hr2std4_warp) is False:
-            rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std4 + " --config=" + self._global.fsl_std_mni_4mm_cnf +
-                " --ref=" + self.subject.std4_head_img + " --refmask=" + self.subject.std4_img_mask_dil + " --warpres=10,10,10" + " --cout=" + self.hr2std4_warp,
-                 logFile=logFile)
+        if imtest(self.hr2std4_warp) is False or overwrite is True:
+
+            if usehead_nl is True:
+                rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std4 + " --config=" + self._global.fsl_std_mni_4mm_cnf +
+                    " --ref=" + self.subject.std4_head_img + " --refmask=" + self.subject.std4_img_mask_dil + " --warpres=10,10,10" +
+                    " --cout=" + self.hr2std4_warp, overwrite=overwrite, logFile=logFile)
+            else:
+                rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + self.hr2std4_mat + " --config=" + self._global.fsl_std_mni_4mm_cnf +
+                    " --ref=" + self.subject.std4_head_img + " --refmask=" + self.subject.std4_img_mask_dil + " --warpres=10,10,10" +
+                    " --cout=" + self.hr2std4_warp, overwrite=overwrite, logFile=logFile)
 
         # => {std}42hr_warp
         check_invert_warp(self.std42hr_warp, self.hr2std4_warp, self.subject.t1_data, overwrite=overwrite, logFile=logFile)
