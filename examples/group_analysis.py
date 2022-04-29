@@ -9,7 +9,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # check global data and external toolboxes
     # ======================================================================================================================
-    fsl_code = "601"
+    fsl_code = "604"
     try:
         globaldata = Global(fsl_code)
 
@@ -49,10 +49,10 @@ if __name__ == "__main__":
     # mat_blind_distance_vs_ctrl = analysis.create_cat_thickness_2samplesttest_1cov_stats_1("/data/MRI/projects/T15/group_analysis/mpr/thickness/blind_distance_vs_ctrl", "controls", "blind_full_far", "age")
     # analysis.create_spm_2samplesttest_contrasts_results(mat_blind_distance_vs_ctrl, "blind_minor", "blind_full_far")
 
-    mat_blind_distance_vs_severely = analysis.create_cat_thickness_2samplesttest_1cov_stats_1(
+    mat_blind_distance_vs_severely = analysis.create_cat_thickness_stats_factdes_2samplesttest(
         "/data/MRI/projects/T15/group_analysis/mpr/thickness/blind_distance_vs_severely", "blind_severely",
         "blind_full_far", "age")
-    analysis.create_spm_2samplesttest_contrasts_results(mat_blind_distance_vs_severely,
+    analysis.create_spm_stats_2samplesttest_contrasts_results(mat_blind_distance_vs_severely,
                                                         "blind_severely > blind_full_far",
                                                         "blind_full_far > blind_severely")
 

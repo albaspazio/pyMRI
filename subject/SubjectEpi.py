@@ -6,7 +6,7 @@ from numpy import arange, concatenate, array
 
 from Global import Global
 from data.utilities import list2spm_text_column
-from group.Stats import Stats
+from group.SPMStatsUtils import SPMStatsUtils
 from utility.myfsl.utils.run import rrun
 from data import utilities
 from utility.images.images import imtest, imcp, is_image, remove_ext, imcp_notexisting, immv
@@ -647,7 +647,7 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<SMOOTHED_VOLS>', epi_all_volumes)
         sed_inplace(out_batch_job, '<MOTION_PARAMS>', rp_filename)
 
-        Stats.spm_fmri_subj_stats_replace_conditions_string(out_batch_job, conditions_lists)
+        SPMStatsUtils.spm_fmri_subj_stats_replace_conditions_string(out_batch_job, conditions_lists)
 
         copyfile(in_batch_start, out_batch_start)
         sed_inplace(out_batch_start, 'X', '1')
@@ -715,7 +715,7 @@ class SubjectEpi:
 
         sed_inplace(out_batch_job, '<COND51_ONSETS>', list2spm_text_column(conditions_lists[4][0][:]))
 
-        # Stats.spm_fmri_subj_stats_replace_conditions_string(out_batch_job, conditions_lists)
+        # SPMStatsUtils.spm_fmri_subj_stats_replace_conditions_string(out_batch_job, conditions_lists)
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
