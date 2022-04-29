@@ -178,7 +178,7 @@ class Project:
         return incomplete_subjects
 
     # check whether all subjects defined by given group_or_subjlabels have the necessary files to perform given analysis
-    # allowed analysis are: vbm_fsl, vbm_spm, ct, tbss, bedpost, xtract, melodic, sbfc, fmri
+    # allowed analysis are: vbm_fsl, vbm_spm, ct, tbss, bedpost, xtract_single, xtract_group, melodic, sbfc, fmri
     # returns a string with the subjects not ready
     def can_run_analysis(self, analysis_type, analysis_params=None, group_or_subjlabels=None, sess_id=1):
 

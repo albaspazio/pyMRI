@@ -623,7 +623,6 @@ class Subject:
                 else:
                     imcp(preproc_aroma_img, postnuisance)
 
-
                 # ------------------------------------------------------------------------------------------------------
                 # MELODIC (ONLY new melodic exploration, NO : reg, hpf, smooth) .....doing another MC and HPF results seemed to improve...although they should not...something that should be investigated....
                 # ------------------------------------------------------------------------------------------------------
@@ -895,12 +894,25 @@ class Subject:
             src_img = os.path.join(self.dti_dir, self.dti_ec_image_label)
             return imtest(src_img) and os.path.exists(self.dti_rotated_bvec)
 
-        elif analysis_type == "xtract":
+        elif analysis_type == "xtract_single":
             if analysis_params is None:
                 analysis_params = "bedpostx"
 
             src_img = os.path.join(self.dti_dir, analysis_params, self.dti_bedpostx_mean_S0_label)
             return imtest(src_img)
+
+        elif analysis_type == "xtract_group":
+            if analysis_params is None:
+                analysis_params = "xtract"
+
+            rootdir = os.path.join(self.dti_dir, analysis_params, "tracts")
+            for tract in self._global.dti_xtract_labels:
+                if tract == "cc":
+                    continue
+                if os.path.exists(os.path.join(rootdir, tract)) is False:
+                    return False
+
+            return True
 
         # RESTING
         elif analysis_type == "melodic":
