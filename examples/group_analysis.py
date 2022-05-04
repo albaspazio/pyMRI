@@ -1,8 +1,10 @@
 import os
+import traceback
 
 from Global import Global
 from Project import Project
 from group.GroupAnalysis import GroupAnalysis
+from group.SPMModels import SPMModels
 
 if __name__ == "__main__":
 
@@ -13,56 +15,71 @@ if __name__ == "__main__":
     try:
         globaldata = Global(fsl_code)
 
+        # ======================================================================================================================
+        # HEADER
+        # ======================================================================================================================
+        proj_dir = "/data/MRI/projects/T15"
+        project = Project(proj_dir, globaldata)     # automatically load PROJDIR/script/data.dat if present
+        SESS_ID = 1
+        num_cpu = 1
+        group_label = "blind_28_seq1"
+
+        # ======================================================================================================================
+        # PROCESSING
+        # ======================================================================================================================
+        subjects = project.load_subjects(group_label, SESS_ID)
+        # project.add_icv_to_data(group_label) # add icv to data
+
+        analysis            = GroupAnalysis(project)
+        spm_analysis        = SPMModels(project)
+
+        # ==================================================================================================================
+        # VBM DATA:
+        # ==================================================================================================================
+        # template
+        vbm_analysis_name   = "c28_b50"
+        vbm_outdir          = os.path.join(project.vbm_dir, vbm_analysis_name)
+
+        # analysis.create_vbm_spm_template_normalize(vbm_analysis_name, subjects)
+
+        # ==================================================================================================================
+        # THICKNESS DATA:
+        # ==================================================================================================================
+        #
+        # def batchrun_cat_thickness_stats_factdes_1group_multregr(self, statsdir, grp_label, cov_names, anal_name,
+        #                                                        cov_interactions=None, data_file=None, sess_id=1,
+        #                                                        spm_template_name="spm_stats_1group_multiregr_check_estimate",
+        #                                                        spm_contrasts_template_name="", mult_corr="FWE", pvalue=0.05,
+        #                                                        cluster_extend=0):
+        group_label = "test"
+        cov_names   = ["gender", "age"]
+        anal_name   = "multregr_age_gender"
+        statsdir    = "/data/MRI/projects/T15/group_analysis/mpr/thickness/" + anal_name
+
+        # spm_analysis.batchrun_cat_thickness_stats_factdes_1group_multregr(statsdir, group_label, cov_names, spm_contrasts_template_name="")
+
+
+        # def batchrun_cat_thickness_stats_factdes_1Wanova(self, statsdir, groups_labels, cov_name, cov_interaction=1,
+        #                                                data_file=None, sess_id=1,
+        #                                                spm_template_name="spm_stats_1Wanova_check_estimate",
+        #                                                spm_contrasts_template_name=""):
+
+        group_labels = ["t1", "t2", "t3"]
+        cov_names   = ["gender", "age"]
+        anal_name   = "1Wanova_3_groups_age_gender"
+        statsdir    = "/data/MRI/projects/T15/group_analysis/mpr/thickness/" + anal_name
+
+        # spm_analysis.batchrun_cat_thickness_stats_factdes_1Wanova(statsdir, group_labels, cov_names, spm_contrasts_template_name="")
+
+
+
+
+
+
     except Exception as e:
+        traceback.print_exc()
+
         print(e)
         exit()
 
-    # ======================================================================================================================
-    # HEADER
-    # ======================================================================================================================
-    proj_dir = "/data/MRI/projects/T15"
-    project = Project(proj_dir, globaldata)
-    SESS_ID = 1
-    num_cpu = 1
-    group_label = "all"
 
-    # ======================================================================================================================
-    # PROCESSING
-    # ======================================================================================================================
-    subjects = project.load_subjects(group_label, SESS_ID)
-
-    # template
-    analysis_name = "c28_b50"
-    outdir = os.path.join(project.vbm_dir, analysis_name)
-
-    analysis = GroupAnalysis(project)
-    # analysis.create_vbm_spm_template_normalize(analysis_name, subjects)
-    # analysis.add_icv_2_data_matrix(subjects, os.path.join(project.dir, "data.dat"))
-    # analysis.create_fslvbm_from_spm(subjects, os.path.join(project.vbm_dir, analysis_name, "subjects"), os.path.join(project.vbm_dir, analysis_name, "fslvbm"))
-
-    # ==================================================================================================================
-    # THICKNESS DATA:
-    # SPM.mat evaluation must be done through the cat gui. only then, you can define contrast and write results
-    # thus put a breakpoint between : create_cat_thickness_2samplesttest_1cov_stats_1 & create_spm_2samplesttest_contrasts_results
-    # ==================================================================================================================
-
-    # mat_blind_distance_vs_ctrl = analysis.create_cat_thickness_2samplesttest_1cov_stats_1("/data/MRI/projects/T15/group_analysis/mpr/thickness/blind_distance_vs_ctrl", "controls", "blind_full_far", "age")
-    # analysis.create_spm_2samplesttest_contrasts_results(mat_blind_distance_vs_ctrl, "blind_minor", "blind_full_far")
-
-    mat_blind_distance_vs_severely = analysis.create_cat_thickness_stats_factdes_2samplesttest(
-        "/data/MRI/projects/T15/group_analysis/mpr/thickness/blind_distance_vs_severely", "blind_severely",
-        "blind_full_far", "age")
-    analysis.create_spm_stats_2samplesttest_contrasts_results(mat_blind_distance_vs_severely,
-                                                        "blind_severely > blind_full_far",
-                                                        "blind_full_far > blind_severely")
-
-    # mat_blind_distance_vs_minor = analysis.create_cat_thickness_2samplesttest_1cov_stats_1("/data/MRI/projects/T15/group_analysis/mpr/thickness/blind_distance_vs_minor", "blind_minor", "blind_full_far", "age")
-    # analysis.create_spm_2samplesttest_contrasts_results(mat_blind_distance_vs_minor, "blind_minor", "blind_full_far")
-
-    # # test getting filtered data columns
-    # datafile = os.path.join(project.script_dir, "data.dat")
-    # data = import_data_file.read_tabbed_file_with_header(datafile)
-    # # age = import_data_file.get_column(data, "age")
-    # # age = import_data_file.get_filtered_dict_column(data, "age", "subj", project.get_list_by_label("test"))
-    # age = import_data_file.get_filtered_dict_column(data, "age", "cat_dist", ['0'])
-    # str = import_data_file.list2spm_text_column(age)

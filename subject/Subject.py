@@ -28,7 +28,7 @@ class Subject:
         self.sessid = sessid
 
         self.project = project
-        self._global = project._global
+        self._global = project.globaldata
 
         self.fsl_dir = self._global.fsl_dir
         self.fsl_bin = self._global.fsl_bin

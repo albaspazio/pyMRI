@@ -7,6 +7,9 @@ matlabbatch{1}.spm.tools.cat.stools.con.spmmat = {'<SPM_MAT>'};
 
 <CONTRASTS>
 
+
+
+
 matlabbatch{1}.spm.tools.cat.stools.con.delete = 1;
 matlabbatch{2}.spm.tools.cat.stools.results.spmmat(1) = cfg_dep('Surface Contrast Manager: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));
 matlabbatch{2}.spm.tools.cat.stools.results.conspec.titlestr = '';

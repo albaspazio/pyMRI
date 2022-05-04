@@ -1,5 +1,3 @@
-import csv
-
 from data.utilities import list2spm_text_column, get_icv_spm_file
 from utility.images.images import imtest
 from utility.matlab import call_matlab_function_noret
@@ -11,7 +9,7 @@ class SPMStatsUtils:
     # create spm fmri 1st level contrasts onsets
     # conditions is a dictionary list with field: [name, onsets, duration]
     @staticmethod
-    def spm_fmri_subj_stats_replace_conditions_string(out_batch_job, conditions):
+    def spm_replace_fmri_subj_stats_conditions_string(out_batch_job, conditions):
 
         conditions_string = ""
         for c in range(1, len(conditions) + 1):
@@ -29,7 +27,7 @@ class SPMStatsUtils:
     # explicit masking
     # ---------------------------------------------------------------------------
     @staticmethod
-    def explicit_mask(_global, out_batch_job, expl_mask=None, athresh=0.2, idstep=1 ):
+    def spm_replace_explicit_mask(_global, out_batch_job, expl_mask=None, athresh=0.2, idstep=1):
 
         if expl_mask is None:
             masking =   "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.masking.tm.tm_none = 1;\n" \
@@ -53,7 +51,7 @@ class SPMStatsUtils:
     # global calculation
     # ---------------------------------------------------------------------------
     @staticmethod
-    def global_calculation(project, out_batch_job, method="", groups_labels=None, data_file=None, idstep=1):
+    def spm_replace_global_calculation(project, out_batch_job, method="", groups_labels=None, data_file=None, idstep=1):
 
         no_corr_str     = "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalc.g_omit = 1;\n matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;\n matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.glonorm = 1;"
         user_corr_str1  = "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalc.g_user.global_uval = [\n"
@@ -99,11 +97,10 @@ class SPMStatsUtils:
                 "matlabbatch{2}.spm.stats.review.print = 'ps';\n"
 
     #endregion
-
     #======================================================================================================================================================
     # create a gifti image with ones in correspondence of each vmask voxel
     @staticmethod
-    def spm_create_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths, distance=8):
+    def batchrun_spm_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths, distance=8):
 
         if imtest(vmask) is False:
             print("Error in create_surface_mask_from_volume_mask: input vmask does not exist")
@@ -115,3 +112,17 @@ class SPMStatsUtils:
 
         call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths,"'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
 
+
+class StatsParams:
+
+    def __init__(self, multcorr="FWE", pvalue=0.05, clustext=0):
+        self.mult_corr      = multcorr
+        self.pvalue         = pvalue
+        self.cluster_extend = 0
+
+class CatConvStatsParams:
+
+    def __init__(self, multcorr="FWE", pvalue=0.05, clustext=0):
+        self.mult_corr      = multcorr
+        self.pvalue         = pvalue
+        self.cluster_extend = 0

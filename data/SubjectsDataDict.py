@@ -1,7 +1,8 @@
 import csv
 import os
 
-from utility.utilities import argsort, reorder_list, string2num
+from data.utilities import get_file_header
+from utility.utilities import argsort, reorder_list, string2num, write_text_file
 
 
 # =====================================================================================
@@ -21,7 +22,8 @@ class SubjectsDataDict:
 
         if filepath != "":
             self.load(filepath)
-        self.num    = len(self.data)
+        self.num        = len(self.data)
+        self.header     = self.get_header()
 
     # =====================================================================================
     # DATA EXTRACTION FROM A "SUBJ" DICTIONARY {"a_subj_label":{"a":..., "b":...., }}
@@ -228,17 +230,41 @@ class SubjectsDataDict:
         res_str = self.__to_str(res, ndecimals)
         return res_str, lab
 
-    def get_header(self):
-        if os.path.exists(self.filepath) is False:
-            print("ERROR in SubjectsDataDict.get_header, given filepath param (" + self.filepath + ") is not a file")
-            return []
+    def add_column(self, col_label, values, saveit=True):
+        nv = len(values)
+        if nv != self.num:
+            print("ERROR in SubjectsDataDict.add")
 
-        with open(self.filepath, "r") as f:
-            reader = csv.reader(f, dialect='excel', delimiter='\t')
-            for row in reader:
-                if reader.line_num == 1:
-                    return row
-        return []
+        for r in range(len(self.data)):
+            self.data[r][col_label] = values[r]
+
+        self.header = self.get_header()
+
+        if saveit is True:
+            self.save_data()
+
+
+    def get_header(self):
+        self.header = []
+        for row in self.data:
+            for field in row:
+                self.header.append(field)
+            break
+        return self.header
+
+    def save_data(self, data_file=None):
+
+        if data_file is None:
+            data_file = self.filepath
+
+        txt = self.header + "\n"
+        for row in self.data:
+            r = ""
+            for field in row:
+                r = field + "\t"
+            r = r.rstrip('\t') + "\n"
+        txt = txt + r
+        write_text_file(data_file, txt)
 
     # =====================================================================================
     # get a data list and return a \n separated string, suitable for spm template files

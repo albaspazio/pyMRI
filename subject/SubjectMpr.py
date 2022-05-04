@@ -991,7 +991,7 @@ class SubjectMpr:
         for atlas in atlases:
             _atlases = _atlases + "\'" + os.path.join(self._global.cat_dir, "atlases_surfaces", "lh." + atlas + ".freesurfer.annot") + "\'" + "\n"
 
-        out_batch_job, out_batch_start = self.subject.project.create_batch_files("cat_extract_roi_based_surface", "mpr", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files("cat_extract_roi_based_surface", "mpr", self.subject.label)
 
         left_thick_img = os.path.join(self.subject.t1_cat_surface_dir, "lh.thickness.T1_" + self.subject.label)
         if os.path.exists(left_thick_img) is False:

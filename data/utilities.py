@@ -1,3 +1,4 @@
+import csv
 import os
 
 
@@ -8,6 +9,10 @@ import os
 # read files like:
 # var1=value1
 # varN=valueN
+from data.SubjectsDataDict import SubjectsDataDict
+from utility.exceptions import DataFileException
+
+
 def read_varlist_file(filepath, comment_char="#"):
     data = {}
     if os.path.exists(filepath) is False:
@@ -91,7 +96,44 @@ def get_icv_spm_file(filepath):
 
 
 
+def get_file_header(filepath):
+    if os.path.exists(filepath) is False:
+        print("ERROR in get_file_header, given filepath param (" + filepath + ") is not a file")
+        return []
 
+    with open(filepath, "r") as f:
+        reader = csv.reader(f, dialect='excel', delimiter='\t')
+        for row in reader:
+            if reader.line_num == 1:
+                return row
+    return []
+
+
+# ---------------------------------------------------------------------------
+# validate data
+# ---------------------------------------------------------------------------
+def validate_data_with_covs(data_file=None, cov_names=None):
+
+    if cov_names is None:
+        cov_names = []
+
+    header = []
+    if data_file is not None:
+        if os.path.exists(data_file) is False:
+            raise DataFileException("validate_data_with_covs", "given data_file (" + str(data_file) + ") does not exist")
+
+        header = SubjectsDataDict(data_file).get_header()  # get_header_of_tabbed_file(data_file)
+
+        # if all(elem in header for elem in cov_names) is False:  if I don't want to understand which cov is absent
+        missing_covs = ""
+        for cov_name in cov_names:
+            if cov_name in header is False:
+                missing_covs = missing_covs + cov_name + ", "
+
+        if len(missing_covs) > 0:
+            raise DataFileException("validate_data_with_covs", "the following header are NOT present in the given datafile: " + missing_covs)
+
+    return header
 
 # =====================================================================================
 # DATA EXTRACTION FROM A PLAIN DICTIONARY

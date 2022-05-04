@@ -79,7 +79,7 @@ class SubjectEpi:
             epi_volume = epi_path_name + ',' + str(i) + "'"
             epi_all_volumes = epi_all_volumes + epi_volume + '\n' + "'"
 
-        out_batch_job, out_batch_start = self.subject.project.create_batch_files(spm_template_name, "fmri", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", self.subject.label)
 
         sed_inplace(out_batch_job, '<FMRI_IMAGES>', epi_all_volumes)
         sed_inplace(out_batch_job, '<NUM_SLICES>', str(num_slices))
@@ -417,7 +417,7 @@ class SubjectEpi:
             gunzip(ref_image + ".nii.gz", ref_image + ".nii")
 
         # 2.1: select the input spm template obtained from batch (we defined it in spm_template_name) + its run file …
-        out_batch_job, out_batch_start = self.subject.project.create_batch_files(spm_template_name, "fmri", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", self.subject.label)
 
         # 2.2: create "output spm template" by copying "input spm template" + changing general tags for our specific ones…
         ref_vol = max(ref_vol, 1)
@@ -511,7 +511,7 @@ class SubjectEpi:
                 print("Error in subj: " + self.subject.label + " epi_spm_fmri_preprocessing")
                 return
 
-        out_batch_job, out_batch_start = self.subject.project.create_batch_files(spm_template_name, "fmri", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", self.subject.label)
 
         # substitute for all the volumes + rest of params
         epi_nvols = int(rrun('fslnvols ' + epi_image + '.nii.gz'))
@@ -647,7 +647,7 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<SMOOTHED_VOLS>', epi_all_volumes)
         sed_inplace(out_batch_job, '<MOTION_PARAMS>', rp_filename)
 
-        SPMStatsUtils.spm_fmri_subj_stats_replace_conditions_string(out_batch_job, conditions_lists)
+        SPMStatsUtils.spm_replace_fmri_subj_stats_conditions_string(out_batch_job, conditions_lists)
 
         copyfile(in_batch_start, out_batch_start)
         sed_inplace(out_batch_start, 'X', '1')
@@ -680,7 +680,7 @@ class SubjectEpi:
         # if rp_filename == "":
         #     rp_filename = os.path.join(self.subject.fmri_dir, "rp_" + self.subject.fmri_image_label + ".txt")
 
-        out_batch_job, out_batch_start = self.subject.project.create_batch_files(spm_template_name, "fmri", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", self.subject.label)
 
         sed_inplace(out_batch_job, '<SPM_DIR>', stats_dir)
         sed_inplace(out_batch_job, '<EVENTS_UNIT>', events_unit)
@@ -715,7 +715,7 @@ class SubjectEpi:
 
         sed_inplace(out_batch_job, '<COND51_ONSETS>', list2spm_text_column(conditions_lists[4][0][:]))
 
-        # SPMStatsUtils.spm_fmri_subj_stats_replace_conditions_string(out_batch_job, conditions_lists)
+        # SPMStatsUtils.spm_replace_fmri_subj_stats_conditions_string(out_batch_job, conditions_lists)
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 

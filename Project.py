@@ -9,6 +9,8 @@ from inspect import signature
 from threading import Thread
 from shutil import copyfile
 
+import numpy
+
 from subject.Subject import Subject
 from data.SubjectsDataDict import SubjectsDataDict
 from utility.exceptions import SubjectListException
@@ -50,7 +52,7 @@ class Project:
         self.topup_fmri_params      = os.path.join(self.script_dir, "topup_acqpar_fmri.txt")
         self.eddy_index             = os.path.join(self.script_dir, "eddy_index.txt")
 
-        self._global = globaldata
+        self.globaldata = globaldata
 
         self.subjects           = []
         self.subjects_labels    = []
@@ -68,15 +70,27 @@ class Project:
 
         # load subjects data if possible
         self.data_file = ""
-        self.data = {}
-        # load data file if exist
-        if os.path.exists(data):
-            self.data_file = data
-        elif os.path.exists(os.path.join(self.script_dir, data)):
-            self.data_file = os.path.join(self.script_dir, data)
+        self.data = SubjectsDataDict()
 
-        if self.data_file != "":
-            self.data = SubjectsDataDict(self.data_file)
+        self.load_data(data)
+
+    # load a data_file if exist
+    def load_data(self, data_file):
+
+        df = ""
+        if os.path.exists(data_file):
+            df = data_file
+        elif os.path.exists(os.path.join(self.script_dir, data_file)):
+            df = os.path.join(self.script_dir, data_file)
+
+        if df != "":
+            d = SubjectsDataDict(df)
+            if d.num > 0:
+                self.data       = d
+                self.data_file  = df
+
+        return self.data
+
 
     # loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
     # returns this list
@@ -233,15 +247,15 @@ class Project:
             l_std = os.path.join(outdir, "lin", "std");     nl_std = os.path.join(outdir, "nlin", "std")
             sd_l_std = os.path.join(outdir, "slicesdir", "lin_std");    os.makedirs(sd_l_std, exist_ok=True)
             sd_nl_std = os.path.join(outdir, "slicesdir", "nlin_std");  os.makedirs(sd_nl_std, exist_ok=True)
-            os.chdir(l_std);    os.system("slicesdir -p " + self._global.fsl_std_mni_2mm_brain + " ./*.nii.gz");  shutil.move(os.path.join(l_std, "slicesdir"), sd_l_std)
-            os.chdir(nl_std);   os.system("slicesdir -p " + self._global.fsl_std_mni_2mm_brain + " ./*.nii.gz");  shutil.move(os.path.join(nl_std, "slicesdir"), sd_nl_std)
+            os.chdir(l_std);    os.system("slicesdir -p " + self.globaldata.fsl_std_mni_2mm_brain + " ./*.nii.gz");  shutil.move(os.path.join(l_std, "slicesdir"), sd_l_std)
+            os.chdir(nl_std);   os.system("slicesdir -p " + self.globaldata.fsl_std_mni_2mm_brain + " ./*.nii.gz");  shutil.move(os.path.join(nl_std, "slicesdir"), sd_nl_std)
 
         if "std4" in _to:
             l_std4 = os.path.join(outdir, "lin", "std4");       nl_std4 = os.path.join(outdir, "nlin", "std4")
             sd_l_std4 = os.path.join(outdir, "slicesdir", "lin_std4");  os.makedirs(sd_l_std4, exist_ok=True)
             sd_nl_std4 = os.path.join(outdir, "slicesdir", "nlin_std4");os.makedirs(sd_nl_std4, exist_ok=True)
-            os.chdir(l_std4);   os.system("slicesdir -p " + self._global.fsl_std_mni_4mm_brain + " ./*.nii.gz");  shutil.move(os.path.join(l_std4, "slicesdir"), sd_l_std4)
-            os.chdir(nl_std4);  os.system("slicesdir -p " + self._global.fsl_std_mni_4mm_brain + " ./*.nii.gz");  shutil.move(os.path.join(nl_std4, "slicesdir"), sd_nl_std4)
+            os.chdir(l_std4);   os.system("slicesdir -p " + self.globaldata.fsl_std_mni_4mm_brain + " ./*.nii.gz");  shutil.move(os.path.join(l_std4, "slicesdir"), sd_l_std4)
+            os.chdir(nl_std4);  os.system("slicesdir -p " + self.globaldata.fsl_std_mni_4mm_brain + " ./*.nii.gz");  shutil.move(os.path.join(nl_std4, "slicesdir"), sd_nl_std4)
 
         if "t2" in _to:
             l_t2 = os.path.join(outdir, "lin", "t2");       nl_t2 = os.path.join(outdir, "nlin", "t2")
@@ -373,40 +387,89 @@ class Project:
                 if os.path.exists(data) is True:
                     return SubjectsDataDict(data)
                 else:
-                    print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is string that does not point to a valid file to load")
+                    print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is a string that does not point to a valid file to load")
                     return None
             else:
                 print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is neither a dict nor a string")
                 return None
+
+    def add_icv_to_data(self, grouplabel_or_subjlist=None, updatefile=False, sess_id=1):
+
+        if grouplabel_or_subjlist is None:
+            grouplabel_or_subjlist = self.get_subjects_labels()
+        else:
+            grouplabel_or_subjlist = self.get_subjects_labels(grouplabel_or_subjlist)
+
+        icvs = self.get_subjects_icv(grouplabel_or_subjlist, sess_id)
+
+        self.data.add_column("icv", icvs, updatefile)
+
+    def get_subjects_icv(self, grouplabel_or_subjlist, sess_id=1):
+
+        self.subjects_list = self.get_subjects(grouplabel_or_subjlist, sess_id)
+        nsubj = len(self.subjects_list)
+
+        icv_scores = numpy.zeros((nsubj, 1))
+        cnt = 0
+        for subj in self.subjects_list:
+            icv_file = os.path.join(subj.t1_spm_dir, "icv_" + subj.label + ".dat")
+
+            with open(icv_file) as fp:
+                fp.readline()
+                line = fp.readline().rstrip()
+                values = line.split(',')
+
+            icv_scores[cnt, 0] = round(float(values[1]) + float(values[2]) + float(values[3]), 4)
+            cnt = cnt + 1
+        return icv_scores
 
     #endregion ==================================================================================================================
 
     # ==================================================================================================================
     # GROUP ANALYSIS ACCESSORY
     # ==================================================================================================================
+    # takes an existing spm batch template
     # returns out_batch_job
-    def create_batch_files(self, templfile_noext, seq, prefix=""):
+    def create_batch_files(self, out_batch_name, seq):
+
+        out_batch_dir = os.path.join(self.script_dir, seq, "spm", "batch")
+        os.makedirs(out_batch_dir, exist_ok=True)
+
+        in_batch_start = os.path.join(self.globaldata.spm_templates_dir, "spm_job_start.m")
+
+        out_batch_start = os.path.join(out_batch_dir, "create_" + out_batch_name + "_start.m")
+        out_batch_job   = os.path.join(out_batch_dir, "create_" + out_batch_name + ".m")
+
+        # set job file
+        open(out_batch_job, 'w', encoding='utf-8').close()
+
+        # set start file
+        copyfile(in_batch_start, out_batch_start)
+        sed_inplace(out_batch_start, "X", "1")
+        sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
+
+        return out_batch_job, out_batch_start
+
+    # returns out_batch_job, created from zero
+    def adapt_batch_files(self, templfile_noext, seq, prefix=""):
 
         if prefix != "":
             prefix = prefix + "_"
 
-        input_batch_name = ntpath.basename(templfile_noext)
+        input_batch_name    = ntpath.basename(templfile_noext)
 
-        # set dirs
-        spm_script_dir = os.path.join(self.script_dir, seq, "spm")
-        out_batch_dir = os.path.join(spm_script_dir, "batch")
-
+        out_batch_dir       = os.path.join(self.script_dir, seq, "spm", "batch")
         os.makedirs(out_batch_dir, exist_ok=True)
 
-        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+        in_batch_start = os.path.join(self.globaldata.spm_templates_dir, "spm_job_start.m")
 
         if os.path.exists(templfile_noext) is True:
             in_batch_job = templfile_noext
         else:
-            in_batch_job = os.path.join(self._global.spm_templates_dir, templfile_noext + "_job.m")
+            in_batch_job = os.path.join(self.globaldata.spm_templates_dir, templfile_noext + "_job.m")
 
         out_batch_start = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + "_start.m")
-        out_batch_job = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + ".m")
+        out_batch_job   = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + ".m")
 
         # set job file
         copyfile(in_batch_job, out_batch_job)

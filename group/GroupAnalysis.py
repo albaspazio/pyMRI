@@ -25,9 +25,9 @@ class GroupAnalysis:
         self.subjects_list  = None
         self.working_dir    = ""
         self.project        = proj
-        self._global        = self.project._global
+        self._global        = self.project.globaldata
 
-        self.spm            = SPMModels(proj, self)
+        self.spm            = SPMModels(proj)
 
     # ---------------------------------------------------
     #region DATA PREPARATION
@@ -46,7 +46,7 @@ class GroupAnalysis:
 
         self.working_dir = os.path.join(self.project.vbm_dir, name)
 
-        out_batch_job, out_batch_start = self.project.create_batch_files(spm_template_name, "mpr")
+        out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr")
 
         # =======================================================
         # START !!!!
@@ -192,38 +192,25 @@ class GroupAnalysis:
 
             os.chdir(curr_dir)
 
-    # read a matrix file and add total ICV as last column
-    # here it assumes [integer, integer, integer, integer, integer, float4]
-    def add_icv_2_data_matrix(self, grouplabel_or_subjlist, input_data_file, sess_id=1):
 
-        self.subjects_list  = self.project.get_subjects(grouplabel_or_subjlist, sess_id)
-        if len(self.subjects_list) == 0:
-            print("ERROR in create_fslvbm_from_spm, given subjs params is neither a string nor a list")
+    # read a matrix file (not a classical subjects_data file) and add total ICV as last column
+    # here it assumes [integer, integer, integer, integer, integer, float4]
+    def add_icv_2_data_matrix(self, grouplabel_or_subjlist, input_data_file=None, sess_id=1):
+
+        if os.path.exists(input_data_file) is False:
+            print("ERROR in add_icv_2_data_matrix, given data_file does not exist")
             return
 
-        nsubj   = len(self.subjects_list)
-        data_file = numpy.loadtxt(input_data_file)
-        ndata = len(data_file)
+        subjects    = self.project.get_subjects_labels(grouplabel_or_subjlist)
+        icvs        = self.project.get_subjects_icv(grouplabel_or_subjlist, sess_id)
 
-        icv_scores = numpy.zeros((ndata, 1))
-
+        nsubj       = len(subjects)
+        ndata       = len(icvs)
         if nsubj != ndata:
             print("ERROR in create_vbm_spm_stats. number of given subjects does not correspond to data number")
             return
 
-        cnt = 0
-        for subj in self.subjects_list:
-            icv_file = os.path.join(subj.t1_spm_dir, "icv_" + subj.label + ".dat")
-
-            with open(icv_file) as fp:
-                fp.readline()
-                line = fp.readline().rstrip()
-                values = line.split(',')
-
-            icv_scores[cnt, 0] = round(float(values[1]) + float(values[2]) + float(values[3]), 4)
-            cnt = cnt + 1
-
-        b = numpy.hstack((data_file, icv_scores))
+        b = numpy.hstack((input_data_file, icvs))
         numpy.savetxt(input_data_file, b, ['%1.0f', '%1.0f', '%5.0f', '%5.0f', '%5.0f', '%2.4f'], '\t')
 
     # read xtract's stats.csv file of each subject in the given list and create a tabbed file (ofp) with given values/tract

@@ -89,7 +89,7 @@ class SubjectDti:
 
         # -----------------------------------------------------------------
         # check whether requested eddy version exist
-        exe_ver = os.path.join(self.subject._global.fsl_dir, "bin", exe_ver)
+        exe_ver = os.path.join(self.subject.globaldata.fsl_dir, "bin", exe_ver)
         if os.path.exists(exe_ver) is False:
             print("ERROR in eddy of subject: " + self.subject.label + ", eddy exe version (" + exe_ver + ") does not exist, exiting.....")
             return
