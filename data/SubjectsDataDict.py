@@ -1,7 +1,6 @@
 import csv
 import os
 
-from data.utilities import get_file_header
 from utility.utilities import argsort, reorder_list, string2num, write_text_file
 
 

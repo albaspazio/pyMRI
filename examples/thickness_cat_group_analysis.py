@@ -28,7 +28,7 @@ if __name__ == "__main__":
         # PROCESSING
         # ======================================================================================================================
         subjects = project.load_subjects(group_label, SESS_ID)
-        # project.add_icv_to_data(group_label) # add icv to data
+        project.add_icv_to_data(group_label) # add icv to data
 
         analysis            = GroupAnalysis(project)
         spm_analysis        = SPMModels(project)
@@ -52,11 +52,12 @@ if __name__ == "__main__":
         #                                                        spm_contrasts_template_name="", mult_corr="FWE", pvalue=0.05,
         #                                                        cluster_extend=0):
         group_label = "test"
+        subjects    = project.get_subjects(group_label, SESS_ID)
         cov_names   = ["gender", "age"]
         anal_name   = "multregr_age_gender"
-        statsdir    = "/data/MRI/projects/T15/group_analysis/mpr/thickness/" + anal_name
+        statsdir    = os.path.join(project.group_analysis_dir, "mpr/thickness/" + anal_name)
 
-        # spm_analysis.batchrun_cat_thickness_stats_factdes_1group_multregr(statsdir, group_label, cov_names, spm_contrasts_template_name="")
+        # spm_analysis.batchrun_cat_thickness_stats_factdes_1group_multregr(statsdir, subjects, cov_names, spm_contrasts_template_name="")
 
 
         # def batchrun_cat_thickness_stats_factdes_1Wanova(self, statsdir, groups_labels, cov_name, cov_interaction=1,

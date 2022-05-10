@@ -121,7 +121,7 @@ class Project:
     # ==================================================================================================================
     #region GET SUBJECTS' LABELS or INSTANCES
     # ==================================================================================================================
-    # GROUP_LABEL or SUBLABELS LIST => VALID SUBLABELS LIST
+    # GROUP_LABEL or SUBLABELS LIST or SUBJINSTANCES LIST => VALID SUBLABELS LIST
     def get_subjects_labels(self, grouplabel_or_subjlist=None, sess_id=1):
         if grouplabel_or_subjlist is None:
             if len(self.subjects_labels) == 0:
@@ -132,10 +132,12 @@ class Project:
             return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, sess_id)
 
         elif isinstance(grouplabel_or_subjlist, list):
-            if isinstance(grouplabel_or_subjlist[0], str) is False:
-                raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a string list, first value is: " + str(grouplabel_or_subjlist[0]))
-            else:
+            if isinstance(grouplabel_or_subjlist[0], str) is True:
                 return self.__get_valid_subjlabels(grouplabel_or_subjlist, sess_id)
+            elif isinstance(grouplabel_or_subjlist[0], Subject):
+                return [subj.label for subj in grouplabel_or_subjlist]
+            else:
+                raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a string list, first value is: " + str(grouplabel_or_subjlist[0]))
         else:
             raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a valid param (None, string  or string list), is: " + str(grouplabel_or_subjlist))
 

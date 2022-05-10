@@ -1,3 +1,5 @@
+import os
+
 from data.utilities import list2spm_text_column, get_icv_spm_file
 from utility.images.images import imtest
 from utility.matlab import call_matlab_function_noret
@@ -22,6 +24,178 @@ class SPMStatsUtils:
             conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").orth = 1;\n"
 
         sed_inplace(out_batch_job, "<CONDITION_STRING>", conditions_string)
+
+    # ---------------------------------------------------
+    #region compose images string
+    # ---------------------------------------------------------------------------
+    # group_instances is a list of subjects' instances
+    # image_description: {"type": ct | dartel | vbm, "folder": root path for dartel}
+    @staticmethod
+    def compose_images_string_1GROUP_MULTREGR(group_instances, out_batch_job, img_description):
+
+        img_type = img_description["type"]
+        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
+            print("ERROR in compose_images_string_1W: given img_description[type] (" + img_type + ") is not valid")
+            return
+
+        img_folder  = ""
+        if img_type == "dartel":
+            if os.path.isdir(img_description["folder"]) is False:
+                print("ERROR in compose_images_string_1W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
+                return
+            else:
+                img_folder = img_description["folder"]
+
+        cells_images = "\r"
+
+        img = ""
+        for subj in group_instances:
+            if img_type == "ct":
+                img = eval("subj.t1_cat_resampled_surface")
+            elif img_type == "dartel":
+                img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
+
+            cells_images = cells_images + "\'" + img + "\'\r"
+
+        sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
+
+    @staticmethod
+    def compose_images_string_1W(groups_instances, out_batch_job, img_description):
+
+        img_type = img_description["type"]
+        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
+            print("ERROR in compose_images_string_1W: given img_description[type] (" + img_type + ") is not valid")
+            return
+
+        img_folder  = ""
+        if img_type == "dartel":
+            if os.path.isdir(img_description["folder"]) is False:
+                print("ERROR in compose_images_string_1W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
+                return
+            else:
+                img_folder = img_description["folder"]
+
+        cells_images = ""
+        gr = 0
+        for subjs in groups_instances:
+            gr              = gr + 1
+            cells_images    = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(" + str(gr) + ").scans = "
+
+            img             = ""
+            grp1_images     = "{\n"
+            for subj in subjs:
+
+                if img_type == "ct":
+                    img = eval("subj.t1_cat_resampled_surface")
+                elif img_type == "dartel":
+                    img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
+
+                grp1_images = grp1_images + "\'" + img + "\'\n"
+            grp1_images = grp1_images + "\n};"
+
+            cells_images = cells_images + grp1_images + "\n"
+
+        sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
+
+    @staticmethod
+    def compose_images_string_2W(factors, out_batch_job, img_description):
+
+        img_type = img_description["type"]
+        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
+            print("ERROR in compose_images_string_2W: given img_description[type] (" + img_type + ") is not valid")
+            return
+
+        img_folder  = ""
+        if img_type == "dartel":
+            if os.path.isdir(img_description["folder"]) is False:
+                print("ERROR in compose_images_string_2W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
+                return
+            else:
+                img_folder = img_description["folder"]
+
+        factors_labels  = factors["labels"]
+        cells           = factors["cells"]
+
+        # nfactors = len(factors_labels)
+        nlevels = [len(cells), len(cells[0])]  # nlevels for each factor
+
+        # checks
+        # if nfactors != len(cells):
+        #     print("Error: num of factors labels (" + str(nfactors) + ") differs from cells content (" + str(len(cells)) + ")")
+        #     return
+
+        cells_images = ""
+        ncell = 0
+        for f1 in range(0, nlevels[0]):
+            for f2 in range(0, nlevels[1]):
+                ncell           = ncell + 1
+                cells_images    = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(" + str(ncell) + ").levels = [" + str(f1 + 1) + "\n" + str(f2 + 1) + "];\n"
+                cells_images    = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(" + str(ncell) + ").scans = {\n"
+
+                subjs           = cells[f1][f2]
+                img             = ""
+                for subj in subjs:
+
+                    if img_type == "ct":
+                        img = eval("subj.t1_cat_resampled_surface")
+                    elif img_type == "dartel":
+                        img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
+
+                    cells_images = cells_images + "'" + img + "'\n"
+                cells_images = cells_images + "};"
+
+        sed_inplace(out_batch_job, "<FACTOR1_NAME>",    factors_labels[0])
+        sed_inplace(out_batch_job, "<FACTOR1_NLEV>",    str(nlevels[0]))
+        sed_inplace(out_batch_job, "<FACTOR2_NAME>",    factors_labels[1])
+        sed_inplace(out_batch_job, "<FACTOR2_NLEV>",    str(nlevels[1]))
+        sed_inplace(out_batch_job, "<FACTORS_CELLS>",   cells_images)
+
+    @staticmethod
+    def compose_images_string_2sTT(groups_instances, out_batch_job, img_description):
+
+        img_type = img_description["type"]
+        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
+            print("ERROR in compose_images_string_2sTT: given img_description[type] (" + img_type + ") is not valid")
+            return
+
+        img_folder  = ""
+        if img_type == "dartel":
+            if os.path.isdir(img_description["folder"]) is False:
+                print("ERROR in compose_images_string_2sTT: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
+                return
+            else:
+                img_folder = img_description["folder"]
+
+        subjs1      = groups_instances[0]
+        subjs2      = groups_instances[1]
+
+        grp1_images = "{\n"
+        img         = ""
+        for subj in subjs1:
+
+            if img_type == "ct":
+                img = eval("subj.t1_cat_resampled_surface")
+            elif img_type == "dartel":
+                img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
+
+            grp1_images = grp1_images + "\'" + img + "\'\n"
+        grp1_images = grp1_images + "\n}"
+
+        grp2_images = "{\n"
+        for subj in subjs2:
+
+            if img_type == "ct":
+                img = eval("subj.t1_cat_resampled_surface")
+            elif img_type == "dartel":
+                img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
+
+            grp2_images = grp2_images + "\'" + img + "\'\n"
+        grp2_images = grp2_images + "\n}"
+
+        # set job file
+        sed_inplace(out_batch_job, "<GROUP1_IMAGES>", grp1_images)
+        sed_inplace(out_batch_job, "<GROUP2_IMAGES>", grp2_images)
+    #endregion
 
     # ---------------------------------------------------------------------------
     # explicit masking
@@ -51,7 +225,7 @@ class SPMStatsUtils:
     # global calculation
     # ---------------------------------------------------------------------------
     @staticmethod
-    def spm_replace_global_calculation(project, out_batch_job, method="", groups_labels=None, data_file=None, idstep=1):
+    def spm_replace_global_calculation(project, out_batch_job, method="", groups_instances=None, data_file=None, idstep=1):
 
         no_corr_str     = "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalc.g_omit = 1;\n matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;\n matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.glonorm = 1;"
         user_corr_str1  = "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalc.g_user.global_uval = [\n"
@@ -60,8 +234,8 @@ class SPMStatsUtils:
 
         if method == "subj_icv":  # read icv file from each subject/mpr/spm folder
             icv = ""
-            for grp in groups_labels:
-                for subj in project.get_subjects(grp):
+            for subjs in groups_instances:
+                for subj in subjs:
                     icv = icv + str(get_icv_spm_file(subj.t1_spm_icv_file)) + "\n"
             gc_str = user_corr_str1 + icv + user_corr_str2
         elif method == "subj_tiv":  # read tiv file from each subject/mpr/cat folder
@@ -70,8 +244,9 @@ class SPMStatsUtils:
             gc_str = no_corr_str
         elif isinstance(method, str) is True and data_file is not None:  # must be a column in the given data_file list of
             icvs = []
-            for grp in groups_labels:
-                icvs = icvs + project.get_filtered_column(method, project.get_subjects_labels(grp))
+            for subjs in groups_instances:
+                subjs_labels = [subj.label for subj in subjs]
+                icvs = icvs + project.get_filtered_column(method, subjs_labels)
             gc_str = user_corr_str1 + list2spm_text_column(icvs) + user_corr_str2  # list2spm_text_column ends with a "\n"
 
         sed_inplace(out_batch_job, "<FACTDES_GLOBAL>", gc_str)
@@ -118,7 +293,7 @@ class StatsParams:
     def __init__(self, multcorr="FWE", pvalue=0.05, clustext=0):
         self.mult_corr      = multcorr
         self.pvalue         = pvalue
-        self.cluster_extend = 0
+        self.cluster_extend = clustext
 
 class CatConvStatsParams:
 

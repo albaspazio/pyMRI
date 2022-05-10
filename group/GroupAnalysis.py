@@ -1,20 +1,14 @@
-import ntpath
 import os
 import shutil
-import traceback
 from shutil import move
 
-import matlab.engine
 import numpy
 
 from data import plot_data
-from data.SubjectsDataDict import SubjectsDataDict
 from group.SPMModels import SPMModels
-from group.SPMStatsUtils import SPMStatsUtils
-from utility.myfsl.utils.run import rrun
 from utility.images.images import imcp, imtest, immv, imrm, remove_ext, filter_volumes, get_image_nvoxels, get_image_mean, mask_image
-from data.utilities import list2spm_text_column, get_icv_spm_file
 from utility.matlab import call_matlab_spmbatch
+from utility.myfsl.utils.run import rrun
 from utility.utilities import sed_inplace
 
 
@@ -37,9 +31,9 @@ class GroupAnalysis:
     # create a folder name and its subfolders : subjects (normalized images), flowfields, stats
     # RC1_IMAGES:    {  '/media/data/MRI/projects/ELA/subjects/0202/s1/mpr/rc20202-t1.nii,1'
     #                   '/media/data/MRI/projects/ELA/subjects/0503/s1/mpr/rc20503-t1.nii,1'}
-    def create_vbm_spm_template_normalize(self, name, grouplabel_or_subjlist, spm_template_name="spm_dartel_createtemplate_normalize", sess_id=1):
+    def create_vbm_spm_template_normalize(self, name, subjects_list, spm_template_name="spm_dartel_createtemplate_normalize"):
 
-        self.subjects_list = self.project.get_subjects(grouplabel_or_subjlist, sess_id)
+        self.subjects_list = subjects_list
         if len(self.subjects_list) == 0:
             print("ERROR in create_vbm_spm_template_normalize, given subjs params is neither a string nor a list")
             return
@@ -77,10 +71,12 @@ class GroupAnalysis:
         affine_trasf_mat = os.path.join(self.subjects_list[0].t1_spm_dir, name + "_6_2mni.mat")
         move(affine_trasf_mat, os.path.join(self.project.vbm_dir, name, "flowfields", name + "_6_2mni.mat"))
 
-    # create a fslvbm folder using spm's vbm output
-    def create_fslvbm_from_spm(self, grouplabel_or_subjlist, smw_folder, vbmfsl_folder, sess_id=1):
+        return self.working_dir
 
-        self.subjects_list  = self.project.get_subjects(grouplabel_or_subjlist, sess_id)
+    # create a fslvbm folder using spm's vbm output
+    def create_fslvbm_from_spm(self, subjects_list, smw_folder, vbmfsl_folder):
+
+        self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
             print("ERROR in create_fslvbm_from_spm, given subjs params is neither a string nor a list")
             return
@@ -109,9 +105,9 @@ class GroupAnalysis:
         shutil.rmtree(struct_dir)
 
 
-    def tbss_run_fa(self, grouplabel_or_subjlist, odn, prepare=True, proc=True, postreg="S", prestat_thr=0.2, sess_id=1):
+    def tbss_run_fa(self, subjects_list, odn, prepare=True, proc=True, postreg="S", prestat_thr=0.2):
 
-        self.subjects_list  = self.project.get_subjects(grouplabel_or_subjlist, sess_id)
+        self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
             print("ERROR in tbss_run_fa, given grouplabel_or_subjlist params is neither a string nor a list")
             return
@@ -148,9 +144,9 @@ class GroupAnalysis:
 
     # run tbss for other modalities = ["MD", "L1", ....]
     # you first must have done run_tbss_fa
-    def tbss_run_alternatives(self, grouplabel_or_subjlist, input_folder, modalities, prepare=True, proc=True, sess_id=1):
+    def tbss_run_alternatives(self, subjects_list, input_folder, modalities, prepare=True, proc=True):
 
-        self.subjects_list  = self.project.get_subjects(grouplabel_or_subjlist, sess_id)
+        self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
             print("ERROR in tbss_run_alternatives, given grouplabel_or_subjlist params is neither a string nor a list")
             return
@@ -215,9 +211,9 @@ class GroupAnalysis:
 
     # read xtract's stats.csv file of each subject in the given list and create a tabbed file (ofp) with given values/tract
     # calls the subject routine
-    def xtract_export_group_data(self, grouplabel_or_subjlist, ofp, tracts=None, values=None, ifn="stats.csv", sess_id=1):
+    def xtract_export_group_data(self, subjects_list, ofp, tracts=None, values=None, ifn="stats.csv"):
 
-        self.subjects_list  = self.project.get_subjects(grouplabel_or_subjlist, sess_id)
+        self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
             print("ERROR in xtract_export_group_data, given subjs params is neither a string nor a list")
             return
@@ -244,7 +240,7 @@ class GroupAnalysis:
 
     # ---------------------------------------------------
     #region MELODIC
-    def group_melodic(self, out_dir_name, subjects, tr):
+    def group_melodic(self, out_dir_name, subjects_list, tr):
 
         if os.path.exists(out_dir_name):
             os.removedirs(out_dir_name)
@@ -256,14 +252,14 @@ class GroupAnalysis:
         masks           = ""
         missing_data    = ""
 
-        for s in subjects:
+        for subj in subjects_list:
 
-            if imtest(s.rs_final_regstd_image) is True and imtest(s.rs_final_regstd_bgimage) and imtest(s.rs_final_regstd_bgimage):
-                subjs       = subjs + " " + s.rs_final_regstd_image
-                bgimages    = subjs + " " + s.rs_final_regstd_bgimage
-                masks       = masks + " " + s.rs_final_regstd_mask
+            if imtest(subj.rs_final_regstd_image) is True and imtest(subj.rs_final_regstd_bgimage) and imtest(subj.rs_final_regstd_bgimage):
+                subjs       = subjs + " " + subj.rs_final_regstd_image
+                bgimages    = subjs + " " + subj.rs_final_regstd_bgimage
+                masks       = masks + " " + subj.rs_final_regstd_mask
             else:
-                missing_data = missing_data + s.label + " "
+                missing_data = missing_data + subj.label + " "
 
         if len(missing_data) > 0:
             print("group melodic failed. the following subjects does not have all the needed images:")
@@ -306,8 +302,7 @@ class GroupAnalysis:
     # ====================================================================================================================================================
     # run tbss for FA
     # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
-    def tbss_clusterize_results_by_atlas(self, tbss_result_image, out_folder,
-                                         log_file="log.txt", tracts_labels=None, tracts_dir=None, thr=0.95):
+    def tbss_clusterize_results_by_atlas(self, tbss_result_image, out_folder, log_file="log.txt", tracts_labels=None, tracts_dir=None, thr=0.95):
 
         try:
             if tracts_labels is None:
