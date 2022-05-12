@@ -15,7 +15,7 @@ class SPMContrasts:
     @staticmethod
     def batchrun_spm_stats_2samplesttest_contrasts_results(project, _global, spmmat, c1_name="A>B", c2_name="B>A",
                                                            spm_template_name="spm_stats_2samplesttest_contrasts_results",
-                                                           stats_params=None, runit=True):
+                                                           stats_params=None, eng=None, runit=True):
         try:
             if stats_params is None:
                 stats_params = StatsParams()
@@ -34,7 +34,10 @@ class SPMContrasts:
             SPMResults.runbatch_cat_results_trasformation_string(out_batch_job, 3, stats_params.mult_corr, stats_params.pvalue, stats_params.cluster_extend)
 
             if runit is True:
-                call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
+                if eng is None:
+                    call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
+                else:
+                    call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir], eng=eng, endengine=False)
 
         except Exception as e:
             traceback.print_exc()
@@ -45,7 +48,7 @@ class SPMContrasts:
     @staticmethod
     def batchrun_cat_stats_1group_multregr_contrasts_results(project, _global, spmmat, cov_names,
                                                              spm_template_name="cat_stats_contrasts_results",
-                                                             stats_params=None, runit=True):
+                                                             stats_params=None, eng=None, runit=True):
         try:
             if stats_params is None:
                 stats_params = StatsParams()
@@ -62,7 +65,11 @@ class SPMContrasts:
             sed_inplace(out_batch_job, "<PVALUE>"           , str(stats_params.pvalue))
             sed_inplace(out_batch_job, "<CLUSTER_EXTEND>"   , str(stats_params.cluster_extend))
 
-            call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
+            if runit is True:
+                if eng is None:
+                    call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
+                else:
+                    call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir], eng=eng, endengine=False)
 
         except Exception as e:
             traceback.print_exc()
@@ -70,7 +77,8 @@ class SPMContrasts:
 
     # run a prebuilt batch file in a non-standard location, which only need to set the stat folder and SPM.mat path
     @staticmethod
-    def batchrun_spm_stats_predefined_contrasts_results(project, _global, statsdir, spm_template_full_path_noext, eng=None, runit=True):
+    def batchrun_spm_stats_predefined_contrasts_results(project, _global, statsdir,
+                                                        spm_template_full_path_noext, eng=None, runit=True):
         try:
             # create template files
             out_batch_job, out_batch_start = project.adapt_batch_files(spm_template_full_path_noext, "mpr")
@@ -84,7 +92,7 @@ class SPMContrasts:
                 if eng is None:
                     call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])  # open a new session and then end it
                 else:
-                    call_matlab_spmbatch(out_batch_start, endengine=False)  # I assume that the caller will end the matlab session and def dir have been already specified
+                    call_matlab_spmbatch(out_batch_start, eng=eng, endengine=False)  # I assume that the caller will end the matlab session and def dir have been already specified
 
         except Exception as e:
             traceback.print_exc()

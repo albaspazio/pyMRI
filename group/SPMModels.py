@@ -32,7 +32,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel")
             statsdir                        = os.path.join(root_outdir, "stats", analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -48,7 +48,7 @@ class SPMModels:
             # check whether adding a covariate
             # ---------------------------------------------------------------------------
             if len(cov_names) > 0:
-                SPMCovariates.spm_replace_stats_add_manycov_1group(out_batch_job, groups_instances[0], self.project, cov_names, cov_interactions, data_file)
+                SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interactions, data_file)
             else:
                 print("ERROR : No covariates in a multiple regression")
                 return ""
@@ -69,7 +69,9 @@ class SPMModels:
                 SPMContrasts.batchrun_spm_stats_predefined_contrasts_results(self.project, self.globaldata, statsdir, spm_contrasts_template_name, eng, runit)
 
             # ---------------------------------------------------------------------------
-            eng.quit()
+            if bool(eng):
+                eng.quit()
+            os.remove(out_batch_start)
             return os.path.join(statsdir, "SPM.mat")
 
         except DataFileException as e:
@@ -97,7 +99,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)   # return data_file header
 
             # create template files
-            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel")
             statsdir                        = os.path.join(root_outdir, "stats", analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -110,14 +112,14 @@ class SPMModels:
             SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
 
             # check whether adding a covariate
-            SPMCovariates.spm_replace_stats_add_covariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
 
             # explicit mask
             SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
 
             # call matlab
             if runit is True:
-                eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir])
+                eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
             else:
                 eng = {}
 
@@ -125,7 +127,10 @@ class SPMModels:
             if spm_contrasts_template_name != "":
                 SPMContrasts.batchrun_spm_stats_predefined_contrasts_results(self.project, self.globaldata, statsdir, spm_contrasts_template_name, eng, runit)
 
-
+            # ---------------------------------------------------------------------------
+            if bool(eng):
+                eng.quit()
+            os.remove(out_batch_start)
             return os.path.join(statsdir, "SPM.mat")
 
         except DataFileException as e:
@@ -154,7 +159,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel")
             statsdir                        = os.path.join(root_outdir, "stats", analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -163,10 +168,17 @@ class SPMModels:
             SPMStatsUtils.compose_images_string_2W(factors, out_batch_job, {"type":"ct"})
 
             # check whether adding a covariate
-            SPMCovariates.spm_replace_stats_add_covariates(self.project, out_batch_job, factors["groups_instances"], cov_names, cov_interaction, data_file)
+            # concatenates all the levels of the two main factors in a single vector. being a simple covariate,
+            all_instances = [[]]
+            for i in factors["cells"][0]:
+                all_instances[0] = all_instances[0] + i
+            for i in factors["cells"][1]:
+                all_instances[0] = all_instances[0] + i
+
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, all_instances, cov_names, cov_interaction, data_file)
 
             # global calculation
-            SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, factors["groups_instances"], data_file)
+            SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, all_instances, data_file)
 
             # explicit mask
             SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
@@ -174,15 +186,18 @@ class SPMModels:
             # ---------------------------------------------------------------------------
             print("running SPM batch template: " + statsdir)
             if runit is True:
-                eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir])
+                eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
             else:
                 eng = {}
 
             # check whether running a given contrasts batch. script must only modify SPM.mat file
             if spm_contrasts_template_name != "":
-                SPMContrasts.batchrun_spm_stats_predefined_contrasts_results(self.project, self.globaldata, statsdir, spm_contrasts_template_name, eng)
-            eng.quit()
+                SPMContrasts.batchrun_spm_stats_predefined_contrasts_results(self.project, self.globaldata, statsdir, spm_contrasts_template_name, eng, runit)
 
+            # ---------------------------------------------------------------------------
+            if bool(eng):
+                eng.quit()
+            os.remove(out_batch_start)
             return os.path.join(statsdir, "SPM.mat")
 
         except Exception as e:
@@ -202,7 +217,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel")
             statsdir                        = os.path.join(root_outdir, "stats", analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -210,7 +225,7 @@ class SPMModels:
             SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, {"type":"ct"})
 
             # check whether adding a covariate
-            SPMCovariates.spm_replace_stats_add_covariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
 
             # global calculation
             SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
@@ -220,12 +235,19 @@ class SPMModels:
 
             # ---------------------------------------------------------------------------
             if runit is True:
-                call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir])
+                eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
+            else:
+                eng = {}
 
             # ---------------------------------------------------------------------------
-            SPMContrasts.batchrun_spm_stats_2samplesttest_contrasts_results(self.project, self.globaldata, os.path.join(statsdir, "SPM.mat"), c1_name, c2_name,
-                                                                            spm_contrasts_template_name,
-                                                                            stats_params, runit)
+            if spm_contrasts_template_name != "":
+                SPMContrasts.batchrun_spm_stats_2samplesttest_contrasts_results(self.project, self.globaldata, os.path.join(statsdir, "SPM.mat"), c1_name, c2_name,
+                                                                                spm_contrasts_template_name,
+                                                                                stats_params, eng, runit)
+            # ---------------------------------------------------------------------------
+            if bool(eng):
+                eng.quit()
+            os.remove(out_batch_start)
 
             return os.path.join(statsdir, "SPM.mat")
 
@@ -250,7 +272,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct")
             statsdir                       = os.path.join(root_outdir, analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -263,7 +285,7 @@ class SPMModels:
 
             # check whether adding a covariate
             if len(cov_names) > 0:
-                SPMCovariates.spm_replace_stats_add_covariates(self.project, out_batch_job, groups_instances, cov_names, cov_interactions, data_file)
+                SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interactions, data_file)
             else:
                 print("ERROR : No covariates in a multiple regression")
                 return ""
@@ -281,9 +303,12 @@ class SPMModels:
 
             # check whether running a given contrasts batch. script must only modify SPM.mat file
             if spm_contrasts_template_name != "":
-                SPMContrasts.batchrun_spm_stats_predefined_contrasts_results(self.project, self.globaldata, statsdir, spm_contrasts_template_name, eng)
-            eng.quit()
+                SPMContrasts.batchrun_spm_stats_predefined_contrasts_results(self.project, self.globaldata, statsdir, spm_contrasts_template_name, eng, runit)
 
+            # ---------------------------------------------------------------------------
+            if bool(eng):
+                eng.quit()
+            os.remove(out_batch_start)
             return os.path.join(statsdir, "SPM.mat")
 
         except Exception as e:
@@ -307,7 +332,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct")
             statsdir                       = os.path.join(root_outdir, analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -319,7 +344,7 @@ class SPMModels:
             SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
 
             # check whether adding a covariate
-            SPMCovariates.spm_replace_stats_add_covariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
 
             # explicit mask
             SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
@@ -336,7 +361,9 @@ class SPMModels:
                 SPMContrasts.batchrun_spm_stats_predefined_contrasts_results(self.project, self.globaldata, statsdir, spm_contrasts_template_name, eng, runit)
 
             # ---------------------------------------------------------------------------
-            eng.quit()
+            if bool(eng):
+                eng.quit()
+            os.remove(out_batch_start)
             return os.path.join(statsdir, "SPM.mat")
 
         except Exception as e:
@@ -355,7 +382,7 @@ class SPMModels:
     # factors in a dict with field {"groups_instances":[], "labels":[], "cells": []}
     def batchrun_cat_thickness_stats_factdes_2Wanova(self, root_outdir, analysis_name, factors, cov_names=None,
                                                      data_file=None, glob_calc="", cov_interaction=None,
-                                                     expl_mask=None, spm_template_name="cat_thickness_stats_2Wanova_check_estimate",
+                                                     expl_mask=None, spm_template_name="spm_stats_2Wanova_check_estimate",
                                                      spm_contrasts_template_name="", runit=True):
 
         try:
@@ -363,7 +390,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct")
             statsdir                       = os.path.join(root_outdir, analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -372,10 +399,18 @@ class SPMModels:
             SPMStatsUtils.compose_images_string_2W(factors, out_batch_job, {"type":"ct"})
 
             # check whether adding a covariate
-            SPMCovariates.spm_replace_stats_add_covariates(self.project, out_batch_job, factors["groups_instances"], cov_names, cov_interaction, data_file)
+            # concatenates all the levels of the two main factors in a single vector. being a simple covariate,
+            all_instances = [[]]
+            for i in factors["cells"][0]:
+                all_instances[0] = all_instances[0] + i
+            for i in factors["cells"][1]:
+                all_instances[0] = all_instances[0] + i
+
+            # check whether adding a covariate
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, all_instances, cov_names, cov_interaction, data_file)
 
             # global calculation
-            SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, factors["groups_instances"], data_file)
+            SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, all_instances, data_file)
 
             # explicit mask
             SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
@@ -383,15 +418,18 @@ class SPMModels:
             # ---------------------------------------------------------------------------
             print("running SPM batch template: " + statsdir)
             if runit is True:
-                eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir])
+                eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
             else:
                 eng = {}
 
             # check whether running a given contrasts batch. script must only modify SPM.mat file
             if spm_contrasts_template_name != "":
-                SPMContrasts.batchrun_spm_stats_predefined_contrasts_results(self.project, self.globaldata, statsdir, spm_contrasts_template_name, eng)
-            eng.quit()
+                SPMContrasts.batchrun_spm_stats_predefined_contrasts_results(self.project, self.globaldata, statsdir, spm_contrasts_template_name, eng, runit)
 
+            # ---------------------------------------------------------------------------
+            if bool(eng):
+                eng.quit()
+            os.remove(out_batch_start)
             return os.path.join(statsdir, "SPM.mat")
 
         except Exception as e:
@@ -403,7 +441,7 @@ class SPMModels:
     # statsparams = {"mult_corr":"", "pvalue":0.05, "clust_ext":0}
     def batchrun_cat_thickness_stats_factdes_2samplesttest(self, root_outdir, analysis_name, groups_instances=None, cov_names=None,
                                                            data_file=None, glob_calc="", cov_interaction=None,
-                                                           expl_mask=None, spm_template_name="cat_thickness_stats_2samples_ttest_check_estimate",
+                                                           expl_mask=None, spm_template_name="spm_stats_2samples_ttest_check_estimate",
                                                            spm_contrasts_template_name="spm_stats_2samplesttest_contrasts_results",
                                                            stats_params=None, runit=True, c1_name = "A > B", c2_name = "B > A"):
 
@@ -412,7 +450,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr")
+            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct")
             statsdir                       = os.path.join(root_outdir, analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -420,7 +458,7 @@ class SPMModels:
             SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, {"type":"ct"})
 
             # check whether adding a covariate
-            SPMCovariates.spm_replace_stats_add_covariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
 
             # global calculation
             SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
@@ -430,13 +468,19 @@ class SPMModels:
 
             # ---------------------------------------------------------------------------
             if runit is True:
-                call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir])
+                eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
+            else:
+                eng = {}
 
             # ---------------------------------------------------------------------------
-            SPMContrasts.batchrun_spm_stats_2samplesttest_contrasts_results(self.project, self.globaldata, os.path.join(statsdir, "SPM.mat"), c1_name, c2_name,
+            if spm_contrasts_template_name != "":
+                SPMContrasts.batchrun_spm_stats_2samplesttest_contrasts_results(self.project, self.globaldata, os.path.join(statsdir, "SPM.mat"), c1_name, c2_name,
                                                                             spm_contrasts_template_name,
-                                                                            stats_params, runit)
-
+                                                                            stats_params, eng, runit)
+            # ---------------------------------------------------------------------------
+            if bool(eng):
+                eng.quit()
+            os.remove(out_batch_start)
             return os.path.join(statsdir, "SPM.mat")
 
         except Exception as e:

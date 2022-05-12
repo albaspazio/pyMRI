@@ -1,7 +1,10 @@
 import os
 
-from data.utilities import list2spm_text_column, get_icv_spm_file
+from data.SubjectsDataDict import SubjectsDataDict
+from data.utilities import list2spm_text_column
+from utility.exceptions import DataFileException
 from utility.images.images import imtest
+import ssl
 from utility.matlab import call_matlab_function_noret
 from utility.utilities import sed_inplace
 
@@ -224,30 +227,49 @@ class SPMStatsUtils:
     # ---------------------------------------------------------------------------
     # global calculation
     # ---------------------------------------------------------------------------
+    # method can be: subj_icv, subj_tiv, "" (no correction) or a column name of the given data_file
     @staticmethod
     def spm_replace_global_calculation(project, out_batch_job, method="", groups_instances=None, data_file=None, idstep=1):
 
         no_corr_str     = "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalc.g_omit = 1;\n matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;\n matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.glonorm = 1;"
         user_corr_str1  = "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalc.g_user.global_uval = [\n"
         user_corr_str2  = "];\n matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;\n matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.glonorm = 2;"
-        gc_str = ""
+        gc_str          = ""
+
+        slabels         = []
+        for subjs in groups_instances:
+            slabels = slabels + project.get_subjects_labels(subjs)
 
         if method == "subj_icv":  # read icv file from each subject/mpr/spm folder
-            icv = ""
-            for subjs in groups_instances:
-                for subj in subjs:
-                    icv = icv + str(get_icv_spm_file(subj.t1_spm_icv_file)) + "\n"
-            gc_str = user_corr_str1 + icv + user_corr_str2
+
+            if project.data.exist_filled_column("icv", slabels) is True:
+                str_icvs = list2spm_text_column(project.get_filtered_column("icv", slabels)[0])
+                # raise DataFileException("spm_replace_global_calculation", "given data_file does not contain the column icv")
+            else:
+                icvs = []
+                for subjs in groups_instances:
+                    icvs = icvs + project.get_subjects_icv(subjs)
+                str_icvs = list2spm_text_column(icvs)
+            gc_str = user_corr_str1 + str_icvs + user_corr_str2
         elif method == "subj_tiv":  # read tiv file from each subject/mpr/cat folder
+            # if project.data.exist_filled_column("tiv", slabels) is False:
+            #
+
             gc_str = no_corr_str
         elif method == "":  # don't correct
             gc_str = no_corr_str
+
         elif isinstance(method, str) is True and data_file is not None:  # must be a column in the given data_file list of
-            icvs = []
-            for subjs in groups_instances:
-                subjs_labels = [subj.label for subj in subjs]
-                icvs = icvs + project.get_filtered_column(method, subjs_labels)
-            gc_str = user_corr_str1 + list2spm_text_column(icvs) + user_corr_str2  # list2spm_text_column ends with a "\n"
+
+            if os.path.exists(data_file) is False:
+                raise DataFileException("spm_replace_global_calculation", "given data_file does not exist")
+            data = SubjectsDataDict(data_file)
+
+            if data.exist_filled_column(method, slabels) is False:
+                raise DataFileException("spm_replace_global_calculation", "given data_file does not contain a valid value of column " + method + " for all subjects")
+
+            str_icvs = list2spm_text_column(data.get_filtered_column(method, slabels)[0])
+            gc_str = user_corr_str1 + str_icvs + user_corr_str2  # list2spm_text_column ends with a "\n"
 
         sed_inplace(out_batch_job, "<FACTDES_GLOBAL>", gc_str)
 

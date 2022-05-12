@@ -95,7 +95,6 @@ def get_icv_spm_file(filepath):
     return float(values[1]) + float(values[2]) + float(values[3])
 
 
-
 def get_file_header(filepath):
     if os.path.exists(filepath) is False:
         print("ERROR in get_file_header, given filepath param (" + filepath + ") is not a file")

@@ -408,21 +408,19 @@ class Project:
 
     def get_subjects_icv(self, grouplabel_or_subjlist, sess_id=1):
 
-        self.subjects_list = self.get_subjects(grouplabel_or_subjlist, sess_id)
-        nsubj = len(self.subjects_list)
+        if isinstance(grouplabel_or_subjlist[0], Subject) is True:  # so caller does not have to set also the sess_id, is a xprojects parameter
+            subjects_list = grouplabel_or_subjlist
+        else:
+            subjects_list = self.get_subjects(grouplabel_or_subjlist, sess_id)
 
-        icv_scores = numpy.zeros((nsubj, 1))
-        cnt = 0
-        for subj in self.subjects_list:
-            icv_file = os.path.join(subj.t1_spm_dir, "icv_" + subj.label + ".dat")
-
-            with open(icv_file) as fp:
+        icv_scores = []
+        for subj in subjects_list:
+            with open(subj.t1_spm_icv_file) as fp:
                 fp.readline()
-                line = fp.readline().rstrip()
-                values = line.split(',')
+                line    = fp.readline().rstrip()
+                values  = line.split(',')
 
-            icv_scores[cnt, 0] = round(float(values[1]) + float(values[2]) + float(values[3]), 4)
-            cnt = cnt + 1
+            icv_scores.append(round(float(values[1]) + float(values[2]) + float(values[3]), 4))
         return icv_scores
 
     #endregion ==================================================================================================================
