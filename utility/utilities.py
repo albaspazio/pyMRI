@@ -137,3 +137,13 @@ def string2num(string):
             return fl_string
     except ValueError:
         return string
+
+
+def listToString(list, separator='\t'):
+
+    str = ""
+    # traverse the list and concatenate to String variable
+    for element in list:
+        str += (element + separator)
+
+    return str

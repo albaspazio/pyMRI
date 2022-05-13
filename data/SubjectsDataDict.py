@@ -2,7 +2,7 @@ import csv
 import os
 
 from utility.exceptions import DataFileException
-from utility.utilities import argsort, reorder_list, string2num, write_text_file
+from utility.utilities import argsort, reorder_list, string2num, write_text_file, listToString
 
 
 # =====================================================================================
@@ -234,8 +234,10 @@ class SubjectsDataDict:
         if nv != self.num:
             print("ERROR in SubjectsDataDict.add")
 
-        for r in range(len(self.data)):
-            self.data[r][col_label] = values[r]
+        cnt = 0
+        for slab in self.data:
+            self.data[slab][col_label] = values[cnt]
+            cnt = cnt + 1
 
         self.header = self.get_header()
 
@@ -271,12 +273,13 @@ class SubjectsDataDict:
 
         return True
 
+    # TODO: fix data save
     def save_data(self, data_file=None):
 
         if data_file is None:
             data_file = self.filepath
 
-        txt = self.header + "\n"
+        txt = listToString(self.header) + "\n"
         for row in self.data:
             r = ""
             for field in row:

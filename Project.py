@@ -326,12 +326,12 @@ class Project:
     # ==================================================================================================================
     # returns a matrix (values x subjects) containing values of the requested columns of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_columns(self, columns_list, grouplabel_or_subjlist, sort=False, data=None, sess_id=1):
+    def get_filtered_columns(self, columns_list, grouplabel_or_subjlist, data=None, sort=False, sess_id=1):
 
         subj_list  = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
         valid_data = self.validate_data(data)
         if valid_data is not None:
-            return valid_data.get_filtered_columns(columns_list, subj_list, sort)
+            return valid_data.get_filtered_columns(columns_list, subj_list, sort=sort)
         else:
             return None
 
@@ -339,23 +339,23 @@ class Project:
     # - [values]
     # - [labels]
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_column(self, column, grouplabel_or_subjlist, sort=False, data=None, sess_id=1):
+    def get_filtered_column(self, column, grouplabel_or_subjlist, data=None, sort=False, sess_id=1):
 
         subj_list   = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
         valid_data  = self.validate_data(data)
         if valid_data is not None:
-            return valid_data.get_filtered_column(column, subj_list, sort)
+            return valid_data.get_filtered_column(column, subj_list, sort=sort)
         else:
             return None
 
     # returns a vector (nsubj) containing values of the requested column of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_column_by_value(self, column, value, operation="=", grouplabel_or_subjlist=None, sort=False, data=None, sess_id=1):
+    def get_filtered_column_by_value(self, column, value, operation="=", grouplabel_or_subjlist=None, data=None, sort=False, sess_id=1):
 
         subj_list   = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
         valid_data  = self.validate_data(data)
         if valid_data is not None:
-            return valid_data.get_filtered_column_by_value(column, value, "=", subj_list, sort)
+            return valid_data.get_filtered_column_by_value(column, value, "=", subj_list, sort=sort)
         else:
             return None
 
@@ -363,12 +363,12 @@ class Project:
     # user can also pass a datafile path or a custom subj_dictionary
     # def get_filtered_column_by_value(self, column, value, operation="=", subjects_label=None, data=None):
     def get_filtered_subj_dict_column_within_values(self, column, value1, value2, operation="<>", grouplabel_or_subjlist=None,
-                                                    sort=False, data=None, sess_id=1):
+                                                    data=None, sort=False, sess_id=1):
 
         subj_list   = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
         valid_data  = self.validate_data(data)
         if valid_data is not None:
-            return valid_data.get_filtered_column_within_values(column, value1, value2, operation, subj_list, sort)
+            return valid_data.get_filtered_column_within_values(column, value1, value2, operation, subj_list, sort=sort)
         else:
             return None
 

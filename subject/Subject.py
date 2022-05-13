@@ -106,7 +106,7 @@ class Subject:
 
         self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
         self.t1_cat_surface_resamplefilt= 12
-        self.t1_cat_lh_surface          = os.path.join(self.t1_cat_surface_dir, "lh.thickness.T1_" + self.label + ".gii")
+        self.t1_cat_lh_surface          = os.path.join(self.t1_cat_surface_dir, "lh.thickness.T1_" + self.label)
         self.t1_cat_resampled_surface   = os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
         self.t1_cat_resampled_surface_longitudinal = os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
 

@@ -32,7 +32,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel")
+            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel_" + analysis_name)
             statsdir                        = os.path.join(root_outdir, "stats", analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -99,7 +99,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)   # return data_file header
 
             # create template files
-            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel")
+            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel_" + analysis_name)
             statsdir                        = os.path.join(root_outdir, "stats", analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -159,7 +159,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel")
+            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel_" + analysis_name)
             statsdir                        = os.path.join(root_outdir, "stats", analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -217,7 +217,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel")
+            out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel_" + analysis_name)
             statsdir                        = os.path.join(root_outdir, "stats", analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -272,7 +272,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct")
+            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)
             statsdir                       = os.path.join(root_outdir, analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -332,7 +332,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct")
+            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)
             statsdir                       = os.path.join(root_outdir, analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -390,7 +390,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct")
+            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)
             statsdir                       = os.path.join(root_outdir, analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
@@ -450,7 +450,7 @@ class SPMModels:
             validate_data_with_covs(data_file, cov_names)
 
             # create template files
-            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct")
+            out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)
             statsdir                       = os.path.join(root_outdir, analysis_name)
             os.makedirs(statsdir, exist_ok=True)
             sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)

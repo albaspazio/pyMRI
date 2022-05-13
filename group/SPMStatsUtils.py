@@ -317,7 +317,7 @@ class SPMStatsUtils:
 
         str_images="\n"
         for subj in subj_instances:
-            lhimage = subj.t1_cat_lh_surface
+            lhimage = "'" + subj.t1_cat_lh_surface + "'"
             str_images = str_images + lhimage + "\n"
 
         sed_inplace(out_batch_job, "<LH_IMAGES>", str_images)
