@@ -556,12 +556,16 @@ class SubjectMpr:
                     num_proc=1,
                     use_existing_nii=True,
                     use_dartel=True,
+                    smooth_surf=None,
                     spm_template_name="cat27_segment_customizedtemplate_tiv_smooth"
                     ):
 
         if imtest(os.path.join(self.subject.t1_cat_dir, "mri", "y_T1_" + self.subject.label)) is True and do_overwrite is False:
             print(self.subject.label + ": skipping cat_segment, already done")
             return
+
+        if smooth_surf is None:
+            smooth_surf = self.subject.t1_cat_surface_resamplefilt
 
         # define placeholder variables for input dir and image name
         if imgtype == 1:
@@ -660,9 +664,8 @@ class SubjectMpr:
                 resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.data_surf(1) = cfg_dep('CAT12: Segmentation: Left Thickness',substruct('.', 'val', '{}', {1}, '.', 'val','{}', {1}, '.', 'val', '{}', {1},'.', 'val', '{}', {1}),substruct('()', {1}, '.', 'lhthickness','()', {':'}));\n"
                 resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
                 resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
-                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.fwhm_surf = 15;\n"
-                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.nproc = " + str(
-                    num_proc) + ";\n"
+                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.fwhm_surf = " + str(smooth_surf) + ";\n"
+                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
 
             sed_inplace(output_template, "<SURF_RESAMPLE>", resample_string)
 

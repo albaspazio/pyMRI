@@ -48,7 +48,7 @@ class SPMModels:
             # check whether adding a covariate
             # ---------------------------------------------------------------------------
             if len(cov_names) > 0:
-                SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interactions, data_file)
+                SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, 1, cov_interactions, data_file)
             else:
                 print("ERROR : No covariates in a multiple regression")
                 return ""
@@ -112,7 +112,7 @@ class SPMModels:
             SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
 
             # check whether adding a covariate
-            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, 1, cov_interaction, data_file)
 
             # explicit mask
             SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
@@ -175,7 +175,7 @@ class SPMModels:
             for i in factors["cells"][1]:
                 all_instances[0] = all_instances[0] + i
 
-            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, all_instances, cov_names, cov_interaction, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, all_instances, cov_names, 1, cov_interaction, data_file)
 
             # global calculation
             SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, all_instances, data_file)
@@ -225,7 +225,7 @@ class SPMModels:
             SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, {"type":"ct"})
 
             # check whether adding a covariate
-            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, 1, cov_interaction, data_file)
 
             # global calculation
             SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
@@ -285,7 +285,7 @@ class SPMModels:
 
             # check whether adding a covariate
             if len(cov_names) > 0:
-                SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interactions, data_file)
+                SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, 1, cov_interactions, data_file)
             else:
                 print("ERROR : No covariates in a multiple regression")
                 return ""
@@ -344,7 +344,7 @@ class SPMModels:
             SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
 
             # check whether adding a covariate
-            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, 1, cov_interaction, data_file)
 
             # explicit mask
             SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
@@ -407,7 +407,7 @@ class SPMModels:
                 all_instances[0] = all_instances[0] + i
 
             # check whether adding a covariate
-            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, all_instances, cov_names, cov_interaction, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, all_instances, cov_names, 1, cov_interaction, data_file)
 
             # global calculation
             SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, all_instances, data_file)
@@ -458,7 +458,7 @@ class SPMModels:
             SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, {"type":"ct"})
 
             # check whether adding a covariate
-            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, cov_interaction, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, cov_names, 1, cov_interaction, data_file)
 
             # global calculation
             SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)

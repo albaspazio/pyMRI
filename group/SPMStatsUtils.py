@@ -5,7 +5,7 @@ from data.utilities import list2spm_text_column
 from utility.exceptions import DataFileException
 from utility.images.images import imtest
 import ssl
-from utility.matlab import call_matlab_function_noret
+from utility.matlab import call_matlab_function_noret, call_matlab_spmbatch
 from utility.utilities import sed_inplace
 
 
@@ -308,6 +308,27 @@ class SPMStatsUtils:
             return
 
         call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths,"'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
+
+    @staticmethod
+    def batchrun_cat_surface_smooth(project, _global, subj_instances, sfilt=12, spm_template_name="cat_surf_smooth", nproc=1, eng=None, runit=True):
+
+        # create template files
+        out_batch_job, out_batch_start = project.adapt_batch_files(spm_template_name, "mpr")
+
+        str_images="\n"
+        for subj in subj_instances:
+            lhimage = subj.t1_cat_lh_surface
+            str_images = str_images + lhimage + "\n"
+
+        sed_inplace(out_batch_job, "<LH_IMAGES>", str_images)
+        sed_inplace(out_batch_job, "<SPFILT>", str(sfilt))
+        sed_inplace(out_batch_job, "<N_PROC>", str(nproc))
+
+        if runit is True:
+            if eng is None:
+                call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
+            else:
+                call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir], eng=eng, endengine=False)
 
 
 class StatsParams:
