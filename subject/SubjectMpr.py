@@ -7,7 +7,7 @@ from Global import Global
 from utility.myfsl.utils.run import rrun
 from utility.myfsl.fslfun import run
 from utility.myfsl.fslfun import run_notexisting_img, runpipe, run_move_notexisting_img
-from utility.images.images import imtest, immv, mass_images_move, imrm, imcp, quick_smooth, remove_ext
+from utility.images.images import imtest, immv, mass_images_move, imrm, imcp, quick_smooth, remove_image_ext
 from utility.matlab import call_matlab_spmbatch, call_matlab_function_noret
 from utility.utilities import sed_inplace, gunzip, write_text_file
 
@@ -1289,7 +1289,7 @@ class SubjectMpr:
         output_roi_dir = os.path.join(self.subject.roi_t1_dir, odn)
         temp_dir = os.path.join(self.subject.first_dir, "temp")
 
-        filename = remove_ext(t1_image)
+        filename = remove_image_ext(t1_image)
         t1_image_label = os.path.basename(filename)
 
         try:

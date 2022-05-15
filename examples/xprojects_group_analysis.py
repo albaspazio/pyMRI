@@ -4,6 +4,7 @@ from Global import Global
 from Project import Project
 from group.GroupAnalysis import GroupAnalysis
 from group.SPMModels import SPMModels
+from group.SPMStatsUtils import Nuisance, PostModel
 
 if __name__ == "__main__":
 
@@ -33,15 +34,16 @@ if __name__ == "__main__":
         ctrl_subjects       = ctrl_project.get_subjects(ctrl_group_label, SESS_ID)
         pat_subjects        = ctrl_project.get_subjects(patient_group_label, SESS_ID)
 
-        cov_names           = ["gender", "age"]
+        covs                = [Nuisance("gender"), Nuisance("age")]
         populations_name    = "a_population"
         analysis_name       = "an_analysis"
 
         all_subjects = ctrl_subjects.append(pat_subjects)  # create a list concatenating controls’ list with patient one
 
         population_dir      = group_analysis.create_vbm_spm_template_normalize(populations_name, all_subjects) # create a template of the given population
+        post_model          = PostModel("cat_stats_2samples_ttest_contrasts_results", regressors=covs, isSpm=False)
 
-        spm_analysis.batchrun_spm_vbm_dartel_stats_factdes_2samplesttest(population_dir, analysis_name, [ctrl_subjects, pat_subjects], cov_names, spm_contrasts_template_name="")
+        spm_analysis.batchrun_spm_vbm_dartel_stats_factdes_2samplesttest(population_dir, analysis_name, [ctrl_subjects, pat_subjects], covs, post_model)
 
 
     except Exception as e:

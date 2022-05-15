@@ -96,6 +96,12 @@ class Global:
                                               "uf_l", "uf_r", "vof_l", "vof_r", "cc"]
         self.dti_xtract_dir                 = os.path.join(self.framework_dir, "templates", "images", "xtract", "mean_skeleton")
 
+    @staticmethod
+    def get_spm_template_dir():
+        filename            = inspect.getframeinfo(inspect.currentframe()).filename
+        return os.path.join(os.path.dirname(os.path.abspath(filename)), "templates", "spm")
+
+
     def check_paths(self):
 
         if len(self.spm_dir) > 0:
