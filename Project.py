@@ -15,7 +15,7 @@ from subject.Subject import Subject
 from data.SubjectsDataDict import SubjectsDataDict
 from utility.exceptions import SubjectListException
 from utility.images.images import imcp, imrm
-from utility.utilities import gunzip, compress, sed_inplace
+from utility.utilities import gunzip, compress, sed_inplace, remove_ext
 
 
 class Project:
@@ -428,8 +428,7 @@ class Project:
     # ==================================================================================================================
     # GROUP ANALYSIS ACCESSORY
     # ==================================================================================================================
-    # takes an existing spm batch template
-    # returns out_batch_job
+    # returns out_batch_job, created from zero
     def create_batch_files(self, out_batch_name, seq):
 
         out_batch_dir = os.path.join(self.script_dir, seq, "spm", "batch")
@@ -440,7 +439,7 @@ class Project:
         out_batch_start = os.path.join(out_batch_dir, "create_" + out_batch_name + "_start.m")
         out_batch_job   = os.path.join(out_batch_dir, "create_" + out_batch_name + ".m")
 
-        # set job file
+        # create empty file
         open(out_batch_job, 'w', encoding='utf-8').close()
 
         # set start file
@@ -450,12 +449,14 @@ class Project:
 
         return out_batch_job, out_batch_start
 
-    # returns out_batch_job, created from zero
+    # returns out_batch_job, taken from an existing spm batch template
     def adapt_batch_files(self, templfile_noext, seq, prefix=""):
 
         if prefix != "":
             prefix = prefix + "_"
 
+        # force input template to be without ext
+        templfile_noext     = remove_ext(templfile_noext)
         input_batch_name    = ntpath.basename(templfile_noext)
 
         out_batch_dir       = os.path.join(self.script_dir, seq, "spm", "batch")
@@ -463,8 +464,8 @@ class Project:
 
         in_batch_start = os.path.join(self.globaldata.spm_templates_dir, "spm_job_start.m")
 
-        if os.path.exists(templfile_noext) is True:
-            in_batch_job = templfile_noext
+        if os.path.exists(templfile_noext + ".m") is True:
+            in_batch_job = templfile_noext + ".m"
         else:
             in_batch_job = os.path.join(self.globaldata.spm_templates_dir, templfile_noext + "_job.m")
 

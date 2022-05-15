@@ -9,7 +9,7 @@ from data.utilities import list2spm_text_column
 from group.SPMStatsUtils import SPMStatsUtils
 from utility.myfsl.utils.run import rrun
 from data import utilities
-from utility.images.images import imtest, imcp, is_image, remove_ext, imcp_notexisting, immv
+from utility.images.images import imtest, imcp, is_image, remove_image_ext, imcp_notexisting, immv
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
 from utility.utilities import sed_inplace, gunzip, compress, copytree, get_filename
 
@@ -108,7 +108,7 @@ class SubjectEpi:
 
         #  /a/b/c/name.nii.gz
         input_dir   = os.path.dirname(in_ap_img)    # /a/b/c
-        in_ap_img   = remove_ext(in_ap_img)         # /a/b/c/name
+        in_ap_img   = remove_image_ext(in_ap_img)         # /a/b/c/name
         in_ap_label = os.path.basename(in_ap_img)   # name
 
         if imtest(in_ap_img + "_distorted") is False:
@@ -455,7 +455,7 @@ class SubjectEpi:
 
         #  /a/b/c/name.ext
         input_dir   = os.path.dirname(in_image)    # /a/b/c
-        in_image    = remove_ext(in_image)         # /a/b/c/name
+        in_image    = remove_image_ext(in_image)         # /a/b/c/name
         in_label    = os.path.basename(in_image)   # name
 
         # create temp folder, copy there epi and epi_pe, unzip and run mc (then I can simply remove it when ended)
@@ -499,7 +499,7 @@ class SubjectEpi:
         os.chdir(outdir)
         for f in os.scandir():
             if f.is_file():
-                gunzip(f.name, os.path.join(outdir, remove_ext(f.name) + ".nii"), replace=True)
+                gunzip(f.name, os.path.join(outdir, remove_image_ext(f.name) + ".nii"), replace=True)
 
     def spm_fmri_preprocessing_motioncorrected(self, epi_image=None, spm_template_name='spm_fmri_preprocessing_noslicetiming_norealign'):
 
@@ -668,8 +668,8 @@ class SubjectEpi:
 
         # unzip whether necessary
         for img in input_images:
-            if os.path.exists(remove_ext(img) + ".nii") is False and os.path.exists(remove_ext(img) + ".nii.gz") is True:
-                gunzip(remove_ext(img) + ".nii.gz", remove_ext(img) + ".nii")
+            if os.path.exists(remove_image_ext(img) + ".nii") is False and os.path.exists(remove_image_ext(img) + ".nii.gz") is True:
+                gunzip(remove_image_ext(img) + ".nii.gz", remove_image_ext(img) + ".nii")
 
         # default params:
         stats_dir = os.path.join(self.subject.fmri_dir, "stats", analysis_name)

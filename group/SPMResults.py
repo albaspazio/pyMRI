@@ -1,9 +1,9 @@
 import csv
 import os
 
-from group.SPMStatsUtils import StatsParams, CatConvStatsParams
+from group.SPMStatsUtils import CatConvResultsParams, Peak, Cluster
 from utility.matlab import call_matlab_spmbatch
-from utility.utilities import sed_inplace, fillnumber2fourdigits, write_text_file
+from utility.utilities import fillnumber2fourdigits, write_text_file
 
 
 class SPMResults:
@@ -13,10 +13,10 @@ class SPMResults:
     # mult_corr = "FWE" | "FDR" | "none"
     # cluster_extend = "none" | "en_corr" | "en_nocorr"
     @staticmethod
-    def runbatch_cat_results_trasformation_string(project, _global, statsdir, ncontrasts, cmd_id=1, cat_conv_stats_params=None, runit=True):
+    def runbatch_cat_results_trasformation(project, _global, statsdir, ncontrasts, cmd_id=1, cat_conv_stats_params=None, runit=True):
 
         if cat_conv_stats_params is None:
-            cat_conv_stats_params = CatConvStatsParams()
+            cat_conv_stats_params = CatConvResultsParams()
 
         mult_corr   = cat_conv_stats_params.mult_corr
         pvalue      = cat_conv_stats_params.pvalue
@@ -46,7 +46,7 @@ class SPMResults:
         elif mult_corr == "en_nocorr":
             str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 0;"
         else:
-            print("warning in runbatch_cat_results_trasformation_string...unrecognized cluster_extend in Tsurf transf")
+            print("warning in runbatch_cat_results_trasformation...unrecognized cluster_extend in Tsurf transf")
             str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;"
 
         out_batch_job, out_batch_start = project.adapt_batch_files("cat_results_trasformation", "mpr")
@@ -82,29 +82,4 @@ class SPMResults:
 
         return clusters
 
-class Peak:
 
-    def __init__(self, pfwe, pfdr, t, zscore, punc, x, y, z):
-        self.pfwe   = pfwe
-        self.pfdr   = pfdr
-        self.t      = t
-        self.zscore = zscore
-        self.punc   = punc
-        self.x      = x
-        self.y      = y
-        self.z      = z
-
-
-class Cluster:
-
-    def __init__(self, id, pfwe, pfdr, k, punc, firstpeak):
-        self.id     = id
-        self.pfwe   = pfwe
-        self.pfdr   = pfdr
-        self.k      = k
-        self.punc   = punc
-        self.peaks  = []
-        self.peaks.append(firstpeak)
-
-    def add_peak(self, peak):
-        self.peaks.append(peak)

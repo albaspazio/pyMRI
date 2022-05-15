@@ -10,7 +10,7 @@ from subject.SubjectEpi import SubjectEpi
 from subject.SubjectMpr import SubjectMpr
 from subject.SubjectTransforms import SubjectTransforms
 from utility.myfsl.fslfun import runsystem
-from utility.images.images import imtest, immv, imcp, is_image, img_split_ext, remove_ext, read_header
+from utility.images.images import imtest, immv, imcp, is_image, img_split_ext, remove_image_ext, read_header
 from utility.utilities import extractall_zip
 
 
@@ -268,7 +268,7 @@ class Subject:
             self.std4_img_mask_dil = self._global.fsl_std_mni_4mm_brain_mask_dil
         else:
             imgdir = os.path.dirname(stdimg)
-            self.std_img_label = remove_ext(os.path.basename(stdimg))  # "pediatric"
+            self.std_img_label = remove_image_ext(os.path.basename(stdimg))  # "pediatric"
 
             self.std_head_img = os.path.join(imgdir, self.std_img_label)  # "pediatric"
             self.std_img = os.path.join(imgdir, self.std_img_label + "_brain")  # "pediatric_brain"

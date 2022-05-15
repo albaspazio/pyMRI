@@ -6,7 +6,7 @@ import numpy
 
 from data import plot_data
 from group.SPMModels import SPMModels
-from utility.images.images import imcp, imtest, immv, imrm, remove_ext, filter_volumes, get_image_nvoxels, get_image_mean, mask_image
+from utility.images.images import imcp, imtest, immv, imrm, remove_image_ext, filter_volumes, get_image_nvoxels, get_image_mean, mask_image
 from utility.matlab import call_matlab_spmbatch
 from utility.myfsl.utils.run import rrun
 from utility.utilities import sed_inplace
@@ -374,7 +374,7 @@ class GroupAnalysis:
         for entry in os.scandir(in_clust_res_dir):
             if not entry.name.startswith('.') and not entry.is_dir():
                 if entry.name.startswith("sk_"):
-                    lab         = remove_ext(entry.name[3:])
+                    lab         = remove_image_ext(entry.name[3:])
                     tracts_labels.append(lab)
                     str_data    = str_data + "\t" + lab
         str_data = str_data + "\n"

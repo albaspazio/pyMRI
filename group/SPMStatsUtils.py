@@ -1,12 +1,13 @@
 import os
 
+from Global import Global
 from data.SubjectsDataDict import SubjectsDataDict
 from data.utilities import list2spm_text_column
 from utility.exceptions import DataFileException
 from utility.images.images import imtest
 import ssl
 from utility.matlab import call_matlab_function_noret, call_matlab_spmbatch
-from utility.utilities import sed_inplace
+from utility.utilities import sed_inplace, remove_ext
 
 
 class SPMStatsUtils:
@@ -30,7 +31,7 @@ class SPMStatsUtils:
 
     # ---------------------------------------------------
     #region compose images string
-    # ---------------------------------------------------------------------------
+
     # group_instances is a list of subjects' instances
     # image_description: {"type": ct | dartel | vbm, "folder": root path for dartel}
     @staticmethod
@@ -201,8 +202,8 @@ class SPMStatsUtils:
     #endregion
 
     # ---------------------------------------------------------------------------
-    # explicit masking
-    # ---------------------------------------------------------------------------
+    #region explicit masking
+
     @staticmethod
     def spm_replace_explicit_mask(_global, out_batch_job, expl_mask=None, athresh=0.2, idstep=1):
 
@@ -224,9 +225,11 @@ class SPMStatsUtils:
 
         sed_inplace(out_batch_job, "<FACTDES_MASKING>", masking)
 
+    #endregion
+
     # ---------------------------------------------------------------------------
-    # global calculation
-    # ---------------------------------------------------------------------------
+    #region global calculation
+
     # method can be: subj_icv, subj_tiv, "" (no correction) or a column name of the given data_file
     @staticmethod
     def spm_replace_global_calculation(project, out_batch_job, method="", groups_instances=None, data_file=None, idstep=1):
@@ -272,9 +275,11 @@ class SPMStatsUtils:
             gc_str = user_corr_str1 + str_icvs + user_corr_str2  # list2spm_text_column ends with a "\n"
 
         sed_inplace(out_batch_job, "<FACTDES_GLOBAL>", gc_str)
+    #endregion
 
-    #======================================================================================================================================================
+    # ---------------------------------------------------------------------------
     #region CHECK REVIEW
+
     @staticmethod
     def spm_get_cat_check(out_batch_job, idstep=2):
 
@@ -294,7 +299,10 @@ class SPMStatsUtils:
                 "matlabbatch{2}.spm.stats.review.print = 'ps';\n"
 
     #endregion
-    #======================================================================================================================================================
+
+    # ---------------------------------------------------------------------------
+    #region OTHER
+
     # create a gifti image with ones in correspondence of each vmask voxel
     @staticmethod
     def batchrun_spm_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths, distance=8):
@@ -329,18 +337,94 @@ class SPMStatsUtils:
                 call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
             else:
                 call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir], eng=eng, endengine=False)
+    #endregion
 
 
-class StatsParams:
 
+class ResultsParams:
     def __init__(self, multcorr="FWE", pvalue=0.05, clustext=0):
         self.mult_corr      = multcorr
         self.pvalue         = pvalue
         self.cluster_extend = clustext
 
-class CatConvStatsParams:
+class CatResultsParams:
+    def __init__(self, multcorr="FWE", pvalue=0.05, clustext="none"):
+        self.mult_corr      = multcorr
+        self.pvalue         = pvalue    # "FWE" | "FDR" | "none"
+        self.cluster_extend = clustext  # "none" | "en_corr" | "en_nocorr"
 
-    def __init__(self, multcorr="FWE", pvalue=0.05, clustext=0):
+class CatConvResultsParams:
+    def __init__(self, multcorr="FWE", pvalue=0.05, clustext="none"):
         self.mult_corr      = multcorr
         self.pvalue         = pvalue
-        self.cluster_extend = 0
+        self.cluster_extend = clustext
+
+
+class PostModel:
+    def __init__(self, templ_name, regressors, contr_names=[], res_params=None, isSpm=True):
+
+        templ_name = remove_ext(templ_name)
+
+        # check if template name is valid according to the specification applied in Project.adapt_batch_files
+        # it can be a full path (without extension) of an existing file, or a file name present in pymri/templates/spm (without "_job.m)
+        if os.path.exists(templ_name + ".m") is False:
+            if os.path.exists(os.path.join(Global.get_spm_template_dir(), templ_name + "_job.m")) is False:
+                raise Exception("given post_model template name (" + templ_name + ") is not valid")
+
+        self.template_name = templ_name
+
+        self.contrast_names = contr_names   # list of strings
+        self.regressors     = regressors    # list of subtypes of Regressors
+        self.isSpm          = isSpm
+
+        if res_params is None:
+            if isSpm is True:
+                self.results_params = ResultsParams()   # standard (FWE, 0.05, 0)
+            else:
+                self.results_params = CatResultsParams()  # standard (FWE, 0.05, "none")
+        else:
+            self.results_params = res_params    # of type (Cat)ResultsParams
+
+
+
+
+class Peak:
+
+    def __init__(self, pfwe, pfdr, t, zscore, punc, x, y, z):
+        self.pfwe   = pfwe
+        self.pfdr   = pfdr
+        self.t      = t
+        self.zscore = zscore
+        self.punc   = punc
+        self.x      = x
+        self.y      = y
+        self.z      = z
+
+class Cluster:
+
+    def __init__(self, id, pfwe, pfdr, k, punc, firstpeak):
+        self.id     = id
+        self.pfwe   = pfwe
+        self.pfdr   = pfdr
+        self.k      = k
+        self.punc   = punc
+        self.peaks  = []
+        self.peaks.append(firstpeak)
+
+    def add_peak(self, peak):
+        self.peaks.append(peak)
+
+
+
+class Regressor:
+    def __init__(self, name, isNuisance):
+        self.name       = name
+        self.isNuisance = isNuisance
+
+class Covariate(Regressor):
+    def __init__(self, name):
+        super().__init__(name, False)
+
+class Nuisance(Regressor):
+    def __init__(self, name):
+        super().__init__(name, True)

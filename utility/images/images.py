@@ -50,7 +50,7 @@ def imgdir(img):
 
 
 # return basename of given image (useful to return "image" from "image.nii.gz")
-def remove_ext(img):
+def remove_image_ext(img):
     return img_split_ext(img)[0]
 
 
@@ -335,7 +335,7 @@ def remove_slices(inputimg, numslice2remove=1, whichslices2remove="updown", remo
         print("ERROR in remove_slices, presently it removes only in the axial (z) dimension")
         return
 
-    imcp(inputimg, remove_ext(inputimg) + "_full")
+    imcp(inputimg, remove_image_ext(inputimg) + "_full")
     rrun('fslroi ' + inputimg + " " + inputimg + dim_str)
 
 
