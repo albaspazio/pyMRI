@@ -380,8 +380,7 @@ class Project:
             if bool(self.data):
                 return self.data
             else:
-                print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is neither a dict nor a string")
-                return None
+                raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is None and project's data is not loaded")
         else:
             if isinstance(data, SubjectsDataDict):
                 return data
@@ -389,11 +388,9 @@ class Project:
                 if os.path.exists(data) is True:
                     return SubjectsDataDict(data)
                 else:
-                    print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is a string that does not point to a valid file to load")
-                    return None
+                    raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is a string that does not point to a valid file to load")
             else:
-                print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is neither a dict nor a string")
-                return None
+                raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is neither a SubjectsDataDict nor a string")
 
     def add_icv_to_data(self, grouplabel_or_subjlist=None, updatefile=False, sess_id=1):
 

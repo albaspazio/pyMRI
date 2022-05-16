@@ -27,7 +27,9 @@ class SPMModels:
                                                               expl_mask="icv", spm_template_name="spm_stats_1group_multiregr_check_estimate",
                                                               post_model=None, runit=True):
         # sanity check
-        validate_data_with_covs(data_file, covs)
+        if bool(covs) is True:
+            data_file = self.project.validate_data(data_file)
+            validate_data_with_covs(data_file, covs)
 
         # create template files
         out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel_" + analysis_name)
@@ -84,7 +86,9 @@ class SPMModels:
                                                             expl_mask="icv", spm_template_name="spm_stats_2samples_ttest_check_estimate",
                                                             post_model=None, runit=True):
         # sanity check
-        validate_data_with_covs(data_file, covs)
+        if bool(covs) is True:
+            data_file = self.project.validate_data(data_file)
+            validate_data_with_covs(data_file, covs)
 
         # create template files
         out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel_" + analysis_name)
@@ -135,7 +139,9 @@ class SPMModels:
                                                       expl_mask="icv", spm_template_name="spm_stats_1Wanova_check_estimate",
                                                       post_model=None, runit=True):
         # sanity check
-        validate_data_with_covs(data_file, covs)   # return data_file header
+        if bool(covs) is True:
+            data_file = self.project.validate_data(data_file)
+            validate_data_with_covs(data_file, covs)
 
         # create template files
         out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel_" + analysis_name)
@@ -187,7 +193,9 @@ class SPMModels:
                                                       expl_mask="icv", spm_template_name="spm_stats_2Wanova_check_estimate",
                                                       post_model=None, runit=True):
         # sanity check
-        validate_data_with_covs(data_file, covs)
+        if bool(covs) is True:
+            data_file = self.project.validate_data(data_file)
+            validate_data_with_covs(data_file, covs)
 
         # create template files
         out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel_" + analysis_name)
@@ -241,7 +249,9 @@ class SPMModels:
                                                              expl_mask=None, spm_template_name="spm_stats_1group_multiregr_check_estimate",
                                                              post_model=None, runit=True):
         # sanity check
-        validate_data_with_covs(data_file, covs)
+        if bool(covs) is True:
+            data_file = self.project.validate_data(data_file)
+            validate_data_with_covs(data_file, covs)
 
         # create template files
         out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)
@@ -293,7 +303,9 @@ class SPMModels:
                                                            post_model=None, runit=True):
 
         # sanity check
-        validate_data_with_covs(data_file, covs)
+        if bool(covs) is True:
+            data_file = self.project.validate_data(data_file)
+            validate_data_with_covs(data_file, covs)
 
         # create template files
         out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)
@@ -343,7 +355,9 @@ class SPMModels:
                                                      post_model=None, runit=True):
 
         # sanity check
-        validate_data_with_covs(data_file, covs)
+        if bool(covs) is True:
+            data_file = self.project.validate_data(data_file)
+            validate_data_with_covs(data_file, covs)
 
         # create template files
         out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)
@@ -397,7 +411,9 @@ class SPMModels:
                                                      expl_mask=None, spm_template_name="spm_stats_2Wanova_check_estimate",
                                                      post_model=None, runit=True):
         # sanity check
-        validate_data_with_covs(data_file, covs)
+        if bool(covs) is True:
+            data_file = self.project.validate_data(data_file)
+            validate_data_with_covs(data_file, covs)
 
         # create template files
         out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)
