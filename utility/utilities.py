@@ -47,6 +47,11 @@ def write_text_file(path, text):
         f.write(text)
 
 
+def append_text_file(path, text):
+    with open(path, "a") as f:
+        f.write(text)
+
+
 def sed_inplace(filename, pattern, repl):
     '''
     Perform the pure-Python equivalent of in-place `sed` substitution: e.g.,
@@ -126,6 +131,7 @@ def fillnumber2fourdigits(num):
         str_num = str(num)
 
     return str_num
+
 
 # if is a string => cast to int or float (when appropriate) or keep it string
 # if not         => don't do anything, return input param unchanged

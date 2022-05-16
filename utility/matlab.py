@@ -43,6 +43,7 @@ def call_matlab_function(func, standard_paths=[], params="", logfile=None, enden
 
     if endengine is True:
         engine.quit()
+        engine = None
         print("quitting matlab session of " + batch_file)
 
     return [engine, res]
@@ -70,6 +71,7 @@ def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None,
 
     if endengine is True:
         engine.quit()
+        engine = None
         print("quitting matlab session of " + batch_file)
 
     return engine
@@ -97,6 +99,7 @@ def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True, 
 
         if endengine is True:
             engine.quit()
+            engine = None
             print("quitting matlab session of " + batch_file)
 
         return engine

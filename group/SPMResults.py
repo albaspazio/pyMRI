@@ -13,7 +13,7 @@ class SPMResults:
     # mult_corr = "FWE" | "FDR" | "none"
     # cluster_extend = "none" | "en_corr" | "en_nocorr"
     @staticmethod
-    def runbatch_cat_results_trasformation(project, _global, statsdir, ncontrasts, cmd_id=1, cat_conv_stats_params=None, runit=True):
+    def runbatch_cat_results_trasformation(project, _global, statsdir, ncontrasts, analysis_name, cmd_id=1, cat_conv_stats_params=None, eng=None, runit=True):
 
         if cat_conv_stats_params is None:
             cat_conv_stats_params = CatConvResultsParams()
@@ -22,41 +22,54 @@ class SPMResults:
         pvalue      = cat_conv_stats_params.pvalue
         cl_ext      = cat_conv_stats_params.cluster_extend
 
-        str_images = "matlabbatch{"+ str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.data_T2x = {"
-        for con in range(1,ncontrasts+1):
-            str_images += ("'" + os.path.join(statsdir, "spmT_" + fillnumber2fourdigits(con) + ".gii") +"'\n")
+        str_images = "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.data_T2x = {"
+        for con in range(1, ncontrasts+1):
+            str_images += ("'" + os.path.join(statsdir, "spmT_" + fillnumber2fourdigits(con) + ".gii") + "'\n")
         str_images += "}\n"
         str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.sel = 2;\n"
-
-        if mult_corr == "FWE":
-            str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";"
-        elif mult_corr == "FDR":
-            str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fdr.thresh05 = " + str(pvalue) + ";"
-        elif mult_corr == "none":
-            str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.uncorr.thresh001 = " + str(pvalue) + ";"
-        else:
-            str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";"
-
+        str_images += SPMResults.get_threshold_string_cat_results_trasformation(mult_corr, pvalue, cmd_id)
         str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.inverse = 0;"
+        str_images += SPMResults.get_clustext_string_cat_results_trasformation(cl_ext, cmd_id)
 
-        if cl_ext == "none":
-            str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;"
-        elif mult_corr == "en_corr":
-            str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 1;"
-        elif mult_corr == "en_nocorr":
-            str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 0;"
-        else:
-            print("warning in runbatch_cat_results_trasformation...unrecognized cluster_extend in Tsurf transf")
-            str_images += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;"
-
-        out_batch_job, out_batch_start = project.adapt_batch_files("cat_results_trasformation", "mpr")
+        out_batch_job, out_batch_start = project.create_batch_files("cat_" + analysis_name + "_results_trasformation", "mpr")
 
         write_text_file(out_batch_job, str_images)
 
         if runit is True:
-            call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
+            if eng is None:
+                call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
+            else:
+                call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir], eng=eng)
+        os.remove(out_batch_start)
 
+    @staticmethod
+    def get_threshold_string_cat_results_trasformation(mult_corr, pvalue, cmd_id=1):
+        res = ""
+        if mult_corr == "FWE":
+            res += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";"
+        elif mult_corr == "FDR":
+            res += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fdr.thresh05 = " + str(pvalue) + ";"
+        elif mult_corr == "none":
+            res += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.uncorr.thresh001 = " + str(pvalue) + ";"
+        else:
+            res += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";"
 
+        return res
+
+    @staticmethod
+    def get_clustext_string_cat_results_trasformation(cl_ext, cmd_id=1):
+        res = ""
+        if cl_ext == "none":
+            res += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;"
+        elif cl_ext == "en_corr":
+            res += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 1;"
+        elif cl_ext == "en_nocorr":
+            res += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.En.noniso = 0;"
+        else:
+            print("warning in runbatch_cat_results_trasformation...unrecognized cluster_extend in Tsurf transf")
+            res += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;"
+
+        return res
     # parse a series of spm-output csv files and report info of those voxels/cluster associated to the given cluster
     # set    set cluster         cluster         cluster cluster peak            peak            peak    peak    peak
     # p      c   p(FWE - corr)   p(FDR - corr)   equivk  p(unc)  p(FWE - corr)   p(FDR - corr)   T       equivZ  p(unc) x  y  z {mm}

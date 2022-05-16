@@ -24,7 +24,7 @@ class SPMModels:
 
     def batchrun_spm_vbm_dartel_stats_factdes_1group_multregr(self, root_outdir, analysis_name, groups_instances, covs,
                                                               data_file=None, glob_calc="subj_icv", cov_interactions=None,
-                                                              expl_mask="icv", spm_template_name="spm_stats_1group_multiregr_check_estimate",
+                                                              expl_mask="icv", spm_template_name="spm_stats_1group_multiregr_estimate",
                                                               post_model=None, runit=True):
         # sanity check
         validate_data_with_covs(data_file, covs)
@@ -67,7 +67,7 @@ class SPMModels:
             if os.path.exists(post_model.template_name + ".m"):
                 SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
             else:
-                SPMPostModel.batchrun_spm_stats_1group_multregr_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
+                SPMPostModel.batchrun_spm_stats_1group_multregr_postmodel(self.project, self.globaldata, statsdir, post_model, analysis_name, eng, runit)
 
         # ---------------------------------------------------------------------------
         if bool(eng):
@@ -81,7 +81,7 @@ class SPMModels:
     # statsparams = {"mult_corr":"", "pvalue":0.05, "clust_ext":0}
     def batchrun_spm_vbm_dartel_stats_factdes_2samplesttest(self, root_outdir, analysis_name, groups_instances=None, covs=None,
                                                             data_file=None, glob_calc="subj_icv", cov_interaction=None,
-                                                            expl_mask="icv", spm_template_name="spm_stats_2samples_ttest_check_estimate",
+                                                            expl_mask="icv", spm_template_name="spm_stats_2samples_ttest_estimate",
                                                             post_model=None, runit=True):
         # sanity check
         validate_data_with_covs(data_file, covs)
@@ -115,7 +115,7 @@ class SPMModels:
             if os.path.exists(post_model.template_name + ".m"):
                 SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
             else:
-                SPMPostModel.batchrun_spm_stats_2samplesttest_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
+                SPMPostModel.batchrun_spm_stats_2samplesttest_postmodel(self.project, self.globaldata, statsdir, post_model, analysis_name, eng, runit)
         # ---------------------------------------------------------------------------
         if bool(eng):
             eng.quit()
@@ -132,7 +132,7 @@ class SPMModels:
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
     def batchrun_spm_vbm_dartel_stats_factdes_1Wanova(self, root_outdir, analysis_name, groups_instances, covs,
                                                       data_file=None, glob_calc="subj_icv", cov_interaction=None,
-                                                      expl_mask="icv", spm_template_name="spm_stats_1Wanova_check_estimate",
+                                                      expl_mask="icv", spm_template_name="spm_stats_1Wanova_estimate",
                                                       post_model=None, runit=True):
         # sanity check
         validate_data_with_covs(data_file, covs)   # return data_file header
@@ -184,7 +184,7 @@ class SPMModels:
     # factors in a dict with field {"groups_instances":[], "labels":[], "cells": []}
     def batchrun_spm_vbm_dartel_stats_factdes_2Wanova(self, root_outdir, analysis_name, factors, covs=None,
                                                       data_file=None, glob_calc="subj_icv", cov_interaction=None,
-                                                      expl_mask="icv", spm_template_name="spm_stats_2Wanova_check_estimate",
+                                                      expl_mask="icv", spm_template_name="spm_stats_2Wanova_estimate",
                                                       post_model=None, runit=True):
         # sanity check
         validate_data_with_covs(data_file, covs)
@@ -238,7 +238,7 @@ class SPMModels:
     # ---------------------------------------------------
     def batchrun_cat_thickness_stats_factdes_1group_multregr(self, root_outdir, analysis_name, groups_instances, covs,
                                                              data_file=None, glob_calc="", cov_interactions=None,
-                                                             expl_mask=None, spm_template_name="spm_stats_1group_multiregr_check_estimate",
+                                                             expl_mask=None, spm_template_name="spm_stats_1group_multiregr_estimate",
                                                              post_model=None, runit=True):
         # sanity check
         validate_data_with_covs(data_file, covs)
@@ -276,7 +276,7 @@ class SPMModels:
             if os.path.exists(post_model.template_name + ".m"):
                 SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
             else:
-                SPMPostModel.batchrun_spm_stats_1group_multregr_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
+                SPMPostModel.batchrun_spm_stats_1group_multregr_postmodel(self.project, self.globaldata, statsdir, post_model, analysis_name, eng, runit)
 
         # ---------------------------------------------------------------------------
         if bool(eng):
@@ -289,7 +289,7 @@ class SPMModels:
     # statsparams = {"mult_corr":"", "pvalue":0.05, "clust_ext":0}
     def batchrun_cat_thickness_stats_factdes_2samplesttest(self, root_outdir, analysis_name, groups_instances=None, covs=None,
                                                            data_file=None, glob_calc="", cov_interaction=None,
-                                                           expl_mask=None, spm_template_name="spm_stats_2samples_ttest_check_estimate",
+                                                           expl_mask=None, spm_template_name="spm_stats_2samples_ttest_estimate",
                                                            post_model=None, runit=True):
 
         # sanity check
@@ -321,10 +321,10 @@ class SPMModels:
         # ---------------------------------------------------------------------------
         # check whether running a given contrasts batch or a standard two-samples ttest
         if bool(post_model) is True:
-            if os.path.exists(post_model.template_name + ".m"):
+            if os.path.exists(post_model.template_name + ".m") is True:
                 SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
             else:
-                SPMPostModel.batchrun_spm_stats_2samplesttest_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
+                SPMPostModel.batchrun_spm_stats_2samplesttest_postmodel(self.project, self.globaldata, statsdir, post_model, analysis_name, eng, runit)
         # ---------------------------------------------------------------------------
         if bool(eng):
             eng.quit()
@@ -339,7 +339,7 @@ class SPMModels:
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
     def batchrun_cat_thickness_stats_factdes_1Wanova(self, root_outdir, analysis_name, groups_instances, covs=None,
                                                      data_file=None, glob_calc="", cov_interaction=None,
-                                                     expl_mask=None, spm_template_name="spm_stats_1Wanova_check_estimate",
+                                                     expl_mask=None, spm_template_name="spm_stats_1Wanova_estimate",
                                                      post_model=None, runit=True):
 
         # sanity check
@@ -394,7 +394,7 @@ class SPMModels:
     # factors in a dict with field {"groups_instances":[], "labels":[], "cells": []}
     def batchrun_cat_thickness_stats_factdes_2Wanova(self, root_outdir, analysis_name, factors, covs=None,
                                                      data_file=None, glob_calc="", cov_interaction=None,
-                                                     expl_mask=None, spm_template_name="spm_stats_2Wanova_check_estimate",
+                                                     expl_mask=None, spm_template_name="spm_stats_2Wanova_estimate",
                                                      post_model=None, runit=True):
         # sanity check
         validate_data_with_covs(data_file, covs)
