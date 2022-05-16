@@ -86,6 +86,10 @@ def get_filename(fullpath):
     return os.path.splitext(os.path.basename(fullpath))[0]
 
 
+def remove_ext(filepath):
+    return os.path.splitext(filepath)[0]
+
+
 def copytree(src, dst, symlinks=False, ignore=None):
     for item in os.listdir(src):
         s = os.path.join(src, item)
@@ -137,3 +141,13 @@ def string2num(string):
             return fl_string
     except ValueError:
         return string
+
+
+def listToString(list, separator='\t'):
+
+    str = ""
+    # traverse the list and concatenate to String variable
+    for element in list:
+        str += (element + separator)
+
+    return str

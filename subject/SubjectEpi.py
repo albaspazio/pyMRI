@@ -6,10 +6,10 @@ from numpy import arange, concatenate, array
 
 from Global import Global
 from data.utilities import list2spm_text_column
-from group.Stats import Stats
+from group.SPMStatsUtils import SPMStatsUtils
 from utility.myfsl.utils.run import rrun
 from data import utilities
-from utility.images.images import imtest, imcp, is_image, remove_ext, imcp_notexisting, immv
+from utility.images.images import imtest, imcp, is_image, remove_image_ext, imcp_notexisting, immv
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
 from utility.utilities import sed_inplace, gunzip, compress, copytree, get_filename
 
@@ -79,7 +79,7 @@ class SubjectEpi:
             epi_volume = epi_path_name + ',' + str(i) + "'"
             epi_all_volumes = epi_all_volumes + epi_volume + '\n' + "'"
 
-        out_batch_job, out_batch_start = self.subject.project.create_batch_files(spm_template_name, "fmri", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", self.subject.label)
 
         sed_inplace(out_batch_job, '<FMRI_IMAGES>', epi_all_volumes)
         sed_inplace(out_batch_job, '<NUM_SLICES>', str(num_slices))
@@ -108,7 +108,7 @@ class SubjectEpi:
 
         #  /a/b/c/name.nii.gz
         input_dir   = os.path.dirname(in_ap_img)    # /a/b/c
-        in_ap_img   = remove_ext(in_ap_img)         # /a/b/c/name
+        in_ap_img   = remove_image_ext(in_ap_img)         # /a/b/c/name
         in_ap_label = os.path.basename(in_ap_img)   # name
 
         if imtest(in_ap_img + "_distorted") is False:
@@ -417,7 +417,7 @@ class SubjectEpi:
             gunzip(ref_image + ".nii.gz", ref_image + ".nii")
 
         # 2.1: select the input spm template obtained from batch (we defined it in spm_template_name) + its run file …
-        out_batch_job, out_batch_start = self.subject.project.create_batch_files(spm_template_name, "fmri", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", self.subject.label)
 
         # 2.2: create "output spm template" by copying "input spm template" + changing general tags for our specific ones…
         ref_vol = max(ref_vol, 1)
@@ -455,7 +455,7 @@ class SubjectEpi:
 
         #  /a/b/c/name.ext
         input_dir   = os.path.dirname(in_image)    # /a/b/c
-        in_image    = remove_ext(in_image)         # /a/b/c/name
+        in_image    = remove_image_ext(in_image)         # /a/b/c/name
         in_label    = os.path.basename(in_image)   # name
 
         # create temp folder, copy there epi and epi_pe, unzip and run mc (then I can simply remove it when ended)
@@ -499,7 +499,7 @@ class SubjectEpi:
         os.chdir(outdir)
         for f in os.scandir():
             if f.is_file():
-                gunzip(f.name, os.path.join(outdir, remove_ext(f.name) + ".nii"), replace=True)
+                gunzip(f.name, os.path.join(outdir, remove_image_ext(f.name) + ".nii"), replace=True)
 
     def spm_fmri_preprocessing_motioncorrected(self, epi_image=None, spm_template_name='spm_fmri_preprocessing_noslicetiming_norealign'):
 
@@ -511,7 +511,7 @@ class SubjectEpi:
                 print("Error in subj: " + self.subject.label + " epi_spm_fmri_preprocessing")
                 return
 
-        out_batch_job, out_batch_start = self.subject.project.create_batch_files(spm_template_name, "fmri", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", self.subject.label)
 
         # substitute for all the volumes + rest of params
         epi_nvols = int(rrun('fslnvols ' + epi_image + '.nii.gz'))
@@ -647,7 +647,7 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<SMOOTHED_VOLS>', epi_all_volumes)
         sed_inplace(out_batch_job, '<MOTION_PARAMS>', rp_filename)
 
-        Stats.spm_fmri_subj_stats_replace_conditions_string(out_batch_job, conditions_lists)
+        SPMStatsUtils.spm_replace_fmri_subj_stats_conditions_string(out_batch_job, conditions_lists)
 
         copyfile(in_batch_start, out_batch_start)
         sed_inplace(out_batch_start, 'X', '1')
@@ -668,8 +668,8 @@ class SubjectEpi:
 
         # unzip whether necessary
         for img in input_images:
-            if os.path.exists(remove_ext(img) + ".nii") is False and os.path.exists(remove_ext(img) + ".nii.gz") is True:
-                gunzip(remove_ext(img) + ".nii.gz", remove_ext(img) + ".nii")
+            if os.path.exists(remove_image_ext(img) + ".nii") is False and os.path.exists(remove_image_ext(img) + ".nii.gz") is True:
+                gunzip(remove_image_ext(img) + ".nii.gz", remove_image_ext(img) + ".nii")
 
         # default params:
         stats_dir = os.path.join(self.subject.fmri_dir, "stats", analysis_name)
@@ -680,7 +680,7 @@ class SubjectEpi:
         # if rp_filename == "":
         #     rp_filename = os.path.join(self.subject.fmri_dir, "rp_" + self.subject.fmri_image_label + ".txt")
 
-        out_batch_job, out_batch_start = self.subject.project.create_batch_files(spm_template_name, "fmri", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", self.subject.label)
 
         sed_inplace(out_batch_job, '<SPM_DIR>', stats_dir)
         sed_inplace(out_batch_job, '<EVENTS_UNIT>', events_unit)
@@ -715,7 +715,7 @@ class SubjectEpi:
 
         sed_inplace(out_batch_job, '<COND51_ONSETS>', list2spm_text_column(conditions_lists[4][0][:]))
 
-        # Stats.spm_fmri_subj_stats_replace_conditions_string(out_batch_job, conditions_lists)
+        # SPMStatsUtils.spm_replace_fmri_subj_stats_conditions_string(out_batch_job, conditions_lists)
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 

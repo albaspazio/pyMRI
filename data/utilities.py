@@ -1,3 +1,4 @@
+import csv
 import os
 
 
@@ -8,6 +9,10 @@ import os
 # read files like:
 # var1=value1
 # varN=valueN
+from data.SubjectsDataDict import SubjectsDataDict
+from utility.exceptions import DataFileException
+
+
 def read_varlist_file(filepath, comment_char="#"):
     data = {}
     if os.path.exists(filepath) is False:
@@ -90,228 +95,41 @@ def get_icv_spm_file(filepath):
     return float(values[1]) + float(values[2]) + float(values[3])
 
 
+def get_file_header(filepath):
+    if os.path.exists(filepath) is False:
+        print("ERROR in get_file_header, given filepath param (" + filepath + ") is not a file")
+        return []
+
+    with open(filepath, "r") as f:
+        reader = csv.reader(f, dialect='excel', delimiter='\t')
+        for row in reader:
+            if reader.line_num == 1:
+                return row
+    return []
 
 
+# ---------------------------------------------------------------------------
+# validate data
+# ---------------------------------------------------------------------------
+def validate_data_with_covs(data_file=None, covs=None):
 
-# =====================================================================================
-# DATA EXTRACTION FROM A PLAIN DICTIONARY
-# =====================================================================================
-# returns       [ {"subj":..., "col1":..., "col2":... }, {"subj":..., "col1":..., "col2":... }, ....]
-# def tabbed_file_with_header2dict_list(filepath):
-#     data = []
-#     if os.path.exists(filepath) is False:
-#         print("ERROR in tabbed_file_with_header2dict_list, given filepath param (" + filepath + ") is not a file")
-#         return data
-#
-#     with open(filepath, "r") as f:
-#         reader = csv.reader(f, dialect='excel', delimiter='\t')
-#         for row in reader:
-#             if reader.line_num == 1:
-#                 header = row
-#             else:
-#                 data_row = {}
-#                 cnt = 0
-#                 for elem in row:
-#                     data_row[header[cnt]] = elem
-#                     cnt = cnt + 1
-#                 data.append(data_row)
-#
-#         return data
-#
+    if covs is None:
+        covs = []
 
-# return a list of values from a given column
-# def get_dict_column(dic, colname):
-#     return [d[colname] for d in dic]
+    header = []
+    if data_file is not None:
+        if os.path.exists(data_file) is False:
+            raise DataFileException("validate_data_with_covs", "given data_file (" + str(data_file) + ") does not exist")
 
+        header = SubjectsDataDict(data_file).get_header()  # get_header_of_tabbed_file(data_file)
 
-# def get_filtered_dict_column(dic, colname, filt_col="", filter=None):
-#     if filt_col != "":
-#         res = []
-#         if filter is not None and isinstance(filter, list):
-#             for d in dic:
-#                 if d[filt_col] in filter:
-#                     res.append(d[colname])
-#             return res
-#         else:
-#             print("Error in get_filtered_dict_column")
-#     else:
-#         return get_dict_column(dic, colname)
+        # if all(elem in header for elem in covs) is False:  if I don't want to understand which cov is absent
+        missing_covs = ""
+        for cov in covs:
+            if cov.name in header is False:
+                missing_covs = missing_covs + cov.name + ", "
 
+        if len(missing_covs) > 0:
+            raise DataFileException("validate_data_with_covs", "the following header are NOT present in the given datafile: " + missing_covs)
 
-# =====================================================================================
-# DATA EXTRACTION FROM A "SUBJ" DICTIONARY
-# =====================================================================================
-# assumes that the first column represents subjects' labels (it will act as dictionary's key).
-# creates a dictionary with subj label as key and data columns as a dictionary
-# returns   { "label1":{"col1", ..., "colN"}, "label2":{"col1", ..., "colN"}, .....}
-# def tabbed_file_with_header2subj_dic(filepath):
-#     data = {}
-#     if os.path.exists(filepath) is False:
-#         print("ERROR in tabbed_file_with_header2subj_dic, given filepath param (" + filepath + ") is not a file")
-#         return data
-#
-#     with open(filepath, "r") as f:
-#         reader = csv.reader(f, dialect='excel', delimiter='\t')
-#         for row in reader:
-#             if reader.line_num == 1:
-#                 header = row
-#             else:
-#                 data_row = {}
-#                 cnt = 0
-#                 for elem in row:
-#                     if cnt == 0:
-#                         subj_lab = elem
-#                     else:
-#                         data_row[header[cnt]] = elem
-#                     cnt = cnt + 1
-#                 data[subj_lab] = data_row
-#         return data
-
-
-# returns the header of a tabbed file as a list
-# def get_header_of_tabbed_file(filepath):
-#     if os.path.exists(filepath) is False:
-#         print("ERROR in get_header_of_tabbed_file, given filepath param (" + filepath + ") is not a file")
-#         return []
-#
-#     with open(filepath, "r") as f:
-#         reader = csv.reader(f, dialect='excel', delimiter='\t')
-#         for row in reader:
-#             if reader.line_num == 1:
-#                 return row
-#
-#     return []
-
-
-# returns a filtered matrix [subj x colnames]
-# def get_filtered_subj_dict_columns(dic, colnames, subj_labels, sort=False):
-#     res = []
-#     lab = []
-#     for subj in subj_labels:
-#         try:
-#             subj_dic = dic[subj]
-#             subj_row = []
-#             for colname in colnames:
-#                 subj_row.append(subj_dic[colname])
-#             res.append(subj_row)
-#             lab.append(subj)
-#
-#         except KeyError:
-#             print(
-#                 "Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
-#             return
-#
-#     if sort is True:
-#         sort_schema = argsort(res)
-#         res.sort()
-#         lab = reorder_list(lab, sort_schema)
-#
-#     return res, lab
-
-
-# returns a tuple with two vectors filtered by [subj labels]
-# - [values]
-# - [labels]
-# def get_filtered_subj_dict_column(dic, colname, subjects_label, sort=False):
-#     res = []
-#     lab = []
-#     for subj in subjects_label:
-#         try:
-#             colvalue = string2num(dic[subj][colname])
-#             res.append(colvalue)
-#             lab.append(subj)
-#         except KeyError:
-#             print(
-#                 "Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
-#             return
-#
-#     if sort is True:
-#         sort_schema = argsort(res)
-#         res.sort()
-#         lab = reorder_list(lab, sort_schema)
-#
-#     return res, lab
-
-
-# returns two vectors filtered by [subj labels] & value
-# - [values]
-# - [labels]
-# def get_filtered_subj_dict_column_by_value(dic, colname, value, operation="=", subjects_label=None, sort=False):
-#     res = []
-#     lab = []
-#     for subj in subjects_label:
-#         try:
-#             colvalue = string2num(dic[subj][colname])
-#             if operation == "=" or operation == "==":
-#                 if colvalue == value:
-#                     res.append(colvalue)
-#                     lab.append(subj)
-#             elif operation == ">":
-#                 if colvalue > value:
-#                     res.append(colvalue)
-#                     lab.append(subj)
-#             elif operation == ">=":
-#                 if colvalue >= value:
-#                     res.append(colvalue)
-#                     lab.append(subj)
-#             elif operation == "<":
-#                 if colvalue < value:
-#                     res.append(colvalue)
-#                     lab.append(subj)
-#             elif operation == "<=":
-#                 if colvalue <= value:
-#                     res.append(colvalue)
-#                     lab.append(subj)
-#
-#         except KeyError:
-#             print(
-#                 "Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
-#             return
-#
-#     if sort is True:
-#         sort_schema = argsort(res)
-#         res.sort()
-#         lab = reorder_list(lab, sort_schema)
-#
-#     return res, lab
-
-
-# returns two vectors filtered by [subj labels] & whether value is within value1/2
-# - [values]
-# - [labels]
-# def get_filtered_subj_dict_column_within_values(dic, colname, value1, value2, operation="<>", subjects_label=None,sort=False):
-#     res = []
-#     lab = []
-#     for subj in subjects_label:
-#         try:
-#             colvalue = string2num(dic[subj][colname])
-#             if operation == "<>":
-#                 if value2 > colvalue > value1:
-#                     res.append(colvalue)
-#                     lab.append(subj)
-#             elif operation == "<=>":
-#                 if value2 >= colvalue > value1:
-#                     res.append(colvalue)
-#                     lab.append(subj)
-#             elif operation == "<=>=":
-#                 if value2 >= colvalue >= value1:
-#                     res.append(colvalue)
-#                     lab.append(subj)
-#             elif operation == "<>=":
-#                 if value2 > colvalue >= value1:
-#                     res.append(colvalue)
-#                     lab.append(subj)
-#
-#         except KeyError:
-#             print(
-#                 "Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
-#             return
-#
-#     if sort is True:
-#         sort_schema = argsort(res)
-#         res.sort()
-#         lab = reorder_list(lab, sort_schema)
-#
-#     return res, lab
-
-
+    return header

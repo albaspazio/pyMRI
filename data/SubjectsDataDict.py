@@ -1,7 +1,8 @@
 import csv
 import os
 
-from utility.utilities import argsort, reorder_list, string2num
+from utility.exceptions import DataFileException
+from utility.utilities import argsort, reorder_list, string2num, write_text_file, listToString
 
 
 # =====================================================================================
@@ -21,7 +22,8 @@ class SubjectsDataDict:
 
         if filepath != "":
             self.load(filepath)
-        self.num    = len(self.data)
+        self.num        = len(self.data)
+        self.header     = self.get_header()
 
     # =====================================================================================
     # DATA EXTRACTION FROM A "SUBJ" DICTIONARY {"a_subj_label":{"a":..., "b":...., }}
@@ -30,12 +32,12 @@ class SubjectsDataDict:
     # assumes that the first column represents subjects' labels (it will act as dictionary's key).
     # creates a dictionary with subj label as key and data columns as a dictionary  {subjlabel:{"a":..., "b":..., }}
     # tonum defines whether checking string(ed) type and convert to int/float
+    # filepath CANNOT be empty
     def load(self, filepath, tonum=True):
 
         self.data = {}
         if os.path.exists(filepath) is False:
-            print("ERROR in SubjectsDataDict.load, given filepath param (" + filepath + ") is not a file")
-            return self.data
+            raise DataFileException("SubjectsDataDict.load", "given filepath param (" + filepath + ") is not a file")
 
         with open(filepath, "r") as f:
             reader = csv.reader(f, dialect='excel', delimiter='\t')
@@ -43,6 +45,9 @@ class SubjectsDataDict:
                 if reader.line_num == 1:
                     header = row
                 else:
+                    if len(row) == 0:
+                        break
+
                     data_row = {}
                     cnt = 0
                     for elem in row:
@@ -82,8 +87,7 @@ class SubjectsDataDict:
                 res.append(colvalue)
                 lab.append(subj)
             except KeyError:
-                print("Error in get_filtered_column: given subject (" + subj + ") is not present in the given list...returning.....")
-                return
+                raise DataFileException("SubjectsDataDict.get_filtered_column", "data of given subject (" + subj + ") is not present in the loaded data")
 
         if sort is True:
             sort_schema = argsort(res)
@@ -116,8 +120,7 @@ class SubjectsDataDict:
                 lab.append(subj)
 
             except KeyError:
-                print("Error in get_filtered_columns: given subject (" + subj + ") is not present in the given list...returning.....")
-                return
+                raise DataFileException("SubjectsDataDict.get_filtered_columns", "data of given subject (" + subj + ") is not present in the loaded data")
 
         if sort is True:
             sort_schema = argsort(res)
@@ -167,8 +170,7 @@ class SubjectsDataDict:
                         lab.append(subj)
 
             except KeyError:
-                print("Error in get_filtered_subj_dict_column: given subject (" + subj + ") is not present in the given list...returning.....")
-                return
+                raise DataFileException("SubjectsDataDict.get_filtered_column_by_value", "data of given subject (" + subj + ") is not present in the loaded data")
 
         if sort is True:
             sort_schema = argsort(res)
@@ -213,8 +215,7 @@ class SubjectsDataDict:
                         lab.append(subj)
 
             except KeyError:
-                print("Error in get_filtered_column: given subject (" + subj + ") is not present in the given list...returning.....")
-                return
+                raise DataFileException("SubjectsDataDict.get_filtered_column_within_values", "data of given subject (" + subj + ") is not present in the loaded data")
 
         if sort is True:
             sort_schema = argsort(res)
@@ -228,17 +229,64 @@ class SubjectsDataDict:
         res_str = self.__to_str(res, ndecimals)
         return res_str, lab
 
-    def get_header(self):
-        if os.path.exists(self.filepath) is False:
-            print("ERROR in SubjectsDataDict.get_header, given filepath param (" + self.filepath + ") is not a file")
-            return []
+    def add_column(self, col_label, values, saveit=True):
+        nv = len(values)
+        if nv != self.num:
+            print("ERROR in SubjectsDataDict.add")
 
-        with open(self.filepath, "r") as f:
-            reader = csv.reader(f, dialect='excel', delimiter='\t')
-            for row in reader:
-                if reader.line_num == 1:
-                    return row
-        return []
+        cnt = 0
+        for slab in self.data:
+            self.data[slab][col_label] = values[cnt]
+            cnt = cnt + 1
+
+        self.header = self.get_header()
+
+        if saveit is True:
+            self.save_data()
+
+
+    def get_header(self):
+        self.header = ["subj"]
+        for row in self.data:
+            for field in self.data[row]:
+                self.header.append(field)
+            break
+        return self.header
+
+    def exist_column(self, colname):
+        return colname in self.header
+
+    def exist_filled_column(self, colname, subj_labels=None):
+
+        if colname in self.header is False:
+            return False
+
+        if subj_labels is None:
+            labs = self.labels
+        else:
+            labs = subj_labels
+
+        for lab in labs:
+            elem = self.data[lab][colname]
+            if len(str(elem)) == 0:
+                return False
+
+        return True
+
+    # TODO: fix data save
+    def save_data(self, data_file=None):
+
+        if data_file is None:
+            data_file = self.filepath
+
+        txt = listToString(self.header) + "\n"
+        for row in self.data:
+            r = ""
+            for field in row:
+                r = field + "\t"
+            r = r.rstrip('\t') + "\n"
+        txt = txt + r
+        write_text_file(data_file, txt)
 
     # =====================================================================================
     # get a data list and return a \n separated string, suitable for spm template files

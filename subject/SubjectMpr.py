@@ -7,7 +7,7 @@ from Global import Global
 from utility.myfsl.utils.run import rrun
 from utility.myfsl.fslfun import run
 from utility.myfsl.fslfun import run_notexisting_img, runpipe, run_move_notexisting_img
-from utility.images.images import imtest, immv, mass_images_move, imrm, imcp, quick_smooth, remove_ext
+from utility.images.images import imtest, immv, mass_images_move, imrm, imcp, quick_smooth, remove_image_ext
 from utility.matlab import call_matlab_spmbatch, call_matlab_function_noret
 from utility.utilities import sed_inplace, gunzip, write_text_file
 
@@ -556,12 +556,16 @@ class SubjectMpr:
                     num_proc=1,
                     use_existing_nii=True,
                     use_dartel=True,
+                    smooth_surf=None,
                     spm_template_name="cat27_segment_customizedtemplate_tiv_smooth"
                     ):
 
         if imtest(os.path.join(self.subject.t1_cat_dir, "mri", "y_T1_" + self.subject.label)) is True and do_overwrite is False:
             print(self.subject.label + ": skipping cat_segment, already done")
             return
+
+        if smooth_surf is None:
+            smooth_surf = self.subject.t1_cat_surface_resamplefilt
 
         # define placeholder variables for input dir and image name
         if imgtype == 1:
@@ -660,9 +664,8 @@ class SubjectMpr:
                 resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.data_surf(1) = cfg_dep('CAT12: Segmentation: Left Thickness',substruct('.', 'val', '{}', {1}, '.', 'val','{}', {1}, '.', 'val', '{}', {1},'.', 'val', '{}', {1}),substruct('()', {1}, '.', 'lhthickness','()', {':'}));\n"
                 resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
                 resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
-                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.fwhm_surf = 15;\n"
-                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.nproc = " + str(
-                    num_proc) + ";\n"
+                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.fwhm_surf = " + str(smooth_surf) + ";\n"
+                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
 
             sed_inplace(output_template, "<SURF_RESAMPLE>", resample_string)
 
@@ -991,7 +994,7 @@ class SubjectMpr:
         for atlas in atlases:
             _atlases = _atlases + "\'" + os.path.join(self._global.cat_dir, "atlases_surfaces", "lh." + atlas + ".freesurfer.annot") + "\'" + "\n"
 
-        out_batch_job, out_batch_start = self.subject.project.create_batch_files("cat_extract_roi_based_surface", "mpr", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files("cat_extract_roi_based_surface", "mpr", self.subject.label)
 
         left_thick_img = os.path.join(self.subject.t1_cat_surface_dir, "lh.thickness.T1_" + self.subject.label)
         if os.path.exists(left_thick_img) is False:
@@ -1286,7 +1289,7 @@ class SubjectMpr:
         output_roi_dir = os.path.join(self.subject.roi_t1_dir, odn)
         temp_dir = os.path.join(self.subject.first_dir, "temp")
 
-        filename = remove_ext(t1_image)
+        filename = remove_image_ext(t1_image)
         t1_image_label = os.path.basename(filename)
 
         try:

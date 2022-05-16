@@ -10,7 +10,7 @@ from subject.SubjectEpi import SubjectEpi
 from subject.SubjectMpr import SubjectMpr
 from subject.SubjectTransforms import SubjectTransforms
 from utility.myfsl.fslfun import runsystem
-from utility.images.images import imtest, immv, imcp, is_image, img_split_ext, remove_ext, read_header
+from utility.images.images import imtest, immv, imcp, is_image, img_split_ext, remove_image_ext, read_header
 from utility.utilities import extractall_zip
 
 
@@ -28,7 +28,7 @@ class Subject:
         self.sessid = sessid
 
         self.project = project
-        self._global = project._global
+        self._global = project.globaldata
 
         self.fsl_dir = self._global.fsl_dir
         self.fsl_bin = self._global.fsl_bin
@@ -105,8 +105,10 @@ class Subject:
         self.t1_segment_csf_ero_path    = os.path.join(self.roi_t1_dir, "mask_t1_csfseg4Nuisance")
 
         self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
-        self.t1_cat_resampled_surface   = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
-        self.t1_cat_resampled_surface_longitudinal = os.path.join(self.t1_cat_surface_dir, "s15.mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
+        self.t1_cat_surface_resamplefilt= 12
+        self.t1_cat_lh_surface          = os.path.join(self.t1_cat_surface_dir, "lh.thickness.T1_" + self.label)
+        self.t1_cat_resampled_surface   = os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
+        self.t1_cat_resampled_surface_longitudinal = os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
 
         self.t1_spm_icv_file = os.path.join(self.t1_spm_dir, "icv_" + self.label + ".dat")
 
@@ -266,7 +268,7 @@ class Subject:
             self.std4_img_mask_dil = self._global.fsl_std_mni_4mm_brain_mask_dil
         else:
             imgdir = os.path.dirname(stdimg)
-            self.std_img_label = remove_ext(os.path.basename(stdimg))  # "pediatric"
+            self.std_img_label = remove_image_ext(os.path.basename(stdimg))  # "pediatric"
 
             self.std_head_img = os.path.join(imgdir, self.std_img_label)  # "pediatric"
             self.std_img = os.path.join(imgdir, self.std_img_label + "_brain")  # "pediatric_brain"
