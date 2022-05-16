@@ -340,28 +340,22 @@ class SPMStatsUtils:
     #endregion
 
 
-
 class ResultsParams:
     def __init__(self, multcorr="FWE", pvalue=0.05, clustext=0):
         self.mult_corr      = multcorr
         self.pvalue         = pvalue
         self.cluster_extend = clustext
 
-class CatResultsParams:
+
+class CatConvResultsParams:
     def __init__(self, multcorr="FWE", pvalue=0.05, clustext="none"):
         self.mult_corr      = multcorr
         self.pvalue         = pvalue    # "FWE" | "FDR" | "none"
         self.cluster_extend = clustext  # "none" | "en_corr" | "en_nocorr"
 
-class CatConvResultsParams:
-    def __init__(self, multcorr="FWE", pvalue=0.05, clustext="none"):
-        self.mult_corr      = multcorr
-        self.pvalue         = pvalue
-        self.cluster_extend = clustext
-
 
 class PostModel:
-    def __init__(self, templ_name, regressors, contr_names=[], res_params=None, isSpm=True):
+    def __init__(self, templ_name, regressors, contr_names=[], res_params=None, res_conv_params=None, isSpm=True):
 
         templ_name = remove_ext(templ_name)
 
@@ -378,14 +372,13 @@ class PostModel:
         self.isSpm          = isSpm
 
         if res_params is None:
-            if isSpm is True:
-                self.results_params = ResultsParams()   # standard (FWE, 0.05, 0)
-            else:
-                self.results_params = CatResultsParams()  # standard (FWE, 0.05, "none")
+            self.results_params = ResultsParams()   # standard (FWE, 0.05, 0)
         else:
-            self.results_params = res_params    # of type (Cat)ResultsParams
+            self.results_params = res_params  # of type (CatConv)ResultsParams
 
-
+        # if res_conv_params is None, do not create a default value, means I don't want to convert results
+        if isSpm is False and bool(res_conv_params):
+            self.results_conv_params = res_conv_params
 
 
 class Peak:
@@ -399,6 +392,7 @@ class Peak:
         self.x      = x
         self.y      = y
         self.z      = z
+
 
 class Cluster:
 
@@ -415,15 +409,16 @@ class Cluster:
         self.peaks.append(peak)
 
 
-
 class Regressor:
     def __init__(self, name, isNuisance):
         self.name       = name
         self.isNuisance = isNuisance
 
+
 class Covariate(Regressor):
     def __init__(self, name):
         super().__init__(name, False)
+
 
 class Nuisance(Regressor):
     def __init__(self, name):
