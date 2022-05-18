@@ -244,7 +244,6 @@ class SubjectsDataDict:
         if saveit is True:
             self.save_data()
 
-
     def get_header(self):
         self.header = ["subj"]
         for row in self.data:
@@ -258,7 +257,7 @@ class SubjectsDataDict:
 
     def exist_filled_column(self, colname, subj_labels=None):
 
-        if colname in self.header is False:
+        if colname not in self.header:
             return False
 
         if subj_labels is None:

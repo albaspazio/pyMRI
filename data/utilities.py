@@ -111,7 +111,7 @@ def get_file_header(filepath):
 # ---------------------------------------------------------------------------
 # validate data
 # ---------------------------------------------------------------------------
-def validate_data_with_covs(data_file=None, covs=None):
+def validate_datafile_with_covs(data_file=None, covs=None):
 
     if covs is None:
         covs = []
@@ -119,7 +119,7 @@ def validate_data_with_covs(data_file=None, covs=None):
     header = []
     if data_file is not None:
         if os.path.exists(data_file) is False:
-            raise DataFileException("validate_data_with_covs", "given data_file (" + str(data_file) + ") does not exist")
+            raise DataFileException("validate_datafile_with_covs", "given data_file (" + str(data_file) + ") does not exist")
 
         header = SubjectsDataDict(data_file).get_header()  # get_header_of_tabbed_file(data_file)
 
@@ -130,6 +130,30 @@ def validate_data_with_covs(data_file=None, covs=None):
                 missing_covs = missing_covs + cov.name + ", "
 
         if len(missing_covs) > 0:
-            raise DataFileException("validate_data_with_covs", "the following header are NOT present in the given datafile: " + missing_covs)
+            raise DataFileException("validate_datafile_with_covs", "the following header are NOT present in the given datafile: " + missing_covs)
 
     return header
+
+
+def validate_data_with_covs(data=None, covs=None):
+
+    if covs is None:
+        covs = []
+
+    if bool(data) is True:
+        if isinstance(data, SubjectsDataDict) is True:
+            header = data.get_header()  # get_header_of_tabbed_file(data_file)
+
+            # if all(elem in header for elem in covs) is False:  if I don't want to understand which cov is absent
+            missing_covs = ""
+            for cov in covs:
+                if cov.name in header is False:
+                    missing_covs = missing_covs + cov.name + ", "
+
+            if len(missing_covs) > 0:
+                raise DataFileException("validate_data_with_covs", "the following header are NOT present in the given datafile: " + missing_covs)
+
+            return header
+
+    raise DataFileException("validate_data_with_covs", "given data (" + str(data) + ") is not valid")
+

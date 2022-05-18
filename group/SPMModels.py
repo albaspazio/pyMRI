@@ -1,6 +1,6 @@
 import os
 
-from data.utilities         import validate_data_with_covs
+from data.utilities import validate_data_with_covs
 from group.SPMCovariates    import SPMCovariates
 from group.SPMPostModel     import SPMPostModel
 from group.SPMStatsUtils    import SPMStatsUtils
@@ -87,8 +87,8 @@ class SPMModels:
                                                             post_model=None, runit=True):
         # sanity check
         if bool(covs) is True:
-            data_file = self.project.validate_data(data_file)
-            validate_data_with_covs(data_file, covs)
+            data = self.project.validate_data(data_file)
+            validate_data_with_covs(data, covs)
 
         # create template files
         out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel_" + analysis_name)
@@ -96,7 +96,8 @@ class SPMModels:
         os.makedirs(statsdir, exist_ok=True)
         sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
 
-        SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, {"type":"dartel", "folder":root_outdir})
+        subjs_dir = os.path.join(root_outdir, "subjects")
+        SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, {"type":"dartel", "folder":subjs_dir})
 
         # check whether adding a covariate
         SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interaction, data_file)
@@ -140,8 +141,8 @@ class SPMModels:
                                                       post_model=None, runit=True):
         # sanity check
         if bool(covs) is True:
-            data_file = self.project.validate_data(data_file)
-            validate_data_with_covs(data_file, covs)
+            data = self.project.validate_data(data_file)
+            validate_data_with_covs(data, covs)
 
         # create template files
         out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel_" + analysis_name)
@@ -194,8 +195,8 @@ class SPMModels:
                                                       post_model=None, runit=True):
         # sanity check
         if bool(covs) is True:
-            data_file = self.project.validate_data(data_file)
-            validate_data_with_covs(data_file, covs)
+            data = self.project.validate_data(data_file)
+            validate_data_with_covs(data, covs)
 
         # create template files
         out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmdartel_" + analysis_name)
@@ -204,7 +205,8 @@ class SPMModels:
         sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
 
         # compose cells string
-        SPMStatsUtils.compose_images_string_2W(factors, out_batch_job, {"type":"dartel", "folder":root_outdir})
+        subjs_dir = os.path.join(root_outdir, "subjects")
+        SPMStatsUtils.compose_images_string_2W(factors, out_batch_job, {"type":"dartel", "folder":subjs_dir})
 
         # check whether adding a covariate
         # concatenates all the levels of the two main factors in a single vector. being a simple covariate,
@@ -250,8 +252,8 @@ class SPMModels:
                                                              post_model=None, runit=True):
         # sanity check
         if bool(covs) is True:
-            data_file = self.project.validate_data(data_file)
-            validate_data_with_covs(data_file, covs)
+            data = self.project.validate_data(data_file)
+            validate_data_with_covs(data, covs)
 
         # create template files
         out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)
@@ -304,8 +306,8 @@ class SPMModels:
 
         # sanity check
         if bool(covs) is True:
-            data_file = self.project.validate_data(data_file)
-            validate_data_with_covs(data_file, covs)
+            data = self.project.validate_data(data_file)
+            validate_data_with_covs(data, covs)
 
         # create template files
         out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)
@@ -356,8 +358,8 @@ class SPMModels:
 
         # sanity check
         if bool(covs) is True:
-            data_file = self.project.validate_data(data_file)
-            validate_data_with_covs(data_file, covs)
+            data = self.project.validate_data(data_file)
+            validate_data_with_covs(data, covs)
 
         # create template files
         out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)
@@ -412,8 +414,8 @@ class SPMModels:
                                                      post_model=None, runit=True):
         # sanity check
         if bool(covs) is True:
-            data_file = self.project.validate_data(data_file)
-            validate_data_with_covs(data_file, covs)
+            data = self.project.validate_data(data_file)
+            validate_data_with_covs(data, covs)
 
         # create template files
         out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "ct_" + analysis_name)

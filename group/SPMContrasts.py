@@ -8,7 +8,7 @@ class SPMContrasts:
     def replace_1group_multregr_contrasts(out_batch_job, post_model, batch_id=1):
 
         if post_model.isSpm is True:
-            con_str = "spm.stats.stools.con.consess"
+            con_str = "spm.stats.con.consess"
         else:
             con_str = "spm.tools.cat.stools.con.consess"
 
