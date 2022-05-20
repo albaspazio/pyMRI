@@ -11,7 +11,7 @@ from subject.SubjectMpr import SubjectMpr
 from subject.SubjectTransforms import SubjectTransforms
 from utility.myfsl.fslfun import runsystem
 from utility.images.images import imtest, immv, imcp, is_image, img_split_ext, remove_image_ext, read_header
-from utility.utilities import extractall_zip
+from utility.utilities import extractall_zip, sed_inplace
 
 
 class Subject:
@@ -105,7 +105,7 @@ class Subject:
         self.t1_segment_csf_ero_path    = os.path.join(self.roi_t1_dir, "mask_t1_csfseg4Nuisance")
 
         self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
-        self.t1_cat_surface_resamplefilt= 12
+        self.t1_cat_surface_resamplefilt= self._global.cat_smooth_surf
         self.t1_cat_lh_surface          = os.path.join(self.t1_cat_surface_dir, "lh.thickness.T1_" + self.label)
         self.t1_cat_resampled_surface   = os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.T1_" + self.label + ".gii")
         self.t1_cat_resampled_surface_longitudinal = os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.rT1_" + self.label + ".gii")
@@ -318,6 +318,11 @@ class Subject:
                     new_name = os.path.join(path, name.replace(self.label, new_label))
                     os.rename(file_path, new_name)
 
+        # rename special file
+        # in sXX.mesh.thickness.resampled_32K.....gii, it loads the corresponding .dat, change such reference)
+        sed_inplace(self.t1_cat_resampled_surface, self.label, new_label)
+
+
         os.makedirs(os.path.join(self.project.dir, "subjects", new_label))
         os.rename(self.dir, os.path.join(self.project.dir, "subjects", new_label, "s" + str(session_id)))
         rmtree(os.path.join(self.project.dir, "subjects", self.label))
@@ -425,7 +430,7 @@ class Subject:
                  do_sienax=False, bet_sienax_param_string="-SNB -f 0.2",
                  do_reg=True, do_nonlinreg=True, do_seg=True,
                  do_spm_seg=False, spm_seg_templ="", spm_seg_over_bet=False,
-                 do_cat_seg=False, cat_seg_over_bet=False, cat_use_dartel=False, do_cat_surf=True,
+                 do_cat_seg=False, cat_seg_over_bet=False, cat_use_dartel=False, do_cat_surf=True, cat_smooth_surf=None,
                  do_cat_seg_long=False, cat_long_sessions=[1],
                  do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
                  use_lesionmask=False, lesionmask="lesionmask",
@@ -482,7 +487,8 @@ class Subject:
                         do_overwrite=do_overwrite,
                         spm_template_name=self._global.cat_template_name,
                         use_dartel=cat_use_dartel,
-                        calc_surfaces=do_cat_surf)
+                        calc_surfaces=do_cat_surf,
+                        smooth_surf=cat_smooth_surf)
 
                 if do_cat_seg_long is True:
                     self.mpr.cat_segment_longitudinal(
@@ -490,7 +496,8 @@ class Subject:
                         do_overwrite=do_overwrite,
                         spm_template_name=self._global.cat_template_name,
                         use_dartel=cat_use_dartel,
-                        calc_surfaces=do_cat_surf)
+                        calc_surfaces=do_cat_surf,
+                        smooth_surf=cat_smooth_surf)
 
                 if do_freesurfer is True:
                     if do_complete_fs is True:

@@ -66,6 +66,7 @@ class Global:
             self.cat_dartel_template        = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_1_Dartel.nii")
             self.cat_shooting_template      = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_0_GS.nii")
             self.cat_template_name          = "cat28_segment_shooting_tiv_smooth"
+        self.cat_smooth_surf                = 12
 
         self.spm_tissue_map                 = os.path.join(self.spm_dir, "tpm", "TPM.nii")
         self.spm_icv_mask                   = os.path.join(self.spm_dir, "tpm", "mask_ICV.nii")

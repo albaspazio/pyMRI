@@ -661,6 +661,7 @@ class SubjectMpr:
 
             resample_string = ""
             if calc_surfaces is True:
+                # resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.sample{1}.data_surf(1) = cfg_dep('CAT12: Segmentation: Left Thickness', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {1}, '.', 'lhthickness', '()', {':'}));\n"
                 resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.data_surf(1) = cfg_dep('CAT12: Segmentation: Left Thickness',substruct('.', 'val', '{}', {1}, '.', 'val','{}', {1}, '.', 'val', '{}', {1},'.', 'val', '{}', {1}),substruct('()', {1}, '.', 'lhthickness','()', {':'}));\n"
                 resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
                 resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
@@ -726,6 +727,7 @@ class SubjectMpr:
                                  calc_surfaces=True,
                                  num_proc=1,
                                  use_dartel=False,
+                                 smooth_surf=None,
                                  use_existing_nii=True,
                                  spm_template_name="cat_segment_longitudinal_customizedtemplate_tiv_smooth"
                                  ):
@@ -749,6 +751,9 @@ class SubjectMpr:
             if imtest(coreg_templ) is False:
                 print("ERROR in cat_segment_longitudinal: given template coregistration is not present")
                 return
+
+        if smooth_surf is None:
+            smooth_surf = self.subject.t1_cat_surface_resamplefilt
 
         # set dirs
         spm_script_dir = os.path.join(self.subject.project.script_dir, "mpr", "spm")
@@ -843,7 +848,7 @@ class SubjectMpr:
 
             if calc_surfaces is True:
                 for sess in sessions:
-                    self.surf_resample(sess, num_proc, isLong=True, endengine=False, eng=eng)
+                    self.cat_surf_resample(sess, num_proc, isLong=True, smooth_surf=smooth_surf, endengine=False, eng=eng)
 
             for sess in sessions:
                 self.cat_tiv_calculation(sess, isLong=True, endengine=False, eng=eng)
@@ -913,7 +918,10 @@ class SubjectMpr:
 
         return err
 
-    def cat_surf_resample(self, session=1, num_proc=1, isLong=False, mesh32k=1, endengine=True, eng=None):
+    def cat_surf_resample(self, session=1, num_proc=1, isLong=False, mesh32k=1, smooth_surf=None, endengine=True, eng=None):
+
+        if smooth_surf is None:
+            smooth_surf = self.subject.t1_cat_surface_resamplefilt
 
         spm_template_name = "mpr_cat_surf_resample"
         # set dirs
@@ -936,11 +944,9 @@ class SubjectMpr:
         resample_string = ""
         resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.data_surf = {'" + surface + "'};\n"
         resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.mesh32k = " + str(
-            mesh32k) + ";\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.fwhm_surf = 15;\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.nproc = " + str(
-            num_proc) + ";\n"
+        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.mesh32k = " + str(mesh32k) + ";\n"
+        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.fwhm_surf = " + str(smooth_surf) + ";\n"
+        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
 
         write_text_file(output_template, resample_string)
         sed_inplace(output_start, "X", "1")
