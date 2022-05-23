@@ -38,7 +38,7 @@ if __name__ == "__main__":
         # THICKNESS DATA:
         # ==================================================================================================================
         #
-        # def batchrun_cat_thickness_stats_factdes_1group_multregr(self, root_outdir, analysis_name, groups_instances, covs,
+        # def batchrun_cat_thickness_stats_factdes_1group_multregr(self, root_outdir, analysis_name, groups_instances, regressors,
         #                                                          data_file=None, glob_calc="", cov_interactions=None,
         #                                                          expl_mask=None, spm_template_name="spm_stats_1group_multiregr_check_estimate",
         #                                                          spm_contrasts_template_name="", runit=True):
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         spm_analysis.batchrun_cat_thickness_stats_factdes_1group_multregr(statsdir, anal_name, groups_instances, covs, post_model=post_model, runit=False)
 
 
-        # def batchrun_cat_thickness_stats_factdes_2samplesttest(self, root_outdir, analysis_name, groups_instances=None, covs=None,
+        # def batchrun_cat_thickness_stats_factdes_2samplesttest(self, root_outdir, analysis_name, groups_instances=None, regressors=None,
         #                                                        data_file=None, glob_calc="", cov_interaction=None,
         #                                                        expl_mask=None, spm_template_name="cat_thickness_stats_2samples_ttest_check_estimate",
         #                                                        spm_contrasts_template_name="spm_stats_2samplesttest_contrasts_results",
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         spm_analysis.batchrun_cat_thickness_stats_factdes_2samplesttest(statsdir, anal_name, groups_instances, covs, post_model=post_model, runit=False)
 
 
-        # def batchrun_cat_thickness_stats_factdes_1Wanova(self, root_outdir, analysis_name, groups_instances, covs=None,
+        # def batchrun_cat_thickness_stats_factdes_1Wanova(self, root_outdir, analysis_name, groups_instances, regressors=None,
         #                                                  data_file=None, glob_calc="", cov_interaction=None,
         #                                                  expl_mask=None, spm_template_name="spm_stats_1Wanova_check_estimate",
         #                                                  spm_contrasts_template_name="", runit=True):
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         spm_analysis.batchrun_cat_thickness_stats_factdes_1Wanova(statsdir, anal_name, groups_instances, covs, post_model=post_model, runit=False)
 
 
-        # def batchrun_cat_thickness_stats_factdes_2Wanova(self, root_outdir, analysis_name, factors, covs=None,
+        # def batchrun_cat_thickness_stats_factdes_2Wanova(self, root_outdir, analysis_name, factors, regressors=None,
         #                                                  data_file=None, glob_calc="", cov_interaction=None,
         #                                                  expl_mask=None, spm_template_name="cat_thickness_stats_2Wanova_check_estimate",
         #                                                  spm_contrasts_template_name="", runit=True):

@@ -39,7 +39,7 @@ if __name__ == "__main__":
         vbm_template_dir    = os.path.join(project.vbm_dir, vbm_template_name) # vbm_template_dir    = analysis.create_vbm_spm_template_normalize(vbm_template_name, subjects)
 
         # STATS
-        # def batchrun_spm_vbm_dartel_stats_factdes_1group_multregr(self, root_outdir, analysis_name, groups_instances, covs,
+        # def batchrun_spm_vbm_dartel_stats_factdes_1group_multregr(self, root_outdir, analysis_name, groups_instances, regressors,
         #                                                           data_file=None, glob_calc="subj_icv", cov_interactions=None,
         #                                                           expl_mask="icv", spm_template_name="spm_stats_1group_multiregr_check_estimate",
         #                                                           spm_contrasts_template_name="", runit=True):
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         spm_analysis.batchrun_spm_vbm_dartel_stats_factdes_1group_multregr(vbm_template_dir, anal_name, groups_instances, covs, post_model=postmodel, runit=False)
 
 
-        # def batchrun_spm_vbm_dartel_stats_factdes_2samplesttest(self, root_outdir, analysis_name, groups_instances=None, covs=None,
+        # def batchrun_spm_vbm_dartel_stats_factdes_2samplesttest(self, root_outdir, analysis_name, groups_instances=None, regressors=None,
         #                                                         data_file=None, glob_calc="subj_icv", cov_interaction=None,
         #                                                         expl_mask="icv", spm_template_name="spm_stats_2samples_ttest_check_estimate",
         #                                                         spm_contrasts_template_name="spm_stats_2samplesttest_contrasts_results",
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
 
 
-        # def batchrun_spm_vbm_dartel_stats_factdes_1Wanova(self, root_outdir, analysis_name, groups_instances, covs,
+        # def batchrun_spm_vbm_dartel_stats_factdes_1Wanova(self, root_outdir, analysis_name, groups_instances, regressors,
         #                                                   data_file=None, glob_calc="subj_icv", cov_interaction=None,
         #                                                   expl_mask="icv", spm_template_name="spm_stats_1Wanova_check_estimate",
         #                                                   spm_contrasts_template_name="", runit=True):
@@ -79,7 +79,7 @@ if __name__ == "__main__":
         spm_analysis.batchrun_spm_vbm_dartel_stats_factdes_1Wanova(vbm_template_dir, anal_name, groups_instances, covs, post_model=postmodel, runit=False)
 
 
-        # def batchrun_spm_vbm_dartel_stats_factdes_2Wanova(self, root_outdir, analysis_name, factors, covs=None,
+        # def batchrun_spm_vbm_dartel_stats_factdes_2Wanova(self, root_outdir, analysis_name, factors, regressors=None,
         #                                                   data_file=None, glob_calc="subj_icv", cov_interaction=None,
         #                                                   expl_mask="icv", spm_template_name="spm_stats_2Wanova_check_estimate",
         #                                                   spm_contrasts_template_name="", runit=True):

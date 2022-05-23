@@ -18,13 +18,13 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir = "/data/MRI/projects/bipolar"
+        proj_dir = "/data/MRI/projects/test"
         project = Project(proj_dir, globaldata)
 
         SESS_ID = 1
         num_cpu = 17
 
-        group_label = "bd_all"
+        group_label = "all"
 
         # ======================================================================================================================
         # PROCESSING
@@ -178,8 +178,8 @@ if __name__ == "__main__":
         # subj.dti.xtract_viewer()
         # subj.dti.xtract_stats(meas="vol,prob,length,FA,MD,L23")
 
-        # subj = project.get_subject_by_label("Versari_Tamara_EU")
-        # subj.rename("Versari_Tamara_DEP")
+        subj = project.get_subject_by_label("T15_C_038")
+        subj.rename("S038")
 
     except SubjectListException as e:
         print(e)

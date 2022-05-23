@@ -123,7 +123,7 @@ def validate_datafile_with_covs(data_file=None, covs=None):
 
         header = SubjectsDataDict(data_file).get_header()  # get_header_of_tabbed_file(data_file)
 
-        # if all(elem in header for elem in covs) is False:  if I don't want to understand which cov is absent
+        # if all(elem in header for elem in regressors) is False:  if I don't want to understand which cov is absent
         missing_covs = ""
         for cov in covs:
             if cov.name in header is False:
@@ -144,7 +144,7 @@ def validate_data_with_covs(data=None, covs=None):
         if isinstance(data, SubjectsDataDict) is True:
             header = data.get_header()  # get_header_of_tabbed_file(data_file)
 
-            # if all(elem in header for elem in covs) is False:  if I don't want to understand which cov is absent
+            # if all(elem in header for elem in regressors) is False:  if I don't want to understand which cov is absent
             missing_covs = ""
             for cov in covs:
                 if cov.name in header is False:

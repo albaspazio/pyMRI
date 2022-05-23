@@ -14,7 +14,7 @@ class SPMCovariates:
             return
         else:
             if isinstance(covs, list) is False:
-                raise Exception("ERROR in spm_replace_stats_add_simplecovariates, covs (" + str(covs) + ") is not a list....returning")
+                raise Exception("ERROR in spm_replace_stats_add_simplecovariates, regressors (" + str(covs) + ") is not a list....returning")
 
         ncov = len(covs)
         if cov_interaction is None:
