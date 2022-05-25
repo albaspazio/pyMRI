@@ -23,7 +23,7 @@ class SPMModels:
     # region VBM
 
     def batchrun_spm_vbm_dartel_stats_factdes_1group_multregr(self, root_outdir, analysis_name, groups_instances, covs,
-                                                              data_file=None, glob_calc="subj_icv", cov_interactions=None,
+                                                              data_file=None, glob_calc="subj_icv", cov_interactions=None, cov_centering=False,
                                                               expl_mask="icv", spm_template_name="spm_stats_1group_multiregr_estimate",
                                                               post_model=None, runit=True):
         # sanity check
@@ -48,7 +48,7 @@ class SPMModels:
         # check whether adding a covariate
         # ---------------------------------------------------------------------------
         if len(covs) > 0:
-            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interactions, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interactions, data_file, cov_centering)
         else:
             print("ERROR : No covariates in a multiple regression")
             return ""
@@ -82,7 +82,7 @@ class SPMModels:
     # GROUPx_IMAGES are :  'mpr/anat/cat_proc/surf/s15.mesh.thickness.resampled_32k.T1_XXXXXXXXXX.gii,1'
     # statsparams = {"mult_corr":"", "pvalue":0.05, "clust_ext":0}
     def batchrun_spm_vbm_dartel_stats_factdes_2samplesttest(self, root_outdir, analysis_name, groups_instances=None, covs=None,
-                                                            data_file=None, glob_calc="subj_icv", cov_interaction=None,
+                                                            data_file=None, glob_calc="subj_icv", cov_interaction=None, cov_centering=False,
                                                             expl_mask="icv", spm_template_name="spm_stats_2samples_ttest_estimate",
                                                             post_model=None, runit=True):
         # sanity check
@@ -100,7 +100,7 @@ class SPMModels:
         SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, {"type":"dartel", "folder":subjs_dir})
 
         # check whether adding a covariate
-        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interaction, data_file)
+        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interaction, data_file, cov_centering)
 
         # global calculation
         SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
@@ -136,7 +136,7 @@ class SPMModels:
     #                                                                            };
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
     def batchrun_spm_vbm_dartel_stats_factdes_1Wanova(self, root_outdir, analysis_name, groups_instances, covs,
-                                                      data_file=None, glob_calc="subj_icv", cov_interaction=None,
+                                                      data_file=None, glob_calc="subj_icv", cov_interaction=None, cov_centering=False,
                                                       expl_mask="icv", spm_template_name="spm_stats_1Wanova_estimate",
                                                       post_model=None, runit=True):
         # sanity check
@@ -158,7 +158,7 @@ class SPMModels:
         SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
 
         # check whether adding a covariate
-        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interaction, data_file)
+        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interaction, data_file, cov_centering)
 
         # explicit mask
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
@@ -190,7 +190,7 @@ class SPMModels:
     # cells is [factor][level][subjects_label]
     # factors in a dict with field {"groups_instances":[], "labels":[], "cells": []}
     def batchrun_spm_vbm_dartel_stats_factdes_2Wanova(self, root_outdir, analysis_name, factors, covs=None,
-                                                      data_file=None, glob_calc="subj_icv", cov_interaction=None,
+                                                      data_file=None, glob_calc="subj_icv", cov_interaction=None, cov_centering=False,
                                                       expl_mask="icv", spm_template_name="spm_stats_2Wanova_estimate",
                                                       post_model=None, runit=True):
         # sanity check
@@ -216,7 +216,7 @@ class SPMModels:
         for i in factors["cells"][1]:
             all_instances[0] = all_instances[0] + i
 
-        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, all_instances, covs, 1, cov_interaction, data_file)
+        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, all_instances, covs, 1, cov_interaction, data_file, cov_centering)
 
         # global calculation
         SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, all_instances, data_file)
@@ -247,7 +247,7 @@ class SPMModels:
     # region SURFACES THICKNESS (CAT12)
     # ---------------------------------------------------
     def batchrun_cat_thickness_stats_factdes_1group_multregr(self, root_outdir, analysis_name, groups_instances, covs,
-                                                             data_file=None, glob_calc="", cov_interactions=None,
+                                                             data_file=None, glob_calc="", cov_interactions=None, cov_centering=False,
                                                              expl_mask=None, spm_template_name="spm_stats_1group_multiregr_estimate",
                                                              post_model=None, runit=True):
         # sanity check
@@ -269,7 +269,7 @@ class SPMModels:
 
         # check whether adding a covariate
         if len(covs) > 0:
-            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interactions, data_file)
+            SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interactions, data_file, cov_centering)
         else:
             print("ERROR : No covariates in a multiple regression")
             return ""
@@ -300,7 +300,7 @@ class SPMModels:
     # GROUPx_IMAGES are :  'mpr/anat/cat_proc/surf/s15.mesh.thickness.resampled_32k.T1_XXXXXXXXXX.gii,1'
     # statsparams = {"mult_corr":"", "pvalue":0.05, "clust_ext":0}
     def batchrun_cat_thickness_stats_factdes_2samplesttest(self, root_outdir, analysis_name, groups_instances=None, covs=None,
-                                                           data_file=None, glob_calc="", cov_interaction=None,
+                                                           data_file=None, glob_calc="", cov_interaction=None, cov_centering=False,
                                                            expl_mask=None, spm_template_name="spm_stats_2samples_ttest_estimate",
                                                            post_model=None, runit=True):
 
@@ -318,7 +318,7 @@ class SPMModels:
         SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, {"type":"ct"})
 
         # check whether adding a covariate
-        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interaction, data_file)
+        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interaction, data_file, cov_centering)
 
         # global calculation
         SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
@@ -352,7 +352,7 @@ class SPMModels:
     #                                                                            };
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
     def batchrun_cat_thickness_stats_factdes_1Wanova(self, root_outdir, analysis_name, groups_instances, covs=None,
-                                                     data_file=None, glob_calc="", cov_interaction=None,
+                                                     data_file=None, glob_calc="", cov_interaction=None, cov_centering=False,
                                                      expl_mask=None, spm_template_name="spm_stats_1Wanova_estimate",
                                                      post_model=None, runit=True):
 
@@ -374,7 +374,7 @@ class SPMModels:
         SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
 
         # check whether adding a covariate
-        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interaction, data_file)
+        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interaction, data_file, cov_centering)
 
         # explicit mask
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
@@ -409,7 +409,7 @@ class SPMModels:
     # cells is [factor][level][subjects_label]
     # factors in a dict with field {"groups_instances":[], "labels":[], "cells": []}
     def batchrun_cat_thickness_stats_factdes_2Wanova(self, root_outdir, analysis_name, factors, covs=None,
-                                                     data_file=None, glob_calc="", cov_interaction=None,
+                                                     data_file=None, glob_calc="", cov_interaction=None, cov_centering=False,
                                                      expl_mask=None, spm_template_name="spm_stats_2Wanova_estimate",
                                                      post_model=None, runit=True):
         # sanity check
@@ -435,7 +435,7 @@ class SPMModels:
             all_instances[0] = all_instances[0] + i
 
         # check whether adding a covariate
-        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, all_instances, covs, 1, cov_interaction, data_file)
+        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, all_instances, covs, 1, cov_interaction, data_file, cov_centering)
 
         # global calculation
         SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, all_instances, data_file)

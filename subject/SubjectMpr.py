@@ -557,8 +557,8 @@ class SubjectMpr:
                     use_existing_nii=True,
                     use_dartel=True,
                     smooth_surf=None,
-                    spm_template_name="cat27_segment_customizedtemplate_tiv_smooth"
-                    ):
+                    atlases=None,
+                    spm_template_name="cat27_segment_customizedtemplate_tiv_smooth"):
 
         if imtest(os.path.join(self.subject.t1_cat_dir, "mri", "y_T1_" + self.subject.label)) is True and do_overwrite is False:
             print(self.subject.label + ": skipping cat_segment, already done")
@@ -594,6 +594,9 @@ class SubjectMpr:
             if imtest(coreg_templ) is False:
                 print("ERROR in cat_segment: given template coregistration is not present")
                 return
+
+        if atlases is None:
+            atlases = ["aparc_HCP_MMP1", "aparc_DK40", "aparc_a2009s"]
 
         srcinputimage = os.path.join(anatdir, T1 + "_biascorr")
         inputimage = os.path.join(self.subject.t1_cat_dir, T1 + "_" + self.subject.label)
@@ -661,14 +664,17 @@ class SubjectMpr:
 
             resample_string = ""
             if calc_surfaces is True:
-                # resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.sample{1}.data_surf(1) = cfg_dep('CAT12: Segmentation: Left Thickness', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {1}, '.', 'lhthickness', '()', {':'}));\n"
-                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.data_surf(1) = cfg_dep('CAT12: Segmentation: Left Thickness',substruct('.', 'val', '{}', {1}, '.', 'val','{}', {1}, '.', 'val', '{}', {1},'.', 'val', '{}', {1}),substruct('()', {1}, '.', 'lhthickness','()', {':'}));\n"
-                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
-                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
-                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.fwhm_surf = " + str(smooth_surf) + ";\n"
-                resample_string = resample_string + "matlabbatch{4}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
+                # resample_string += "matlabbatch{4}.spm.tools.cat.stools.surfresamp.sample{1}.data_surf(1) = cfg_dep('CAT12: Segmentation: Left Thickness', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {1}, '.', 'lhthickness', '()', {':'}));\n"
+                resample_string += "matlabbatch{4}.spm.tools.cat.stools.surfresamp.data_surf(1) = cfg_dep('CAT12: Segmentation: Left Thickness',substruct('.', 'val', '{}', {1}, '.', 'val','{}', {1}, '.', 'val', '{}', {1},'.', 'val', '{}', {1}),substruct('()', {1}, '.', 'lhthickness','()', {':'}));\n"
+                resample_string += "matlabbatch{4}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;\n"
+                resample_string += "matlabbatch{4}.spm.tools.cat.stools.surfresamp.mesh32k = 1;\n"
+                resample_string += "matlabbatch{4}.spm.tools.cat.stools.surfresamp.fwhm_surf = " + str(smooth_surf) + ";\n"
+                resample_string += "matlabbatch{4}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
+                resample_string += ""
+                resample_string += "matlabbatch{5}.spm.tools.cat.stools.surf2roi.cdata = {\n{" + self.subject.t1_cat_lh_surface + "}\n};\n"
+                resample_string += "matlabbatch{5}.spm.tools.cat.stools.surf2roi.rdata = {\n" + atlases + "};\n"
 
-            sed_inplace(output_template, "<SURF_RESAMPLE>", resample_string)
+            sed_inplace(output_template, "<SURF_POSTPROCESS>", resample_string)
 
             sed_inplace(output_start, "X", "1")
             sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
@@ -988,8 +994,7 @@ class SubjectMpr:
         sed_inplace(output_start, "X", "1")
         sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
 
-        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine,
-                             eng=eng)
+        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine, eng=eng)
 
     def cat_extract_roi_based_surface(self, atlases=None):
 
@@ -1054,8 +1059,7 @@ class SubjectMpr:
 
         res_surf = os.path.join(outdir, "surf_resampled_sess_" + out_str + self.subject.label + ".gii")
 
-        call_matlab_function_noret(matlab_func, [self._global.spm_functions_dir],
-                                   "\"" + surfaces[1] + "\",  \"" + surfaces[0] + "\", \"" + res_surf + "\"")
+        call_matlab_function_noret(matlab_func, [self._global.spm_functions_dir], "\"" + surfaces[1] + "\",  \"" + surfaces[0] + "\", \"" + res_surf + "\"")
 
     # ==================================================================================================================
     #   TISSUE-TYPE SEGMENTATION
@@ -1066,8 +1070,7 @@ class SubjectMpr:
                 do_reg=True, do_nonlinreg=True,
                 do_seg=True,
                 do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
-                use_lesionmask=False, lesionmask="lesionmask"
-                ):
+                use_lesionmask=False, lesionmask="lesionmask"):
         niter = 5
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
         curdir = os.getcwd()

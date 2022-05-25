@@ -84,4 +84,4 @@ matlabbatch{2}.spm.spatial.smooth.prefix = 's';
 matlabbatch{3}.spm.tools.cat.tools.calcvol.data_xml(1) = cfg_dep('CAT12: Segmentation: CAT Report', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','catxml', '()',{':'}));
 matlabbatch{3}.spm.tools.cat.tools.calcvol.calcvol_TIV = 1;
 matlabbatch{3}.spm.tools.cat.tools.calcvol.calcvol_name = '<TIV_FILE>';
-<SURF_RESAMPLE>
+<SURF_POSTPROCESS>
