@@ -46,7 +46,7 @@ if __name__ == "__main__":
         groups_instances    = [project.get_subjects("grp1", SESS_ID)]
         covs                = [Covariate("gender"), Covariate("age")]
         anal_name           = "multregr_age_gender"
-        postmodel           = PostModel("spm_stats_contrasts_results",
+        postmodel           = PostModel("group_postmodel_spm_stats_contrasts_results",
                                         covs, [], res_params=ResultsParams("FWE", 0.01, 10))
         spm_analysis.batchrun_spm_vbm_dartel_stats_factdes_1group_multregr(vbm_template_dir, anal_name, groups_instances, covs, post_model=postmodel, runit=False)
 
@@ -60,7 +60,7 @@ if __name__ == "__main__":
                                 project.get_subjects("grp2")]
         covs                = [Nuisance("gender"), Nuisance("age")]
         anal_name           = "2stt_age_gender"
-        postmodel           = PostModel("spm_stats_2samples_ttest_contrasts_results",
+        postmodel           = PostModel("group_postmodel_spm_stats_2samples_ttest_contrasts_results",
                                         covs, ["grp1 > grop2", "grp2 > grp1"], ResultsParams("FWE", 0.01, 10))
         spm_analysis.batchrun_spm_vbm_dartel_stats_factdes_2samplesttest(vbm_template_dir, anal_name, groups_instances, covs, post_model=postmodel, runit=False)
 

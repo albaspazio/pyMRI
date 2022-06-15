@@ -24,7 +24,7 @@ class SPMModels:
 
     def batchrun_spm_vbm_dartel_stats_factdes_1group_multregr(self, root_outdir, analysis_name, groups_instances, covs,
                                                               data_file=None, glob_calc="subj_icv", cov_interactions=None, cov_centering=False,
-                                                              expl_mask="icv", spm_template_name="spm_stats_1group_multiregr_estimate",
+                                                              expl_mask="icv", spm_template_name="group_model_spm_stats_1group_multiregr_estimate",
                                                               post_model=None, runit=True):
         # sanity check
         if bool(covs) is True:
@@ -56,9 +56,11 @@ class SPMModels:
         # explicit mask
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
 
+        # model estimate
+        sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=False))
+
         # ---------------------------------------------------------------------------
-        # call matlab
-        # ---------------------------------------------------------------------------
+        print("running SPM batch template: " + statsdir)
         if runit is True:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
@@ -83,7 +85,7 @@ class SPMModels:
     # statsparams = {"mult_corr":"", "pvalue":0.05, "clust_ext":0}
     def batchrun_spm_vbm_dartel_stats_factdes_2samplesttest(self, root_outdir, analysis_name, groups_instances=None, covs=None,
                                                             data_file=None, glob_calc="subj_icv", cov_interaction=None, cov_centering=False,
-                                                            expl_mask="icv", spm_template_name="spm_stats_2samples_ttest_estimate",
+                                                            expl_mask="icv", spm_template_name="group_model_spm_stats_2samples_ttest_estimate",
                                                             post_model=None, runit=True):
         # sanity check
         if bool(covs) is True:
@@ -108,7 +110,11 @@ class SPMModels:
         # explicit mask
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
 
+        # model estimate
+        sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=False))
+
         # ---------------------------------------------------------------------------
+        print("running SPM batch template: " + statsdir)
         if runit is True:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
@@ -137,7 +143,7 @@ class SPMModels:
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
     def batchrun_spm_vbm_dartel_stats_factdes_1Wanova(self, root_outdir, analysis_name, groups_instances, covs,
                                                       data_file=None, glob_calc="subj_icv", cov_interaction=None, cov_centering=False,
-                                                      expl_mask="icv", spm_template_name="spm_stats_1Wanova_estimate",
+                                                      expl_mask="icv", spm_template_name="group_model_spm_stats_1Wanova_estimate",
                                                       post_model=None, runit=True):
         # sanity check
         if bool(covs) is True:
@@ -163,7 +169,11 @@ class SPMModels:
         # explicit mask
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
 
-        # call matlab
+        # model estimate
+        sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=False))
+
+        # ---------------------------------------------------------------------------
+        print("running SPM batch template: " + statsdir)
         if runit is True:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
@@ -191,7 +201,7 @@ class SPMModels:
     # factors in a dict with field {"groups_instances":[], "labels":[], "cells": []}
     def batchrun_spm_vbm_dartel_stats_factdes_2Wanova(self, root_outdir, analysis_name, factors, covs=None,
                                                       data_file=None, glob_calc="subj_icv", cov_interaction=None, cov_centering=False,
-                                                      expl_mask="icv", spm_template_name="spm_stats_2Wanova_estimate",
+                                                      expl_mask="icv", spm_template_name="group_model_spm_stats_2Wanova_estimate",
                                                       post_model=None, runit=True):
         # sanity check
         if bool(covs) is True:
@@ -224,6 +234,9 @@ class SPMModels:
         # explicit mask
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
 
+        # model estimate
+        sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=False))
+
         # ---------------------------------------------------------------------------
         print("running SPM batch template: " + statsdir)
         if runit is True:
@@ -248,7 +261,7 @@ class SPMModels:
     # ---------------------------------------------------
     def batchrun_cat_thickness_stats_factdes_1group_multregr(self, root_outdir, analysis_name, groups_instances, covs,
                                                              data_file=None, glob_calc="", cov_interactions=None, cov_centering=False,
-                                                             expl_mask=None, spm_template_name="spm_stats_1group_multiregr_estimate",
+                                                             expl_mask=None, spm_template_name="group_model_spm_stats_1group_multiregr_estimate",
                                                              post_model=None, runit=True):
         # sanity check
         if bool(covs) is True:
@@ -277,7 +290,11 @@ class SPMModels:
         # explicit mask
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
 
-        # call matlab
+        # model estimate
+        sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=True))
+
+        # ---------------------------------------------------------------------------
+        print("running SPM batch template: " + statsdir)
         if runit is True:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
@@ -301,7 +318,7 @@ class SPMModels:
     # statsparams = {"mult_corr":"", "pvalue":0.05, "clust_ext":0}
     def batchrun_cat_thickness_stats_factdes_2samplesttest(self, root_outdir, analysis_name, groups_instances=None, covs=None,
                                                            data_file=None, glob_calc="", cov_interaction=None, cov_centering=False,
-                                                           expl_mask=None, spm_template_name="spm_stats_2samples_ttest_estimate",
+                                                           expl_mask=None, spm_template_name="group_model_spm_stats_2samples_ttest_estimate",
                                                            post_model=None, runit=True):
 
         # sanity check
@@ -326,7 +343,11 @@ class SPMModels:
         # explicit mask
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
 
+        # model estimate
+        sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=True))
+
         # ---------------------------------------------------------------------------
+        print("running SPM batch template: " + statsdir)
         if runit is True:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
@@ -353,7 +374,7 @@ class SPMModels:
     #       matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(2).scans = {'<UNDEFINED>'};
     def batchrun_cat_thickness_stats_factdes_1Wanova(self, root_outdir, analysis_name, groups_instances, covs=None,
                                                      data_file=None, glob_calc="", cov_interaction=None, cov_centering=False,
-                                                     expl_mask=None, spm_template_name="spm_stats_1Wanova_estimate",
+                                                     expl_mask=None, spm_template_name="group_model_spm_stats_1Wanova_estimate",
                                                      post_model=None, runit=True):
 
         # sanity check
@@ -379,7 +400,11 @@ class SPMModels:
         # explicit mask
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
 
+        # model estimate
+        sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=True))
+
         # ---------------------------------------------------------------------------
+        print("running SPM batch template: " + statsdir)
         if runit is True:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
@@ -390,7 +415,7 @@ class SPMModels:
             if os.path.exists(post_model.template_name):
                 SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
             else:
-                SPMPostModel.batchrun_spm_stats_1group_multregr_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
+                SPMPostModel.batchrun_spm_stats_1wanova_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
 
         # ---------------------------------------------------------------------------
         if bool(eng):
@@ -410,7 +435,7 @@ class SPMModels:
     # factors in a dict with field {"groups_instances":[], "labels":[], "cells": []}
     def batchrun_cat_thickness_stats_factdes_2Wanova(self, root_outdir, analysis_name, factors, covs=None,
                                                      data_file=None, glob_calc="", cov_interaction=None, cov_centering=False,
-                                                     expl_mask=None, spm_template_name="spm_stats_2Wanova_estimate",
+                                                     expl_mask=None, spm_template_name="group_model_spm_stats_2Wanova_estimate",
                                                      post_model=None, runit=True):
         # sanity check
         if bool(covs) is True:
@@ -442,6 +467,9 @@ class SPMModels:
 
         # explicit mask
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
+
+        # model estimate
+        sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=True))
 
         # ---------------------------------------------------------------------------
         print("running SPM batch template: " + statsdir)

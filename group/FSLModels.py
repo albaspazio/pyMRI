@@ -94,24 +94,22 @@ class FSLModels:
         nnuis = len(nuis_label)
 
         # at least one valid contrast must exist
-        if ncovs == 0 and group_mean_contrasts == 0:
-            raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, NEITHER COVS or MEAN contrast were specified..dont know what to do, so....exiting")
-        elif ngroups == 1 and (cov_mean_contrasts or group_mean_contrasts) == 0:
+        if ngroups == 1 and ncovs == 0 and group_mean_contrasts == 0:
             raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, when one group is investigated, either cov_mean_contrasts or group_mean_contrasts must be > 0....exiting")
 
         # ----------------------------------------------------------------------------------
         # get subjects values
         subj_labels_by_groups   = []
-        all_subj_labels         = []
+        all_subj                = []
         nsubjs      = 0
         for grp in grouplabel_or_subjlist:
             labels = self.project.get_subjects_labels(grp)
             subj_labels_by_groups.append(labels)
-            all_subj_labels += labels
+            all_subj += grp
             nsubjs += len(labels)
 
-        covs_values = self.project.get_filtered_columns(covs_label, all_subj_labels)[0]
-        nuis_values = self.project.get_filtered_columns(nuis_label, all_subj_labels)[0]
+        covs_values = self.project.get_filtered_columns(covs_label, all_subj, data=data)[0]
+        nuis_values = self.project.get_filtered_columns(nuis_label, all_subj, data=data)[0]
 
         # ------------------------------------------------------------------------------------
         # define output filename...add regressors/nuis to given ofn containing groups info

@@ -278,7 +278,7 @@ class SPMStatsUtils:
     #endregion
 
     # ---------------------------------------------------------------------------
-    #region CHECK REVIEW
+    #region CHECK REVIEW ESTIMATE
 
     @staticmethod
     def spm_get_cat_check(out_batch_job, idstep=2):
@@ -298,6 +298,16 @@ class SPMStatsUtils:
                 "matlabbatch{2}.spm.stats.review.display.matrix = 1;\n" \
                 "matlabbatch{2}.spm.stats.review.print = 'ps';\n"
 
+    @staticmethod
+    def get_spm_model_estimate(isSurf=False, idstep=3):
+
+        if isSurf is True:
+            return "matlabbatch{" + str(idstep) + "}.spm.tools.cat.stools.SPM.spmmat = cfg_dep('Factorial design specification: SPM.mat File', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'spmmat'));"
+        else:
+            return "matlabbatch{" + str(idstep) + "}.spm.stats.fmri_est.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'spmmat'));\n \
+                    matlabbatch{" + str(idstep) + "}.spm.stats.fmri_est.write_residuals = 0;\n \
+                    matlabbatch{" + str(idstep) + "}.spm.stats.fmri_est.method.Classical = 1;\n"
+
     #endregion
 
     # ---------------------------------------------------------------------------
@@ -315,7 +325,7 @@ class SPMStatsUtils:
             print("Error in create_surface_mask_from_volume_mask: input ref_surf does not exist")
             return
 
-        call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths,"'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
+        call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths, "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
 
     @staticmethod
     def batchrun_cat_surface_smooth(project, _global, subj_instances, sfilt=12, spm_template_name="cat_surf_smooth", nproc=1, eng=None, runit=True):

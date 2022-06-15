@@ -26,6 +26,5 @@ matlabbatch{1}.spm.stats.factorial_design.multi_cov = struct('files', {}, 'iCFI'
 matlabbatch{2}.spm.stats.review.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));
 matlabbatch{2}.spm.stats.review.display.matrix = 1;
 matlabbatch{2}.spm.stats.review.print = 'ps';
-matlabbatch{3}.spm.stats.fmri_est.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));
-matlabbatch{3}.spm.stats.fmri_est.write_residuals = 0;
-matlabbatch{3}.spm.stats.fmri_est.method.Classical = 1;
+<MODEL_ESTIMATE>
+
