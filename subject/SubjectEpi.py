@@ -1,7 +1,6 @@
 import os
 import sys
 from shutil import copyfile, rmtree
-
 from numpy import arange, concatenate, array
 
 from Global import Global
@@ -9,7 +8,7 @@ from data.utilities import list2spm_text_column
 from group.SPMStatsUtils import SPMStatsUtils
 from utility.myfsl.utils.run import rrun
 from data import utilities
-from utility.images.images import imtest, imcp, is_image, remove_image_ext, imcp_notexisting, immv
+from utility.images.images import imtest, imcp, is_image, remove_image_ext, imcp_notexisting, immv, add_postfix2name
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
 from utility.utilities import sed_inplace, gunzip, compress, copytree, get_filename
 
@@ -24,29 +23,41 @@ class SubjectEpi:
     # GENERAL (pepolar corr, fsl_feat, aroma, remove_nuisance)
     # ==================================================================================================================================================
 
+    # volnum=3 ...trying to exclude
+    def get_nth_volume(self, in_img, out_img=None, out_mask_img=None, volnum=3, logFile=None):
+
+        if out_mask_img is None:
+            out_mask_img = add_postfix2name(in_img, "_mask")
+
+        if out_mask_img is None:
+            out_mask_img = add_postfix2name(in_img, "_mask")
+
+        rrun("fslmaths " + in_img + " " + add_postfix2name(in_img, "_prefiltered_func_data") + " -odt float", logFile=logFile)
+        rrun("fslroi " + add_postfix2name(in_img, "_prefiltered_func_data") + " " + out_img + " " + str(volnum) + " 1", logFile=logFile)
+        rrun("bet2 "        + out_img + " " + out_img + " -f 0.3", logFile=logFile)
+        rrun("imrm "        + "*prefiltered_func_data*",  logFile=logFile)
+        rrun("fslmaths "    + out_img + " -bin " + out_mask_img,  logFile=logFile)  # create example_function mask (a -thr 0.01/0.1 could have been used to further reduce it)
+
+        return out_img
+
+
     def get_example_function(self, seq="rs", logFile=None):
 
         if seq == "rs":
-            exfun = self.subject.rs_examplefunc
-            data = self.subject.rs_data
+            exfun   = self.subject.rs_examplefunc
+            data    = self.subject.rs_data
             m_exfun = self.subject.rs_examplefunc_mask
         else:
-            exfun = self.subject.fmri_examplefunc
-            data = self.subject.fmri_data
+            exfun   = self.subject.fmri_examplefunc
+            data    = self.subject.fmri_data
             m_exfun = self.subject.fmri_examplefunc_mask
 
         if imtest(exfun) is False:
-            rrun("fslmaths " + data + " " + data + "_prefiltered_func_data" + " -odt float", logFile=logFile)
-            rrun("fslroi " + data + "_prefiltered_func_data" + " " + exfun + " 100 1", logFile=logFile)
-            rrun("bet2 " + exfun + " " + exfun + " -f 0.3", logFile=logFile)
-
-            rrun("imrm " + data + "prefiltered_func_data*", logFile=logFile)
-
-            rrun("fslmaths " + exfun + " -bin " + m_exfun, logFile=logFile)  # create example_function mask (a -thr 0.01/0.1 could have been used to further reduce it)
+            self.get_nth_volume(data, exfun, m_exfun, 100, logFile)
 
         return exfun
 
-    def slice_timing(self, num_slices, TR, epi_image=None, TA=-1, acq_scheme=0, ref_slice=-1, slice_timing=None, spm_template_name="spm_fmri_slice_timing_correction"):
+    def slice_timing(self, num_slices, TR, epi_image=None, TA=-1, acq_scheme=0, ref_slice=-1, slice_timing=None, spm_template_name="subj_spm_fmri_slice_timing_correction"):
 
         # default params:
         if epi_image is None:
@@ -110,9 +121,10 @@ class SubjectEpi:
         input_dir   = os.path.dirname(in_ap_img)    # /a/b/c
         in_ap_img   = remove_image_ext(in_ap_img)         # /a/b/c/name
         in_ap_label = os.path.basename(in_ap_img)   # name
+        in_distorted= add_postfix2name(in_ap_img, "_distorted")
 
-        if imtest(in_ap_img + "_distorted") is False:
-            imcp(in_ap_img, in_ap_img + "_distorted")
+        if imtest(in_distorted) is False:
+            imcp(in_ap_img, in_distorted)
 
         ap_ref          = os.path.join(input_dir, "ap_ref")
         pa_ref          = os.path.join(input_dir, "pa_ref")
@@ -130,11 +142,11 @@ class SubjectEpi:
 
         # 2
         if ap_ref_vol == -1:
-            central_vol = self.get_closest_volume(in_ap_img, in_pa_img, pa_ref_vol) - 1 # returns a 1-based volume, so I subtract 1
+            closest_vol = self.get_closest_volume(in_ap_img, in_pa_img, pa_ref_vol) - 1 # returns a 1-based volume, so I subtract 1
         else:
-            central_vol = ap_ref_vol
+            closest_vol = ap_ref_vol
 
-        rrun("fslselectvols -i " + in_ap_img + " -o " + ap_ref + " --vols=" + str(central_vol), logFile=logFile)
+        rrun("fslselectvols -i " + in_ap_img + " -o " + ap_ref + " --vols=" + str(closest_vol), logFile=logFile)
 
         # 3
         rrun("fslmerge -t " + ap_pa_ref + " " + ap_ref + " " + pa_ref, stop_on_error=False)
@@ -143,10 +155,10 @@ class SubjectEpi:
         rrun("topup --imain=" + ap_pa_ref + " --datain=" + acq_params + " --config=" + config + " --out=" + ap_pa_ref_topup, logFile=logFile) # + " --iout=" + self.subject.fmri_data + "_PE_ref_topup_corrected")
 
         img2correct = in_ap_img
-        # 5 -motion correction using central_vol (given or that closest to _PA image)
+        # 5 -motion correction using closest_vol (given or that closest to _PA image)
         if motion_corr is True:
             img2correct = os.path.join(input_dir, "r" + in_ap_label)
-            self.spm_motion_correction(in_ap_img, ref_vol=central_vol)   # add r in front of img name
+            self.spm_motion_correction(in_ap_img, ref_vol=closest_vol)   # add r in front of img name
             os.remove(in_ap_img + ".nii")       # remove old with-motion SUBJ-fmri.nii
             os.remove(in_ap_img + ".nii.gz")    # remove old with-motion SUBJ-fmri.nii.gz
             compress(img2correct + ".nii", img2correct + ".nii.gz", replace=True)  # zip rSUBJ-fmri.nii => rSUBJ-fmri.nii.gz
@@ -156,6 +168,9 @@ class SubjectEpi:
 
         os.system("rm " + input_dir + "/" + "ap_*")
         os.system("rm " + input_dir + "/" + "pa_*")
+
+        print("topup correction of subj: " + self.subject.label + " finished. closest volume is: " + str(closest_vol))
+        return closest_vol
 
     # model can be:  a fullpath, a filename (string) located in project's glm_template_dir
     def fsl_feat(self, epi_label, in_file_name, out_dir_name, model, do_initreg=False, std_image="", tr="", te=""):
@@ -396,7 +411,7 @@ class SubjectEpi:
     # coregister epi (or a given image) to given volume of given image (usually the epi itself, the pepolar in case of distortion correction process)
     # automatically put an "r" in front of the given file name
     def spm_motion_correction(self, epi2correct, ref_image=None, ref_vol=1,
-                              spm_template_name="spm_fmri_realign_estimate_reslice_to_given_vol"):
+                              spm_template_name="subj_spm_fmri_realign_estimate_reslice_to_given_vol"):
 
         # check if input image is valid, upzip whether zipped
         if imtest(epi2correct) is False:
@@ -417,7 +432,7 @@ class SubjectEpi:
             gunzip(ref_image + ".nii.gz", ref_image + ".nii")
 
         # 2.1: select the input spm template obtained from batch (we defined it in spm_template_name) + its run file …
-        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
 
         # 2.2: create "output spm template" by copying "input spm template" + changing general tags for our specific ones…
         ref_vol = max(ref_vol, 1)
@@ -482,7 +497,7 @@ class SubjectEpi:
             ref_volume      = epi_pe_nvols // 2     # 0-based. in spm_motioncorrection get 1-based
 
         # estimate BUT NOT reslice
-        self.spm_motion_correction(temp_epi, temp_epi_ref, ref_volume, spm_template_name="spm_fmri_realign_estimate_to_given_vol")
+        self.spm_motion_correction(temp_epi, temp_epi_ref, ref_volume, spm_template_name="subj_spm_fmri_realign_estimate_to_given_vol")
 
         # 3: call matlab function that calculates best volume (1-based):
         best_vol = call_matlab_function("least_mov", [self._global.spm_functions_dir], "\"" + os.path.join(temp_distorsion_mc, "rp_" + in_label + "_ref" + '.txt' + "\""))[1]
@@ -501,7 +516,7 @@ class SubjectEpi:
             if f.is_file():
                 gunzip(f.name, os.path.join(outdir, remove_image_ext(f.name) + ".nii"), replace=True)
 
-    def spm_fmri_preprocessing_motioncorrected(self, epi_image=None, spm_template_name='spm_fmri_preprocessing_noslicetiming_norealign'):
+    def spm_fmri_preprocessing_motioncorrected(self, epi_image=None, spm_template_name='subj_spm_fmri_preprocessing_noslicetiming_norealign'):
 
         # default params:
         if epi_image is None:
@@ -536,10 +551,10 @@ class SubjectEpi:
                                                slice_timing=None):
         self.subject.epi_spm_fmri_preprocessing(num_slices, TR, TA, acq_scheme, ref_slice, slice_timing,
                                                 epi_image=self.subject.fmri_data_mc,
-                                                spm_template_name='spm_fmri_preprocessing_norealign')
+                                                spm_template_name='subj_spm_fmri_preprocessing_norealign')
 
     def spm_fmri_preprocessing_old(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice=-1, slice_timing=None,
-                               epi_image=None, spm_template_name='spm_fmri_preprocessing'):
+                               epi_image=None, spm_template_name='subj_spm_fmri_preprocessing'):
 
         # default params:
         if epi_image is None:
@@ -609,7 +624,7 @@ class SubjectEpi:
 
     # conditions_lists[{"name", "onsets", "duration"}, ....]
     def spm_fmri_1st_level_analysis(self, analysis_name, TR, num_slices, conditions_lists, events_unit="secs",
-                                    spm_template_name='spm_fmri_stats_1st_level', rp_filename=""):
+                                    spm_template_name='subj_spm_fmri_stats_1st_level', rp_filename=""):
 
         # default params:
         stats_dir = os.path.join(self.subject.fmri_dir, "stats", analysis_name)
@@ -662,7 +677,7 @@ class SubjectEpi:
 
     # sessions x conditions_lists[{"name", "onsets", "duration"}, ....]
     def spm_fmri_1st_level_multisessions_custom_analysis(self, analysis_name, input_images, TR, num_slices, conditions_lists, events_unit="secs",
-                                                  spm_template_name='spm_fmri_stats_1st_level', rp_filenames=None):
+                                                  spm_template_name='subj_spm_fmri_stats_1st_level', rp_filenames=None):
 
         nsessions = len(input_images)
 
@@ -847,4 +862,52 @@ class SubjectEpi:
 
     def sbfc_several_1roi_feat(self):
         pass
+
+    def coregister_epis(self, ref, target, trgpostfix="_ref", img2transform=None, ref_vol=3):
+
+        trg_dir     = os.path.dirname(target)
+        trg_name    = os.path.basename(target)
+        omat        = os.path.join(trg_dir, "temp_trg2ref")
+        owarp       = os.path.join(trg_dir, "temp_trg2ref_warp")
+        otrg        = add_postfix2name(target, trgpostfix)
+        otrg_lin    = add_postfix2name(target, trgpostfix + "_lin")
+
+        single_ref_vol = add_postfix2name(ref, "_sv")
+        single_trg_vol = add_postfix2name(target, "_sv")
+        ref_mask       = add_postfix2name(ref, "_sv_mask")
+
+        if img2transform is None:
+            cout = " "                          # don't want to use warp for further coreg, only interested in trg coreg
+        else:
+            cout = " --cout=" + owarp + " "     # want to use warp for further coregs
+
+        self.get_nth_volume(ref,    single_ref_vol, ref_mask, volnum=ref_vol, logFile=None)     # it creates ref_mask
+        self.get_nth_volume(target, single_trg_vol, out_mask_img=None, volnum=ref_vol, logFile=None)
+
+        rrun("flirt  -in "  + single_trg_vol + "  -ref " + single_ref_vol + "  -omat " + omat + " -out " + otrg_lin)
+        rrun("fnirt --in="  + single_trg_vol + " --ref=" + single_ref_vol + " --aff="  + omat + " --refmask=" + ref_mask + cout + " --iout=" + otrg)
+
+        if img2transform is not None:
+            for img in img2transform:
+                ref_name = os.path.basename(ref)
+                oimg     = add_postfix2name(img, trgpostfix)
+                rrun("applywarp -i " + img + " -w " + owarp + " -r " + single_ref_vol + " -o " + oimg + " --interp=spline")
+
+        return owarp
+
+    # def normalize(self, inimg=None):
+    #
+    #     if inimg is None:
+    #         if imtest(inimg) is False:
+    #             print("Error in epi.normalize of subj: " + self.subject.label + " given image (" + inimg + ") is not present....exiting")
+    #             return
+    #     elif inimg == "rs":
+    #         inimg = self.subject.rs_data
+    #     elif inimg == "fmri":
+    #         inimg = self.subject.fmri_data
+    #
+    #     # if self.subject.hr2std_warp
+
+
+
     # ===============================================================================

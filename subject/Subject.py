@@ -149,10 +149,11 @@ class Subject:
         # ------------------------------------------------------------------------------------------------------------------------
         self.rs_image_label = self.label + "-rs"
 
-        self.rs_dir     = os.path.join(self.dir, "resting")
-        self.rs_data    = os.path.join(self.rs_dir, self.rs_image_label)
-        self.rs_pa_data = os.path.join(self.rs_dir, self.rs_image_label + "_PA")
-        self.rs_pa_data2= os.path.join(self.rs_dir, self.rs_image_label + "_PA2")
+        self.rs_dir         = os.path.join(self.dir, "resting")
+        self.rs_data        = os.path.join(self.rs_dir, self.rs_image_label)
+        self.rs_data_dist   = os.path.join(self.rs_dir, self.rs_image_label + "_distorted")
+        self.rs_pa_data     = os.path.join(self.rs_dir, self.rs_image_label + "_PA")
+        self.rs_pa_data2    = os.path.join(self.rs_dir, self.rs_image_label + "_PA2")
 
         self.sbfc_dir = os.path.join(self.rs_dir, "sbfc")
         self.rs_series_dir = os.path.join(self.sbfc_dir, "series")

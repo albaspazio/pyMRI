@@ -447,7 +447,7 @@ class Project:
         return out_batch_job, out_batch_start
 
     # returns out_batch_job, taken from an existing spm batch template
-    def adapt_batch_files(self, templfile_noext, seq, prefix=""):
+    def adapt_batch_files(self, templfile_noext, seq, prefix="", postfix=""):
 
         if prefix != "":
             prefix = prefix + "_"
@@ -455,6 +455,9 @@ class Project:
         # force input template to be without ext
         templfile_noext     = remove_ext(templfile_noext)
         input_batch_name    = ntpath.basename(templfile_noext)
+
+        if postfix != "":
+            input_batch_name = input_batch_name + "_" + postfix
 
         out_batch_dir       = os.path.join(self.script_dir, seq, "spm", "batch")
         os.makedirs(out_batch_dir, exist_ok=True)

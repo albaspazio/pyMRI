@@ -28,7 +28,7 @@ from utility.images.images import imtest, imcp
 #   DTI   <--> T2 <--> HR <---> STD
 #
 from utility.images.transform_images import check_concat_mat, check_invert_mat, check_convert_warp_mw, check_invert_warp, \
-    check_flirt, check_apply_mat, check_convert_warp_wmw, check_convert_warp_ww, check_apply_warp
+    check_flirt, check_apply_mat, check_convert_warp_wmw, check_convert_warp_ww, check_apply_warp, flirt
 
 
 class SubjectTransforms:
@@ -230,6 +230,33 @@ class SubjectTransforms:
             "dtiTOt2": self.transform_nl_dti2t2
         }
 
+    # def hr2std_nl(self, hrhead=None, stdhead=None, usehead_nl=True, overwrite=False, logFile=None):
+    #
+    #     if hrhead is None:
+    #         hrhead = self.subject.t1_data
+    #         hrhead2std = os.path.join(self.subject.roi_std_dir, "hrhead2" + self.subject.std_img_label + ".mat")
+    #         hr2std_warp = self.hr2std_warp
+    #     else:
+    #         hrhead2std  = os.path.join(os.path.dirname(hrhead), "hrhead2std")
+    #         hr2std_warp = os.path.join(os.path.dirname(hrhead), "hr2std_warp")
+    #
+    #     if stdhead in None:
+    #         stdhead = self.subject.std_head_img
+    #
+    #     if usehead_nl is True:
+    #
+    #         params      = "-cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear",
+    #         flirt(hrhead2std, hrhead, stdhead, params, logFile=logFile)
+    #
+    #         rrun("fnirt --in=" + hrhead + " --aff=" + hrhead2std + " --config=" + self._global.fsl_std_mni_2mm_cnf +
+    #             " --ref=" + stdhead + " --refmask=" + self.subject.std_img_mask_dil + " --warpres=10,10,10" +
+    #             " --cout=" + self.hr2std_warp, overwrite=overwrite, logFile=logFile)
+    #     else:
+    #         rrun("fnirt --in=" + hrhead + " --aff=" + self.hr2std_mat + " --config=" + self._global.fsl_std_mni_2mm_cnf +
+    #             " --ref=" + stdhead + " --refmask=" + self.subject.std_img_mask_dil + " --warpres=10,10,10" +
+    #             " --cout=" + self.hr2std_warp, overwrite=overwrite, logFile=logFile)
+
+
     # ==================================================================================================================================================
     # MAIN SEQUENCES TRANSFORMS
     # ==================================================================================================================================================
@@ -320,7 +347,7 @@ class SubjectTransforms:
     # (17/7/21) bbr co-registration fails!!!
     # it creates (10) : example_func, rs2hr_mat , hr2rs_mat , rs2std_mat , std2rs_mat , rs2std4_mat , std42rs_mat
     #                                 rs2std_warp, std2rs_warp, rs2std4_warp, std42rs_warp
-    def transform_rs(self, do_bbr=False, wmseg="", overwrite=False, logFile=None):
+    def transform_rs(self, inimg=None, do_bbr=False, wmseg="", overwrite=False, logFile=None):
 
         if wmseg == "":
             wmseg = self.subject.t1_segment_wm_bbr_path
@@ -339,7 +366,10 @@ class SubjectTransforms:
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # check or create example function
-        exfun = self.subject.epi.get_example_function(logFile=logFile)
+        if inimg is None:
+            exfun = self.subject.epi.get_example_function(logFile=logFile)
+        else:
+            exfun = self.subject.epi.get_nth_volume(inimg, logFile=None)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #  RS <--> HIGHRES (linear, bbr or not)
