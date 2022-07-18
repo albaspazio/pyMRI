@@ -8,7 +8,8 @@ from data.utilities import list2spm_text_column
 from group.SPMStatsUtils import SPMStatsUtils
 from utility.myfsl.utils.run import rrun
 from data import utilities
-from utility.images.images import imtest, imcp, is_image, remove_image_ext, imcp_notexisting, immv, add_postfix2name
+from utility.images.images import imtest, imcp, is_image, remove_image_ext, imcp_notexisting, immv, add_postfix2name, imgname
+from utility.images.transform_images import check_convert_warp_mw, flirt
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
 from utility.utilities import sed_inplace, gunzip, compress, copytree, get_filename
 
@@ -32,14 +33,13 @@ class SubjectEpi:
         if out_mask_img is None:
             out_mask_img = add_postfix2name(in_img, "_mask")
 
-        rrun("fslmaths " + in_img + " " + add_postfix2name(in_img, "_prefiltered_func_data") + " -odt float", logFile=logFile)
-        rrun("fslroi " + add_postfix2name(in_img, "_prefiltered_func_data") + " " + out_img + " " + str(volnum) + " 1", logFile=logFile)
+        rrun("fslmaths "    + in_img + " " + add_postfix2name(in_img, "_prefiltered_func_data") + " -odt float", logFile=logFile)
+        rrun("fslroi "      + add_postfix2name(in_img, "_prefiltered_func_data") + " " + out_img + " " + str(volnum) + " 1", logFile=logFile)
         rrun("bet2 "        + out_img + " " + out_img + " -f 0.3", logFile=logFile)
         rrun("imrm "        + "*prefiltered_func_data*",  logFile=logFile)
         rrun("fslmaths "    + out_img + " -bin " + out_mask_img,  logFile=logFile)  # create example_function mask (a -thr 0.01/0.1 could have been used to further reduce it)
 
         return out_img
-
 
     def get_example_function(self, seq="rs", logFile=None):
 
@@ -57,7 +57,7 @@ class SubjectEpi:
 
         return exfun
 
-    def slice_timing(self, num_slices, TR, epi_image=None, TA=-1, acq_scheme=0, ref_slice=-1, slice_timing=None, spm_template_name="subj_spm_fmri_slice_timing_correction"):
+    def slice_timing(self, TR, num_slices=-1, epi_image=None, TA=-1, acq_scheme=0, ref_slice=-1, slice_timing=None, spm_template_name="subj_spm_fmri_slice_timing_correction"):
 
         # default params:
         if epi_image is None:
@@ -66,6 +66,9 @@ class SubjectEpi:
             if imtest(epi_image) is False:
                 print("Error in subj: " + self.subject.label + " slice_timing")
                 return
+
+        if num_slices == -1:
+            pass
 
         # TA - if not otherwise indicated, it assumes the acquisition is continuous and TA = TR - (TR/num slices)
         if TA == -1:
@@ -90,7 +93,7 @@ class SubjectEpi:
             epi_volume = epi_path_name + ',' + str(i) + "'"
             epi_all_volumes = epi_all_volumes + epi_volume + '\n' + "'"
 
-        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", self.subject.label)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
 
         sed_inplace(out_batch_job, '<FMRI_IMAGES>', epi_all_volumes)
         sed_inplace(out_batch_job, '<NUM_SLICES>', str(num_slices))
@@ -872,9 +875,9 @@ class SubjectEpi:
         otrg        = add_postfix2name(target, trgpostfix)
         otrg_lin    = add_postfix2name(target, trgpostfix + "_lin")
 
-        single_ref_vol = add_postfix2name(ref, "_sv")
-        single_trg_vol = add_postfix2name(target, "_sv")
-        ref_mask       = add_postfix2name(ref, "_sv_mask")
+        single_ref_vol = add_postfix2name(ref,      "_sv")
+        single_trg_vol = add_postfix2name(target,   "_sv")
+        ref_mask       = add_postfix2name(ref,      "_sv_mask")
 
         if img2transform is None:
             cout = " "                          # don't want to use warp for further coreg, only interested in trg coreg
@@ -895,18 +898,32 @@ class SubjectEpi:
 
         return owarp
 
-    # def normalize(self, inimg=None):
-    #
-    #     if inimg is None:
-    #         if imtest(inimg) is False:
-    #             print("Error in epi.normalize of subj: " + self.subject.label + " given image (" + inimg + ") is not present....exiting")
-    #             return
-    #     elif inimg == "rs":
-    #         inimg = self.subject.rs_data
-    #     elif inimg == "fmri":
-    #         inimg = self.subject.fmri_data
-    #
-    #     # if self.subject.hr2std_warp
+    def normalize(self, inimg=None, logFile=None):
+
+        if inimg is None:
+            if imtest(inimg) is False:
+                print("Error in epi.normalize of subj: " + self.subject.label + " given image (" + inimg + ") is not present....exiting")
+                return
+        elif inimg == "rs":
+            inimg = self.subject.rs_data
+        elif inimg == "fmri":
+            inimg = self.subject.fmri_data
+
+        iname       = imgname(inimg)
+        params      = " -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear"
+        omat        = os.path.join(os.path.dirname(inimg), iname + "2hr.mat")
+        epi_sv      = os.path.join(os.path.dirname(inimg), iname + "_sv")
+        owarp       = os.path.join(os.path.dirname(inimg), iname + "2std_warp")
+        norm_input  = os.path.join(os.path.dirname(inimg), iname +  "_norm")
+        self.get_nth_volume(inimg, epi_sv, None, 0, logFile)
+        flirt(omat, epi_sv, self.subject.t1_brain_data, params, logFile=logFile)
+
+        if imtest(self.subject.transform.hr2std_warp) is True:
+            rrun("convertwarp --ref=" + self.subject.std_img + " --premat=" + omat + " --warp1=" + self.subject.transform.hr2std_warp + " --out=" + owarp, logFile=logFile)
+            rrun("applywarp -i " + inimg + " -r " + self.subject.std_img + " -o " + norm_input + " --warp=" + owarp, logFile=logFile)
+
+
+
 
 
 
