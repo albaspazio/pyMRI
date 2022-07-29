@@ -64,7 +64,7 @@ class SubjectEpi:
             epi_image = self.subject.fmri_data
         else:
             if imtest(epi_image) is False:
-                print("Error in subj: " + self.subject.label + " slice_timing")
+                print("Warning in subj: " + self.subject.label + " slice_timing")
                 return
 
         if num_slices == -1:
@@ -550,62 +550,75 @@ class SubjectEpi:
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
-    def spm_fmri_preprocessing_motioncorrected_old(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice=-1,
-                                               slice_timing=None):
-        self.subject.epi_spm_fmri_preprocessing(num_slices, TR, TA, acq_scheme, ref_slice, slice_timing,
-                                                epi_image=self.subject.fmri_data_mc,
-                                                spm_template_name='subj_spm_fmri_preprocessing_norealign')
+    def spm_fmri_preprocessing(self, num_slices, TR, TA=0, acq_scheme=0, ref_slice=-1, slice_timing=None,
+                               epi_images=None, smooth=6, spm_template_name='subj_spm_fmri_full_preprocessing'):
 
-    def spm_fmri_preprocessing_old(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice=-1, slice_timing=None,
-                               epi_image=None, spm_template_name='subj_spm_fmri_preprocessing'):
-
+        valid_images = []
         # default params:
-        if epi_image is None:
-            epi_image = self.subject.fmri_data
+        if epi_images is None:
+            valid_images = [self.subject.fmri_data]
         else:
-            if imtest(epi_image) is False:
-                print("Error in subj: " + self.subject.label + " epi_spm_fmri_preprocessing")
-                return
+            for img in epi_images:
+                if imtest(img):
+                    valid_images.append(img)
+                else:
+                    print("WARNING in subj: " + self.subject.label + ", given image (" + img + " is missing...skipping this image")
 
-        # TA - if not otherwise indicated, it assumes the acquisition is continuous and TA = TR - (TR/num slices)
-        if TA == -1:
-            TA = TR - (TR / num_slices)
+
+        nsessions = len(valid_images)
+
+        if slice_timing is None:
+            slice_timing = self.subject.epi_get_slicetiming_params(num_slices, acq_scheme)
+
+            # TA - if not otherwise indicated, it assumes the acquisition is continuous and TA = TR - (TR/num slices)
+            if TA == 0:
+                TA = TR - (TR / num_slices)
+
+        else:
+            num_slices      = len(slice_timing)
+            slice_timing    = [str(p) for p in slice_timing]
+            TA              = 0
 
         # takes central slice as a reference
         if ref_slice == -1:
             ref_slice = num_slices // 2 + 1
 
-        #
-        if slice_timing is None:
-            slice_timing = self.subject.epi_get_slicetiming_params(num_slices, acq_scheme)
-        else:
-            slice_timing = [str(p) for p in slice_timing]
-
-        # set dirs
-        in_batch_job = os.path.join(self._global.spm_templates_dir, spm_template_name + '_job.m')
-        in_batch_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
-
-        spm_script_dir = os.path.join(self.subject.project.script_dir, "fmri", "spm")
-        out_batch_dir = os.path.join(spm_script_dir, "batch")
-
-        out_batch_job = os.path.join(out_batch_dir, spm_template_name + self.subject.label + '_job.m')
-        out_batch_start = os.path.join(out_batch_dir, "start_" + spm_template_name + self.subject.label + '.m')
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
 
         # substitute for all the volumes + rest of params
-        epi_nvols = int(rrun('fslnvols ' + epi_image + '.nii.gz'))
-        epi_path_name = epi_image + '.nii'
-
-        gunzip(epi_image + '.nii.gz', epi_path_name, replace=False)
-
         epi_all_volumes = ''
-        for i in range(1, epi_nvols + 1):
-            epi_volume = epi_path_name + ',' + str(i) + "'"
-            epi_all_volumes = epi_all_volumes + epi_volume + '\n' + "'"
+        for img in valid_images:
+
+            epi_nvols       = int(rrun('fslnvols ' + img + '.nii.gz'))
+            epi_path_name   = img + '.nii'
+
+            gunzip(img + '.nii.gz', epi_path_name, replace=False)
+
+            epi_all_volumes += '{'
+            for i in range(1, epi_nvols + 1):
+                epi_volume =  "'" + epi_path_name + ',' + str(i) + "'"
+                epi_all_volumes = epi_all_volumes + epi_volume + '\n'
+
+            epi_all_volumes += '}\n'
+
+        # slice-timing sessions
+        slice_timing_sessions = ""
+        for i in range(nsessions):
+            slice_timing_sessions += "matlabbatch{2}.spm.temporal.st.scans{" + str(i+1) + "}(1) = cfg_dep('Realign: Estimate & Reslice: Resliced Images (Sess " + str(i+1) + ")', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'sess', '()', {" + str(i+1) + "}, '.', 'rfiles'));\n"
+
+        # normalize write
+        normalize_write_sessions = ""
+        for i in range(nsessions):
+            normalize_write_sessions += "matlabbatch{5}.spm.spatial.normalise.write.subj.resample(" + str(i+1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess 1)', substruct('.', 'val', '{}', {2}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i+1) + "}, '.', 'files'));\n"
 
         mean_image = os.path.join(self.subject.fmri_dir, "mean" + self.subject.fmri_image_label + ".nii")
 
-        copyfile(in_batch_job, out_batch_job)
+        smooth_schema = "[" + str(smooth) + " " + str(smooth) + " " + str(smooth) + "]"
+
         sed_inplace(out_batch_job, '<FMRI_IMAGES>', epi_all_volumes)
+        sed_inplace(out_batch_job, '<SLICE_TIMING_SESSIONS>', slice_timing_sessions)
+        sed_inplace(out_batch_job, '<NORMALIZE_WRITE_SESSIONS>', normalize_write_sessions)
+
         sed_inplace(out_batch_job, '<NUM_SLICES>', str(num_slices))
         sed_inplace(out_batch_job, '<TR_VALUE>', str(TR))
         sed_inplace(out_batch_job, '<TA_VALUE>', str(TA))
@@ -614,10 +627,7 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<RESLICE_MEANIMAGE>', mean_image)
         sed_inplace(out_batch_job, '<T1_IMAGE>', self.subject.t1_data + '.nii,1')
         sed_inplace(out_batch_job, '<SPM_DIR>', self._global.spm_dir)
-
-        copyfile(in_batch_start, out_batch_start)
-        sed_inplace(out_batch_start, 'X', '1')
-        sed_inplace(out_batch_start, 'JOB_LIST', "\'" + out_batch_job + "\'")
+        sed_inplace(out_batch_job, '<SMOOTH_SCHEMA>', smooth_schema)
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
         # eng = matlab.engine.start_matlab()
