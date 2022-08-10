@@ -164,7 +164,7 @@ class SubjectEpi:
             self.spm_motion_correction(in_ap_img, ref_vol=closest_vol)   # add r in front of img name
             os.remove(in_ap_img + ".nii")       # remove old with-motion SUBJ-fmri.nii
             os.remove(in_ap_img + ".nii.gz")    # remove old with-motion SUBJ-fmri.nii.gz
-            compress(img2correct + ".nii", img2correct + ".nii.gz", replace=True)  # zip rSUBJ-fmri.nii => rSUBJ-fmri.nii.gz
+            compress(img2correct + ".nii", in_ap_img + ".nii.gz", replace=True)  # zip rSUBJ-fmri.nii => SUBJ-fmri.nii.gz
 
         # 6 —again these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
         rrun("applytopup --imain=" + img2correct + " --topup=" + ap_pa_ref_topup + " --datain=" + acq_params + " --inindex=1 --method=jac --interp=spline --out=" + img2correct, logFile=logFile)
@@ -612,6 +612,9 @@ class SubjectEpi:
             normalize_write_sessions += "matlabbatch{5}.spm.spatial.normalise.write.subj.resample(" + str(i+1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess 1)', substruct('.', 'val', '{}', {2}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i+1) + "}, '.', 'files'));\n"
 
         mean_image = os.path.join(self.subject.fmri_dir, "mean" + self.subject.fmri_image_label + ".nii")
+
+        if not os.path.exists(self.subject.t1_data + ".nii"):
+            gunzip(self.subject.t1_data + '.nii.gz', self.subject.t1_data + ".nii", replace=False)
 
         smooth_schema = "[" + str(smooth) + " " + str(smooth) + " " + str(smooth) + "]"
 

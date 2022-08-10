@@ -484,7 +484,7 @@ class SubjectTransforms:
         print(self.subject.label + " :STARTED transform_fmri")
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # check or create example function
-        exfun = self.subject.epi.get_example_function(logFile=logFile)
+        exfun = self.subject.epi.get_example_function(seq="fmri", logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #  fmri <--> HIGHRES (linear, bbr or not)

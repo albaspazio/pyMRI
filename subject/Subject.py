@@ -323,7 +323,6 @@ class Subject:
         # in sXX.mesh.thickness.resampled_32K.....gii, it loads the corresponding .dat, change such reference)
         sed_inplace(self.t1_cat_resampled_surface, self.label, new_label)
 
-
         os.makedirs(os.path.join(self.project.dir, "subjects", new_label))
         os.rename(self.dir, os.path.join(self.project.dir, "subjects", new_label, "s" + str(session_id)))
         rmtree(os.path.join(self.project.dir, "subjects", self.label))
@@ -480,7 +479,7 @@ class Subject:
                         do_bet_overwrite=spm_seg_over_bet,
                         do_overwrite=do_overwrite,
                         seg_templ=spm_seg_templ,
-                        spm_template_name="spm_segment_tissuevolume")
+                        spm_template_name="subj_spm_segment_tissuevolume")
 
                 if do_cat_seg is True:
                     self.mpr.cat_segment(
@@ -579,7 +578,7 @@ class Subject:
                 # susceptibility correction ?
                 # ------------------------------------------------------------------------------------------------------
                 if imtest(self.rs_pa_data) and do_susc_corr is True:
-                    self.epi.topup_correction(self.rs_data, self.rs_pa_data2, self.project.topup_rs_params, logFile=log)
+                    self.epi.topup_correction(self.rs_data, self.rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
 
                 # ------------------------------------------------------------------------------------------------------
                 # FEAT PRE PROCESSING  (hp filt, mcflirt, spatial smoothing, melodic exploration, NO REG)
@@ -660,6 +659,23 @@ class Subject:
                 log.close()
 
         # ==============================================================================================================================================================
+        # FMRI DATA
+        # ==============================================================================================================================================================
+        if self.hasFMRI:
+
+            log_file    = os.path.join(self.fmri_dir, "log_fmri_processing.txt")
+            log         = open(log_file, "a")
+            # ------------------------------------------------------------------------------------------------------
+            # susceptibility correction ?
+            # ------------------------------------------------------------------------------------------------------
+            if imtest(self.fmri_pa_data) and do_susc_corr is True:
+                self.epi.topup_correction(self.fmri_data, self.fmri_pa_data, self.project.topup_fmri_params, motion_corr=True, logFile=log)
+
+            self.transform.transform_fmri(logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
+
+
+
+        # ==============================================================================================================================================================
         # T2 data
         # ==============================================================================================================================================================
         if self.hasT2:
@@ -715,12 +731,6 @@ class Subject:
                 self.dti.conn_matrix(struct_conn_atlas_path, struct_conn_atlas_nroi)  # . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_conn_matrix.sh $SUBJ_NAME $PROJ_DIR
 
             log.close()
-
-        # ==============================================================================================================================================================
-        # FMRI DATA
-        # ==============================================================================================================================================================
-        if self.hasFMRI:
-            self.transform.transform_fmri(logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
 
         # ==============================================================================================================================================================
         # EXTRA
