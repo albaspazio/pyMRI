@@ -1,18 +1,15 @@
 import json
 import math
+import ntpath
 import os
 import shutil
-import ntpath
-
 from copy import deepcopy
 from inspect import signature
-from threading import Thread
 from shutil import copyfile
+from threading import Thread
 
-import numpy
-
-from subject.Subject import Subject
 from data.SubjectsDataDict import SubjectsDataDict
+from subject.Subject import Subject
 from utility.exceptions import SubjectListException
 from utility.images.Image import Image
 from utility.utilities import gunzip, sed_inplace, remove_ext
@@ -31,7 +28,7 @@ class Project:
 
         self.subjects_dir       = os.path.join(self.dir, "subjects")
         self.group_analysis_dir = os.path.join(self.dir, "group_analysis")
-        self.script_dir         = os.path.join(self.dir, "script")
+        self.script_dir         = os.path.join(globaldata.project_scripts_dir, self.name)
 
         self.glm_template_dir = os.path.join(self.script_dir, "glm", "templates")
 
@@ -92,20 +89,24 @@ class Project:
         return self.data
 
 
-    # loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
+    # if must_exist=true:   loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
+    # if must_exist=false:  only create
     # returns this list
-    def load_subjects(self, group_label, sess_id=1):
+    def load_subjects(self, group_label, sess_id=1, must_exist=True):
 
         try:
-            self.subjects           = self.get_subjects(group_label, sess_id)
+            subjects           = self.get_subjects(group_label, sess_id, must_exist)
 
         except SubjectListException as e:
             raise SubjectListException("load_subjects", e.param)    # send whether the group label was not present
                                                                     # or one of the subjects was not valid
 
-        self.subjects_labels    = [subj.label for subj in self.subjects]
-        self.nsubj              = len(self.subjects)
-        return self.subjects
+        if must_exist:
+            self.subjects           = subjects
+            self.subjects_labels    = [subj.label for subj in self.subjects]
+            self.nsubj              = len(self.subjects)
+
+        return subjects
 
     # get a deepcopy of subject with given label
     def get_subject_by_label(self, subj_label, sess=1):
@@ -121,31 +122,37 @@ class Project:
     # ==================================================================================================================
     #region GET SUBJECTS' LABELS or INSTANCES
     # ==================================================================================================================
+    # GROUP_LABEL or SUBLABELS LIST => VALID SUBJECT INSTANCES LIST
+    # create and returns a list of valid subjects instances given a grouplabel or a subjlabels list
+    def get_subjects(self, group_or_subjlabels, sess_id=1, must_exist=True):
+        valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, sess_id, must_exist)
+        return self.__get_subjects_from_labels(valid_subj_labels, sess_id, must_exist)
+
     # GROUP_LABEL or SUBLABELS LIST or SUBJINSTANCES LIST => VALID SUBLABELS LIST
-    def get_subjects_labels(self, grouplabel_or_subjlist=None, sess_id=1):
+    # returns [labels]
+    def get_subjects_labels(self, grouplabel_or_subjlist=None, sess_id=1, must_exist=True):
         if grouplabel_or_subjlist is None:
             if len(self.subjects_labels) == 0:
                 raise SubjectListException("get_subjects_labels", "given grouplabel_or_subjlist is None and no group is loaded")
             else:
                 return self.subjects_labels         # if != form 0, they have been already validated
         elif isinstance(grouplabel_or_subjlist, str):  # must be a group_label and have its associated subjects list
-            return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, sess_id)
+            return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, sess_id, must_exist)
 
         elif isinstance(grouplabel_or_subjlist, list):
-            if isinstance(grouplabel_or_subjlist[0], str):
-                return self.__get_valid_subjlabels(grouplabel_or_subjlist, sess_id)
+            if isinstance(grouplabel_or_subjlist[0], str) is True:
+                # list of subjects' names
+                if must_exist:
+                    return self.__get_valid_subjlabels(grouplabel_or_subjlist, sess_id)
+                else:
+                    return grouplabel_or_subjlist   # [string]
+
             elif isinstance(grouplabel_or_subjlist[0], Subject):
                 return [subj.label for subj in grouplabel_or_subjlist]
             else:
                 raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a string list, first value is: " + str(grouplabel_or_subjlist[0]))
         else:
             raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a valid param (None, string  or string list), is: " + str(grouplabel_or_subjlist))
-
-    # GROUP_LABEL or SUBLABELS LIST => VALID SUBJECT INSTANCES LIST
-    # create and returns a list of valid subjects instances given a grouplabel or a subjlabels list
-    def get_subjects(self, group_or_subjlabels, sess_id=1):
-        valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, sess_id)
-        return self.__get_subjects_from_labels(valid_subj_labels, sess_id)
 
 
 #endregion
@@ -157,10 +164,13 @@ class Project:
     # GROUP_LAB => VALID SUBJLABELS LIST or []
     # check whether all subjects belonging to the given group_label are valid
     # returns such subject list if all valid
-    def __get_valid_subjlabels_from_group(self, group_label, sess_id=1):
+    def __get_valid_subjlabels_from_group(self, group_label, sess_id=1, must_exist=True):
         for grp in self.subjects_lists:
             if grp["label"] == group_label:
-                return self.__get_valid_subjlabels(grp["list"], sess_id)
+                if must_exist:
+                    return self.__get_valid_subjlabels(grp["list"], sess_id)
+                else:
+                    return grp["list"]
         raise SubjectListException("__get_valid_subjlabels_from_group", "given group_label does not exist in subjects_lists")
 
     # SUBJLABELS LIST => VALID SUBJLABELS LIST or []
@@ -174,8 +184,9 @@ class Project:
 
     # SUBJLABELS LIST => VALID SUBJS INSTANCES or []
     # create and returns a list of valid subjects instances given a subjlabels list
-    def __get_subjects_from_labels(self, subj_labels, sess_id=1):
-        subj_labels = self.__get_valid_subjlabels(subj_labels)
+    def __get_subjects_from_labels(self, subj_labels, sess_id=1, must_exist=True):
+        if must_exist:
+            subj_labels = self.__get_valid_subjlabels(subj_labels)
         return [Subject(subj_lab, self, sess_id) for subj_lab in subj_labels]
 
     #endregion

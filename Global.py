@@ -34,6 +34,7 @@ class Global:
 
         local_settings_data         = read_varlist_file(local_settings)
 
+        self.project_scripts_dir    = local_settings_data["project_scripts_dir"]
         self.spm_dir                = local_settings_data["spm_dir"]
         self.cat_version            = local_settings_data["cat_version"]
         self.marsbar                = local_settings_data["marsbar"]
@@ -67,6 +68,9 @@ class Global:
             self.cat_dartel_template        = Image(os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_1_Dartel.nii"), must_exist=True, msg="CAT Dartel template not present")
             self.cat_shooting_template      = Image(os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_0_GS.nii"), must_exist=True, msg="CAT Dartel template not present")
             self.cat_template_name          = "cat28_segment_shooting_tiv_smooth"
+            self.cat_dartel_template        = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_1_Dartel.nii")
+            self.cat_shooting_template      = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_0_GS.nii")
+            self.cat_template_name          = "subj_cat28_segment_shooting_tiv_smooth"
         self.cat_smooth_surf                = 12
 
         self.spm_tissue_map                 = Image(os.path.join(self.spm_dir, "tpm", "TPM.nii"), must_exist=True, msg="SPM's Standard Images not present")
@@ -103,8 +107,13 @@ class Global:
         filename            = inspect.getframeinfo(inspect.currentframe()).filename
         return os.path.join(os.path.dirname(os.path.abspath(filename)), "templates", "spm")
 
-
     def check_paths(self):
+
+        if len(self.project_scripts_dir) > 0:
+            if os.path.isdir(self.project_scripts_dir) is False:
+                raise Exception("Error: Scripts folder is not present")
+        else:
+            raise Exception("Error: Scripts folder (e.g. /data/MRI/projects/SCRIPT) is not specified")
 
         if len(self.spm_dir) > 0:
             if not os.path.isdir(self.spm_dir):

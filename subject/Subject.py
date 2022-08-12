@@ -150,10 +150,11 @@ class Subject:
         # ------------------------------------------------------------------------------------------------------------------------
         self.rs_image_label = self.label + "-rs"
 
-        self.rs_dir     = os.path.join(self.dir, "resting")
-        self.rs_data    = Image(os.path.join(self.rs_dir, self.rs_image_label))
-        self.rs_pa_data = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA"))
-        self.rs_pa_data2= Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA2"))
+        self.rs_dir         = os.path.join(self.dir, "resting")
+        self.rs_data        = Image(os.path.join(self.rs_dir, self.rs_image_label))
+        self.rs_data_dist   = Image(os.path.join(self.rs_dir, self.rs_image_label + "_distorted"))
+        self.rs_pa_data     = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA"))
+        self.rs_pa_data2    = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA2"))
 
         self.sbfc_dir           = os.path.join(self.rs_dir, "sbfc")
         self.rs_series_dir      = os.path.join(self.sbfc_dir, "series")
@@ -328,7 +329,6 @@ class Subject:
         # in sXX.mesh.thickness.resampled_32K.....gii, it loads the corresponding .dat, change such reference)
         sed_inplace(self.t1_cat_resampled_surface, self.label, new_label)
 
-
         os.makedirs(os.path.join(self.project.dir, "subjects", new_label))
         os.rename(self.dir, os.path.join(self.project.dir, "subjects", new_label, "s" + str(session_id)))
         rmtree(os.path.join(self.project.dir, "subjects", self.label))
@@ -491,7 +491,7 @@ class Subject:
                         do_bet_overwrite=spm_seg_over_bet,
                         do_overwrite=do_overwrite,
                         seg_templ=spm_seg_templ,
-                        spm_template_name="spm_segment_tissuevolume")
+                        spm_template_name="subj_spm_segment_tissuevolume")
 
                 if do_cat_seg:
                     self.mpr.cat_segment(
@@ -590,7 +590,7 @@ class Subject:
                 # susceptibility correction ?
                 # ------------------------------------------------------------------------------------------------------
                 if self.rs_pa_data.exist and do_susc_corr:
-                    self.epi.topup_correction(self.rs_data, self.rs_pa_data2, self.project.topup_rs_params, logFile=log)
+                    self.epi.topup_correction(self.rs_data, self.rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
 
                 # ------------------------------------------------------------------------------------------------------
                 # FEAT PRE PROCESSING  (hp filt, mcflirt, spatial smoothing, melodic exploration, NO REG)
@@ -671,6 +671,21 @@ class Subject:
                 log.close()
 
         # ==============================================================================================================================================================
+        # FMRI DATA
+        # ==============================================================================================================================================================
+        if self.hasFMRI:
+
+            log_file    = os.path.join(self.fmri_dir, "log_fmri_processing.txt")
+            log         = open(log_file, "a")
+            # ------------------------------------------------------------------------------------------------------
+            # susceptibility correction ?
+            # ------------------------------------------------------------------------------------------------------
+            if self.fmri_pa_data.exist and do_susc_corr is True:
+                self.epi.topup_correction(self.fmri_data, self.fmri_pa_data, self.project.topup_fmri_params, motion_corr=True, logFile=log)
+
+            self.transform.transform_fmri(logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
+
+        # ==============================================================================================================================================================
         # T2 data
         # ==============================================================================================================================================================
         if self.hasT2:
@@ -728,15 +743,6 @@ class Subject:
             log.close()
 
         # ==============================================================================================================================================================
-        # FMRI DATA
-        # ==============================================================================================================================================================
-        if self.hasFMRI:
-            log_file    = os.path.join(self.fmri_dir, "log_fmri_processing.txt")
-            log         = open(log_file, "a")
-
-            self.transform.transform_fmri(logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
-
-        # ==============================================================================================================================================================
         # EXTRA
         # ==============================================================================================================================================================
         self.transform.transform_extra(logFile=log)
@@ -780,9 +786,7 @@ class Subject:
             original_images = []
 
             for f in files:
-
                 f = Image(f)
-
                 if f.endswith("dcm"):
                     continue
 

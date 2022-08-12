@@ -406,7 +406,7 @@ class SubjectMpr:
                     add_bet_mask=False,
                     set_origin=False,
                     seg_templ="",
-                    spm_template_name="spm_segment_tissuevolume"
+                    spm_template_name="subj_spm_segment_tissuevolume"
                     ):
 
         # define placeholder variables for input dir and image name
@@ -423,9 +423,10 @@ class SubjectMpr:
         srcinputimage       = Image(os.path.join(anatdir, T1 + "_biascorr"))
         inputimage          = Image(os.path.join(self.subject.t1_spm_dir, T1 + "_" + self.subject.label))
 
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
 
         brain_mask          = Image(os.path.join(self.subject.t1_spm_dir, "brain_mask.nii.gz"))
-        skullstripped_mask  = os.path.join(self.subject.t1_spm_dir, "skullstripped_mask.nii.gz")
+        skullstripped_mask = os.path.join(self.subject.t1_spm_dir, "skullstripped_mask.nii.gz")
 
         icv_file            = os.path.join(self.subject.t1_spm_dir, "icv_" + self.subject.label + ".dat")
 
@@ -456,12 +457,12 @@ class SubjectMpr:
 
             seg_templ = Image(seg_templ, must_exist=True, msg="SubjectMPR.spm_segment given template tissue")
 
-            out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
-
             sed_inplace(out_batch_job, "<T1_IMAGE>", inputimage + ".nii")
             sed_inplace(out_batch_job, "<ICV_FILE>", icv_file)
             sed_inplace(out_batch_job, '<SPM_DIR>', self._global.spm_dir)
             sed_inplace(out_batch_job, '<TEMPLATE_TISSUES>', seg_templ)
+
+            out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
 
             call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir], log)
 
@@ -579,18 +580,16 @@ class SubjectMpr:
         if atlases is None:
             atlases = ["aparc_HCP_MMP1", "aparc_DK40", "aparc_a2009s"]
 
-        srcinputimage = os.path.join(anatdir, T1 + "_biascorr")
-        inputimage = os.path.join(self.subject.t1_cat_dir, T1 + "_" + self.subject.label)
+        str_atlases = ""
+        for atl in atlases:
+            str_atlases += "'" + os.path.join(self._global.cat_dir, "atlases_surfaces", "lh." + atl + ".freesurfer.annot") + "'\n"
 
-        # set dirs
-        spm_script_dir = os.path.join(self.subject.project.script_dir, "mpr", "spm")
-        out_batch_dir = os.path.join(spm_script_dir, "batch")
-        in_script_template = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
-        in_script_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+        srcinputimage   = os.path.join(anatdir, T1 + "_biascorr")
+        inputimage      = os.path.join(self.subject.t1_cat_dir, T1 + "_" + self.subject.label)
 
-        output_template = os.path.join(out_batch_dir, self.subject.label + "_" + spm_template_name + "_job.m")
-        output_start = os.path.join(out_batch_dir, "start_" + self.subject.label + "_" + spm_template_name + ".m")
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
 
+        icv_file    = os.path.join(self.subject.t1_cat_dir, "tiv_" + self.subject.label + ".txt")
         brain_mask = Image(os.path.join(self.subject.t1_cat_dir, "brain_mask.nii.gz"))
 
         icv_file = os.path.join(self.subject.t1_cat_dir, "tiv_" + self.subject.label + ".txt")
@@ -609,7 +608,6 @@ class SubjectMpr:
 
             log = open(logfile, "a")
 
-            os.makedirs(out_batch_dir, exist_ok=True)
             os.makedirs(self.subject.t1_cat_dir, exist_ok=True)
 
             # I may want to process with cat after having previously processed without having set image's origin.
@@ -628,20 +626,17 @@ class SubjectMpr:
             if set_origin:
                 input("press keyboard when finished setting the origin for subj " + self.subject.label + " :")
 
-            copyfile(in_script_template, output_template)
-            copyfile(in_script_start, output_start)
-
-            if calc_surfaces:
+            if calc_surfaces is True:
                 str_surf = "1"
             else:
                 str_surf = "0"
 
-            sed_inplace(output_template, "<T1_IMAGE>", inputimage + ".nii")
-            sed_inplace(output_template, "<TEMPLATE_SEGMENTATION>", seg_templ)
-            sed_inplace(output_template, "<TEMPLATE_COREGISTRATION>", coreg_templ)
-            sed_inplace(output_template, "<CALC_SURFACES>", str_surf)
-            sed_inplace(output_template, "<TIV_FILE>", icv_file)
-            sed_inplace(output_template, "<N_PROC>", str(num_proc))
+            sed_inplace(out_batch_job, "<T1_IMAGE>", inputimage + ".nii")
+            sed_inplace(out_batch_job, "<TEMPLATE_SEGMENTATION>", seg_templ)
+            sed_inplace(out_batch_job, "<TEMPLATE_COREGISTRATION>", coreg_templ)
+            sed_inplace(out_batch_job, "<CALC_SURFACES>", str_surf)
+            sed_inplace(out_batch_job, "<TIV_FILE>", icv_file)
+            sed_inplace(out_batch_job, "<N_PROC>", str(num_proc))
 
             resample_string = ""
             if calc_surfaces:
@@ -652,15 +647,12 @@ class SubjectMpr:
                 resample_string += "matlabbatch{4}.spm.tools.cat.stools.surfresamp.fwhm_surf = " + str(smooth_surf) + ";\n"
                 resample_string += "matlabbatch{4}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
                 resample_string += ""
-                resample_string += "matlabbatch{5}.spm.tools.cat.stools.surf2roi.cdata = {\n{" + self.subject.t1_cat_lh_surface + "}\n};\n"
-                resample_string += "matlabbatch{5}.spm.tools.cat.stools.surf2roi.rdata = {\n" + atlases + "};\n"
+                resample_string += "matlabbatch{5}.spm.tools.cat.stools.surf2roi.cdata = {\n{'" + self.subject.t1_cat_lh_surface + "'}\n};\n"
+                resample_string += "matlabbatch{5}.spm.tools.cat.stools.surf2roi.rdata = {\n" + str_atlases + "};\n"
 
-            sed_inplace(output_template, "<SURF_POSTPROCESS>", resample_string)
+            sed_inplace(out_batch_job, "<SURF_POSTPROCESS>", resample_string)
 
-            sed_inplace(output_start, "X", "1")
-            sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
-
-            call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], log)
+            call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], log)
 
             if not use_existing_nii:
                 Image(inputimage + ".nii").rm()
@@ -735,6 +727,8 @@ class SubjectMpr:
 
         if smooth_surf is None:
             smooth_surf = self.subject.t1_cat_surface_resamplefilt
+
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
 
         try:
 
@@ -887,16 +881,8 @@ class SubjectMpr:
             smooth_surf = self.subject.t1_cat_surface_resamplefilt
 
         spm_template_name = "mpr_cat_surf_resample"
-        # set dirs
-        spm_script_dir = os.path.join(self.subject.project.script_dir, "mpr", "spm")
-        out_batch_dir = os.path.join(spm_script_dir, "batch")
-        in_script_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
 
-        output_template = os.path.join(out_batch_dir, self.subject.label + "_" + spm_template_name + "_job.m")
-        output_start = os.path.join(out_batch_dir, "start_" + self.subject.label + "_" + spm_template_name + ".m")
-
-        copyfile(in_script_start, output_start)
-
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
         subj = self.subject.get_properties(session)
 
         surf_prefix = "T1"
@@ -911,47 +897,35 @@ class SubjectMpr:
         resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.fwhm_surf = " + str(smooth_surf) + ";\n"
         resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfresamp.nproc = " + str(num_proc) + ";\n"
 
-        write_text_file(output_template, resample_string)
-        sed_inplace(output_start, "X", "1")
-        sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
+        write_text_file(out_batch_job, resample_string)
 
-        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine,
-                             eng=eng)
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine, eng=eng)
 
     def cat_tiv_calculation(self, session=1, isLong=False, endengine=True, eng=None):
 
         spm_template_name = "mpr_cat_tiv_calculation"
-        # set dirs
-        spm_script_dir = os.path.join(self.subject.project.script_dir, "mpr", "spm")
-        out_batch_dir = os.path.join(spm_script_dir, "batch")
-        in_script_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
 
-        output_template = os.path.join(out_batch_dir, self.subject.label + "_" + spm_template_name + "_job.m")
-        output_start = os.path.join(out_batch_dir, "start_" + self.subject.label + "_" + spm_template_name + ".m")
-
-        copyfile(in_script_start, output_start)
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
 
         subj = self.subject.get_properties(session)
 
-        prefix = "cat_T1_"
-        prefix_tiv = "tiv_"
-        if isLong:
+        prefix      = "cat_T1_"
+        prefix_tiv  = "tiv_"
+        if isLong is True:
             prefix = "cat_rT1_"
             prefix_tiv = "tiv_r_"
 
         report_file = os.path.join(subj.t1_cat_dir, "report", prefix + subj.label + ".xml")
-        tiv_file = os.path.join(subj.t1_cat_dir, prefix_tiv + subj.label + ".txt")
+        tiv_file    = os.path.join(subj.t1_cat_dir, prefix_tiv + subj.label + ".txt")
 
         tiv_string = ""
         tiv_string = tiv_string + "matlabbatch{1}.spm.tools.cat.tools.calcvol.data_xml = {'" + report_file + "'};\n"
         tiv_string = tiv_string + "matlabbatch{1}.spm.tools.cat.tools.calcvol.calcvol_TIV = 1;\n"
         tiv_string = tiv_string + "matlabbatch{1}.spm.tools.cat.tools.calcvol.calcvol_name = '" + tiv_file + "';\n"
 
-        write_text_file(output_template, tiv_string)
-        sed_inplace(output_start, "X", "1")
-        sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
+        write_text_file(out_batch_job, tiv_string)
 
-        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine, eng=eng)
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine, eng=eng)
 
     def cat_extract_roi_based_surface(self, atlases=None):
 
@@ -979,24 +953,12 @@ class SubjectMpr:
         seg_mat = os.path.join(self.subject.t1_spm_dir, "T1_biascorr_" + self.subject.label + "_seg8.mat")
         icv_file = os.path.join(self.subject.t1_spm_dir, "icv_" + self.subject.label + ".dat")
 
-        # set dirs
-        spm_script_dir = os.path.join(self.subject.project.script_dir, "mpr", "spm")
-        out_batch_dir = os.path.join(spm_script_dir, "batch")
-        in_script_template = os.path.join(self._global.spm_templates_dir, spm_template_name + "_job.m")
-        in_script_start = os.path.join(self._global.spm_templates_dir, "spm_job_start.m")
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files("cat_extract_roi_based_surface", "mpr", self.subject.label)
 
-        output_template = os.path.join(out_batch_dir, self.subject.label + "_" + spm_template_name + "_job.m")
-        output_start = os.path.join(out_batch_dir, "start_" + self.subject.label + "_" + spm_template_name + ".m")
+        sed_inplace(out_batch_job, "<SEG_MAT>", seg_mat)
+        sed_inplace(out_batch_job, "<ICV_FILE>", icv_file)
 
-        copyfile(in_script_template, output_template)
-        copyfile(in_script_start, output_start)
-
-        sed_inplace(output_template, "<SEG_MAT>", seg_mat)
-        sed_inplace(output_template, "<ICV_FILE>", icv_file)
-        sed_inplace(output_start, "X", "1")
-        sed_inplace(output_start, "JOB_LIST", "\'" + output_template + "\'")
-
-        call_matlab_spmbatch(output_start, [self._global.spm_functions_dir], endengine=False, eng=eng)
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir], endengine=False, eng=eng)
 
     def surf_resampled_longitudinal_diff(self, sessions, outdir="", matlab_func="subtract_gifti"):
 
@@ -1387,16 +1349,12 @@ class SubjectMpr:
                           do_clean=True):
 
         # convert fs brainmask to nii.gz => move to the same orientation as working image (usually axial) => erode it
-        rrun(
-            "mri_convert " + self.subject.t1_fs_brainmask_data + ".mgz " + self.subject.t1_fs_brainmask_data + ".nii.gz")
-        rrun(
-            "fslswapdim " + self.subject.t1_fs_brainmask_data + ".nii.gz" + backtransfparams + self.subject.t1_fs_brainmask_data + "_orig.nii.gz")
-        rrun(
-            "fslmaths " + self.subject.t1_fs_brainmask_data + "_orig.nii.gz" + erosiontype + " -ero " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
+        rrun("mri_convert " + self.subject.t1_fs_brainmask_data + ".mgz " + self.subject.t1_fs_brainmask_data + ".nii.gz")
+        rrun("fslswapdim " + self.subject.t1_fs_brainmask_data + ".nii.gz" + backtransfparams + self.subject.t1_fs_brainmask_data + "_orig.nii.gz")
+        rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig.nii.gz" + erosiontype + " -ero " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
 
-        if is_interactive:
-            rrun(
-                "fsleyes " + self.subject.t1_data + " " + self.subject.t1_brain_data + " " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
+        if is_interactive is True:
+            rrun("fsleyes " + self.subject.t1_data + " " + self.subject.t1_brain_data + " " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
 
             do_substitute = input("do you want to substitute bet image with this one? press y or n\n : ")
 

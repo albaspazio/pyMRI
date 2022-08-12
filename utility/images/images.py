@@ -14,16 +14,15 @@ IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".i
 # FOLDERS, NAME, EXTENSIONS,
 # ===============================================================================================================================
 
-# get the whole extension  (e.g. abc.nii.gz => nii.gz )
-# return [path/filename_noext, ext]
-# def img_split_ext(img, img_formats=IMAGE_FORMATS):
-#     fullext = ""
-#     for imgext in img_formats:
-#         if img.endswith(imgext):
-#             fullext = imgext  # [1:]
-#             break
-#     filename = img.replace(fullext, '')
-#     return [filename, fullext]
+# return [path/filename_noext, ext with point]
+def img_split_ext(img, img_formats=IMAGE_FORMATS):
+    fullext = ""
+    for imgext in img_formats:
+        if img.endswith(imgext):
+            fullext = imgext  # [1:]
+            break
+    filename = img.replace(fullext, '')
+    return [filename, fullext]
 
 
 # suitable for images (with double extension e.g.: /a/b/c/name.nii.gz)
@@ -50,6 +49,18 @@ IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".i
 # def remove_image_ext(img):
 #     return img_split_ext(img)[0]
 #
+
+def add_postfix2name(img, postfix):
+    filename, fullext = img_split_ext(img)  # ext contains the dot
+    return filename + postfix + fullext
+
+
+def add_prefix2name(img, prefix):
+    filepath, fullext   = img_split_ext(img)  # ext contains the dot
+    path                = os.path.dirname(filepath)
+    filename            = os.path.basename(filepath)
+    return os.path.join(path, prefix + filename + fullext)
+
 
 # ===========================================================================================================
 # EXIST, COPY, REMOVE, MOVE, MASS MOVE
