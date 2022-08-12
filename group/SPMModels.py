@@ -27,7 +27,7 @@ class SPMModels:
                                                               expl_mask="icv", spm_template_name="group_model_spm_stats_1group_multiregr_estimate",
                                                               post_model=None, runit=True):
         # sanity check
-        if bool(covs) is True:
+        if bool(covs):
             data_file = self.project.validate_data(data_file)
             validate_data_with_covs(data_file, covs)
 
@@ -61,13 +61,13 @@ class SPMModels:
 
         # ---------------------------------------------------------------------------
         print("running SPM batch template: " + statsdir)
-        if runit is True:
+        if runit:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
             eng = {}
 
         # check whether running a given contrasts batch or a standard multregr. script must only modify SPM.mat file
-        if bool(post_model) is True:
+        if bool(post_model):
             if os.path.exists(post_model.template_name + ".m"):
                 SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
             else:
@@ -88,7 +88,7 @@ class SPMModels:
                                                             expl_mask="icv", spm_template_name="group_model_spm_stats_2samples_ttest_estimate",
                                                             post_model=None, runit=True):
         # sanity check
-        if bool(covs) is True:
+        if bool(covs):
             data = self.project.validate_data(data_file)
             validate_data_with_covs(data, covs)
 
@@ -115,14 +115,14 @@ class SPMModels:
 
         # ---------------------------------------------------------------------------
         print("running SPM batch template: " + statsdir)
-        if runit is True:
+        if runit:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
             eng = {}
 
         # ---------------------------------------------------------------------------
         # check whether running a given contrasts batch or a standard two-sampled ttest. script must only modify SPM.mat file
-        if bool(post_model) is True:
+        if bool(post_model):
             if os.path.exists(post_model.template_name + ".m"):
                 SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
             else:
@@ -146,7 +146,7 @@ class SPMModels:
                                                       expl_mask="icv", spm_template_name="group_model_spm_stats_1Wanova_estimate",
                                                       post_model=None, runit=True):
         # sanity check
-        if bool(covs) is True:
+        if bool(covs):
             data = self.project.validate_data(data_file)
             validate_data_with_covs(data, covs)
 
@@ -174,13 +174,13 @@ class SPMModels:
 
         # ---------------------------------------------------------------------------
         print("running SPM batch template: " + statsdir)
-        if runit is True:
+        if runit:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
             eng = {}
 
         # check whether running a given contrasts batch. script must only modify SPM.mat file
-        if bool(post_model) is True:
+        if bool(post_model):
             SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
 
         # ---------------------------------------------------------------------------
@@ -204,7 +204,7 @@ class SPMModels:
                                                       expl_mask="icv", spm_template_name="group_model_spm_stats_2Wanova_estimate",
                                                       post_model=None, runit=True):
         # sanity check
-        if bool(covs) is True:
+        if bool(covs):
             data = self.project.validate_data(data_file)
             validate_data_with_covs(data, covs)
 
@@ -239,13 +239,13 @@ class SPMModels:
 
         # ---------------------------------------------------------------------------
         print("running SPM batch template: " + statsdir)
-        if runit is True:
+        if runit:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
             eng = {}
 
         # check whether running a given contrasts batch. script must only modify SPM.mat file
-        if bool(post_model) is True:
+        if bool(post_model):
             SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
 
         # ---------------------------------------------------------------------------
@@ -264,7 +264,7 @@ class SPMModels:
                                                              expl_mask=None, spm_template_name="group_model_spm_stats_1group_multiregr_estimate",
                                                              post_model=None, runit=True):
         # sanity check
-        if bool(covs) is True:
+        if bool(covs):
             data = self.project.validate_data(data_file)
             validate_data_with_covs(data, covs)
 
@@ -295,13 +295,13 @@ class SPMModels:
 
         # ---------------------------------------------------------------------------
         print("running SPM batch template: " + statsdir)
-        if runit is True:
+        if runit:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
             eng = {}
 
         # check whether running a given contrasts batch. script must only modify SPM.mat file
-        if bool(post_model) is True:
+        if bool(post_model):
             if os.path.exists(post_model.template_name + ".m"):
                 SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
             else:
@@ -322,7 +322,7 @@ class SPMModels:
                                                            post_model=None, runit=True):
 
         # sanity check
-        if bool(covs) is True:
+        if bool(covs):
             data = self.project.validate_data(data_file)
             validate_data_with_covs(data, covs)
 
@@ -348,15 +348,15 @@ class SPMModels:
 
         # ---------------------------------------------------------------------------
         print("running SPM batch template: " + statsdir)
-        if runit is True:
+        if runit:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
             eng = {}
 
         # ---------------------------------------------------------------------------
         # check whether running a given contrasts batch or a standard two-samples ttest
-        if bool(post_model) is True:
-            if os.path.exists(post_model.template_name + ".m") is True:
+        if bool(post_model):
+            if os.path.exists(post_model.template_name + ".m"):
                 SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
             else:
                 SPMPostModel.batchrun_spm_stats_2samplesttest_postmodel(self.project, self.globaldata, statsdir, post_model, analysis_name, eng, runit)
@@ -378,7 +378,7 @@ class SPMModels:
                                                      post_model=None, runit=True):
 
         # sanity check
-        if bool(covs) is True:
+        if bool(covs):
             data = self.project.validate_data(data_file)
             validate_data_with_covs(data, covs)
 
@@ -405,13 +405,13 @@ class SPMModels:
 
         # ---------------------------------------------------------------------------
         print("running SPM batch template: " + statsdir)
-        if runit is True:
+        if runit:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
             eng = {}
 
         # check whether running a given contrasts batch or a standard multregr. script must only modify SPM.mat file
-        if bool(post_model) is True:
+        if bool(post_model):
             if os.path.exists(post_model.template_name):
                 SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
             else:
@@ -438,7 +438,7 @@ class SPMModels:
                                                      expl_mask=None, spm_template_name="group_model_spm_stats_2Wanova_estimate",
                                                      post_model=None, runit=True):
         # sanity check
-        if bool(covs) is True:
+        if bool(covs):
             data = self.project.validate_data(data_file)
             validate_data_with_covs(data, covs)
 
@@ -473,13 +473,13 @@ class SPMModels:
 
         # ---------------------------------------------------------------------------
         print("running SPM batch template: " + statsdir)
-        if runit is True:
+        if runit:
             eng = call_matlab_spmbatch(out_batch_start, [self.globaldata.spm_functions_dir, self.globaldata.spm_dir], endengine=False)
         else:
             eng = {}
 
         # check whether running a given contrasts batch. script must only modify SPM.mat file
-        if bool(post_model) is True:
+        if bool(post_model):
             SPMPostModel.batchrun_spm_stats_predefined_postmodel(self.project, self.globaldata, statsdir, post_model, eng, runit)
 
         # ---------------------------------------------------------------------------

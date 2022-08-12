@@ -7,7 +7,7 @@ class SPMContrasts:
     @staticmethod
     def replace_1group_multregr_contrasts(out_batch_job, post_model, batch_id=1):
 
-        if post_model.isSpm is True:
+        if post_model.isSpm:
             con_str = "spm.stats.con.consess"
         else:
             con_str = "spm.tools.cat.stools.con.consess"
@@ -19,7 +19,7 @@ class SPMContrasts:
         for regr_id in range(nregr):
             regressor = post_model.regressors[regr_id]
 
-            if regressor.isNuisance is False:
+            if not regressor.isNuisance:
                 cov_name = regressor.name
 
                 # weights follows regr_id (regressors column positions), contrast id follow cov_id (number of covariates)
@@ -53,7 +53,7 @@ class SPMContrasts:
     @staticmethod
     def replace_1WAnova_contrasts(out_batch_job, post_model, batch_id=1):
 
-        if post_model.isSpm is True:
+        if post_model.isSpm:
             con_str = "spm.stats.con.consess"
         else:
             con_str = "spm.tools.cat.stools.con.consess"

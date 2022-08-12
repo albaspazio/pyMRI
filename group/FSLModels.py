@@ -70,12 +70,14 @@ class FSLModels:
         self.string = ""
         # ------------------------------------------------------------------------------------
         # sanity checks
-        if os.path.exists(input_fsf) is False:
+        if not os.path.exists(input_fsf):
             raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, input fsf file is missing...exiting")
 
-        if bool(regressors) is True:
+        if bool(regressors):
             data = self.project.validate_data(data_file)
             validate_data_with_covs(data, regressors)
+        else:
+            data = None
 
         ngroups = len(grouplabel_or_subjlist)  # number of groups in the design. each group will have its regressor (EV).
         if ngroups > 3:
@@ -145,7 +147,7 @@ class FSLModels:
             tot_cont += within_grp_contrasts            # between-groups comparisons
 
         between_cov_contrasts = 0
-        if ngroups == 1 and ncovs > 1 and compare_covs is True:
+        if ngroups == 1 and ncovs > 1 and compare_covs:
             if ncovs == 2:
                 between_cov_contrasts = 2  # a>b, b>a
             elif ncovs == 3:
@@ -215,7 +217,7 @@ class FSLModels:
         self.addline2string("#====================== set groups' means to actual values")
         subjid = 1
         for gr in range(1, ngroups+1):
-            for s in subj_labels_by_groups[gr-1]:
+            for _ in subj_labels_by_groups[gr - 1]:
                 self.addline2string("set fmri(evg" + str(subjid) + "." + str(gr) + ") 1")
                 subjid += 1
 
@@ -225,19 +227,19 @@ class FSLModels:
 
         # =================================================================================================
         #region N U I S A N C E
-        id = 0
+        col_id = 0
         self.addline2string("#====================== set nuisance event titles (event [1:$NUM_GROUPS] are the means and are not overwritten)")
         for nuis in nuis_label:
-            cnt = id + 1 + ngroups
+            cnt = col_id + 1 + ngroups
             self.addline2string("set fmri(evtitle" + str(cnt) + ") \"" + nuis + "\"")
-            id += 1
+            col_id += 1
 
         self.addline2string("#====================== set nuisance values")
         for s in range(nsubjs):
-            for id in range(nnuis):
-                cnt  = id + 1 + ngroups
+            for col_id in range(nnuis):
+                cnt  = col_id + 1 + ngroups
                 # cnt2 = (s-1)*nnuis + id
-                self.addline2string("set fmri(evg" + str(s+1) + "." + str(cnt) + ") " + str(nuis_values[s][id]) )
+                self.addline2string("set fmri(evg" + str(s+1) + "." + str(cnt) + ") " + str(nuis_values[s][col_id]) )
 
         #endregion
         # =================================================================================================
@@ -493,7 +495,7 @@ class FSLModels:
         append_text_file(output_glm_fsf + ".fsf", self.string)
         # -----------------------------------------------------------------------------------------------
         # create model
-        if create_model is True:
+        if create_model:
             model_noext = remove_ext(output_glm_fsf)
             rrun("feat_model " + model_noext)
 

@@ -28,7 +28,7 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        all     = project.load_subjects("all", SESS_ID)
+        all_grp = project.load_subjects("all", SESS_ID)
         group1  = project.load_subjects("grp1", SESS_ID)
         group2  = project.load_subjects("grp2", SESS_ID)
         group3  = project.load_subjects("grp3", SESS_ID)

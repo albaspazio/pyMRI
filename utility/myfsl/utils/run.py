@@ -233,7 +233,7 @@ def rrun(*args, **kwargs):
         returnStderr = False
         returnExitcode = False
 
-        if submit is True:
+        if submit:
             submit = dict()
 
     if submit is not None and not isinstance(submit, collections.Mapping):
@@ -259,7 +259,7 @@ def rrun(*args, **kwargs):
             print(str, file=logFile)
 
         print(str)
-        if stop_on_error is True:
+        if stop_on_error:
             raise RuntimeError(str)
 
     results = []

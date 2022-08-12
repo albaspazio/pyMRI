@@ -35,7 +35,7 @@ class SPMResults:
 
         write_text_file(out_batch_job, str_images)
 
-        if runit is True:
+        if runit:
             if eng is None:
                 call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
             else:

@@ -159,12 +159,12 @@ if cancel:
 fslDir = os.path.join(os.environ["FSLDIR"], 'bin', '')
 
 # Create output directory if needed
-if os.path.isdir(outDir) and args.overwrite is False:
+if os.path.isdir(outDir) and not args.overwrite:
     print('Output directory', outDir, """already exists.
           AROMA will not continue.
           Rerun with the -overwrite option to explicitly overwrite existing output.""")
     exit()
-elif os.path.isdir(outDir) and args.overwrite is True:
+elif os.path.isdir(outDir) and args.overwrite:
     print('Warning! Output directory', outDir, 'exists and will be overwritten.\n')
     shutil.rmtree(outDir)
     os.makedirs(outDir)

@@ -9,7 +9,7 @@ import zipfile
 def extractall_zip(src, dest, replace=True):
 
     if os.path.exists(dest):
-        if replace is True:
+        if replace:
             os.removedirs(dest)
         else:
             return
@@ -28,7 +28,7 @@ def gunzip(src, dest, replace=False):
     fp.write(bindata)
     fp.close()
 
-    if replace is True:
+    if replace:
         os.remove(src)
 
 
@@ -38,7 +38,7 @@ def compress(src, dest, replace=False):
         f.write(fp.read())
     fp.close()
 
-    if replace is True:
+    if replace:
         os.remove(src)
 
 
@@ -137,7 +137,7 @@ def fillnumber2fourdigits(num):
 # if not         => don't do anything, return input param unchanged
 def string2num(string):
     try:
-        if isinstance(string, str) is False:
+        if not isinstance(string, str):
             return string
 
         fl_string = float(string)

@@ -14,8 +14,8 @@ import numpy
 from subject.Subject import Subject
 from data.SubjectsDataDict import SubjectsDataDict
 from utility.exceptions import SubjectListException
-from utility.images.images import imcp, imrm
-from utility.utilities import gunzip, compress, sed_inplace, remove_ext
+from utility.images.Image import Image
+from utility.utilities import gunzip, sed_inplace, remove_ext
 
 
 class Project:
@@ -132,7 +132,7 @@ class Project:
             return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, sess_id)
 
         elif isinstance(grouplabel_or_subjlist, list):
-            if isinstance(grouplabel_or_subjlist[0], str) is True:
+            if isinstance(grouplabel_or_subjlist[0], str):
                 return self.__get_valid_subjlabels(grouplabel_or_subjlist, sess_id)
             elif isinstance(grouplabel_or_subjlist[0], Subject):
                 return [subj.label for subj in grouplabel_or_subjlist]
@@ -168,7 +168,7 @@ class Project:
     # returns given list if all valid
     def __get_valid_subjlabels(self, subj_labels, sess_id=1):
         for lab in subj_labels:
-            if Subject(lab, self, sess_id).exist() is False:
+            if not Subject(lab, self, sess_id).exist():
                 raise SubjectListException("__get_valid_subjlabels", "given subject (" + lab + ") does not exist in file system")
         return subj_labels
 
@@ -201,7 +201,7 @@ class Project:
         invalid_subjs = ""
         valid_subjs = self.get_subjects(group_or_subjlabels, sess_id)
         for subj in valid_subjs:
-            if subj.can_run_analysis(analysis_type, analysis_params) is False:
+            if not subj.can_run_analysis(analysis_type, analysis_params):
                 invalid_subjs = invalid_subjs + subj.label + ", "
 
         if len(invalid_subjs) > 0:
@@ -298,12 +298,12 @@ class Project:
         subjects = self.load_subjects(group_label, sess_id)
         for subj in subjects:
 
-            if replaceOrig is False:
-                imcp(subj.t1_data, subj.t1_data + "_old_origin")
+            if not replaceOrig:
+                subj.t1_data.cp(subj.t1_data + "_old_origin")
 
             niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
 
-            if os.path.exists(niifile) is True and overwrite is False:
+            if os.path.exists(niifile) and not overwrite:
                 print("skipping prepare_mpr_for_setorigin1 for subj " + subj.label)
                 continue
 
@@ -314,10 +314,10 @@ class Project:
 
         subjects = self.load_subjects(group_label, sess_id)
         for subj in subjects:
-            niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
-            imrm([subj.t1_data + ".nii.gz"])
-            compress(niifile, subj.t1_data + ".nii.gz")
-            imrm([niifile])
+            niifile = Image(os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii"))
+            Image(subj.t1_data + ".nii.gz").rm()
+            niifile.compress(subj.t1_data + ".nii.gz")
+            Image(niifile).rm()
             print("zipped " + subj.label + " mri")
     #endregion
 
@@ -385,7 +385,7 @@ class Project:
             if isinstance(data, SubjectsDataDict):
                 return data
             elif isinstance(data, str):
-                if os.path.exists(data) is True:
+                if os.path.exists(data):
                     return SubjectsDataDict(data)
                 else:
                     raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is a string that does not point to a valid file to load")
@@ -405,7 +405,7 @@ class Project:
 
     def get_subjects_icv(self, grouplabel_or_subjlist, sess_id=1):
 
-        if isinstance(grouplabel_or_subjlist[0], Subject) is True:  # so caller does not have to set also the sess_id, is a xprojects parameter
+        if isinstance(grouplabel_or_subjlist[0], Subject):  # so caller does not have to set also the sess_id, is a xprojects parameter
             subjects_list = grouplabel_or_subjlist
         else:
             subjects_list = self.get_subjects(grouplabel_or_subjlist, sess_id)
@@ -447,10 +447,13 @@ class Project:
         return out_batch_job, out_batch_start
 
     # returns out_batch_job, taken from an existing spm batch template
-    def adapt_batch_files(self, templfile_noext, seq, prefix=""):
+    def adapt_batch_files(self, templfile_noext, seq, prefix="", postfix=""):
 
         if prefix != "":
             prefix = prefix + "_"
+
+        if postfix != "":
+            postfix =  "_" + postfix
 
         # force input template to be without ext
         templfile_noext     = remove_ext(templfile_noext)
@@ -461,13 +464,13 @@ class Project:
 
         in_batch_start = os.path.join(self.globaldata.spm_templates_dir, "spm_job_start.m")
 
-        if os.path.exists(templfile_noext + ".m") is True:
+        if os.path.exists(templfile_noext + ".m"):
             in_batch_job = templfile_noext + ".m"
         else:
             in_batch_job = os.path.join(self.globaldata.spm_templates_dir, templfile_noext + "_job.m")
 
-        out_batch_start = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + "_start.m")
-        out_batch_job   = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + ".m")
+        out_batch_start = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + postfix + "_start.m")
+        out_batch_job   = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + postfix + ".m")
 
         # set job file
         copyfile(in_batch_job, out_batch_job)

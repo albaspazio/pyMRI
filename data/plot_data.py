@@ -94,8 +94,8 @@ def scatter_plot_dataserie(ydata, xdata, fnameout, color="red", label="control",
     plt.title(os.path.basename(fnameout))
     plt.legend(loc=4)
 
-    # if show:
-    plt.show()
+    if show:
+        plt.show()
 
     if len(fnameout) > 0:
         plt.savefig(fnameout, dpi=1200)

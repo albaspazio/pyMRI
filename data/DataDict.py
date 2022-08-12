@@ -21,7 +21,7 @@ class DataDict:
     def load(self, filepath):
 
         self.data = []
-        if os.path.exists(filepath) is False:
+        if not os.path.exists(filepath):
             print("ERROR in SubjectsDataDict.load, given filepath param (" + filepath + ") is not a file")
             return self.data
 

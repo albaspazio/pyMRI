@@ -1,11 +1,11 @@
 import os
+# import ssl    # it was needed, can't remember when
 
 from Global import Global
 from data.SubjectsDataDict import SubjectsDataDict
 from data.utilities import list2spm_text_column
 from utility.exceptions import DataFileException
-from utility.images.images import imtest
-import ssl
+from utility.images.Image import Image
 from utility.matlab import call_matlab_function_noret, call_matlab_spmbatch
 from utility.utilities import sed_inplace, remove_ext
 
@@ -44,7 +44,7 @@ class SPMStatsUtils:
 
         img_folder  = ""
         if img_type == "dartel":
-            if os.path.isdir(img_description["folder"]) is False:
+            if not os.path.isdir(img_description["folder"]):
                 print("ERROR in compose_images_string_1W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
                 return
             else:
@@ -59,6 +59,7 @@ class SPMStatsUtils:
             elif img_type == "dartel":
                 img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
 
+            img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_1GROUP_MULTREGR")
             cells_images = cells_images + "\'" + img + "\'\r"
 
         sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
@@ -73,7 +74,7 @@ class SPMStatsUtils:
 
         img_folder  = ""
         if img_type == "dartel":
-            if os.path.isdir(img_description["folder"]) is False:
+            if not os.path.isdir(img_description["folder"]):
                 print("ERROR in compose_images_string_1W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
                 return
             else:
@@ -94,6 +95,8 @@ class SPMStatsUtils:
                 elif img_type == "dartel":
                     img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
 
+                img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_1W")
+
                 grp1_images = grp1_images + "\'" + img + "\'\n"
             grp1_images = grp1_images + "\n};"
 
@@ -111,7 +114,7 @@ class SPMStatsUtils:
 
         img_folder  = ""
         if img_type == "dartel":
-            if os.path.isdir(img_description["folder"]) is False:
+            if not os.path.isdir(img_description["folder"]):
                 print("ERROR in compose_images_string_2W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
                 return
             else:
@@ -145,6 +148,8 @@ class SPMStatsUtils:
                     elif img_type == "dartel":
                         img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
 
+                    img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_2W")
+
                     cells_images = cells_images + "'" + img + "'\n"
                 cells_images = cells_images + "};"
 
@@ -164,7 +169,7 @@ class SPMStatsUtils:
 
         img_folder  = ""
         if img_type == "dartel":
-            if os.path.isdir(img_description["folder"]) is False:
+            if not os.path.isdir(img_description["folder"]):
                 print("ERROR in compose_images_string_2sTT: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
                 return
             else:
@@ -182,6 +187,8 @@ class SPMStatsUtils:
             elif img_type == "dartel":
                 img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
 
+            img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_2sTT")
+
             grp1_images = grp1_images + "\'" + img + "\'\n"
         grp1_images = grp1_images + "\n}"
 
@@ -192,6 +199,8 @@ class SPMStatsUtils:
                 img = eval("subj.t1_cat_resampled_surface")
             elif img_type == "dartel":
                 img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
+
+            img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_2sTT")
 
             grp2_images = grp2_images + "\'" + img + "\'\n"
         grp2_images = grp2_images + "\n}"
@@ -215,8 +224,7 @@ class SPMStatsUtils:
             if expl_mask == "icv":
                 mask = _global.spm_icv_mask + ",1"
             else:
-                if imtest(expl_mask) is False:
-                    raise Exception("ERROR in explicit_mask, given explicit mask does not exist")
+                expl_mask = Image(expl_mask, must_exist=True, msg="SPMStatsUtils.spm_replace_explicit_mask")
                 mask = expl_mask + ",1"
 
             masking = "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.masking.tm.tma.athresh = " + str(athresh) + ";\n" \
@@ -245,7 +253,7 @@ class SPMStatsUtils:
 
         if method == "subj_icv":  # read icv file from each subject/mpr/spm folder
 
-            if project.data.exist_filled_column("icv", slabels) is True:
+            if project.data.exist_filled_column("icv", slabels):
                 str_icvs = list2spm_text_column(project.get_filtered_column("icv", slabels)[0])
                 # raise DataFileException("spm_replace_global_calculation", "given data_file does not contain the column icv")
             else:
@@ -255,20 +263,20 @@ class SPMStatsUtils:
                 str_icvs = list2spm_text_column(icvs)
             gc_str = user_corr_str1 + str_icvs + user_corr_str2
         elif method == "subj_tiv":  # read tiv file from each subject/mpr/cat folder
-            # if project.data.exist_filled_column("tiv", slabels) is False:
+            # if not project.data.exist_filled_column("tiv", slabels):
             #
 
             gc_str = no_corr_str
         elif method == "":  # don't correct
             gc_str = no_corr_str
 
-        elif isinstance(method, str) is True and data_file is not None:  # must be a column in the given data_file list of
+        elif isinstance(method, str) and data_file is not None:  # must be a column in the given data_file list of
 
-            if os.path.exists(data_file) is False:
+            if not os.path.exists(data_file):
                 raise DataFileException("spm_replace_global_calculation", "given data_file does not exist")
             data = SubjectsDataDict(data_file)
 
-            if data.exist_filled_column(method, slabels) is False:
+            if not data.exist_filled_column(method, slabels):
                 raise DataFileException("spm_replace_global_calculation", "given data_file does not contain a valid value of column " + method + " for all subjects")
 
             str_icvs = list2spm_text_column(data.get_filtered_column(method, slabels)[0])
@@ -301,7 +309,7 @@ class SPMStatsUtils:
     @staticmethod
     def get_spm_model_estimate(isSurf=False, idstep=3):
 
-        if isSurf is True:
+        if isSurf:
             return "matlabbatch{" + str(idstep) + "}.spm.tools.cat.stools.SPM.spmmat = cfg_dep('Factorial design specification: SPM.mat File', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'spmmat'));"
         else:
             return "matlabbatch{" + str(idstep) + "}.spm.stats.fmri_est.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'spmmat'));\n \
@@ -317,14 +325,8 @@ class SPMStatsUtils:
     @staticmethod
     def batchrun_spm_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths, distance=8):
 
-        if imtest(vmask) is False:
-            print("Error in create_surface_mask_from_volume_mask: input vmask does not exist")
-            return
-
-        if imtest(ref_surf) is False:
-            print("Error in create_surface_mask_from_volume_mask: input ref_surf does not exist")
-            return
-
+        Image(vmask, must_exist=True, msg="SPMStatsUtils.batchrun_spm_surface_mask_from_volume_mask vmask")
+        Image(ref_surf, must_exist=True, msg="SPMStatsUtils.batchrun_spm_surface_mask_from_volume_mask ref_surf")
         call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths, "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
 
     @staticmethod
@@ -342,7 +344,7 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<SPFILT>", str(sfilt))
         sed_inplace(out_batch_job, "<N_PROC>", str(nproc))
 
-        if runit is True:
+        if runit:
             if eng is None:
                 call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
             else:
@@ -365,14 +367,17 @@ class CatConvResultsParams:
 
 
 class PostModel:
-    def __init__(self, templ_name, regressors, contr_names=[], res_params=None, res_conv_params=None, isSpm=True):
+    def __init__(self, templ_name, regressors, contr_names=None, res_params=None, res_conv_params=None, isSpm=True):
+
+        if contr_names is None:
+            contr_names = []
 
         templ_name = remove_ext(templ_name)
 
         # check if template name is valid according to the specification applied in Project.adapt_batch_files
         # it can be a full path (without extension) of an existing file, or a file name present in pymri/templates/spm (without "_job.m)
-        if os.path.exists(templ_name + ".m") is False:
-            if os.path.exists(os.path.join(Global.get_spm_template_dir(), templ_name + "_job.m")) is False:
+        if not os.path.exists(templ_name + ".m"):
+            if not os.path.exists(os.path.join(Global.get_spm_template_dir(), templ_name + "_job.m")):
                 raise Exception("given post_model template name (" + templ_name + ") is not valid")
 
         self.template_name = templ_name
@@ -387,7 +392,7 @@ class PostModel:
             self.results_params = res_params  # of type (CatConv)ResultsParams
 
         # if res_conv_params is None, do not create a default value, means I don't want to convert results
-        if isSpm is False and bool(res_conv_params):
+        if not isSpm and bool(res_conv_params):
             self.results_conv_params = res_conv_params
 
 

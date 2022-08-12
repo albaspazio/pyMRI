@@ -15,7 +15,7 @@ from utility.exceptions import DataFileException
 
 def read_varlist_file(filepath, comment_char="#"):
     data = {}
-    if os.path.exists(filepath) is False:
+    if not os.path.exists(filepath):
         print("ERROR in read_varlist_file, given filepath param (" + filepath + ") is not a file")
         return data
 
@@ -43,7 +43,7 @@ def list2spm_text_column(datalist):
 # read the output file of fslmeants, create subjlabel and value columns
 def process_results(filepath, subjs_list, outname, dataprecision='.3f'):
     list_str = []
-    if os.path.exists(filepath) is False:
+    if not os.path.exists(filepath):
         print("ERROR in process_results, given filepath param (" + filepath + ") is not a file")
         return list_str
 
@@ -96,7 +96,7 @@ def get_icv_spm_file(filepath):
 
 
 def get_file_header(filepath):
-    if os.path.exists(filepath) is False:
+    if not os.path.exists(filepath):
         print("ERROR in get_file_header, given filepath param (" + filepath + ") is not a file")
         return []
 
@@ -118,7 +118,7 @@ def validate_datafile_with_covs(data_file=None, covs=None):
 
     header = []
     if data_file is not None:
-        if os.path.exists(data_file) is False:
+        if not os.path.exists(data_file):
             raise DataFileException("validate_datafile_with_covs", "given data_file (" + str(data_file) + ") does not exist")
 
         header = SubjectsDataDict(data_file).get_header()  # get_header_of_tabbed_file(data_file)
@@ -126,7 +126,7 @@ def validate_datafile_with_covs(data_file=None, covs=None):
         # if all(elem in header for elem in regressors) is False:  if I don't want to understand which cov is absent
         missing_covs = ""
         for cov in covs:
-            if cov.name in header is False:
+            if not cov.name in header:
                 missing_covs = missing_covs + cov.name + ", "
 
         if len(missing_covs) > 0:
@@ -140,14 +140,14 @@ def validate_data_with_covs(data=None, covs=None):
     if covs is None:
         covs = []
 
-    if bool(data) is True:
-        if isinstance(data, SubjectsDataDict) is True:
+    if bool(data):
+        if isinstance(data, SubjectsDataDict):
             header = data.get_header()  # get_header_of_tabbed_file(data_file)
 
             # if all(elem in header for elem in regressors) is False:  if I don't want to understand which cov is absent
             missing_covs = ""
             for cov in covs:
-                if cov.name in header is False:
+                if not cov.name in header:
                     missing_covs = missing_covs + cov.name + ", "
 
             if len(missing_covs) > 0:

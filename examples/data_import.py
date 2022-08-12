@@ -1,6 +1,5 @@
 from Global import Global
 from Project import Project
-from data.SubjectsDataDict import SubjectsDataDict
 
 from data.utilities import *
 from utility.exceptions import SubjectListException
@@ -29,10 +28,10 @@ if __name__ == "__main__":
         # test getting filtered data columns
         data = SubjectsDataDict(datafile)
 
-        age = data.get_column("age")
-        age = data.get_filtered_column("age", project.get_subjects_labels("test"))  # extract age from a subset of loaded subjects
-        age = data.get_filtered_column_by_value("cat_dist", 0)
-        age = data.get_filtered_column_within_values("age", 1800, 2500)
+        age             = data.get_column("age")
+        age_subj_subset = data.get_filtered_column("age", project.get_subjects_labels("test"))  # extract age from a subset of loaded subjects
+        cat_dist        = data.get_filtered_column_by_value("cat_dist", 0)
+        age_withinvalues= data.get_filtered_column_within_values("age", 1800, 2500)
         age_str = data.get_column_str("age")
         print(age_str)
 

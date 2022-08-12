@@ -2,8 +2,8 @@ import os
 import subprocess
 import sys
 
+from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
-from utility.images.images import imtest
 
 
 # ===============================================================================================================================
@@ -18,13 +18,13 @@ def runsystem(cmd, logFile=None):
 
 # run plain os.system command whether the given image is not present
 def run_move_notexisting_img(img, cmd, logFile=None, is_fsl=True):
-    if not imtest(img):
+    if not Image(img).exist:
         runsystem(cmd, logFile)
 
 
 # run command whether the given image is not present
 def run_notexisting_img(img, cmd, logFile=None):
-    if not imtest(img):
+    if not Image(img).exist:
         rrun(cmd, logFile=logFile)
 
 
@@ -33,7 +33,7 @@ def run_notexisting_img(img, cmd, logFile=None):
 # ===============================================================================================================================
 # run fsl (default) or generic command and return exception
 def run(cmd, logFile=None, is_fsl=True):
-    if is_fsl is True:
+    if is_fsl:
         fsl_bin = os.path.join(os.getenv('FSLDIR'), "bin")
         cmdstr = os.path.join(fsl_bin, cmd)
     else:
@@ -65,7 +65,7 @@ def run(cmd, logFile=None, is_fsl=True):
 def runpipe(cmd, logFile=None, is_fsl=True):
     try:
         cmdstr = ""
-        if is_fsl is True:
+        if is_fsl:
             fsl_bin = os.path.join(os.getenv('FSLDIR'), "bin")
             cmdstr = os.path.join(fsl_bin, cmd)
         else:
@@ -90,7 +90,7 @@ def runpipe(cmd, logFile=None, is_fsl=True):
 # run fsl (default) or generic command and return cmd values (typically fslstats)
 # def runreturn(cmd, params, logFile=None, is_fsl=True):
 #
-#     if is_fsl is True:
+#     if is_fsl:
 #         fsl_bin = os.path.join(os.getenv('FSLDIR'), "bin")
 #         cmdstr = os.path.join(fsl_bin, cmd)
 #     else:

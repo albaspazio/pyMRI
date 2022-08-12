@@ -13,17 +13,17 @@ class SPMCovariates:
             sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
             return
         else:
-            if isinstance(covs, list) is False:
+            if not isinstance(covs, list):
                 raise Exception("ERROR in spm_replace_stats_add_simplecovariates, regressors (" + str(covs) + ") is not a list....returning")
 
-        if centering is True:
+        if centering:
             icc = 1
         else:
             icc = 5
 
         ncov = len(covs)
         if cov_interaction is None:     # assumes no interaction for all covs
-            cov_interaction = [1 for i in range(ncov)]
+            cov_interaction = [1 for _ in range(ncov)]
 
         cint = len(cov_interaction)
         if ncov != cint:
@@ -54,15 +54,15 @@ class SPMCovariates:
     @staticmethod
     def spm_replace_stats_add_1cov_manygroups(out_batch_job, groups_labels, project, cov, batch_id=1, cov_interaction=None, datafile=None, centering=False):
 
-        if centering is True:
+        if centering:
             icc = 1
         else:
             icc = 5
 
-        cov = []
+        cov_values = []
         for grp in groups_labels:
-            cov = cov + project.get_filtered_column(cov.name, grp, datafile)[0]
-        str_cov = "\n" + list2spm_text_column(cov)  # ends with a "\n"
+            cov_values = cov_values + project.get_filtered_column(cov.name, grp, datafile)[0]
+        str_cov = "\n" + list2spm_text_column(cov_values)  # ends with a "\n"
 
         cov_string =              "matlabbatch{" + str(batch_id) + "}.spm.stats.factorial_design.cov.c = "
         cov_string = cov_string + "[" + str_cov + "];\n"

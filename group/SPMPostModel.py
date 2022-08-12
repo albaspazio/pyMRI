@@ -1,10 +1,7 @@
-import ntpath
 import os
-import traceback
 
 from group.SPMContrasts import SPMContrasts
 from group.SPMResults import SPMResults
-from group.SPMStatsUtils import ResultsParams
 from utility.matlab import call_matlab_spmbatch
 from utility.utilities import sed_inplace
 
@@ -23,7 +20,7 @@ class SPMPostModel:
         sed_inplace(out_batch_job, "<SPM_MAT>", spm_mat_path)
         sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
 
-        if runit is True:
+        if runit:
             if eng is None:
                 call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])  # open a new session and then end it
             else:
@@ -36,7 +33,7 @@ class SPMPostModel:
 
         spmmat = os.path.join(statsdir, "SPM.mat")
         # create template files
-        if post_model.isSpm is True:
+        if post_model.isSpm:
             prefix = "spm_" + analysis_name
         else:
             prefix = "ct_" + analysis_name
@@ -51,17 +48,17 @@ class SPMPostModel:
         sed_inplace(out_batch_job, "<PVALUE>"           , str(post_model.results_params.pvalue))
         sed_inplace(out_batch_job, "<CLUSTER_EXTEND>"   , str(post_model.results_params.cluster_extend))
 
-        if runit is True:
+        if runit:
             if eng is None:
                 eng = call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir], endengine=False)
             else:
                 call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir], eng=eng, endengine=False)
         os.remove(out_batch_start)
 
-        if post_model.isSpm is False and bool(post_model.results_conv_params):
+        if not post_model.isSpm and bool(post_model.results_conv_params):
             SPMResults.runbatch_cat_results_trasformation(project, _global, statsdir, 2, analysis_name, cat_conv_stats_params=post_model.results_conv_params, eng=eng)
 
-        if bool(eng) is True:
+        if bool(eng):
             eng.quit()
 
     # calculate contrasts and report their results on a given, already estimated, SPM.mat
@@ -69,7 +66,7 @@ class SPMPostModel:
     @staticmethod
     def batchrun_spm_stats_1wanova_postmodel(project, _global, statsdir, post_model, analysis_name, eng=None, runit=True):
 
-        if post_model.isSpm is True:
+        if post_model.isSpm:
             prefix = "spm_" + analysis_name
         else:
             prefix = "ct_" + analysis_name
@@ -88,7 +85,7 @@ class SPMPostModel:
         sed_inplace(out_batch_job, "<PVALUE>"           , str(post_model.results_params.pvalue))
         sed_inplace(out_batch_job, "<CLUSTER_EXTEND>"   , str(post_model.results_params.cluster_extend))
 
-        if runit is True:
+        if runit:
             if eng is None:
                 call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
             else:
@@ -100,7 +97,7 @@ class SPMPostModel:
     @staticmethod
     def batchrun_spm_stats_1group_multregr_postmodel(project, _global, statsdir, post_model, analysis_name, eng=None, runit=True):
 
-        if post_model.isSpm is True:
+        if post_model.isSpm:
             prefix = "spm_" + analysis_name
         else:
             prefix = "ct_" + analysis_name
@@ -119,7 +116,7 @@ class SPMPostModel:
         sed_inplace(out_batch_job, "<PVALUE>"           , str(post_model.results_params.pvalue))
         sed_inplace(out_batch_job, "<CLUSTER_EXTEND>"   , str(post_model.results_params.cluster_extend))
 
-        if runit is True:
+        if runit:
             if eng is None:
                 call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
             else:

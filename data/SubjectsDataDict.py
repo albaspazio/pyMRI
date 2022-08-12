@@ -36,7 +36,7 @@ class SubjectsDataDict:
     def load(self, filepath, tonum=True):
 
         self.data = {}
-        if os.path.exists(filepath) is False:
+        if not os.path.exists(filepath):
             raise DataFileException("SubjectsDataDict.load", "given filepath param (" + filepath + ") is not a file")
 
         with open(filepath, "r") as f:
@@ -54,7 +54,10 @@ class SubjectsDataDict:
                         if cnt == 0:
                             subj_lab = elem
                         else:
-                            casted_elem             = string2num(elem)
+                            if tonum:
+                                casted_elem     = string2num(elem)
+                            else:
+                                casted_elem     = elem
                             data_row[header[cnt]]   = casted_elem
                         cnt = cnt + 1
                     self.data[subj_lab] = data_row
@@ -89,7 +92,7 @@ class SubjectsDataDict:
             except KeyError:
                 raise DataFileException("SubjectsDataDict.get_filtered_column", "data of given subject (" + subj + ") is not present in the loaded data")
 
-        if sort is True:
+        if sort:
             sort_schema = argsort(res)
             res.sort()
             lab = reorder_list(lab, sort_schema)
@@ -122,7 +125,7 @@ class SubjectsDataDict:
             except KeyError:
                 raise DataFileException("SubjectsDataDict.get_filtered_columns", "data of given subject (" + subj + ") is not present in the loaded data")
 
-        if sort is True:
+        if sort:
             sort_schema = argsort(res)
             res.sort()
             lab = reorder_list(lab, sort_schema)
@@ -172,7 +175,7 @@ class SubjectsDataDict:
             except KeyError:
                 raise DataFileException("SubjectsDataDict.get_filtered_column_by_value", "data of given subject (" + subj + ") is not present in the loaded data")
 
-        if sort is True:
+        if sort:
             sort_schema = argsort(res)
             res.sort()
             lab = reorder_list(lab, sort_schema)
@@ -217,7 +220,7 @@ class SubjectsDataDict:
             except KeyError:
                 raise DataFileException("SubjectsDataDict.get_filtered_column_within_values", "data of given subject (" + subj + ") is not present in the loaded data")
 
-        if sort is True:
+        if sort:
             sort_schema = argsort(res)
             res.sort()
             lab = reorder_list(lab, sort_schema)
@@ -241,7 +244,7 @@ class SubjectsDataDict:
 
         self.header = self.get_header()
 
-        if saveit is True:
+        if saveit:
             self.save_data()
 
     def get_header(self):
@@ -279,6 +282,7 @@ class SubjectsDataDict:
             data_file = self.filepath
 
         txt = listToString(self.header) + "\n"
+        r = ""
         for row in self.data:
             r = ""
             for field in row:
@@ -289,7 +293,8 @@ class SubjectsDataDict:
 
     # =====================================================================================
     # get a data list and return a \n separated string, suitable for spm template files
-    def __to_str(self, datalist, ndecimals=3):
+    @staticmethod
+    def __to_str(datalist, ndecimals=3):
         datastr = ""
 
         for r in datalist:

@@ -87,7 +87,7 @@ class MatlabManager:
         print("running matlab function: " + batch_file, file=logfile)
         res = eval("engine." + batch_file + "(" + params + ")")
 
-        if endengine is True:
+        if endengine:
             engine.quit()
             print("quitting matlab session of " + batch_file)
 
@@ -115,7 +115,7 @@ class MatlabManager:
         print("running matlab function: " + batch_file, file=logfile)
         eval("engine." + batch_file + str_params)
 
-        if endengine is True:
+        if endengine:
             engine.quit()
             print("quitting matlab session of " + batch_file)
 
@@ -143,7 +143,7 @@ class MatlabManager:
             eval("engine." + batch_file + "(nargout=0)")
             # eval("engine." + batch_file + "(nargout=0, stderr=err)")
 
-            if endengine is True:
+            if endengine:
                 engine.quit()
                 print("quitting matlab session of " + batch_file)
 
@@ -200,7 +200,7 @@ class MatlabManager:
     #             params_str = "(" + params[f] + ")"
     #         eval("engine." + os.path.basename(os.path.splitext(functions[f])[0]) + "(nargout=0)")
     #
-    #     if endengine is True:
+    #     if endengine:
     #         engine.quit()
     #         print("quitting matlab session")
     #
