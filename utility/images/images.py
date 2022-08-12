@@ -25,31 +25,6 @@ def img_split_ext(img, img_formats=IMAGE_FORMATS):
     return [filename, fullext]
 
 
-# suitable for images (with double extension e.g.: /a/b/c/name.nii.gz)
-# return [folder, filename, ext]
-# def imgparts(img):
-#     if os.path.isdir(img):
-#         return [img, "", ""]
-#
-#     parts = img_split_ext(img)
-#     return [ntpath.dirname(parts[0]), ntpath.basename(parts[0]), parts[1]]
-
-# return imgname_noext
-# def imgname(img):
-#     namepath = img_split_ext(img)[0]
-#     return ntpath.basename(namepath)
-#
-#
-# def imgdir(img):
-#     namepath = img_split_ext(img)[0]
-#     return ntpath.dirname(namepath)
-
-
-# return basename of given image (useful to return "image" from "image.nii.gz")
-# def remove_image_ext(img):
-#     return img_split_ext(img)[0]
-#
-
 def add_postfix2name(img, postfix):
     filename, fullext = img_split_ext(img)  # ext contains the dot
     return filename + postfix + fullext
@@ -60,109 +35,6 @@ def add_prefix2name(img, prefix):
     path                = os.path.dirname(filepath)
     filename            = os.path.basename(filepath)
     return os.path.join(path, prefix + filename + fullext)
-
-
-# ===========================================================================================================
-# EXIST, COPY, REMOVE, MOVE, MASS MOVE
-# ===========================================================================================================
-#
-# # return False if no image exists or True if the image exists
-# def imtest(image_path):
-#     if image_path == "":
-#         return False
-#
-#     fileparts = img_split_ext(image_path)
-#
-#     if os.path.isfile(fileparts[0] + ".nii") or os.path.isfile(fileparts[0] + ".nii.gz") or os.path.isfile(fileparts[0] + ".mgz"):
-#         return True
-#
-#     if os.path.isfile(fileparts[0] + ".mnc") or os.path.isfile(fileparts[0] + ".mnc.gz"):
-#         return True
-#
-#     if os.path.isfile(fileparts[0] + ".gii"):
-#         return True
-#
-#     if not os.path.isfile(fileparts[0] + ".hdr") and not os.path.isfile(fileparts[0] + ".hdr.gz"):
-#         # return 0 here as no header exists and no single image means no image!
-#         return False
-#
-#     if not os.path.isfile(fileparts[0] + ".img") and not os.path.isfile(fileparts[0] + ".img.gz"):
-#         # return 0 here as no img file exists and no single image means no image!
-#         return False
-#
-#     # only gets to here if there was a hdr and an img file
-#     return True
-#
-#
-# def  imcp(src, dest, error_src_not_exist=True, logFile=None):
-#     if not imtest(src):
-#         if error_src_not_exist:
-#             print("ERROR in imcp. src image (" + src + ") does not exist")
-#             return
-#         else:
-#             print("WARNING in imcp. src image (" + src + ") does not exist, skip copy and continue")
-#
-#     fileparts_src = img_split_ext(src)
-#     fileparts_dst = img_split_ext(dest)
-#
-#     if os.path.isdir(dest):
-#         fileparts_dst[0] = os.path.join(dest, imgname(fileparts_src[0]))  # dest dir + source filename
-#     else:
-#         fileparts_dst = img_split_ext(dest)
-#
-#     ext = ""
-#     if os.path.isfile(fileparts_src[0] + ".nii"):
-#         ext = ".nii"
-#     elif os.path.isfile(fileparts_src[0] + ".nii.gz"):
-#         ext = ".nii.gz"
-#
-#     dest_ext = fileparts_dst[1]
-#     if dest_ext == "":
-#         dest_ext = ext
-#
-#     copyfile(fileparts_src[0] + ext, fileparts_dst[0] + dest_ext)
-#
-#     if logFile is not None:
-#         print("cp " + fileparts_src[0] + ext + " " + fileparts_dst[0] + dest_ext, file=logFile)
-
-
-# def imcp_notexisting(src, dest, error_src_not_exist=False, logFile=None):
-#     if not imtest(src):
-#         if error_src_not_exist:
-#             print("ERROR in imcp_notexisting. src image (" + src + ") does not exist")
-#             return
-#         else:
-#             print("WARNING in imcp_notexisting. src image (" + src + ") does not exist, skip copy and continue")
-#
-#     if not imtest(dest):
-#         imcp(src, dest, logFile)
-
-
-# def imrm(filelist, logFile=None):
-#     if isinstance(filelist, str):
-#         filelist = [filelist]
-#
-#     for file in filelist:
-#
-#         if not imtest(file):
-#             continue
-#
-#         fileparts = img_split_ext(file)
-#
-#         ext = ""
-#         if os.path.isfile(fileparts[0] + ".nii"):
-#             ext = ".nii"
-#         elif os.path.isfile(fileparts[0] + ".nii.gz"):
-#             ext = ".nii.gz"
-#         elif os.path.isfile(fileparts[0] + ".mgz"):
-#             ext = ".mgz"
-#
-#         os.remove(fileparts[0] + ext)
-#
-#         if logFile is not None:
-#             print("rm " + fileparts[0] + ext, file=logFile)
-#
-
 
 
 # move a series of images defined by wildcard string ( e.g.   *fast*
@@ -182,29 +54,6 @@ def mass_images_move(wildcardsource, destdir, logFile=None):
         if logFile is not None:
             print("mv " + img + " " + dest_file, file=logFile)
 
-
-# ===============================================================================================================================
-# utilities
-# ===============================================================================================================================
-# def getnvol(image):
-#     return int(rrun("fslnvols " + image).split('\n')[0])
-
-
-# def get_image_nvoxels(image):
-#     return int(rrun("fslstats " + image + " -V").strip().split(" ")[0])
-#
-#
-# def get_image_volume(image):
-#     return int(rrun("fslstats " + image + " -V").strip().split(" ")[1])
-#
-#
-# def get_image_mean(image):
-#     return float(rrun("fslstats " + image + " -M").strip())
-#
-#
-# def mask_image(src, mask, out):
-#     rrun("fslmaths " + src + " -mas " + mask + " " + out)
-
 def immerge(out_img, premerge_labels=None):
     seq_string = " "
 
@@ -222,105 +71,6 @@ def immerge(out_img, premerge_labels=None):
     os.system("fslmerge -t " + out_img + " " + seq_string)
     # rrun("fslmerge -t " + out_img + " " + seq_string)
 
-
-# def imsplit(in_img, templabel=None, subdirmame=""):
-#
-#     folder = os.path.dirname(in_img)
-#
-#     if templabel is None:
-#         label = imgparts(in_img)[1]
-#     else:
-#         label = templabel
-#
-#     currdir = os.getcwd()
-#     outdir = os.path.join(folder, subdirmame)
-#     os.makedirs(outdir, exist_ok=True)
-#     os.chdir(outdir)
-#     rrun('fslsplit ' + in_img + " " + label + " -t")
-#     os.chdir(currdir)
-#
-#     return outdir,  label
-
-
-# def quick_smooth(inimg, outimg, logFile=None):
-#     currpath = os.path.dirname(inimg)
-#     vol16 = os.path.join(currpath, "vol16")
-#
-#     rrun("fslmaths " + inimg + " -subsamp2 -subsamp2 -subsamp2 -subsamp2 " + vol16, logFile=logFile)
-#     rrun("flirt -in " + vol16 + " -ref " + inimg + " -out " + outimg + " -noresampblur -applyxfm -paddingsize 16",
-#          logFile=logFile)
-#     # possibly do a tiny extra smooth to $out here?
-#     imrm([vol16])
-
-
-# TODO: patched to deal with X dots + .nii.gz...fix it definitively !!
-# def is_image(file, img_formats=IMAGE_FORMATS):
-#     # preserve only the last two dots (those relating to ".nii.gz")
-#     num_dot = file.count(".")
-#     if num_dot > 2:
-#         file = file.replace(".", "", num_dot - 2)
-#     file_extension = img_split_ext(file, img_formats)[1]
-#
-#     if file_extension in img_formats:
-#         return True
-#     else:
-#         return False
-
-
-# def get_head_from_brain(img, checkexist=True):
-#     if not imtest(img):
-#         err = "Error in get_head_from_brain: given img is not an image"
-#         print(err)
-#         raise Exception(err)
-#
-#     headimg = img.replace("_brain", "")
-#     if not imtest(headimg) and checkexist:
-#         err = "Error in get_head_from_brain: head image is not present"
-#         print(err)
-#         raise Exception(err)
-#     else:
-#         return headimg
-
-
-# read header and calculate a dimension number hdr["nx"] * hdr["ny"] * hdr["nz"] * hdr["dx"] * hdr["dy"] * hdr["dz"]
-# def get_image_dimension(file):
-#     hdr = read_header(file)
-#     return int(hdr["nx"]) * int(hdr["ny"]) * int(hdr["nz"]) * float(hdr["dx"]) * float(hdr["dy"]) * float(hdr["dz"])
-#
-
-# # extract header in xml format and returns it as a (possibly filtered by list_field) dictionary
-# def read_header(file, list_field=None):
-#     res = rrun("fslhd -x " + file)
-#     root = ET.fromstring(res)
-#     attribs_dict = root.attrib
-#
-#     if list_field is not None:
-#         fields = dict()
-#         for f in list_field:
-#             fields[f] = attribs_dict[f]
-#         return fields
-#     else:
-#         return attribs_dict
-#
-# # remove numslice2remove up and down (fslroi wants, for each dimension, first slice to keep and number of slices to keep)
-# def remove_slices(inputimg, numslice2remove=1, whichslices2remove="updown", remove_dimension="axial"):
-#     nslices = int(rrun("fslval " + inputimg + " dim3"))
-#
-#     dim_str = ""
-#     if remove_dimension == "axial":
-#         if whichslices2remove == "updown":
-#             dim_str = " 0 -1 0 -1 " + str(numslice2remove) + " " + str(nslices - 2*numslice2remove)
-#         else:
-#             print("ERROR in remove_slices, presently it removes only in the axial (z) dimension") # TODO
-#             return
-#             # dim_str = " 0 -1 0 -1 " + "0 " + str(numslice2remove) + " " + str(nslices - 2 * numslice2remove)
-#     else:
-#         print("ERROR in remove_slices, presently it removes only in the axial (z) dimension")
-#         return
-#
-#     imcp(inputimg, remove_image_ext(inputimg) + "_full")
-#     rrun('fslroi ' + inputimg + " " + inputimg + dim_str)
-#
 
 # divide the tbss mean skeleton in images according to a given atlas file (where each volume is specific tract)
 # needs that atlas has its own json file
