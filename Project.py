@@ -366,7 +366,7 @@ class Project:
         subj_list   = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
         valid_data  = self.validate_data(data)
         if valid_data is not None:
-            return valid_data.get_filtered_column_by_value(column, value, "=", subj_list, sort=sort)
+            return valid_data.get_filtered_column_by_value(column, value, operation, subj_list, sort=sort)
         else:
             return None
 

@@ -436,7 +436,7 @@ class Subject:
                  do_sienax=False, bet_sienax_param_string="-SNB -f 0.2",
                  do_reg=True, do_nonlinreg=True, do_seg=True,
                  do_spm_seg=False, spm_seg_templ="", spm_seg_over_bet=False,
-                 do_cat_seg=False, cat_seg_over_bet=False, cat_use_dartel=False, do_cat_surf=True, cat_smooth_surf=None,
+                 do_cat_seg=False, cat_use_dartel=False, do_cat_surf=True, cat_smooth_surf=None,
                  do_cat_seg_long=False, cat_long_sessions=None,
                  do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
                  use_lesionmask=False, lesionmask="lesionmask",
@@ -615,9 +615,9 @@ class Subject:
                 # AROMA processing
                 # ------------------------------------------------------------------------------------------------------
                 preproc_aroma_img           = Image(os.path.join(self.rs_dir, self.rs_post_aroma_image_label))  # output image of aroma processing
-                preproc_feat_dir_melodic    = os.path.join(preproc_feat_dir, "filtered_func_data.ica")
                 preproc_feat_dir_mc         = os.path.join(preproc_feat_dir, "mc", "prefiltered_func_data_mcf.par")
-                aff                         = self.transform.rs2hr_mat
+                # preproc_feat_dir_melodic    = os.path.join(preproc_feat_dir, "filtered_func_data.ica")
+                # aff                         = self.transform.rs2hr_mat
 
                 try:
                     if do_aroma:
@@ -878,9 +878,9 @@ class Subject:
             traceback.print_exc()
             print(e)
 
-    def mri_merger(self, input_files, outputname, dimension="-t", type='fmri'):
+    def mri_merger(self, input_files, outputname, dimension="-t", typ='fmri'):
 
-        if type == 'fmri':
+        if typ == 'fmri':
             folder = self.fmri_dir
         else:
             folder = self.rs_dir
@@ -890,6 +890,7 @@ class Subject:
 
         rrun("fslmerge " + dimension + " " + outputname + " " + " ".join(input_files))
         os.chdir(cur_dir)
+
 
     def unzip_data(self, src_zip, dest_dir, replace=True):
         extractall_zip(src_zip, dest_dir, replace)

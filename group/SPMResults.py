@@ -74,7 +74,7 @@ class SPMResults:
     # set    set cluster         cluster         cluster cluster peak            peak            peak    peak    peak
     # p      c   p(FWE - corr)   p(FDR - corr)   equivk  p(unc)  p(FWE - corr)   p(FDR - corr)   T       equivZ  p(unc) x  y  z {mm}
     @staticmethod
-    def extract_clusters_info(res_csv_file, ref_clusters, distance=8):
+    def extract_clusters_info(res_csv_file): #, ref_clusters, distance=8):
 
         curr_cluster = -1
         clusters = []

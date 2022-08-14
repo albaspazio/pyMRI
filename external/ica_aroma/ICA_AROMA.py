@@ -244,7 +244,7 @@ if args.generate_plots:
     classification_plot(os.path.join(outDir, 'classification_overview.txt'),
                         outDir)
 
-if (denType != 'no'):
+if denType != 'no':
     print('Step 3) Data denoising')
     aromafunc.denoising(fslDir, inFile, outDir, melmix, denType, motionICs)
 

@@ -1,15 +1,14 @@
 import datetime
 import os
 import traceback
-from shutil import copyfile
 
 from Global import Global
 from utility.images.Image import Image, Images
-from utility.myfsl.utils.run import rrun
-from utility.myfsl.fslfun import run
-from utility.myfsl.fslfun import run_notexisting_img, runpipe, run_move_notexisting_img
 from utility.images.images import mass_images_move
 from utility.matlab import call_matlab_spmbatch, call_matlab_function_noret
+from utility.myfsl.fslfun import run
+from utility.myfsl.fslfun import run_notexisting_img, runpipe, run_move_notexisting_img
+from utility.myfsl.utils.run import rrun
 from utility.utilities import sed_inplace, gunzip, write_text_file
 
 
@@ -67,7 +66,7 @@ class SubjectMpr:
         # I CAN START PROCESSING !
         try:
 
-            # create processing dir (if non existent)
+            # create processing dir (if non-existent)
             os.makedirs(anatdir, exist_ok=True)
             T1 = Image(os.path.join(anatdir, T1))  # T1 is now an absolute path
 
@@ -245,13 +244,15 @@ class SubjectMpr:
 
     def bet(self,
             odn="anat", imgtype=1,
-            do_bet=True, betfparam=[], bettypeparam="-R",
+            do_bet=True, betfparam=None, bettypeparam="-R",
             do_reg=True, do_nonlinreg=True,
             do_skipflirtsearch=False,
             do_overwrite=False,
             use_lesionmask=False, lesionmask="lesionmask"
             ):
 
+        if betfparam is None:
+            betfparam = []
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
         curdir = os.getcwd()
 
@@ -362,6 +363,7 @@ class SubjectMpr:
                             rrun("fslmaths " + T1 + "_biascorr -mas " + T1 + "_biascorr_brain_mask " + T1 + "_biascorr_brain", logFile=log)
                             ## In the future, could check the initial ROI extraction here
                         else:
+                            fp = ""
                             for i in range(len(list_bet_fparams)):
                                 betopts = bettypeparam + " -f " + str(list_bet_fparams[i])
                                 fp = "_" + str(list_bet_fparams[i]).replace(".", "")
@@ -374,7 +376,7 @@ class SubjectMpr:
                 else:
                     # do_reg=False
                     if do_bet:
-
+                        fp = ""
                         for i in range(len(list_bet_fparams)):
                             betopts = bettypeparam + " -f " + str(list_bet_fparams[i])
                             fp = "_" + str(list_bet_fparams[i]).replace(".", "")
@@ -587,12 +589,8 @@ class SubjectMpr:
         srcinputimage   = os.path.join(anatdir, T1 + "_biascorr")
         inputimage      = os.path.join(self.subject.t1_cat_dir, T1 + "_" + self.subject.label)
 
-        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
-
-        icv_file    = os.path.join(self.subject.t1_cat_dir, "tiv_" + self.subject.label + ".txt")
-        brain_mask = Image(os.path.join(self.subject.t1_cat_dir, "brain_mask.nii.gz"))
-
-        icv_file = os.path.join(self.subject.t1_cat_dir, "tiv_" + self.subject.label + ".txt")
+        icv_file        = os.path.join(self.subject.t1_cat_dir, "tiv_" + self.subject.label + ".txt")
+        brain_mask      = Image(os.path.join(self.subject.t1_cat_dir, "brain_mask.nii.gz"))
 
         # check whether skipping
         if brain_mask.exist and not do_overwrite:
@@ -630,6 +628,8 @@ class SubjectMpr:
                 str_surf = "1"
             else:
                 str_surf = "0"
+
+            out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
 
             sed_inplace(out_batch_job, "<T1_IMAGE>", inputimage + ".nii")
             sed_inplace(out_batch_job, "<TEMPLATE_SEGMENTATION>", seg_templ)
@@ -727,8 +727,6 @@ class SubjectMpr:
 
         if smooth_surf is None:
             smooth_surf = self.subject.t1_cat_surface_resamplefilt
-
-        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
 
         try:
 
@@ -948,7 +946,7 @@ class SubjectMpr:
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir])
 
-    def spm_tissue_volumes(self, spm_template_name="spm_icv_template", endengine=True, eng=None):
+    def spm_tissue_volumes(self, spm_template_name="spm_icv_template", endengine=False, eng=None):
 
         seg_mat = os.path.join(self.subject.t1_spm_dir, "T1_biascorr_" + self.subject.label + "_seg8.mat")
         icv_file = os.path.join(self.subject.t1_spm_dir, "icv_" + self.subject.label + ".dat")
@@ -958,7 +956,7 @@ class SubjectMpr:
         sed_inplace(out_batch_job, "<SEG_MAT>", seg_mat)
         sed_inplace(out_batch_job, "<ICV_FILE>", icv_file)
 
-        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir], endengine=False, eng=eng)
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir], endengine=endengine, eng=eng)
 
     def surf_resampled_longitudinal_diff(self, sessions, outdir="", matlab_func="subtract_gifti"):
 
@@ -992,7 +990,6 @@ class SubjectMpr:
                 use_lesionmask=False, lesionmask="lesionmask"):
         niter = 5
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
-        curdir = os.getcwd()
 
         # check anatomical image imgtype
         if imgtype != 1:
@@ -1028,7 +1025,7 @@ class SubjectMpr:
 
             betopts = "-f " + str(betfparam[0])
 
-            # create processing dir (if non existent) and cd to it
+            # create processing dir (if non-existent) and cd to it
             os.makedirs(anatdir, exist_ok=True)
             # os.chdir(anatdir)
 
@@ -1133,7 +1130,6 @@ class SubjectMpr:
     def finalize(self, odn="anat", imgtype=1):
 
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
-        curdir = os.getcwd()
 
         # define placeholder variables for input dir and image name
         if imgtype == 1:
@@ -1196,7 +1192,6 @@ class SubjectMpr:
     def first(self, structures="", t1_image="", odn=""):
 
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
-        curdir = os.getcwd()
 
         # init params
         if t1_image == "":
@@ -1261,13 +1256,11 @@ class SubjectMpr:
 
             log = open(logfile, "a")
 
-            curdir = os.getcwd()
-
             rrun("mri_convert " + self.subject.t1_data + ".nii.gz " + self.subject.t1_data + ".mgz", logFile=log)
 
             try:
                 os.environ['OLD_SUBJECTS_DIR'] = os.environ['SUBJECTS_DIR']
-            except Exception as e:
+            except Exception:
                 pass
 
             os.environ['SUBJECTS_DIR'] = self.subject.t1_dir

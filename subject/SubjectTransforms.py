@@ -28,7 +28,7 @@ from utility.myfsl.fslfun import runsystem
 #   DTI   <--> T2 <--> HR <---> STD
 #
 from utility.images.transform_images import check_concat_mat, check_invert_mat, check_convert_warp_mw, check_invert_warp, \
-    check_flirt, check_apply_mat, check_convert_warp_wmw, check_convert_warp_ww, check_apply_warp, flirt
+    check_flirt, check_apply_mat, check_convert_warp_wmw, check_convert_warp_ww, check_apply_warp
 
 
 class SubjectTransforms:
@@ -709,11 +709,13 @@ class SubjectTransforms:
     #                                       -> stdimg, stdimg_brain, stdimg_brain_mask_dil
     #                                       -> stdimg4, stdimg4_brain, stdimg4_brain_mask_dil
     # in linear transf, it must be betted (must contain the "_brain" text) in non-linear is must be a full head image.
-    def transform_roi(self, regtype, pathtype="standard", outdir="", outname="", mask="", orf="", thresh=0, islin=True, rois=[]):
+    def transform_roi(self, regtype, pathtype="standard", outdir="", outname="", mask="", orf="", thresh=0, islin=True, rois=None):
 
         # ===========================================================
         # SANITY CHECK
         # ===========================================================
+        if rois is None:
+            rois = []
         if outdir != "":
             if not os.path.isdir(outdir):
                 print("ERROR in transform_roi: given outdir (" + outdir + ") is not a folder.....exiting")
@@ -728,7 +730,7 @@ class SubjectTransforms:
 
         try:
             bool(self.linear_registration_type[regtype])
-        except Exception as e:
+        except Exception:
             print("ERROR in transform_roi: given regtype (" + regtype + ") is not valid.....exiting")
             return
         # ===========================================================
@@ -811,7 +813,7 @@ class SubjectTransforms:
                     mat, ref = self.linear_registration_type[regtype]()
                     check_apply_mat(output_roi, input_roi, mat, ref, overwrite=True)
                 else:
-                    # is non linear (actually, when non linear reg exist, it can be linear)
+                    # is non-linear (actually, when non-linear reg exist, it can be linear)
                     warp, ref = self.non_linear_registration_type[regtype]()
                     if not Image(warp).exist:
                         check_apply_mat(output_roi, input_roi, warp, ref, overwrite=True)
@@ -850,7 +852,7 @@ class SubjectTransforms:
         return self.std42hr_warp, self.subject.t1_data
 
     def transform_l_std42hr(self):
-        return self.std42hr.mat, self.subject.t1_brain_data
+        return self.std42hr_mat, self.subject.t1_brain_data
 
     def transform_nl_rs2hr(self):
         print("WARNING calling transform_l_rs2hr instead of transform_nl_rs2hr")
@@ -864,7 +866,7 @@ class SubjectTransforms:
         return self.transform_l_fmri2hr()
 
     def transform_l_fmri2hr(self):
-        return self.fmri2hr.mat, self.subject.t1_brain_data
+        return self.fmri2hr_mat, self.subject.t1_brain_data
 
     def transform_nl_dti2hr(self):
         if self.subject.hasT2:
@@ -896,7 +898,7 @@ class SubjectTransforms:
         return self.std42rs_warp, self.subject.rs_examplefunc
 
     def transform_l_std42rs(self):
-        return self.std42rs.mat, self.subject.rs_examplefunc
+        return self.std42rs_mat, self.subject.rs_examplefunc
 
     def transform_nl_hr2rs(self):
         print("WARNING: transform_nl_hr2rs calls transform_l_hr2rs ")
@@ -918,13 +920,13 @@ class SubjectTransforms:
         return self.std2fmri_warp, self.subject.fmri_examplefunc
 
     def transform_l_std2fmri(self):
-        return self.std2fmri.mat, self.subject.roi_fmri_dir
+        return self.std2fmri_mat, self.subject.roi_fmri_dir
 
     def transform_nl_std42fmri(self):
         return self.std42fmri_warp, self.subject.fmri_examplefunc
 
     def transform_l_std42fmri(self):
-        return self.std42fmri.mat, self.subject.fmri_examplefunc
+        return self.std42fmri_mat, self.subject.fmri_examplefunc
 
     def transform_nl_hr2fmri(self):
         return self.transform_l_hr2fmri()
@@ -1048,7 +1050,7 @@ class SubjectTransforms:
     # this method takes base images (t1/t1_brain, epi_example_function, dti_nodiff/dti_nodiff_brain, t2/t2_brain) and coregister to all other modalities and standard
     # creates up to 14 folders, 7 for linear and 7 for non linear transformation towards the 7 different space (hr, rs, frmi, dti, t2, std, std4)
     # user can select from which seq to which seq create the transforms
-    def test_all_coregistration(self, test_dir, _from=None, _to=None, extended=False, overwrite=False):
+    def test_all_coregistration(self, test_dir, _from=None, _to=None, extended=False): #, overwrite=False):
 
         if _from is None:
             _from = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]

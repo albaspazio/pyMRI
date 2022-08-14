@@ -15,7 +15,11 @@ IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".i
 # ===============================================================================================================================
 
 # return [path/filename_noext, ext with point]
-def img_split_ext(img, img_formats=IMAGE_FORMATS):
+def img_split_ext(img, img_formats=None):
+
+    if img_formats is None:
+        img_formats = IMAGE_FORMATS
+
     fullext = ""
     for imgext in img_formats:
         if img.endswith(imgext):

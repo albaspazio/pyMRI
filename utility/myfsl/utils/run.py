@@ -254,23 +254,23 @@ def rrun(*args, **kwargs):
 
     if not returnExitcode and (exitcode != 0 or len(stderr)):
 
-        str = '{} returned non-zero exit code or error: {}\nmessage: {}\n full command: {}'.format(args[0], exitcode, stderr, " ".join(args))
+        _str = '{} returned non-zero exit code or error: {}\nmessage: {}\n full command: {}'.format(args[0], exitcode, stderr, " ".join(args))
         if logFile is not None:
-            print(str, file=logFile)
+            print(_str, file=logFile)
 
-        print(str)
+        print(_str)
         if stop_on_error:
-            raise RuntimeError(str)
+            raise RuntimeError(_str)
 
     results = []
     if returnStdout:   results.append(stdout)
     if returnStderr:   results.append(stderr)
     if returnExitcode: results.append(exitcode)
 
-    str = '{} returned {}'.format(" ".join(args), stdout)
+    _str = '{} returned {}'.format(" ".join(args), stdout)
 
     if logFile is not None:
-        print(str, file=logFile)
+        print(_str, file=logFile)
 
     if len(results) == 1:
         return results[0]
@@ -284,7 +284,7 @@ def _dryrun(submit, returnStdout, returnStderr, returnExitcode, *args):
     """
 
     if submit:
-        return ('0',)
+        return '0',
 
     results = []
     stderr = ''
@@ -387,8 +387,6 @@ def runfsl(*args, **kwargs):
     """Call a FSL command and return its output. This function simply prepends
     ``$FSLDIR/bin/`` to the command before passing it to :func:`run`.
     """
-
-    prefix = None
 
     # if FSL_PREFIX is not None:
     #     prefix = FSL_PREFIX

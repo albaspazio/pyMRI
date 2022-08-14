@@ -51,7 +51,7 @@ class SubjectEpi:
             m_exfun = self.subject.fmri_examplefunc_mask
 
         if not exfun.exist:
-            self.get_nth_volume(data, exfun, m_exfun, 100, logFile)
+            self.get_nth_volume(data, exfun, m_exfun, vol_num, logFile)
 
         return Image(exfun)
 
@@ -173,10 +173,10 @@ class SubjectEpi:
     # model can be:  a fullpath, a filename (string) located in project's glm_template_dir
     def fsl_feat(self, epi_label, in_file_name, out_dir_name, model, do_initreg=False, std_image="", tr="", te=""):
 
-        if epi_label == "rs":
-            epi_dir = self.subject.rs_dir
-        elif epi_label.startswith("fmri"):
+        if epi_label.startswith("fmri"):
             epi_dir = self.subject.fmri_dir
+        else:
+            epi_dir = self.subject.rs_dir
 
         out_dir     = os.path.join(epi_dir, out_dir_name)
         epi_image   = Image(os.path.join(epi_dir, in_file_name))
@@ -242,7 +242,7 @@ class SubjectEpi:
         rrun(os.path.join(self._global.fsl_bin, "feat") + " " + OUTPUT_FEAT_FSF + ".fsf")  # execute  FEAT
 
     # perform aroma on feat folder data, create reg folder and copy precalculated coregistrations
-    def aroma_feat(self, epi_label, input_dir, mc, aff, warp, ofn="ica_aroma", upsampling=0, logFile=None):
+    def aroma_feat(self, epi_label, input_dir, mc, aff, warp, upsampling=0, logFile=None):
 
         if epi_label == "rs":
             aroma_dir           = self.subject.rs_aroma_dir
@@ -257,9 +257,9 @@ class SubjectEpi:
 
         warp = Image(warp)
 
-        option_string = ""
-        if mc != "":
-            option_string = " -mc " + mc + " "
+        # option_string = ""
+        # if mc != "":
+        #     option_string = " -mc " + mc + " "
 
         input_reg = os.path.join(input_dir, "reg")
         os.makedirs(input_reg, exist_ok=True)
@@ -378,7 +378,7 @@ class SubjectEpi:
             Image(os.path.join(self.subject.roi_std4_dir, self.subject.rs_post_nuisance_image_label + "_std4")).mv(self.subject.rs_final_regstd_image, logFile=logFile)
 
     @staticmethod
-    def get_slicetiming_params(self, nslices, scheme=1, params=None):
+    def get_slicetiming_params(nslices, scheme=1, params=None):
 
         # =============Sequential ascending: 1=============
         if scheme == 1:
@@ -493,10 +493,8 @@ class SubjectEpi:
 
     def prepare_for_spm(self, in_img, subdirmame="temp_split"):
 
-        folder = os.path.dirname(in_img)
-
         raise Exception("ERROR in prepare for spm")
-
+        folder = os.path.dirname(in_img)
         self.subject.epi_split(in_img, subdirmame)
         outdir = os.path.join(folder, subdirmame)
         os.chdir(outdir)

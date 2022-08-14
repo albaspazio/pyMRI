@@ -345,7 +345,6 @@ class Image(str):
     def remove_slices(self, numslice2remove=1, whichslices2remove="updown", remove_dimension="axial"):
 
         nslices = int(rrun("fslval " + self + " dim3"))
-        dim_str = ""
         if remove_dimension == "axial":
             if whichslices2remove == "updown":
                 dim_str = " 0 -1 0 -1 " + str(numslice2remove) + " " + str(nslices - 2*numslice2remove)
@@ -360,8 +359,14 @@ class Image(str):
         self.cp(self.fpathnoext + "_full")
         rrun('fslroi ' + self + " " + self + dim_str)
 
-    def compress(self, replace=True):
-        compress(self.fpathnoext + ".nii", self.fpathnoext + ".nii.gz", replace)
+    def compress(self, dest=None, replace=True):
+        if dest is None:
+            udest   = self.fpathnoext + ".nii.gz"
+        else:
+            dest  = Image(dest)
+            udest = dest.fpathnoext + ".nii.gz"
+
+        compress(self.fpathnoext + ".nii", udest, replace)
 
     # unzip file to a given path, deleting (by default) the original nii.gz
     def unzip(self, dest=None, replace=True):
@@ -404,8 +409,14 @@ class Image(str):
 
 class Images(list):
 
-    def __new__(cls, value):
-        return super(Images, cls).__new__(cls, value)
+    def __new__(cls, value=None):
+        if value is None:
+            ivalues = []
+        else:
+            ivalues = []
+            for v in value:
+                ivalues.append(Image(v))
+        return super(Images, cls).__new__(cls, ivalues)
 
     def rm(self, logFile=None):
 

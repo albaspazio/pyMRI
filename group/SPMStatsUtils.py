@@ -289,7 +289,7 @@ class SPMStatsUtils:
     #region CHECK REVIEW ESTIMATE
 
     @staticmethod
-    def spm_get_cat_check(out_batch_job, idstep=2):
+    def spm_get_cat_check(idstep=2):
 
         return  "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.spmmat(1) = cfg_dep(\'Factorial design specification: SPM.mat File\', substruct(\'.\', 'val', '{}', {1}, \'.\', \'val\', '{}', {1}, \'.\', \'val\', \'{}\', {1}), substruct(\'.\', \'spmmat\'));\n" \
                 "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.check_SPM_cov.do_check_cov.use_unsmoothed_data = 1;\n" \
@@ -300,11 +300,11 @@ class SPMStatsUtils:
                 "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.check_SPM_ortho = 1;\n"
 
     @staticmethod
-    def spm_get_review_model(out_batch_job, string, idstep=2):
+    def spm_get_review_model(idstep=2):
 
-        return  "matlabbatch{2}.spm.stats.review.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));\n" \
-                "matlabbatch{2}.spm.stats.review.display.matrix = 1;\n" \
-                "matlabbatch{2}.spm.stats.review.print = 'ps';\n"
+        return  "matlabbatch{" + str(idstep) + "}.spm.stats.review.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));\n" \
+                "matlabbatch{" + str(idstep) + "}.spm.stats.review.display.matrix = 1;\n" \
+                "matlabbatch{" + str(idstep) + "}.spm.stats.review.print = 'ps';\n"
 
     @staticmethod
     def get_spm_model_estimate(isSurf=False, idstep=3):
@@ -323,7 +323,7 @@ class SPMStatsUtils:
 
     # create a gifti image with ones in correspondence of each vmask voxel
     @staticmethod
-    def batchrun_spm_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths, distance=8):
+    def batchrun_spm_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths): #, distance=8):
 
         Image(vmask, must_exist=True, msg="SPMStatsUtils.batchrun_spm_surface_mask_from_volume_mask vmask")
         Image(ref_surf, must_exist=True, msg="SPMStatsUtils.batchrun_spm_surface_mask_from_volume_mask ref_surf")
@@ -411,8 +411,8 @@ class Peak:
 
 class Cluster:
 
-    def __init__(self, id, pfwe, pfdr, k, punc, firstpeak):
-        self.id     = id
+    def __init__(self, _id, pfwe, pfdr, k, punc, firstpeak):
+        self.id     = _id
         self.pfwe   = pfwe
         self.pfdr   = pfdr
         self.k      = k

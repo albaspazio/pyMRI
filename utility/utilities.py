@@ -53,10 +53,10 @@ def append_text_file(path, text):
 
 
 def sed_inplace(filename, pattern, repl, must_exist=False):
-    '''
+    """
     Perform the pure-Python equivalent of in-place `sed` substitution: e.g.,
     `sed -i -e 's/'${pattern}'/'${repl}' "${filename}"`.
-    '''
+    """
     # For efficiency, precompile the passed regular expression.
     pattern_compiled = re.compile(pattern)
 
@@ -93,8 +93,8 @@ def argsort(seq):
 
 
 # apply the given permutation to a list
-def reorder_list(list, neworder):
-    return [list[i] for i in neworder]
+def reorder_list(_list, neworder):
+    return [_list[i] for i in neworder]
 
 
 def get_filename(fullpath):
@@ -118,11 +118,11 @@ def copytree(src, dst, symlinks=False, ignore=None):
 # read a file where each line is a string and returns them as list (pruning the '\n')
 def read_list_from_file(srcfile):
     with open(srcfile, 'r') as f:
-        str = f.readlines()
+        _str = f.readlines()
 
-    for s in range(len(str)):
-        str[s] = str[s].strip()
-    return str
+    for s in range(len(_str)):
+        _str[s] = _str[s].strip()
+    return _str
 
 
 def fillnumber2fourdigits(num):
@@ -159,11 +159,11 @@ def string2num(string):
         return string
 
 
-def listToString(list, separator='\t'):
+def listToString(_list, separator='\t'):
 
-    str = ""
+    _str = ""
     # traverse the list and concatenate to String variable
-    for element in list:
-        str += (element + separator)
+    for element in _list:
+        _str += (element + separator)
 
-    return str
+    return _str

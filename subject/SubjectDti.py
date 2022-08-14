@@ -255,7 +255,7 @@ class SubjectDti:
         rrun("xtract_stats " + " -xtract " + xdir + rspace + root_dir + " -meas " + meas + "" + structures, logFile=logFile)
 
     # read its own xtract_stats output file and return a dictionary = { "tractX":{"val1":XX,"val2":YY, ...}, .. }
-    def xtract_read_file(self, tracts=None, values=None, ifn="stats.csv", logFile=None):
+    def xtract_read_file(self, tracts=None, values=None, ifn="stats.csv"):
 
         if len(tracts) is None:
             tracts = self._global.dti_xtract_labels
@@ -292,12 +292,12 @@ class SubjectDti:
                     if bool(data_row):
                         datas[tract_lab] = data_row
 
-        str = self.subject.label + "\t"
+        _str = self.subject.label + "\t"
         for tract in datas:
             for v in values:
-                str = str + datas[tract][v] + "\t"
+                _str += datas[tract][v] + "\t"
 
-        return str, datas
+        return _str, datas
 
     def conn_matrix(self, atlas_path="freesurfer", nroi=0):
         pass

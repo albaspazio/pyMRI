@@ -20,7 +20,10 @@ class MatlabManager:
     # (if no session are active) or connect to the first one available or return None.
 
     @staticmethod
-    def start_matlab(paths2add=[], sess_type=SESSION_REUSE_FIRST, conn2existing=""):
+    def start_matlab(paths2add=None, sess_type=SESSION_REUSE_FIRST, conn2existing=""):
+
+        if paths2add is None:
+            paths2add = []
 
         if sess_type == MatlabManager.SESSION_NEW_PERSISTENT:
             if len(conn2existing) == 0:
@@ -29,7 +32,7 @@ class MatlabManager:
             # os.system('matlab -r \"matlab.engine.shareEngine(''' + conn2existing + ')\"')
             # os.system('matlab -r \"matlab.engine.shareEngine\"')
             # process = subprocess.run(['matlab', '-r', 'matlab.engine.shareEngine(\"' + conn2existing + '\")'])
-            process = subprocess.run(['matlab', '-r \"matlab.engine.shareEngine\"'])
+            subprocess.run(['matlab', '-r \"matlab.engine.shareEngine\"'])
 
             # rrun("matlab -r \"matlab.engine.shareEngine(\'" + conn2existing + "\')\"")
             while True:
@@ -37,6 +40,7 @@ class MatlabManager:
                 if conn2existing in existing_sessions:
                     eng = matlab.engine.connect_matlab(conn2existing)
                     break
+            raise Exception("matlab session not found")
 
         elif sess_type == MatlabManager.SESSION_NEW_NOTSHARED:
             eng = matlab.engine.start_matlab()
@@ -71,8 +75,10 @@ class MatlabManager:
         return eng
 
     @staticmethod
-    def call_matlab_function(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
+    def call_matlab_function(func, standard_paths=None, params="", logfile=None, endengine=True, eng=None):
 
+        if standard_paths is None:
+            standard_paths = []
         if eng is None:
             engine = MatlabManager.start_matlab(standard_paths)
             if engine is None:
@@ -94,8 +100,10 @@ class MatlabManager:
         return [engine, res]
 
     @staticmethod
-    def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
+    def call_matlab_function_noret(func, standard_paths=None, params="", logfile=None, endengine=True, eng=None):
 
+        if standard_paths is None:
+            standard_paths = []
         if eng is None:
             engine = MatlabManager.start_matlab(standard_paths, MatlabManager.SESSION_REUSE_FIRST)
             if engine is None:
@@ -123,8 +131,10 @@ class MatlabManager:
 
     # subcase of call_matlab_function_noret: call a SPM batch file that does not return anything
     @staticmethod
-    def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True, eng=None):
+    def call_matlab_spmbatch(func, standard_paths=None, logfile=None, endengine=True, eng=None):
 
+        if standard_paths is None:
+            standard_paths = []
         batch_file = os.path.basename(os.path.splitext(func)[0])
         # err = io.StringIO
 

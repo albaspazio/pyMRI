@@ -92,7 +92,7 @@ class GroupAnalysis:
             rrun("fslmaths " + os.path.join(struct_dir, "smwc1T1_biascorr_" + subj.label) + " -thr 0.1 " + os.path.join(struct_dir, "smwc1T1_biascorr_" + subj.label))
 
         # create merged image
-        cur_dir = os.getcwd()
+        # cur_dir = os.getcwd()
         os.chdir(stats_dir)
 
         # trick...since there are nii and nii.gz. by adding ".gz" in the check I consider only the nii
@@ -376,7 +376,7 @@ class GroupAnalysis:
         str_data = str_data + "\n"
 
         tracts_data = []
-        [tracts_data.append([]) for t in range(len(tracts_labels))]
+        [tracts_data.append([]) for _ in range(len(tracts_labels))]
         nsubj = len(datas[0])
         for i in range(nsubj):
             subj_label      = datas[1][i]

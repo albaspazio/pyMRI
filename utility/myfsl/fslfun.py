@@ -17,7 +17,7 @@ def runsystem(cmd, logFile=None):
 
 
 # run plain os.system command whether the given image is not present
-def run_move_notexisting_img(img, cmd, logFile=None, is_fsl=True):
+def run_move_notexisting_img(img, cmd, logFile=None):
     if not Image(img).exist:
         runsystem(cmd, logFile)
 

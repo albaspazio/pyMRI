@@ -1,10 +1,6 @@
-import os
-
 from Global import Global
 from Project import Project
-from subject.Subject import Subject
 from utility.exceptions import SubjectListException
-from utility.utilities import extractall_zip
 
 if __name__ == "__main__":
 
@@ -100,7 +96,7 @@ if __name__ == "__main__":
         #              do_sienax=False, bet_sienax_param_string="-SNB -f 0.2",
         #              do_reg=True, do_nonlinreg=True, do_seg=True,
         #              do_spm_seg=False, spm_seg_templ="", spm_seg_over_bet=False,
-        #              do_cat_seg=False, cat_seg_over_bet=False, cat_use_dartel=False, do_cat_surf=True,
+        #              do_cat_seg=False, cat_use_dartel=False, do_cat_surf=True,
         #              do_cat_seg_long=False, cat_long_sessions=[1],
         #              do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
         #              use_lesionmask=False, lesionmask="lesionmask",
