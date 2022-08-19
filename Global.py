@@ -42,6 +42,7 @@ class Global:
         self.ica_aroma_script       = local_settings_data["ica_aroma_script"]
         self.trackvis_bin           = local_settings_data["trackvis_bin"]
         self.autoptx_script_dir     = local_settings_data["autoptx_script_dir"]
+        self.eddy_gpu_exe_name      = local_settings_data["eddy_gpu_exe_name"]
 
         self.cat_foldername         = self.cat_version.split('.')[0]
         self.cat_dir                = os.path.join(self.spm_dir, "toolbox", self.cat_foldername)

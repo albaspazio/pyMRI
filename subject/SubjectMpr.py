@@ -448,7 +448,7 @@ class SubjectMpr:
 
             os.makedirs(self.subject.t1_spm_dir, exist_ok=True)
 
-            srcinputimage.unzip(inputimage + ".nii")
+            srcinputimage.unzip(inputimage.upath)
 
             # here I may stop script to allow resetting the nii origin. sometimes is necessary to perform the segmentation
             if set_origin:
@@ -459,7 +459,7 @@ class SubjectMpr:
 
             seg_templ = Image(seg_templ, must_exist=True, msg="SubjectMPR.spm_segment given template tissue")
 
-            sed_inplace(out_batch_job, "<T1_IMAGE>", inputimage + ".nii")
+            sed_inplace(out_batch_job, "<T1_IMAGE>", inputimage.upath)
             sed_inplace(out_batch_job, "<ICV_FILE>", icv_file)
             sed_inplace(out_batch_job, '<SPM_DIR>', self._global.spm_dir)
             sed_inplace(out_batch_job, '<TEMPLATE_TISSUES>', seg_templ)
@@ -480,8 +480,8 @@ class SubjectMpr:
             # 1) it resets like in the original image the dt header parameters that spm set to 0.
             #    otherwise it fails some operations like fnirt as it sees the mask and the brain data of different dimensions
             # 2) changing image origin in spm, changes how fsleyes display the image. while, masking in this ways, everything goes right
-            rrun("fslmaths " + srcinputimage + ".nii.gz" + " -mas " + brain_mask + " -bin " + brain_mask)
-            rrun("fslmaths " + srcinputimage + ".nii.gz" + " -mas " + skullstripped_mask + " -bin " + skullstripped_mask)
+            rrun("fslmaths " + srcinputimage.cpath + " -mas " + brain_mask + " -bin " + brain_mask)
+            rrun("fslmaths " + srcinputimage.cpath + " -mas " + skullstripped_mask + " -bin " + skullstripped_mask)
 
             if add_bet_mask:
                 T1_biascorr_brain_mask = Image(os.path.join(self.subject.t1_anat_dir, "T1_biascorr_brain_mask"))
@@ -497,7 +497,7 @@ class SubjectMpr:
                 brain_mask.cp(self.subject.t1_brain_data_mask, logFile=log)
                 rrun("fslmaths " + inputimage + " -mas " + brain_mask + " " + self.subject.t1_brain_data, logFile=log)
 
-            Image(inputimage + ".nii").rm()
+            Image(inputimage.upath).rm()
             log.close()
 
         except Exception as e:

@@ -141,6 +141,8 @@ class Subject:
         self.dti_nodiff_brain_data      = Image(os.path.join(self.roi_dti_dir, "nodif_brain"))
         self.dti_nodiff_brainmask_data  = Image(os.path.join(self.roi_dti_dir, "nodif_brain_mask"))
 
+        self.dti_fit_FA                 = Image(os.path.join(self.roi_dti_dir, self.dti_fit_label + "_FA"))
+
         self.dti_bedpostx_mean_S0_label = "mean_S0samples"
 
         self.trackvis_transposed_bvecs = "bvec_vert.txt"
@@ -208,8 +210,9 @@ class Subject:
         self.fmri_pa_data   = Image(os.path.join(self.fmri_dir, self.fmri_image_label + "_PA"))
 
         self.fmri_data_mc           = Image(os.path.join(self.fmri_dir, "ra" + self.fmri_image_label))   # assumes motion correction after slice timings
-        self.fmri_examplefunc       = Image(os.path.join(self.fmri_dir, "example_func"))
-        self.fmri_examplefunc_mask  = Image(os.path.join(self.fmri_dir, "mask_example_func"))
+
+        self.fmri_examplefunc       = Image(os.path.join(self.roi_fmri_dir, "example_func"))
+        self.fmri_examplefunc_mask  = Image(os.path.join(self.roi_fmri_dir, "mask_example_func"))
 
         self.fmri_pe_data           = Image(os.path.join(self.fmri_dir, self.fmri_image_label + "_pe"))
         self.fmri_acq_params        = os.path.join(self.fmri_dir, "acqparams.txt")
@@ -429,7 +432,8 @@ class Subject:
     # ==================================================================================================================================================
     # WELCOME
     # ==================================================================================================================================================
-    def wellcome(self, do_anat=True, odn="anat", imgtype=1, smooth=10,
+    def wellcome(self, do_overwrite=False,
+                 do_fslanat=True, odn="anat", imgtype=1, smooth=10,
                  biascorr_type=SubjectMpr.BIAS_TYPE_STRONG,
                  do_reorient=True, do_crop=True,
                  do_bet=True, betfparam=None,
@@ -438,16 +442,18 @@ class Subject:
                  do_spm_seg=False, spm_seg_templ="", spm_seg_over_bet=False,
                  do_cat_seg=False, cat_use_dartel=False, do_cat_surf=True, cat_smooth_surf=None,
                  do_cat_seg_long=False, cat_long_sessions=None,
-                 do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
+                 do_cleanup=True, do_strongcleanup=False,
                  use_lesionmask=False, lesionmask="lesionmask",
                  do_freesurfer=False, do_complete_fs=False, fs_seg_over_bet=False,
                  do_first=False, first_struct="", first_odn="",
-                 do_epirm2vol=0, do_susc_corr=False, do_aroma=True, do_nuisance=True, hpfsec=100,
-                 feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
-                 do_featinitreg=False,
-                 do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False,
-                 replace_std_filtfun=True,
-                 do_dtifit=True, do_pa_eddy=False, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
+
+                 do_rs=True, do_epirm2vol=0, do_susc_corr=False,
+                 do_aroma=True, do_nuisance=True, hpfsec=100, feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
+                 do_featinitreg=False, do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=True,
+
+                 do_fmri=True,
+
+                 do_dtifit=True, do_pa_eddy=False, do_eddy_gpu=False, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
                  do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",
                  do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0):
 
@@ -470,7 +476,7 @@ class Subject:
             os.makedirs(self.roi_std_dir, exist_ok=True)
             os.makedirs(self.fast_dir, exist_ok=True)
 
-            if do_anat:
+            if do_fslanat:
                 self.mpr.prebet(
                     odn=odn, imgtype=imgtype, smooth=smooth,
                     biascorr_type=biascorr_type,
@@ -530,16 +536,16 @@ class Subject:
                     use_lesionmask=use_lesionmask, lesionmask=lesionmask)
 
                 self.mpr.finalize(odn=odn)
+                self.transform.transform_mpr()
 
             if do_sienax:
                 print(self.label + " : sienax with " + bet_sienax_param_string)
                 rrun("sienax " + self.t1_data + " -B " + bet_sienax_param_string + " -r")
 
-            self.transform.transform_mpr()
-
             if do_first:
                 if not self.first_all_fast_origsegs.exist and not self.first_all_none_origsegs.exist:
                     self.mpr.first(first_struct, odn=first_odn)
+
 
         # ==============================================================================================================================================================
         # WB data
@@ -555,12 +561,10 @@ class Subject:
         # ==============================================================================================================================================================
         # preprocessing step considered valid (filtered_func_data, bg_image and mask)
         # is stored in resting/reg_std with a resolution of 4mm to be used for melodic group analysis
-        if self.hasRS:
+        while self.hasRS:
             os.makedirs(self.roi_rs_dir, exist_ok=True)
 
-            if not self.rs_data.exist:
-                print("rs image (" + self.rs_data + ") is missing...continuing")
-            else:
+            if do_rs:
                 log_file = os.path.join(self.rs_dir, "log_rs_processing.txt")
                 log = open(log_file, "a")
 
@@ -584,13 +588,27 @@ class Subject:
                         except Exception as e:
                             print("UNRECOVERABLE ERROR: " + str(e))
                             Image(self.rs_data.fpathnoext + "_fullvol").mv(self.rs_data, logFile=log)
-                            return
+                            break
 
                 # ------------------------------------------------------------------------------------------------------
                 # susceptibility correction ?
                 # ------------------------------------------------------------------------------------------------------
-                if self.rs_pa_data.exist and do_susc_corr:
-                    self.epi.topup_correction(self.rs_data, self.rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
+                if self.rs_pa_data.exist and do_susc_corr:  # want to correct
+
+                    ap_distorted = self.rs_data.add_postfix2name("_distorted")
+
+                    if ap_distorted.exist and do_overwrite:      # already done and I want to re-do it  ==> rollback changes
+                        self.rs_data.rm(logFile=log)
+                        ap_distorted.cp(self.rs_data, logFile=log)
+                    elif not ap_distorted.exist:                 # never done ==> create backup copy
+                        self.rs_data.cp(ap_distorted)
+
+                    try:
+                        self.epi.topup_correction(self.rs_data, self.rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
+                    except Exception as e:
+                        print("UNRECOVERABLE ERROR: " + str(e))
+                        ap_distorted.mv(self.rs_data, logFile=log)
+                        break
 
                 # ------------------------------------------------------------------------------------------------------
                 # FEAT PRE PROCESSING  (hp filt, mcflirt, spatial smoothing, melodic exploration, NO REG)
@@ -632,7 +650,7 @@ class Subject:
 
                 except Exception as e:
                     print("UNRECOVERABLE ERROR: " + str(e))
-                    return
+                    break
 
                 # ------------------------------------------------------------------------------------------------------
                 # do nuisance removal (WM, CSF & highpass temporal filtering)....create the following file: $RS_IMAGE_LABEL"_preproc_aroma_nuisance"
@@ -670,20 +688,40 @@ class Subject:
 
                 log.close()
 
+            break
+
         # ==============================================================================================================================================================
         # FMRI DATA
         # ==============================================================================================================================================================
-        if self.hasFMRI:
+        while self.hasFMRI and do_fmri:
 
             log_file    = os.path.join(self.fmri_dir, "log_fmri_processing.txt")
             log         = open(log_file, "a")
+
             # ------------------------------------------------------------------------------------------------------
             # susceptibility correction ?
             # ------------------------------------------------------------------------------------------------------
-            if self.fmri_pa_data.exist and do_susc_corr is True:
-                self.epi.topup_correction(self.fmri_data, self.fmri_pa_data, self.project.topup_fmri_params, motion_corr=True, logFile=log)
+            if self.fmri_pa_data.exist and do_susc_corr:    # want to correct
+
+                ap_distorted = self.fmri_data.add_postfix2name("_distorted")
+                if ap_distorted.exist and not do_overwrite:
+                    pass
+                else:
+                    if ap_distorted.exist:          # already done  ==> rollback changes
+                        self.fmri_data.rm(logFile=log)
+                        ap_distorted.cp(self.fmri_data, logFile=log)
+                    else:                           # never done ==> create backup copy
+                        self.fmri_data.cp(ap_distorted, logFile=log)
+
+                    try:
+                        self.epi.topup_correction(self.fmri_data, self.fmri_pa_data, self.project.topup_fmri_params, motion_corr=True, logFile=log)
+                    except Exception as e:
+                        print("UNRECOVERABLE ERROR: " + str(e))
+                        ap_distorted.mv(self.rs_data, logFile=log)
+                        break
 
             self.transform.transform_fmri(logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
+            break
 
         # ==============================================================================================================================================================
         # T2 data
@@ -707,13 +745,17 @@ class Subject:
 
             self.dti.get_nodiff()  # create nodif & nodif_brain in roi/reg_dti
 
-            if not Image(os.path.join(self.dti_dir, self.dti_fit_label + "_FA")).exist and do_dtifit:
+            if not self.dti_fit_FA.exist and do_dtifit:
                 print("===========>>>> " + self.label + " : dtifit")
 
                 if not do_pa_eddy:
                     self.dti.eddy_correct(do_overwrite, log)
                 else:
-                    self.dti.eddy(logFile=log)
+                    if do_eddy_gpu:
+                        self.dti.eddy(exe_ver=self._global.eddy_gpu_exe_name, logFile=log)
+                    else:
+                        self.dti.eddy(exe_ver="eddy_openmp", logFile=log)
+
 
                 self.dti.fit(log)
 
@@ -745,7 +787,7 @@ class Subject:
         # ==============================================================================================================================================================
         # EXTRA
         # ==============================================================================================================================================================
-        self.transform.transform_extra(logFile=log)
+        self.transform.transform_extra()
 
     # ==================================================================================================================================================
     # DATA CONVERSIONS

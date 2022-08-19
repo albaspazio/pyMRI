@@ -3,30 +3,26 @@ import os
 from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
 
+
 # ======================================================================================================================
 # LINEAR
 # ======================================================================================================================
 def flirt(omat, inimg, ref,
           params="-cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear",
           logFile=None):
-    if not Image(inimg).exist:
-        print("ERROR in flirt: input image (" + inimg + ") is not valid....exiting")
-        return
+    inimg   = Image(inimg, must_exist=True, msg="ERROR in flirt: input image is not valid")
+    ref     = Image(ref, must_exist=True, msg="ERROR in flirt: ref image is not valid")
 
-    if not Image(ref).exist:
-        print("ERROR in flirt: ref image (" + ref + ") is not valid....exiting")
-        return
-
-    outdir = os.path.dirname(omat)
+    outdir  = os.path.dirname(omat)
     if not os.path.isdir(outdir):
-        print("ERROR in flirt, output dir (" + outdir + ") does not exist")
+        raise Exception("ERROR in flirt, output dir (" + outdir + ") does not exist")
 
     rrun("flirt -in " + inimg + " -ref " + ref + " -omat " + omat + " " + params, logFile=logFile)
 
 
-def check_flirt(omat, inimg, ref,
-                params="-cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear",
+def check_flirt(omat, inimg, ref, params="-cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear",
                 overwrite=False, logFile=None):
+
     if not os.path.exists(omat) or overwrite:
         flirt(omat, inimg, ref, params, logFile=logFile)
 
@@ -36,6 +32,10 @@ def check_invert_mat(omat, imat, overwrite=False, logFile=None):
         if not os.path.exists(imat):
             raise Exception("ERROR in check_invert_mat, input mat (" + imat + ") does not exist")
         else:
+            outdir = os.path.dirname(omat)
+            if not os.path.isdir(outdir):
+                raise Exception("ERROR in flirt, output dir (" + outdir + ") does not exist")
+
             rrun("convert_xfm -inverse -omat " + omat + " " + imat, logFile=logFile)
 
 
@@ -44,6 +44,10 @@ def check_concat_mat(omat, imat1, imat2, overwrite=False, logFile=None):
         if not os.path.exists(imat1) or not os.path.exists(imat2):
             raise Exception("ERROR in check_concat_mat, input mat1 (" + imat1 + ") or input mat2 (" + imat2 + ") does not exist")
         else:
+            outdir = os.path.dirname(omat)
+            if not os.path.isdir(outdir):
+                raise Exception("ERROR in flirt, output dir (" + outdir + ") does not exist")
+
             rrun("convert_xfm -omat " + omat + " -concat " + imat1 + " " + imat2, logFile=logFile)
 
 

@@ -89,23 +89,28 @@ if __name__ == "__main__":
         # ---------------------------------------------------------------------------------------------------------------------
         # 5: WELLCOME
         # ---------------------------------------------------------------------------------------------------------------------
-        # def wellcome(self, do_anat=True, odn="anat", imgtype=1, smooth=10,
+        # def wellcome(self, do_overwrite=False,
+        #              do_fslanat=True, odn="anat", imgtype=1, smooth=10,
         #              biascorr_type=SubjectMpr.BIAS_TYPE_STRONG,
         #              do_reorient=True, do_crop=True,
-        #              do_bet=True, betfparam=[0.5],
+        #              do_bet=True, betfparam=None,
         #              do_sienax=False, bet_sienax_param_string="-SNB -f 0.2",
         #              do_reg=True, do_nonlinreg=True, do_seg=True,
         #              do_spm_seg=False, spm_seg_templ="", spm_seg_over_bet=False,
-        #              do_cat_seg=False, cat_use_dartel=False, do_cat_surf=True,
-        #              do_cat_seg_long=False, cat_long_sessions=[1],
-        #              do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
+        #              do_cat_seg=False, cat_use_dartel=False, do_cat_surf=True, cat_smooth_surf=None,
+        #              do_cat_seg_long=False, cat_long_sessions=None,
+        #              do_cleanup=True, do_strongcleanup=False,
         #              use_lesionmask=False, lesionmask="lesionmask",
         #              do_freesurfer=False, do_complete_fs=False, fs_seg_over_bet=False,
         #              do_first=False, first_struct="", first_odn="",
-        #              do_epirm2vol=0, do_susc_corr=False, do_aroma=True, do_nuisance=True, hpfsec=100,
-        #              feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic", do_featinitreg=False,
-        #              do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=True,
-        #              do_dtifit=True, do_pa_eddy=False, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
+        #
+        #              do_rs=True, do_epirm2vol=0, do_susc_corr=False,
+        #              do_aroma=True, do_nuisance=True, hpfsec=100, feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
+        #              do_featinitreg=False, do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=True,
+        #
+        #              do_fmri=True,
+        #
+        #              do_dtifit=True, do_pa_eddy=False, do_eddy_gpu=False, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
         #              do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",
         #              do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0):
 

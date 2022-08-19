@@ -3,10 +3,10 @@ import os
 import shutil
 from shutil import move, copyfile
 import xml.etree.ElementTree as ET
+import collections
 
 # https://stackoverflow.com/questions/30045106/python-how-to-extend-str-and-overload-its-constructor
 from utility.exceptions import NotExistingImageException
-from utility.images.images import immerge
 from utility.myfsl.utils.run import rrun
 from utility.utilities import compress, gunzip, fillnumber2fourdigits
 
@@ -15,7 +15,7 @@ class Image(str):
 
     IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".img", ".nii", ".mgz", ".gii"]
 
-    def __new__(cls, value, must_exist=False):
+    def __new__(cls, value, must_exist=False, msg=""):
         return super(Image, cls).__new__(cls, value)
 
     def __init__(self, value, must_exist=False, msg=""):
@@ -37,7 +37,6 @@ class Image(str):
         if must_exist and not self.exist:
             raise NotExistingImageException(msg, self)
 
-
     @property
     def exist(self):
         return self.imtest()
@@ -47,8 +46,16 @@ class Image(str):
         return self.uimtest()
 
     @property
-    def spmpath(self):
-        return self.fpathnoext + ".nii"
+    def cexist(self):
+        return self.cimtest()
+
+    @property
+    def upath(self):
+        return Image(self.fpathnoext + ".nii")
+
+    @property
+    def cpath(self):
+        return Image(self.fpathnoext + ".nii.gz")
 
     # ===============================================================================================================================
     # FOLDERS, NAME, EXTENSIONS,
@@ -93,12 +100,12 @@ class Image(str):
     # EXIST, COPY, REMOVE, MOVE, MASS MOVE
     # ===========================================================================================================
 
-    # return False if no image exists or True if the image exists
+    # return False if neither compressed nor uncompressed images exist or True if either compressed or uncompressed image exists
     def imtest(self):
         # if self == "":
         #     return False
 
-        if os.path.isfile(self.fpathnoext + ".nii") or os.path.isfile(self.fpathnoext + ".nii.gz") or os.path.isfile(self.fpathnoext + ".mgz"):
+        if os.path.isfile(self.upath) or os.path.isfile(self.cpath) or os.path.isfile(self.fpathnoext + ".mgz"):
             return True
 
         if os.path.isfile(self.fpathnoext + ".mnc") or os.path.isfile(self.fpathnoext + ".mnc.gz"):
@@ -118,12 +125,37 @@ class Image(str):
         # only gets to here if there was a hdr and an img file
         return True
 
-    # return False if no image exists or True if the image exists
+    # return False if compressed image does not exist or True if compressed image exists
+    def cimtest(self):
+        # if self == "":
+        #     return False
+
+        if os.path.isfile(self.cpath):
+            return True
+
+        if os.path.isfile(self.fpathnoext + ".mnc.gz"):
+            return True
+
+        if os.path.isfile(self.fpathnoext + ".gii"):
+            return True
+
+        if not os.path.isfile(self.fpathnoext + ".hdr.gz"):
+            # return 0 here as no header exists and no single image means no image!
+            return False
+
+        if not os.path.isfile(self.fpathnoext + ".img.gz"):
+            # return 0 here as no img file exists and no single image means no image!
+            return False
+
+        # only gets to here if there was a hdr and an img file
+        return True
+
+    # return False if uncompressed image does not exist or True if uncompressed image exists
     def uimtest(self):
         # if self == "":
         #     return False
 
-        if os.path.isfile(self.fpathnoext + ".nii"):
+        if os.path.isfile(self.upath):
             return True
 
         if os.path.isfile(self.fpathnoext + ".mnc"):
@@ -238,6 +270,7 @@ class Image(str):
 
         if logFile is not None:
             print("rm " + self.fpathnoext, file=logFile)
+
     # ===============================================================================================================================
     # utilities
     # ===============================================================================================================================
@@ -380,7 +413,7 @@ class Image(str):
 
     # check whether nii does not exist but nii.gz does => create the nii copy preserving (by default) the nii.gz one
     def check_if_uncompress(self, replace=False):
-        if not os.path.isfile(self.fpathnoext + ".nii") and os.path.isfile(self.fpathnoext + ".nii.gz"):
+        if not self.uexist and self.cexist:
             self.unzip(replace=replace)
 
     # preserve given volumes
@@ -405,6 +438,27 @@ class Image(str):
         shutil.rmtree(tempdir)
         os.chdir(currdir)
         os.system("rm " + os.path.join(outdir, "temp_*"))
+
+    def get_nth_volume(self, out_img=None, out_mask_img=None, volnum=3, logFile=None):
+
+        if out_mask_img is None:
+            out_mask_img = self.add_postfix2name("_mask")
+
+        prefilt_func_data = Image(self.add_postfix2name("_prefiltered_func_data"))
+
+        rrun("fslmaths "    + self.fpathnoext + " " + prefilt_func_data + " -odt float", logFile=logFile)
+        rrun("fslroi "      + prefilt_func_data + " " + out_img + " " + str(volnum) + " 1", logFile=logFile)
+        rrun("bet2 "        + out_img + " " + out_img + " -f 0.3", logFile=logFile)
+        rrun("fslmaths "    + out_img + " -bin " + out_mask_img,  logFile=logFile)  # create example_function mask (a -thr 0.01/0.1 could have been used to further reduce it)
+        prefilt_func_data.rm(logFile=logFile)
+
+        return out_img
+
+    def add_postfix2name(self, postfix):
+        return Image(self.fpathnoext + postfix + self.ext)
+
+    def add_prefix2name(self, prefix):
+        return Image(os.path.join(self.dir, prefix + self.fpathnoext + self.ext))
 
 
 class Images(list):
@@ -439,3 +493,20 @@ class Images(list):
             if logFile is not None:
                 print("mv " + img + " " + dest_file, file=logFile)
 
+
+def immerge(out_img, premerge_labels=None):
+    seq_string = " "
+
+    if premerge_labels is None:
+        seq_string = "./*"
+    elif isinstance(premerge_labels, str):
+        seq_string = premerge_labels + "*"
+    elif isinstance(premerge_labels, collections.Sequence):
+        for seq in premerge_labels:
+            seq_string = seq_string + out_img + "_" + seq + " "
+    else:
+        print("Error in immerge, given premerge_labels is not in a correct format")
+        return
+
+    os.system("fslmerge -t " + out_img + " " + seq_string)
+    # rrun("fslmerge -t " + out_img + " " + seq_string)

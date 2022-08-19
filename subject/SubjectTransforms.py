@@ -567,7 +567,7 @@ class SubjectTransforms:
         rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_wm_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_wm_fmri"), logFile=logFile)
         rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_csf_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_csf_fmri"), logFile=logFile)
         rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_brain_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_brain_fmri"), logFile=logFile)
-        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir,"t1_brain_mask_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_brain_fmri"), logFile=logFile)
+        rrun("fslmaths " + os.path.join(self.subject.roi_fmri_dir, "t1_brain_mask_fmri") + " -thr 0.2 -bin " + os.path.join(self.subject.roi_fmri_dir, "mask_t1_brain_fmri"), logFile=logFile)
 
     # DTI <-- (lin) -- HIGHRES -- (non-lin) --> STANDARD
     # creates  (18) :   dti2hr.mat, hr2dti.mat,     dti2std_warp, std2dti_warp  , dti2std_mat, std2dti_mat

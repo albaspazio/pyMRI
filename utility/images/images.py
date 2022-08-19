@@ -1,4 +1,3 @@
-import collections
 import glob
 import json
 import os
@@ -13,34 +12,6 @@ IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".i
 # ===============================================================================================================================
 # FOLDERS, NAME, EXTENSIONS,
 # ===============================================================================================================================
-
-# return [path/filename_noext, ext with point]
-def img_split_ext(img, img_formats=None):
-
-    if img_formats is None:
-        img_formats = IMAGE_FORMATS
-
-    fullext = ""
-    for imgext in img_formats:
-        if img.endswith(imgext):
-            fullext = imgext  # [1:]
-            break
-    filename = img.replace(fullext, '')
-    return [filename, fullext]
-
-
-def add_postfix2name(img, postfix):
-    filename, fullext = img_split_ext(img)  # ext contains the dot
-    return filename + postfix + fullext
-
-
-def add_prefix2name(img, prefix):
-    filepath, fullext   = img_split_ext(img)  # ext contains the dot
-    path                = os.path.dirname(filepath)
-    filename            = os.path.basename(filepath)
-    return os.path.join(path, prefix + filename + fullext)
-
-
 # move a series of images defined by wildcard string ( e.g.   *fast*
 def mass_images_move(wildcardsource, destdir, logFile=None):
     files = glob.glob(wildcardsource)
@@ -57,23 +28,6 @@ def mass_images_move(wildcardsource, destdir, logFile=None):
         move(img, dest_file)
         if logFile is not None:
             print("mv " + img + " " + dest_file, file=logFile)
-
-def immerge(out_img, premerge_labels=None):
-    seq_string = " "
-
-    if premerge_labels is None:
-        seq_string = "./*"
-    elif isinstance(premerge_labels, str):
-        seq_string = premerge_labels + "*"
-    elif isinstance(premerge_labels, collections.Sequence):
-        for seq in premerge_labels:
-            seq_string = seq_string + out_img + "_" + seq + " "
-    else:
-        print("Error in immerge, given premerge_labels is not in a correct format")
-        return
-
-    os.system("fslmerge -t " + out_img + " " + seq_string)
-    # rrun("fslmerge -t " + out_img + " " + seq_string)
 
 
 # divide the tbss mean skeleton in images according to a given atlas file (where each volume is specific tract)

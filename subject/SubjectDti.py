@@ -19,12 +19,10 @@ class SubjectDti:
     def get_nodiff(self, logFile=None):
 
         if not self.subject.dti_nodiff_data.exist:
-            rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1",
-                 logFile=logFile)
+            rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1", logFile=logFile)
 
         if not self.subject.dti_nodiff_brain_data.exist:
-            rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3",
-                 logFile=logFile)  # also creates dti_nodiff_brain_mask_data
+            rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
 
     # eddy correction when PA sequence is not available
     def eddy_correct(self, overwrite=False, logFile=None):
@@ -52,9 +50,21 @@ class SubjectDti:
         if acq_params is None:
             acq_params = self.subject.project.topup_dti_params
 
+        if json is None:
+            json = self.subject.project.eddy_dti_json
+
+        if not (rep_out == "both" or rep_out == "gw" or rep_out == "sw" or rep_out == ""):
+            print("ERROR in eddy of subject: " + self.subject.label + ", rep_out (" + str(rep_out) + ") param must be one of the following: sw,gw,both,'', exiting.....")
+            return
+
         if not os.path.exists(acq_params):
             print("ERROR in eddy of subject: " + self.subject.label + ", acq_params file does not exist, exiting.....")
             return
+
+        if not os.path.exists(json):
+            if (rep_out == "both" or rep_out == "gw" or rep_out == "sw") or slice2vol > 0:
+                print("ERROR in eddy of subject: " + self.subject.label + ", json file does not exist and repol type was set or mporder > 0 , exiting.....")
+                return
 
         if not os.path.exists(self.subject.project.eddy_index):
             print("ERROR in eddy of subject: " + self.subject.label + ", eddy_index file does not exist, exiting.....")
@@ -62,22 +72,25 @@ class SubjectDti:
 
         if not self.subject.dti_pa_data.exist:
             print("ERROR in eddy, PA sequence is not available, cannot do eddy")
+            return
+
         # ----------------------------------------------------------------
         # parameters
+        # ----------------------------------------------------------------
         if estmove:
             str_estmove = " --estimate_move_by_susceptibility"
         else:
             str_estmove = ""
 
-        if json is not None:
-            str_json = " --json=" + json
-        else:
+        if json == "":
             str_json = ""
-
-        if rep_out is not None:
-            str_rep_out = " --repol --ol_type=" + rep_out
         else:
+            str_json = " --json=" + json
+
+        if rep_out == "":
             str_rep_out = ""
+        else:
+            str_rep_out = " --repol --ol_type=" + rep_out
 
         if slice2vol == 0:
             str_slice2vol = ""
@@ -86,7 +99,7 @@ class SubjectDti:
 
         # -----------------------------------------------------------------
         # check whether requested eddy version exist
-        exe_ver = os.path.join(self.subject.globaldata.fsl_dir, "bin", exe_ver)
+        exe_ver = os.path.join(self.subject._global.fsl_dir, "bin", exe_ver)
         if not os.path.exists(exe_ver):
             print("ERROR in eddy of subject: " + self.subject.label + ", eddy exe version (" + exe_ver + ") does not exist, exiting.....")
             return
@@ -124,6 +137,10 @@ class SubjectDti:
                        " --topup=" + topup_results + " --out=" + eddy_corrected_data + str_estmove + str_slice2vol + str_json + str_rep_out, logFile=logFile)
 
         os.rename(self.subject.dti_eddyrotated_bvec, self.subject.dti_rotated_bvec)
+
+        os.system("rm " + self.subject.dti_dir + "/" + "ap_*")
+        os.system("rm " + self.subject.dti_dir + "/" + "pa_*")
+        os.system("rm " + self.subject.dti_dir + "/" + "hifi_*")
 
     # use_ec = True: eddycorrect, False: eddy
     def fit(self, logFile=None):
