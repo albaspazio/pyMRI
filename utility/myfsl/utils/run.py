@@ -214,11 +214,11 @@ def rrun(*args, **kwargs):
     submit = kwargs.get('submit', {})
     stop_on_error = kwargs.get('stop_on_error', True)
 
-    log = kwargs.get('log', {})
-    tee = log.get('tee', False)
-    logStdout = log.get('stdout', None)
-    logStderr = log.get('stderr', None)
-    logCmd = log.get('cmd', False)
+    _log = kwargs.get('log', {})
+    tee = _log.get('tee', False)
+    logStdout = _log.get('stdout', None)
+    logStderr = _log.get('stderr', None)
+    logCmd = _log.get('cmd', False)
 
     # added to write cmd string, returns and error to the given file descriptor
     logFile = kwargs.get('logFile', None)

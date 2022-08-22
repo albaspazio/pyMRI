@@ -2,8 +2,6 @@ import os
 from Global import Global
 from group.GroupAnalysis import GroupAnalysis
 from Project import Project
-from utility import images
-# from utility.images import mask_tbss_skeleton_volumes_atlas, mask_tbss_skeleton_folder_atlas
 
 if __name__ == "__main__":
 

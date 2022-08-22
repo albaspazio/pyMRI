@@ -308,18 +308,18 @@ class Project:
     # the latter zip and clean up
     def prepare_mpr_for_setorigin1(self, group_label, sess_id=1, replaceOrig=False, overwrite=False):
         subjects = self.load_subjects(group_label, sess_id)
-        for subj in subjects:
 
+        for subj in subjects:
             if not replaceOrig:
                 subj.t1_data.cp(subj.t1_data + "_old_origin")
 
-            niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
+            niifile = Image(os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii"))
 
-            if os.path.exists(niifile) and not overwrite:
+            if niifile.uexist and not overwrite:
                 print("skipping prepare_mpr_for_setorigin1 for subj " + subj.label)
                 continue
 
-            gunzip(subj.t1_data + ".nii.gz", niifile)
+            subj.t1_data.cpath.unzip(niifile)
             print("unzipped " + subj.label + " mri")
 
     def prepare_mpr_for_setorigin2(self, group_label, sess_id=1):
@@ -327,9 +327,9 @@ class Project:
         subjects = self.load_subjects(group_label, sess_id)
         for subj in subjects:
             niifile = Image(os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii"))
-            Image(subj.t1_data + ".nii.gz").rm()
-            niifile.compress(subj.t1_data + ".nii.gz")
-            Image(niifile).rm()
+            subj.t1_data.cpath.rm()
+            niifile.compress(subj.t1_data.cpath)
+            niifile.rm()
             print("zipped " + subj.label + " mri")
     #endregion
 

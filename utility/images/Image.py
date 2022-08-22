@@ -57,6 +57,18 @@ class Image(str):
     def cpath(self):
         return Image(self.fpathnoext + ".nii.gz")
 
+    @property
+    def nslices(self):
+        return self.getnslices()
+
+    @property
+    def nvols(self):
+        return self.getnvol()
+
+    @property
+    def TR(self):
+        return self.get_tr()
+
     # ===============================================================================================================================
     # FOLDERS, NAME, EXTENSIONS,
     # ===============================================================================================================================
@@ -185,9 +197,9 @@ class Image(str):
                 print("WARNING in cp. src image (" + self + ") does not exist, skip copy and continue")
 
         ext = ""
-        if os.path.isfile(self.fpathnoext + ".nii"):
+        if os.path.isfile(self.upath):
             ext = ".nii"
-        elif os.path.isfile(self.fpathnoext + ".nii.gz"):
+        elif os.path.isfile(self.cpath):
             ext = ".nii.gz"
 
         dest            = Image(dest)
@@ -227,9 +239,9 @@ class Image(str):
                 print("WARNING in mv. src image (" + self + ") does not exist, skip copy and continue")
 
         ext = ""
-        if os.path.isfile(self.fpathnoext + ".nii"):
+        if os.path.isfile(self.upath):
             ext = ".nii"
-        elif os.path.isfile(self.fpathnoext + ".nii.gz"):
+        elif os.path.isfile(self.cpath):
             ext = ".nii.gz"
         elif os.path.isfile(self.fpathnoext + ".gii"):
             ext = ".gii"
@@ -252,11 +264,11 @@ class Image(str):
         
         if self.ext == "":
             # delete all the existing ones
-            if os.path.isfile(self.fpathnoext + ".nii"):
-                os.remove(self.fpathnoext + ".nii")
+            if os.path.isfile(self.upath):
+                os.remove(self.upath)
                 
-            if os.path.isfile(self.fpathnoext + ".nii.gz"):
-                os.remove(self.fpathnoext + ".nii.gz")
+            if os.path.isfile(self.cpath):
+                os.remove(self.cpath)
 
             if os.path.isfile(self.fpathnoext + ".mgz"):
                 os.remove(self.fpathnoext + ".mgz")
@@ -279,6 +291,9 @@ class Image(str):
 
     def get_nvoxels(self):
         return int(rrun("fslstats " + self + " -V").strip().split(" ")[0])
+
+    def getnslices(self):
+        return int(rrun("fslval " + self + " dim3"))
 
     def get_image_volume(self):
         return int(rrun("fslstats " + self + " -V").strip().split(" ")[1])
@@ -356,7 +371,7 @@ class Image(str):
         hdr = self.read_header()
         return int(hdr["nx"]) * int(hdr["ny"]) * int(hdr["nz"]) * float(hdr["dx"]) * float(hdr["dy"]) * float(hdr["dz"])
 
-    def get_epi_tr(self):
+    def get_tr(self):
         return float(rrun('fslval ' + self + ' pixdim4'))
 
     # extract header in xml format and returns it as a (possibly filtered by list_field) dictionary
@@ -394,22 +409,20 @@ class Image(str):
 
     def compress(self, dest=None, replace=True):
         if dest is None:
-            udest   = self.fpathnoext + ".nii.gz"
+            udest   = self.cpath
         else:
-            dest  = Image(dest)
-            udest = dest.fpathnoext + ".nii.gz"
+            udest = Image(dest).cpath
 
-        compress(self.fpathnoext + ".nii", udest, replace)
+        compress(self.upath, udest, replace)
 
     # unzip file to a given path, deleting (by default) the original nii.gz
     def unzip(self, dest=None, replace=True):
 
         if dest is None:
-            udest   = self.fpathnoext + ".nii"
+            udest   = self.upath
         else:
-            dest    = Image(dest)
-            udest   = dest.fpathnoext + ".nii"
-        gunzip(self.fpathnoext + ".nii.gz", udest, replace)
+            udest   = Image(dest).upath
+        gunzip(self.cpath, udest, replace)
 
     # check whether nii does not exist but nii.gz does => create the nii copy preserving (by default) the nii.gz one
     def check_if_uncompress(self, replace=False):

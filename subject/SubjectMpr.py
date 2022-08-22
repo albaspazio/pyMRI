@@ -586,8 +586,8 @@ class SubjectMpr:
         for atl in atlases:
             str_atlases += "'" + os.path.join(self._global.cat_dir, "atlases_surfaces", "lh." + atl + ".freesurfer.annot") + "'\n"
 
-        srcinputimage   = os.path.join(anatdir, T1 + "_biascorr")
-        inputimage      = os.path.join(self.subject.t1_cat_dir, T1 + "_" + self.subject.label)
+        srcinputimage   = Image(os.path.join(anatdir, T1 + "_biascorr"))
+        inputimage      = Image(os.path.join(self.subject.t1_cat_dir, T1 + "_" + self.subject.label))
 
         icv_file        = os.path.join(self.subject.t1_cat_dir, "tiv_" + self.subject.label + ".txt")
         brain_mask      = Image(os.path.join(self.subject.t1_cat_dir, "brain_mask.nii.gz"))
@@ -611,12 +611,12 @@ class SubjectMpr:
             # I may want to process with cat after having previously processed without having set image's origin.
             # thus I may have created a nii version in the cat_proc folder , with the origin properly set
             # unzip nii.gz -> nii in cat folder only if nii is absent or I want to overwrite it.
-            if use_existing_nii and not os.path.exists(srcinputimage + ".nii.gz"):
+            if use_existing_nii and not srcinputimage.cpath:
                 print("Error in subj: " + self.subject.label + ", method: cat_segment, given image in cat folder is absent")
             else:
 
-                if os.path.exists(srcinputimage + ".nii.gz"):
-                    gunzip(srcinputimage + ".nii.gz", inputimage + ".nii")
+                if srcinputimage.cexist:
+                    srcinputimage.unzip(inputimage)
                 else:
                     print("Error in subj: " + self.subject.label + ", method: cat_segment, biascorr image is absent")
 
@@ -655,7 +655,7 @@ class SubjectMpr:
             call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], log)
 
             if not use_existing_nii:
-                Image(inputimage + ".nii").rm()
+                inputimage.upath.rm()
 
             log.close()
 
@@ -768,11 +768,11 @@ class SubjectMpr:
                 os.makedirs(subj.t1_cat_dir, exist_ok=True)
 
                 # I may want to process with cat after having previously processed without having set image's origin.
-                # thus I may have created a nii version in the cat_proc folder , with the origin properly set
+                # thus I may have created a nii version in the cat_proc folder, with the origin properly set
                 # unzip T1_biascorr.nii.gz -> nii in cat folder only if nii is absent or I want to overwrite it.
                 if not use_existing_nii:
-                    if os.path.exists(srcinputimage + ".nii.gz"):
-                        srcinputimage.unzip(inputimage + ".nii")
+                    if srcinputimage.cexist:
+                        srcinputimage.unzip(inputimage)
                     else:
                         print("Error in subj: " + self.subject.label + ", method: cat_segment, biascorr image is absent")
                 else:
@@ -783,8 +783,8 @@ class SubjectMpr:
                 if set_origin:
                     input("press keyboard when finished setting the origin for subj " + subj.label + " :")
 
-                images_string = images_string + "'" + inputimage + ".nii,1'\n"
-                images_list.append(inputimage + ".nii")
+                images_string = images_string + "'" + inputimage.upath + ",1'\n"
+                images_list.append(inputimage.upath)
 
             if calc_surfaces:
                 str_surf = "1"
@@ -1267,12 +1267,14 @@ class SubjectMpr:
 
             rrun("recon-all -subject freesurfer" + " -i " + self.subject.t1_data + ".mgz " + step + " -threads " + str(numcpu), logFile=log)
 
+            t1_fs_data_orig = self.subject.t1_fs_data.add_postfix2name("_orig")
+
             # calculate linear trasf to move coronal-conformed T1 back to original reference (specified by backtransfparams)
             # I convert T1.mgz => nii.gz, then I swapdim to axial and coregister to t1_data
-            rrun("mri_convert " + self.subject.t1_fs_data + ".mgz " + self.subject.t1_fs_data + ".nii.gz")
-            rrun("fslswapdim " + self.subject.t1_fs_data + ".nii.gz" + backtransfparams + self.subject.t1_fs_data + "_orig.nii.gz")
-            rrun("flirt -in " + self.subject.t1_fs_data + "_orig.nii.gz" + " -ref " + self.subject.t1_data + " -omat " + os.path.join(self.subject.t1_fs_mri_dir, "fscor2t1.mat") + " -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
-            Images([self.subject.t1_fs_data + ".nii.gz", self.subject.t1_fs_data + "_orig.nii.gz"])
+            rrun("mri_convert " + self.subject.t1_fs_data + ".mgz " + self.subject.t1_fs_data.cpath)
+            rrun("fslswapdim " + self.subject.t1_fs_data.cpath + backtransfparams + t1_fs_data_orig.cpath)
+            rrun("flirt -in " + t1_fs_data_orig.cpath + " -ref " + self.subject.t1_data + " -omat " + os.path.join(self.subject.t1_fs_mri_dir, "fscor2t1.mat") + " -cost corratio -dof 6 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear")
+            Images([self.subject.t1_fs_data.cpath, t1_fs_data_orig.cpath])
 
             if step == "-all":
                 rrun("mri_convert " + os.path.join(self.subject.t1_dir, "freesurfer", "mri", "aparc+aseg.mgz") + " " + os.path.join(self.subject.t1_dir, "freesurfer", "aparc+aseg.nii.gz"), logFile=log)
@@ -1291,17 +1293,20 @@ class SubjectMpr:
     # since the latter op create holes within the image. I create a mask with the latter and the bet mask (which must be coregistered since fs ones are coronal)
     def use_fs_brainmask(self, backtransfparams=" RL PA IS ", erosiontype=" -kernel boxv 5 ", is_interactive=True, do_clean=True):
 
+        t1_fs_brainmask_data_orig       = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig")
+        t1_fs_brainmask_data_orig_ero   = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero")
+
         # convert fs brainmask to nii.gz => move to the same orientation as working image (usually axial) => erode it
-        rrun("mri_convert " + self.subject.t1_fs_brainmask_data + ".mgz " + self.subject.t1_fs_brainmask_data + ".nii.gz")
-        rrun("fslswapdim " + self.subject.t1_fs_brainmask_data + ".nii.gz" + backtransfparams + self.subject.t1_fs_brainmask_data + "_orig.nii.gz")
+        rrun("mri_convert " + self.subject.t1_fs_brainmask_data + ".mgz " + self.subject.t1_fs_brainmask_data.cpath)
+        rrun("fslswapdim " + self.subject.t1_fs_brainmask_data.cpath + backtransfparams + t1_fs_brainmask_data_orig.cpath)
 
         if erosiontype != "":
-            rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig.nii.gz" + erosiontype + " -ero " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
+            rrun("fslmaths " + t1_fs_brainmask_data_orig.cpath + erosiontype + " -ero " + t1_fs_brainmask_data_orig_ero.cpath)
         else:
-            Image((self.subject.t1_fs_brainmask_data + "_orig.nii.gz")).cp(self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
+            t1_fs_brainmask_data_orig.cpath.cp(t1_fs_brainmask_data_orig_ero.cpath)
 
         if is_interactive:
-            rrun("fsleyes " + self.subject.t1_data + " " + self.subject.t1_brain_data + " " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz", stop_on_error=False)
+            rrun("fsleyes " + self.subject.t1_data + " " + self.subject.t1_brain_data + " " + t1_fs_brainmask_data_orig_ero.cpath, stop_on_error=False)
 
             do_substitute = input("do you want to substitute bet image with this one? press y or n\n : ")
 
@@ -1312,42 +1317,48 @@ class SubjectMpr:
             self.use_fs_brainmask_exec(do_clean)
 
         if do_clean:
-            Images([self.subject.t1_fs_brainmask_data + ".nii.gz",
-                  self.subject.t1_fs_brainmask_data + "_orig.nii.gz",
-                  self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz"]).rm()
+            Images([self.subject.t1_fs_brainmask_data.cpath,
+                    t1_fs_brainmask_data_orig.cpath,
+                    t1_fs_brainmask_data_orig_ero.cpath]).rm()
 
     def use_fs_brainmask_exec(self, add_previous=False, do_clean=True):
 
+        t1_fs_brainmask_data_orig_ero       = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero")
+        t1_fs_brainmask_data_orig_ero_mask  = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero_mask")
+        t1_fs_brainmask_data_orig_ero_in_t1 = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero_in_t1")
+
         # I may have manually edited self.t1_fs_brainmask + "_orig_ero.nii.gz"
-        # although is at the same reference as working image, it still have to be co-registered
+        # although is at the same reference as working image, it still has to be co-registered
         # 1) I move this orig brainmask to the same space as t1 and t1_brain, applying the coronalconformed->original transformation to eroded brainmask_orig
-        rrun("flirt -in " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz" + " -ref " + self.subject.t1_data + " -out " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -applyxfm -init " + os.path.join(self.subject.t1_fs_mri_dir, "fscor2t1.mat") + " -interp trilinear")
+        rrun("flirt -in " + t1_fs_brainmask_data_orig_ero + " -ref " + self.subject.t1_data + " -out " + t1_fs_brainmask_data_orig_ero_in_t1 + " -applyxfm -init " + os.path.join(self.subject.t1_fs_mri_dir, "fscor2t1.mat") + " -interp trilinear")
 
         if add_previous:
             # => I create its mask (with holes) and add to the bet's one (assumed as smaller but without holes)
-            rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -bin -add " + self.subject.t1_brain_data_mask + " -bin " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz")
+            rrun("fslmaths " + t1_fs_brainmask_data_orig_ero_in_t1 + " -bin -add " + self.subject.t1_brain_data_mask + " -bin " + t1_fs_brainmask_data_orig_ero_mask)
         else:
             # => just fill holes
-            rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -bin -fillh " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz")
+            rrun("fslmaths " + t1_fs_brainmask_data_orig_ero_in_t1 + " -bin -fillh " + t1_fs_brainmask_data_orig_ero_mask)
 
-        Image(self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz").cp(self.subject.t1_brain_data_mask)  # substitute bet mask with this one
+        t1_fs_brainmask_data_orig_ero_mask.cp(self.subject.t1_brain_data_mask)  # substitute bet mask with this one
         rrun("fslmaths " + self.subject.t1_data + " -mas " + self.subject.t1_brain_data_mask + " " + self.subject.t1_brain_data)
 
         if do_clean:
-            Image(self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz").rm()
+            t1_fs_brainmask_data_orig_ero_in_t1.cpath.rm()
 
     # check whether substituting bet brain with the one created by SPM-segment.
     # since the SPM GM+WM mask contains holes within the image. I create a mask with the latter and the bet mask (which must be coregistered since fs ones are coronal)
-    def use_spm_brainmask(self, backtransfparams=" RL PA IS ", erosiontype=" -kernel boxv 5 ", is_interactive=True,
-                          do_clean=True):
+    def use_spm_brainmask(self, backtransfparams=" RL PA IS ", erosiontype=" -kernel boxv 5 ", is_interactive=True, do_clean=True):
+
+        t1_fs_brainmask_data_orig           = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig")
+        t1_fs_brainmask_data_orig_ero       = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero")
 
         # convert fs brainmask to nii.gz => move to the same orientation as working image (usually axial) => erode it
-        rrun("mri_convert " + self.subject.t1_fs_brainmask_data + ".mgz " + self.subject.t1_fs_brainmask_data + ".nii.gz")
-        rrun("fslswapdim " + self.subject.t1_fs_brainmask_data + ".nii.gz" + backtransfparams + self.subject.t1_fs_brainmask_data + "_orig.nii.gz")
-        rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig.nii.gz" + erosiontype + " -ero " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
+        rrun("mri_convert " + self.subject.t1_fs_brainmask_data + ".mgz " + self.subject.t1_fs_brainmask_data.cpath)
+        rrun("fslswapdim " + self.subject.t1_fs_brainmask_data.cpath + backtransfparams + t1_fs_brainmask_data_orig.cpath)
+        rrun("fslmaths " + t1_fs_brainmask_data_orig.cpath + erosiontype + " -ero " + t1_fs_brainmask_data_orig_ero.cpath)
 
         if is_interactive is True:
-            rrun("fsleyes " + self.subject.t1_data + " " + self.subject.t1_brain_data + " " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz")
+            rrun("fsleyes " + self.subject.t1_data + " " + self.subject.t1_brain_data + " " + t1_fs_brainmask_data_orig_ero.cpath)
 
             do_substitute = input("do you want to substitute bet image with this one? press y or n\n : ")
 
@@ -1358,25 +1369,30 @@ class SubjectMpr:
             self.use_spm_brainmask_exec(do_clean)
 
         if do_clean:
-            Images([self.subject.t1_fs_brainmask_data + ".nii.gz", self.subject.t1_fs_brainmask_data + "_orig.nii.gz",
-                  self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz"]).rm()
+            Images([self.subject.t1_fs_brainmask_data.cpath,
+                    t1_fs_brainmask_data_orig.cpath,
+                    t1_fs_brainmask_data_orig_ero.cpath]).rm()
 
     def use_spm_brainmask_exec(self, do_clean=True):
 
+        t1_fs_brainmask_data_orig_ero       = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero")
+        t1_fs_brainmask_data_orig_ero_mask  = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero_mask")
+        t1_fs_brainmask_data_orig_ero_in_t1 = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero_in_t1")
+
         # I may have manually edited self.t1_fs_brainmask + "_orig_ero.nii.gz"
-        # although is at the same reference as working image, it still have to be co-registered
+        # although is at the same reference as working image, it still has to be co-registered
         # 1) I move this orig brainmask to the same space as t1 and t1_brain, applying the coronalconformed->original transformation to eroded brainmask_orig
-        rrun("flirt -in " + self.subject.t1_fs_brainmask_data + "_orig_ero.nii.gz" + " -ref " + self.subject.t1_data + " -out " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -applyxfm -init " + os.path.join(
+        rrun("flirt -in " + t1_fs_brainmask_data_orig_ero + " -ref " + self.subject.t1_data + " -out " + t1_fs_brainmask_data_orig_ero_in_t1 + " -applyxfm -init " + os.path.join(
                 self.subject.t1_fs_mri_dir, "fscor2t1.mat") + " -interp trilinear")
 
         # => I create its mask (with holes) and add to the bet's one (assumed as smaller but without holes)
-        rrun("fslmaths " + self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz" + " -bin -add " + self.subject.t1_brain_data_mask + " -bin " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz")
+        rrun("fslmaths " + t1_fs_brainmask_data_orig_ero_in_t1 + " -bin -add " + self.subject.t1_brain_data_mask + " -bin " + t1_fs_brainmask_data_orig_ero_mask)
 
-        Image(self.subject.t1_fs_brainmask_data + "_axial_ero_mask.nii.gz").cp(self.subject.t1_brain_data_mask)  # substitute bet mask with this one
-        rrun("fslmaths " + self.subject.t1_data + " -mas " + self.subject.t1_fs_brainmask_data + "_orig_ero_mask.nii.gz" + " " + self.subject.t1_brain_data)
+        t1_fs_brainmask_data_orig_ero_mask.cp(self.subject.t1_brain_data_mask)  # substitute bet mask with this one
+        rrun("fslmaths " + self.subject.t1_data + " -mas " + t1_fs_brainmask_data_orig_ero_mask + " " + self.subject.t1_brain_data)
 
         if do_clean:
-            Image(self.subject.t1_fs_brainmask_data + "_orig_ero_in_t1.nii.gz").rm()
+            t1_fs_brainmask_data_orig_ero_in_t1.rm()
 
     # copy bet, spm and fs extracted brain to given directory
     def compare_brain_extraction(self, tempdir, backtransfparams=" RL PA IS "):
@@ -1396,11 +1412,12 @@ class SubjectMpr:
 
         # freesurfer
         fsmask = Image(os.path.join(self.subject.t1_dir, "freesurfer", "mri", "brainmask"))
+        temp_brain_mask = Image(os.path.join(tempdir, self.subject.label + "_brainmask.nii.gz"))
         if fsmask.exist:
-            rrun("mri_convert " + fsmask + ".mgz " + os.path.join(tempdir, self.subject.label + "_brainmask.nii.gz"))
+            rrun("mri_convert " + fsmask + ".mgz " + temp_brain_mask.cpath)
 
-            rrun("fslswapdim " + os.path.join(tempdir, self.subject.label + "_brainmask.nii.gz") + backtransfparams + os.path.join(tempdir, self.subject.label + "_brainmask.nii.gz"))
-            rrun("flirt -in " + os.path.join(tempdir, self.subject.label + "_brainmask.nii.gz") + " -ref " + self.subject.t1_data + " -out " + os.path.join(tempdir, self.subject.label + "_brainmask.nii.gz") + " -applyxfm -init " + os.path.join(self.subject.t1_fs_mri_dir, "fscor2t1.mat") + " -interp trilinear")
+            rrun("fslswapdim " + temp_brain_mask.cpath + backtransfparams + temp_brain_mask.cpath)
+            rrun("flirt -in " + temp_brain_mask.cpath + " -ref " + self.subject.t1_data + " -out " + temp_brain_mask.cpath + " -applyxfm -init " + os.path.join(self.subject.t1_fs_mri_dir, "fscor2t1.mat") + " -interp trilinear")
 
             # rrun("fslmaths " + os.path.join(tempdir, subj.label + "_brainmask.nii.gz") + " -bin " + os.path.join(tempdir, subj.label + "_brainmask.nii.gz"))
             # rrun("fslmaths " + os.path.join(betdir, "T1_biascorr_brain") + " -mas " + os.path.join(tempdir, subj.label + "_brainmask.nii.gz") + " " + os.path.join(tempdir, subj.label + "_brainmask.nii.gz"))

@@ -451,7 +451,7 @@ class Subject:
                  do_aroma=True, do_nuisance=True, hpfsec=100, feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
                  do_featinitreg=False, do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=True,
 
-                 do_fmri=True,
+                 do_fmri=True, fmri_params=None, fmri_images=None,
 
                  do_dtifit=True, do_pa_eddy=False, do_eddy_gpu=False, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
                  do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",
@@ -545,7 +545,6 @@ class Subject:
             if do_first:
                 if not self.first_all_fast_origsegs.exist and not self.first_all_none_origsegs.exist:
                     self.mpr.first(first_struct, odn=first_odn)
-
 
         # ==============================================================================================================================================================
         # WB data
@@ -695,11 +694,14 @@ class Subject:
         # ==============================================================================================================================================================
         while self.hasFMRI and do_fmri:
 
+            if fmri_params is None:
+                raise Exception("Error in Subject.wellcome of subj " + self.label)
+
             log_file    = os.path.join(self.fmri_dir, "log_fmri_processing.txt")
             log         = open(log_file, "a")
 
             # ------------------------------------------------------------------------------------------------------
-            # susceptibility correction ?
+            # if susceptibility correction is selected. it performs topup correction after motion correction (realignment).
             # ------------------------------------------------------------------------------------------------------
             if self.fmri_pa_data.exist and do_susc_corr:    # want to correct
 
@@ -719,6 +721,13 @@ class Subject:
                         print("UNRECOVERABLE ERROR: " + str(e))
                         ap_distorted.mv(self.rs_data, logFile=log)
                         break
+
+                self.epi.spm_fmri_preprocessing(fmri_images, fmri_params, "subj_spm_fmri_preprocessing_norealign")
+
+            else:
+                self.epi.spm_fmri_preprocessing(fmri_images, fmri_params, "subj_spm_fmri_full_preprocessing")
+                pass
+
 
             self.transform.transform_fmri(logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
             break
@@ -932,7 +941,6 @@ class Subject:
 
         rrun("fslmerge " + dimension + " " + outputname + " " + " ".join(input_files))
         os.chdir(cur_dir)
-
 
     def unzip_data(self, src_zip, dest_dir, replace=True):
         extractall_zip(src_zip, dest_dir, replace)

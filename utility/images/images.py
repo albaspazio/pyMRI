@@ -6,9 +6,6 @@ from shutil import move
 from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
 
-IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".img", ".nii", ".mgz", ".gii"]
-
-
 # ===============================================================================================================================
 # FOLDERS, NAME, EXTENSIONS,
 # ===============================================================================================================================

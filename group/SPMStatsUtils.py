@@ -438,3 +438,14 @@ class Covariate(Regressor):
 class Nuisance(Regressor):
     def __init__(self, name):
         super().__init__(name, True)
+
+
+class FmriProcParams:
+    def __init__(self, tr, nsl, sl_tim, ref_sl=-1, acq_sch=0, ta=0, smooth=6):
+        self.tr             = tr
+        self.nslices        = nsl
+        self.slice_timing   = sl_tim
+        self.ref_slice      = ref_sl
+        self.acq_scheme     = acq_sch
+        self.ta             = ta
+        self.smooth         = smooth

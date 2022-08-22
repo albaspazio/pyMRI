@@ -8,10 +8,16 @@ import matlab.engine.engineerror
 
 
 class MatlabManager:
-    SESSION_NEW_PERSISTENT = 1
-    SESSION_NEW_NOTSHARED = 2
-    SESSION_REUSE_FIRST = 3
-    SESSION_REUSE_NAME = 4
+
+    SESSION_NEW_PERSISTENT  = 1
+    SESSION_NEW_NOTSHARED   = 2
+    SESSION_REUSE_FIRST     = 3
+    SESSION_REUSE_NAME      = 4
+
+    # def __new__(cls):
+    #     if not hasattr(cls, 'instance'):
+    #         cls.instance = super(MatlabManager, cls).__new__(cls)
+    #     return cls.instance
 
     # start a new matlab session or connect to an existing one:
     #   persistent=False : start a new NOT-SHARED one if not existing or connect to an existing SHARED (given by conn2existing) or the first available

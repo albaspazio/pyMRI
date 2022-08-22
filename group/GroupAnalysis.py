@@ -236,7 +236,8 @@ class GroupAnalysis:
 
     # ---------------------------------------------------
     #region MELODIC
-    def group_melodic(self, out_dir_name, subjects_list, tr):
+    @staticmethod
+    def group_melodic(out_dir_name, subjects_list, tr):
 
         if os.path.exists(out_dir_name):
             os.removedirs(out_dir_name)
@@ -357,7 +358,8 @@ class GroupAnalysis:
     # clust_res_dir: output folder of tbss's results clustering
     # datas is a tuple of two elements containing the list of values and subj_labels
     # returns tracts_data
-    def tbss_summarize_clusterized_folder(self, in_clust_res_dir, datas, data_label, tbss_folder, modality="FA",
+    @staticmethod
+    def tbss_summarize_clusterized_folder(in_clust_res_dir, datas, data_label, tbss_folder, modality="FA",
                                           subj_img_postfix="_FA_FA_to_target", ofn="scatter_tracts_", doplot=False):
 
         subjects_images = os.path.join(tbss_folder, modality)  # folder containing tbss subjects' folder of that modality
@@ -411,7 +413,8 @@ class GroupAnalysis:
 
     # create a new tbss analysis folder (only stats one), filtering an existing analysis folder
     # vols2keep: 0-based list of indices to keep
-    def create_analysis_folder_from_existing(self, src_folder, new_folder, vols2keep, modalities=None):
+    @staticmethod
+    def create_analysis_folder_from_existing(src_folder, new_folder, vols2keep, modalities=None):
 
         if modalities is None:
             modalities = ["FA", "MD", "L1", "L23"]

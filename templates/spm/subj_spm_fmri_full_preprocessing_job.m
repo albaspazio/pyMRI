@@ -1,7 +1,5 @@
 %-----------------------------------------------------------------------
-% Job saved on 02-Sep-2019 17:07:32 by cfg_util (rev $Rev: 7345 $)
-% spm SPM - SPM12 (7487)
-% cfg_basicio BasicIO - Unknown
+% Used by SubjectEpi.spm_fmri_preprocessing
 %-----------------------------------------------------------------------
 %%
 matlabbatch{1}.spm.spatial.realign.estwrite.data = {
@@ -73,7 +71,7 @@ matlabbatch{5}.spm.spatial.normalise.write.subj.def(1) = cfg_dep('Segment: Forwa
 <NORMALIZE_WRITE_SESSIONS>
 matlabbatch{5}.spm.spatial.normalise.write.woptions.bb = [-78 -112 -70
                                                           78 76 85];
-matlabbatch{5}.spm.spatial.normalise.write.woptions.vox = [3 3 3];
+matlabbatch{5}.spm.spatial.normalise.write.woptions.vox = [2 2 2];
 matlabbatch{5}.spm.spatial.normalise.write.woptions.interp = 4;
 matlabbatch{5}.spm.spatial.normalise.write.woptions.prefix = 'w';
 matlabbatch{6}.spm.spatial.smooth.data(1) = cfg_dep('Normalise: Write: Normalised Images (Subj 1)', substruct('.','val', '{}',{5}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('()',{1}, '.','files'));
