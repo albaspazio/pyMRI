@@ -3,12 +3,7 @@
 % spm SPM - SPM12 (7487)
 % cfg_basicio BasicIO - Unknown
 %-----------------------------------------------------------------------
-%%
-matlabbatch{1}.spm.temporal.st.scans = {
-                                        '<FMRI_IMAGES>'
-                                        };
-%%
-
+<SLICE_TIMING_SESSIONS>
 matlabbatch{1}.spm.temporal.st.nslices = <NUM_SLICES>;
 matlabbatch{1}.spm.temporal.st.tr = <TR_VALUE>;
 matlabbatch{1}.spm.temporal.st.ta = <TA_VALUE>;
@@ -67,11 +62,11 @@ matlabbatch{4}.spm.spatial.normalise.write.subj.resample(1) = cfg_dep('Slice Tim
 matlabbatch{4}.spm.spatial.normalise.write.woptions.bb = [   -90  -126   -72
                                                               90    90   108];
 matlabbatch{4}.spm.spatial.normalise.write.woptions.vox = [2 2 2];
-matlabbatch{4}.spm.spatial.normalise.write.woptions.interp = 7;
+matlabbatch{4}.spm.spatial.normalise.write.woptions.interp = 4;
 matlabbatch{4}.spm.spatial.normalise.write.woptions.prefix = 'w';
 
 matlabbatch{5}.spm.spatial.smooth.data(1) = cfg_dep('Normalise: Write: Normalised Images (Subj 1)', substruct('.','val', '{}',{4}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('()',{1}, '.','files'));
-matlabbatch{5}.spm.spatial.smooth.fwhm = [3 3 3];
+matlabbatch{6}.spm.spatial.smooth.fwhm = <SMOOTH_SCHEMA>;
 matlabbatch{5}.spm.spatial.smooth.dtype = 0;
 matlabbatch{5}.spm.spatial.smooth.im = 0;
 matlabbatch{5}.spm.spatial.smooth.prefix = 's';

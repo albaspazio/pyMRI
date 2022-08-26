@@ -1,5 +1,8 @@
 import csv
 import os
+from collections import Counter
+
+from typing import List
 
 from utility.exceptions import DataFileException
 from utility.utilities import argsort, reorder_list, string2num, write_text_file, listToString
@@ -12,18 +15,27 @@ from utility.utilities import argsort, reorder_list, string2num, write_text_file
 # creates a dictionary with subj label as key and data columns as a dictionary
 # returns   { "label1":{"col1", ..., "colN"}, "label2":{"col1", ..., "colN"}, .....}
 
-class SubjectsDataDict:
+class SubjectsDataDict(dict):
 
-    def __init__(self, filepath=""):
+    def __new__(cls, value=None, filepath="", tonum=True, delimiter='\t'):
+        return super(SubjectsDataDict, cls).__new__(cls, value)
 
-        self.data       = {}
+    def __init__(self, value=None, filepath="", tonum=True, delimiter='\t'):
+
+        super().__init__()
         self.labels     = []
         self.filepath   = filepath
 
         if filepath != "":
-            self.load(filepath)
-        self.num        = len(self.data)
-        self.header     = self.get_header()
+            self.load(filepath, tonum, delimiter)
+
+    @property
+    def header(self) -> list:
+        return self.get_header()
+
+    @property
+    def num(self) -> int:
+        return len(self)
 
     # =====================================================================================
     # DATA EXTRACTION FROM A "SUBJ" DICTIONARY {"a_subj_label":{"a":..., "b":...., }}
@@ -33,14 +45,13 @@ class SubjectsDataDict:
     # creates a dictionary with subj label as key and data columns as a dictionary  {subjlabel:{"a":..., "b":..., }}
     # tonum defines whether checking string(ed) type and convert to int/float
     # filepath CANNOT be empty
-    def load(self, filepath, tonum=True):
+    def load(self, filepath, tonum=True, delimiter='\t') -> dict:
 
-        self.data = {}
         if not os.path.exists(filepath):
             raise DataFileException("SubjectsDataDict.load", "given filepath param (" + filepath + ") is not a file")
 
         with open(filepath, "r") as f:
-            reader = csv.reader(f, dialect='excel', delimiter='\t')
+            reader = csv.reader(f, dialect='excel', delimiter=delimiter)
             for row in reader:
                 if reader.line_num == 1:
                     header = row
@@ -60,16 +71,87 @@ class SubjectsDataDict:
                                 casted_elem     = elem
                             data_row[header[cnt]]   = casted_elem
                         cnt = cnt + 1
-                    self.data[subj_lab] = data_row
+                    self[subj_lab] = data_row
                     self.labels.append(subj_lab)
 
-            self.num        = len(self.data)
-            self.filepath   = filepath
-            return self.data
+            return self
+
+    # add new subjects
+    def add(self, newsubjs, can_overwrite=False, can_add_incomplete=False):
+
+        if not isinstance(newsubjs, dict):
+            raise Exception("Error in SubjectsDataDict.add, given newsubjs is not a dictionary")
+
+        names   = list(newsubjs.keys())
+        nsubjs  = len(names)
+        if nsubjs == 0:
+            raise Exception("Error in SubjectsDataDict.add, given newsubjs is an empty dictionary")
+
+        elems = list(list(newsubjs.values())[0].keys())
+        elems.insert(0, "subj")
+
+        for name in names:
+            if self.exist_subject(name) and not can_overwrite:
+                raise Exception("Error in SubjectsDataDict.add, you are trying to overwrite existing subject " + name)
+
+        if len(self.header) > 0:
+            if Counter(elems) != Counter(self.header) and not can_add_incomplete:
+                raise Exception("Error in SubjectsDataDict.add, given newsubj does not contain the same elements")
+
+        self.update(newsubjs)
+
+    # return a list of subjects values
+
+    def exist_subject(self, subj_name) -> bool:
+        return bool(self[subj_name])
+
+    def get_subject(self, subj_lab) -> dict:
+        return self[subj_lab]
+
+    def pop(self) -> tuple:
+        return self.popitem()
+
+    def get_subjects_list(self, subj_names=None) -> list:
+
+        if subj_names is None:
+            subj_names = self.labels
+
+        try:
+            return [self[subj_lab] for subj_lab in subj_names]
+        except Exception as e:
+            return []
+
+    def get_subset(self, subj_names=None) -> dict:
+
+        if subj_names is None:
+            return self
+        sdict = {}
+        for k,v in self.items():
+            if k in subj_names:
+                sdict[k] = v
+        return sdict
+
+    def get_subjects_filtered_columns(self, colnames, subj_names=None):
+
+        if subj_names is None:
+            subj_names = self.labels
+
+        try:
+            res = {}
+            for subj_lab in subj_names:
+                data_row    = {}
+                subj        = self[subj_lab]
+                for col in colnames:
+                    data_row[col] = subj[col]
+                res[subj_lab] = data_row
+            return res
+
+        except Exception as e:
+            return []
 
     # return a list of values from a given column
     def get_column(self, colname):
-        return [self.data[d][colname] for d in self.data]
+        return [self[d][colname] for d in self]
 
     def get_column_str(self, colname, ndecimals=3):
         return self.__to_str(self.get_column(colname), ndecimals)
@@ -86,7 +168,7 @@ class SubjectsDataDict:
         lab = []
         for subj in subj_labels:
             try:
-                colvalue = string2num(self.data[subj][colname])
+                colvalue = string2num(self[subj][colname])
                 res.append(colvalue)
                 lab.append(subj)
             except KeyError:
@@ -115,7 +197,7 @@ class SubjectsDataDict:
 
         for subj in subj_labels:
             try:
-                subj_dic = self.data[subj]
+                subj_dic = self[subj]
                 subj_row = []
                 for colname in colnames:
                     subj_row.append(subj_dic[colname])
@@ -150,7 +232,7 @@ class SubjectsDataDict:
         lab = []
         for subj in subj_labels:
             try:
-                colvalue = string2num(self.data[subj][colname])
+                colvalue = string2num(self[subj][colname])
                 if operation == "=" or operation == "==":
                     if colvalue == value:
                         res.append(colvalue)
@@ -199,7 +281,7 @@ class SubjectsDataDict:
         lab = []
         for subj in subj_labels:
             try:
-                colvalue = string2num(self.data[subj][colname])
+                colvalue = string2num(self[subj][colname])
                 if operation == "<>":
                     if value2 > colvalue > value1:
                         res.append(colvalue)
@@ -232,28 +314,32 @@ class SubjectsDataDict:
         res_str = self.__to_str(res, ndecimals)
         return res_str, lab
 
-    def add_column(self, col_label, values, saveit=True):
+    def add_column(self, col_label, labels, values, saveit=False):
+
         nv = len(values)
-        if nv != self.num:
+        nl = len(labels)
+        if nv != self.num or nl != self.num:
             print("ERROR in SubjectsDataDict.add")
 
         cnt = 0
-        for slab in self.data:
-            self.data[slab][col_label] = values[cnt]
+        for subj in labels:
+            self[subj][col_label] = values[cnt]
             cnt = cnt + 1
-
-        self.header = self.get_header()
 
         if saveit:
             self.save_data()
 
     def get_header(self):
-        self.header = ["subj"]
-        for row in self.data:
-            for field in self.data[row]:
-                self.header.append(field)
+
+        if len(self) == 0:
+            return []
+
+        header = ["subj"]
+        for row in self:
+            for field in self[row]:
+                header.append(field)
             break
-        return self.header
+        return header
 
     def exist_column(self, colname):
         return colname in self.header
@@ -269,26 +355,37 @@ class SubjectsDataDict:
             labs = subj_labels
 
         for lab in labs:
-            elem = self.data[lab][colname]
+            elem = self[lab][colname]
             if len(str(elem)) == 0:
                 return False
 
         return True
 
-    # TODO: fix data save
-    def save_data(self, data_file=None):
+    # save some columns of a subset of the subjects in given file
+    def save_data(self, data_file=None, subj_labels=None, incolnames=None, outcolnames=None, separator="\t"):
 
         if data_file is None:
             data_file = self.filepath
 
-        txt = listToString(self.header) + "\n"
+        if incolnames is None:
+            incolnames = self.header
+
+        if outcolnames is None:
+            outcolnames = self.header
+
+        if subj_labels is None:
+            data = self
+        else:
+            data = self.get_subset(subj_labels)
+
+        txt = "subj" + separator + listToString(outcolnames, separator) + "\n"
         r = ""
-        for row in self.data:
-            r = ""
-            for field in row:
-                r = field + "\t"
-            r = r.rstrip('\t') + "\n"
-        txt = txt + r
+        for subj in data:
+            r += (subj + separator)
+            for col in incolnames:
+                r += str(data[subj][col]) + separator
+            r = r.rstrip(separator) + "\n"
+        txt += r
         write_text_file(data_file, txt)
 
     # =====================================================================================

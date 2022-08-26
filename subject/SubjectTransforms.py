@@ -959,7 +959,7 @@ class SubjectTransforms:
         return self.fmri2std_warp, self.subject.std_head_img
 
     def transform_l_fmri2std(self):
-        return self.rs2std_mat, self.subject.std_img
+        return self.fmri2std_mat, self.subject.std_img
 
     def transform_nl_dti2std(self):
         return self.dti2std_warp, self.subject.std_head_img
@@ -1050,7 +1050,7 @@ class SubjectTransforms:
     # this method takes base images (t1/t1_brain, epi_example_function, dti_nodiff/dti_nodiff_brain, t2/t2_brain) and coregister to all other modalities and standard
     # creates up to 14 folders, 7 for linear and 7 for non linear transformation towards the 7 different space (hr, rs, frmi, dti, t2, std, std4)
     # user can select from which seq to which seq create the transforms
-    def test_all_coregistration(self, test_dir, _from=None, _to=None, extended=False): #, overwrite=False):
+    def test_all_coregistration(self, test_dir, _from=None, _to=None, extended=False, overwrite=False):
 
         if _from is None:
             _from = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]
