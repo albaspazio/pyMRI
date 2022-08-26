@@ -80,6 +80,20 @@ def mask_tbss_skeleton_folder_atlas(skel_templ, atlas_dir, thr=0.95):
         tempmask.rm()
 
 
+def mid_0based(nvol):
+
+    if (nvol % 2) == 0:     # even      0,1,2,3 -> 2
+        return nvol//2
+    else:                   # odd       0,1,2   -> 1
+        return nvol//2
+
+
+def mid_1based(nvol):
+
+    if (nvol % 2) == 0:     # even      1,2,3,4 -> 3
+        return nvol//2 + 1
+    else:                   # odd       1,2,3   -> 2
+        return nvol//2 + 1
 
 
 

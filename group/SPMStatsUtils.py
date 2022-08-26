@@ -441,11 +441,12 @@ class Nuisance(Regressor):
 
 
 class FmriProcParams:
-    def __init__(self, tr, nsl, sl_tim, ref_sl=-1, acq_sch=0, ta=0, smooth=6):
+    def __init__(self, tr, nsl, sl_tim, st_ref, acq_sch=0, ta=0, smooth=6, events_unit="secs"):
         self.tr             = tr
         self.nslices        = nsl
         self.slice_timing   = sl_tim
-        self.ref_slice      = ref_sl
+        self.st_ref         = st_ref
         self.acq_scheme     = acq_sch
         self.ta             = ta
         self.smooth         = smooth
+        self.events_unit    = events_unit

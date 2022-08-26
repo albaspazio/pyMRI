@@ -20,22 +20,23 @@ class Image(str):
 
     def __init__(self, value, must_exist=False, msg=""):
 
-        if value == "":
-            if msg == "":
-                msg = "Given Image path is empty"
+        if value != "":
+            parts = self.imgparts()
 
-            raise NotExistingImageException(msg, self)
+            self.dir        = parts[0]
+            self.name       = parts[1]      # name NO EXTENSION !!!!!!
+            self.ext        = parts[2]
+            self.fpathnoext = os.path.join(self.dir, self.name)
+            self.is_dir     = os.path.isdir(self)
 
-        parts = self.imgparts()
+            if must_exist and not self.exist:
+                raise NotExistingImageException(msg, self)
+            return
 
-        self.dir        = parts[0]
-        self.name       = parts[1]      # name NO EXTENSION !!!!!!
-        self.ext        = parts[2]
-        self.fpathnoext = os.path.join(self.dir, self.name)
-        self.is_dir     = os.path.isdir(self)
+        if msg == "":
+            msg = "Given Image path is empty"
 
-        if must_exist and not self.exist:
-            raise NotExistingImageException(msg, self)
+        raise NotExistingImageException(msg, self)
 
     @property
     def exist(self):
@@ -476,19 +477,22 @@ class Image(str):
 
 class Images(list):
 
-    def __new__(cls, value=None):
+    def __new__(cls, value=None, must_exist=False, msg=""):
         if value is None:
             ivalues = []
         else:
             ivalues = []
             for v in value:
-                ivalues.append(Image(v))
+                ivalues.append(Image(v, must_exist, msg))
         return super(Images, cls).__new__(cls, ivalues)
 
     def rm(self, logFile=None):
 
         for file in self:
             Image(file).rm(logFile)
+
+    def append(self, __object) -> None:
+        self.append(Image(__object))
 
     # move a series of images defined by wildcard string ( e.g.   *fast*
     def move(self, destdir, logFile=None):

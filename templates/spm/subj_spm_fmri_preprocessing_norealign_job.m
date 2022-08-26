@@ -22,6 +22,7 @@ matlabbatch{2}.spm.spatial.coreg.estwrite.roptions.wrap = [0 0 0];
 matlabbatch{2}.spm.spatial.coreg.estwrite.roptions.mask = 0;
 matlabbatch{2}.spm.spatial.coreg.estwrite.roptions.prefix = 'r';
 matlabbatch{3}.spm.spatial.preproc.channel.vols(1) = cfg_dep('Coregister: Estimate & Reslice: Coregistered Images', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','cfiles'));
+
 matlabbatch{3}.spm.spatial.preproc.channel.biasreg = 0.001;
 matlabbatch{3}.spm.spatial.preproc.channel.biasfwhm = 60;
 matlabbatch{3}.spm.spatial.preproc.channel.write = [0 1];
