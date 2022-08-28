@@ -72,8 +72,8 @@ if __name__ == "__main__":
         #     kwparams = []
         #     for s in subjects:
         #         in_ap_img = os.path.join(s.fmri_dir, "a" + s.label + "-epi_" + sess)
-        #         kwparams.append({"in_ap_img":in_ap_img, "in_pa_img":s.fmri_pa_data, "acq_params": project.topup_fmri_params})
-        #         project.run_subjects_methods("epi", "topup_correction", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+        #         kwparams.append({"in_ap_images":[in_ap_img], "in_pa_img":s.fmri_pa_data, "acq_params": project.topup_fmri_params})
+        #         project.run_subjects_methods("epi", "topup_corrections", kwparams, project.get_subjects_labels(), nthread=num_cpu)
 
         # ---------------------------------------------------------------------------------------------------------------------
         # SLICE TIMING

@@ -478,12 +478,11 @@ class Image(str):
 class Images(list):
 
     def __new__(cls, value=None, must_exist=False, msg=""):
-        if value is None:
-            ivalues = []
-        else:
-            ivalues = []
+        ivalues = []
+        if value is not None:
             for v in value:
                 ivalues.append(Image(v, must_exist, msg))
+
         return super(Images, cls).__new__(cls, ivalues)
 
     def rm(self, logFile=None):
@@ -510,6 +509,9 @@ class Images(list):
             if logFile is not None:
                 print("mv " + img + " " + dest_file, file=logFile)
 
+    def check_if_uncompress(self, replace=False):
+        for img in self:
+            Image(img).check_if_uncompress(replace)
 
 def immerge(out_img, premerge_labels=None):
     seq_string = " "

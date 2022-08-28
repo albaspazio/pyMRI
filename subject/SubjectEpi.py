@@ -8,7 +8,7 @@ from data.utilities import list2spm_text_column
 from group.SPMStatsUtils import SPMStatsUtils
 from utility.images.Image import Image, Images
 from utility.images.transform_images import flirt
-from utility.images.images import mid_1based
+from utility.images.images import mid_1based, mid_0based
 from utility.myfsl.utils.run import rrun
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
 from utility.utilities import sed_inplace, compress, copytree, get_filename
@@ -110,13 +110,13 @@ class SubjectEpi:
     # 5 motion correction using closest_vol to PA (or given one) [fmri do it, rs default not]
     # 6: applytopup --> choose images whose distortion we want to correct
     # returns 0-based volume
-    def topup_correction(self, in_ap_images, in_pa_img, acq_params, ap_ref_vol=-1, pa_ref_vol=-1, config="b02b0.cnf", motion_corr=True, logFile=None):
-        return self.topup_correction(in_ap_images[0], in_pa_img, acq_params, ap_ref_vol, pa_ref_vol, config, motion_corr, logFile)
-
     def topup_corrections(self, in_ap_images, in_pa_img, acq_params, ap_ref_vol=-1, pa_ref_vol=-1, config="b02b0.cnf", motion_corr=True, logFile=None):
 
         #  /a/b/c/name.nii.gz
         in_ap_images    = Images(in_ap_images)
+
+        if len(in_ap_images) > 1 and not motion_corr:
+            raise Exception("Error in topup_corrections, when multiple images have to be corrected, realignment must be performed, correct and re-run")
 
         ap_distorted    = Images()
         for img in in_ap_images:
@@ -133,18 +133,15 @@ class SubjectEpi:
 
         # 1: get number of volumes of epi_PA image in opposite phase-encoding direction and extract middle volume (add "_ref")
         if pa_ref_vol == -1:
-            nvols_pe = in_pa_img.getnvol()
-            central_vol_pa = int(nvols_pe) // 2     # odd values:   returns the middle volume in a zero-based context
-                                                    #               3//2 -> 1 which is the middle volume in 0,(1),2 context
-                                                    # even values:  returns second middle volume in a zero-based context
-                                                    #               4//2 -> 2, 0,1,(2),3
-        else:
+            nvols_pe        = in_pa_img.getnvol()
+            central_vol_pa  = mid_0based(nvols_pe)  # odd values:   returns the middle volume in a zero-based context,      3//2 -> 1 which is the middle volume in 0,(1),2 context
+        else:                                       # even values:  returns second middle volume in a zero-based context,   4//2 -> 2, 0,1,(2),3
             central_vol_pa = pa_ref_vol
         rrun("fslselectvols -i " + in_pa_img + " -o " + pa_ref + " --vols=" + str(central_vol_pa), logFile=logFile)
 
         # 2: look for the epi volume closest to epi_pa_ref volume
         if ap_ref_vol == -1:
-            closest_vol = self.get_closest_volume(in_ap_img, in_pa_img, pa_ref_vol) - 1 # returns a 1-based volume, so I subtract 1
+            closest_vol = self.get_closest_volume(in_ap_img, in_pa_img, pa_ref_vol) # returns a 0-based volume
         else:
             closest_vol = ap_ref_vol
 
@@ -157,17 +154,20 @@ class SubjectEpi:
         # —assumes merged epi volumes appear in the same order as acqparams.txt (--datain)
         rrun("topup --imain=" + ap_pa_ref + " --datain=" + acq_params + " --config=" + config + " --out=" + ap_pa_ref_topup, logFile=logFile) # + " --iout=" + self.subject.fmri_data + "_PE_ref_topup_corrected")
 
-        # 5 motion correction using closest_vol to PA (or given one)
+        # 5 realign all volumes of all images to the closest_vol to PA (or given one)
         if motion_corr:
-            mc_image = Image(os.path.join(input_dir, "r" + in_ap_img.name))
-            self.spm_motion_correction(in_ap_img, ref_vol=closest_vol+1)   # add r in front of img name, closest_vol is 0-based
-            in_ap_img.upath.rm()    # remove old with-motion SUBJ-fmri.nii
-            in_ap_img.cpath.rm()    # remove old with-motion SUBJ-fmri.nii.gz
-            mc_image.compress(in_ap_img, replace=True)  # zip rSUBJ-fmri.nii => rSUBJ-fmri.nii.gz
+            self.spm_motion_correction(in_ap_images, ref_vol=closest_vol, reslice=True)   # add r in front of images' names, closest_vol is 0-based
 
-        # 6 applytopup --> choose images whose distortion we want to correct
+            for img in in_ap_images:
+                img = Image(img)
+                img.upath.rm()    # remove old with-motion SUBJ-fmri.nii
+                img.cpath.rm()    # remove old with-motion SUBJ-fmri.nii.gz
+                Image(os.path.join(input_dir, "r" + img.name)).compress(img, replace=True)  # zip rSUBJ-fmri.nii => rSUBJ-fmri.nii.gz
+
+        # 6 applytopup to input images
         # again, these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
-        rrun("applytopup --imain=" + in_ap_img + " --topup=" + ap_pa_ref_topup + " --datain=" + acq_params + " --inindex=1 --method=jac --interp=spline --out=" + in_ap_img, logFile=logFile)
+        for img in in_ap_images:
+            rrun("applytopup --imain=" + img + " --topup=" + ap_pa_ref_topup + " --datain=" + acq_params + " --inindex=1 --method=jac --interp=spline --out=" + in_ap_img, logFile=logFile)
 
         # clean up
         os.system("rm " + input_dir + "/" + "ap_*")
@@ -177,6 +177,116 @@ class SubjectEpi:
 
         print("topup correction of subj: " + self.subject.label + " finished. closest volume is: " + str(closest_vol))
         return closest_vol
+
+    # coregister given images to given volume of given image (usually the epi itself or pepolar in case of distortion correction process)
+    # automatically put an out_prefix="r" in front of the given file name if reslice=True
+    # ref_vol MUST BE 0-BASED
+    # the first volume of the first session is the reference volume.
+    # if ref_vol belongs to the input image (ref_image=None):   put that volume first and the remaining in the list (skipping the ref_vol)
+    # if ref_vol belongs to ref_image:                          put that vol first and all the input images then
+    def spm_motion_correction(self, images2correct, ref_image=None, ref_vol=0, reslice=True, out_prefix="r", whichreslice=None):
+
+        if whichreslice is None:
+            whichreslice = "[2 1]"
+        else:
+            if whichreslice != "[2 1]" and whichreslice != "[2 0]" and whichreslice != "[1 0]":
+                raise Exception("Error in spm_motion_correction, given whichreslice (" + whichreslice + ") is not valid")
+
+        if reslice is True:
+            spm_template_name = "subj_spm_fmri_realign_estimate_reslice_to_given_vol"
+        else:
+            spm_template_name = "subj_spm_fmri_realign_estimate_to_given_vol"
+
+        ref_vol += 1    # SPM wants it 1-based
+
+        images2correct = Images(images2correct, must_exist=True, msg="Subject.epi.spm_motion_correction")
+        images2correct.check_if_uncompress()
+
+        # check if ref image is valid (if not specified, use in_img)
+        if ref_image is None:
+            ref_volume = "'" + images2correct[0].upath + ',' + str(ref_vol) + "'"
+            skip_ref = True
+        else:
+            ref_image  = Image(ref_image, must_exist=True, msg="Subject.epi.spm_motion_correction")
+            ref_image.check_if_uncompress()
+
+            ref_volume = "'" + ref_image.upath + ',' + str(ref_vol) + "'\n"
+            skip_ref = False
+
+        out_batch_job, out_batch_start  = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
+
+        # first session, starting with ref_vol
+        epi_all_volumes                 = '{\n'
+        epi_all_volumes                += ref_volume      # reference volume must be inserted as first volume
+
+        first_image                     = Image(images2correct.pop(0))
+        epi_nvols                       = first_image.getnvol()
+        for i in range(1, epi_nvols + 1):
+            if i == ref_vol and skip_ref:
+                continue    # skip ref_vol if it belongs to the input image
+            epi_all_volumes += ("'" + first_image.upath + ',' + str(i) + "'\n")
+
+        epi_all_volumes                += '}\n'
+
+        # all other sessions
+        for img in images2correct:
+            epi_nvols = img.getnvol()
+            img.check_if_uncompress()
+
+            epi_all_volumes += '{'
+            for i in range(1, epi_nvols + 1):
+                epi_all_volumes += ("'" + img.upath + ',' + str(i) + "'\n")
+            epi_all_volumes += '}\n'
+
+        sed_inplace(out_batch_job, '<FMRI_IMAGES>', epi_all_volumes)
+        sed_inplace(out_batch_job, '<IMG_PREFIX>', out_prefix)
+        sed_inplace(out_batch_job, '<WHICH>', whichreslice)
+
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
+
+    # calculate the in_image 0-based volume closest to ref_image (by estimating the realignment without performing it)
+    def get_closest_volume(self, in_image, ref_image, ref_volume=-1):
+        # will calculate the closest vol from given epi image to ref_image
+        # Steps:
+        # 0: get epi_pe central volume + unzip so SPM can use it
+        # 1: merge all the sessions into one file ("_merged-sessions") + unzip so SPM can use it
+        # 2: align all the volumes within merged file to epi_pe central volume (SPM12-Realign:Estimate)
+        # 3: calculate the "less motion corrected" volume from the merged file with respect to the epi-pe in terms of rotation around x, y and z axis).
+
+        in_image    = Image(in_image, must_exist=True,  msg="Subject.epi.get_closest_volume")
+        ref_image   = Image(ref_image, must_exist=True, msg="Subject.epi.get_closest_volume")
+
+        input_dir   = in_image.dir
+
+        # create temp folder, copy there epi and epi_pe, unzip and run mc (then I can simply remove it when ended)
+        temp_distorsion_mc  = os.path.join(input_dir, "temp_distorsion_mc")
+        os.makedirs(temp_distorsion_mc, exist_ok=True)
+        temp_epi            = Image(os.path.join(temp_distorsion_mc, in_image.name))
+        temp_epi_ref        = Image(os.path.join(temp_distorsion_mc, in_image.name + "_ref"))
+
+        if not temp_epi.uexist:
+            if in_image.uexist:
+                in_image.cp(temp_epi.upath)
+            else:
+                in_image.unzip(temp_epi.upath, replace=False)
+
+        if not temp_epi_ref.uexist:
+            if ref_image.uexist:
+                ref_image.cp(temp_epi_ref.upath)
+            else:
+                ref_image.unzip(temp_epi_ref.upath, replace=False)
+
+        if ref_volume == -1:
+            ref_volume = mid_0based(ref_image.getnvol())    # odd values:   returns the middle volume in a zero-based context       3//2 -> 1 which is the middle volume in 0,(1),2 context
+                                                            # even values:  returns second middle volume in a zero-based context    4//2 -> 2, 0,1,(2),3
+        # estimate BUT NOT reslice
+        self.spm_motion_correction([temp_epi], temp_epi_ref, ref_volume, reslice=False)
+
+        # 3: call matlab function that calculates best volume (1-based):
+        best_vol = call_matlab_function("least_mov", [self._global.spm_functions_dir], "\"" + os.path.join(temp_distorsion_mc, "rp_" + in_image.name + "_ref" + '.txt' + "\""))[1]
+        rmtree(temp_distorsion_mc)
+
+        return int(best_vol) - 1    # 0-based volume
 
     def remove_nuisance(self, in_img_name, out_img_name, epi_label="rs", ospn="", hpfsec=100):
 
@@ -345,88 +455,6 @@ class SubjectEpi:
                 img.add_prefix2name("r").rm()
                 img.add_prefix2name("ar").rm()
                 img.add_prefix2name("war").rm()
-
-    # coregister epi (or a given image) to given volume of given image (usually the epi itself, the pepolar in case of distortion correction process)
-    # automatically put an "r" in front of the given file name
-    # ref_vol MUST BE 0-BASED
-    def spm_motion_correction(self, image2correct, ref_image=None, ref_vol=0, spm_template_name="subj_spm_fmri_realign_estimate_reslice_to_given_vol"):
-
-        ref_vol += 1    # SPM wants it 1-based
-
-        image2correct = Image(image2correct, must_exist=True, msg="Subject.epi.spm_motion_correction")
-
-        # check if ref image is valid (if not specified, use in_img)
-        if ref_image is None:
-            ref_image = image2correct
-        else:
-            ref_image = Image(ref_image, must_exist=True, msg="Subject.epi.spm_motion_correction")
-
-        # upzip whether zipped
-        image2correct.check_if_uncompress()
-        ref_image.check_if_uncompress()
-
-        out_batch_job, out_batch_start  = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
-        epi_all_volumes                 = "'" + ref_image.upath + ',' + str(ref_vol) + "'\n"      # reference volume must be inserted as first volume
-
-        epi_nvols                       = image2correct.upath.getnvol()
-        for i in range(1, epi_nvols + 1):
-            if i == ref_vol:
-                continue    # skip ref_vol
-            epi_volume       = "'" + image2correct.upath + ',' + str(i) + "'"
-            epi_all_volumes += (epi_volume + '\n')
-
-        sed_inplace(out_batch_job, '<FMRI_IMAGES>', epi_all_volumes)
-
-        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
-
-    # calculate the in_image 0-based volume closest to ref_image (by estimating the realignment without performing it)
-    def get_closest_volume(self, in_image, ref_image, ref_volume=-1):
-        # will calculate the closest vol from given epi image to ref_image
-        # Steps:
-        # 0: get epi_pe central volume + unzip so SPM can use it
-        # 1: merge all the sessions into one file ("_merged-sessions") + unzip so SPM can use it
-        # 2: align all the volumes within merged file to epi_pe central volume (SPM12-Realign:Estimate)
-        # 3: calculate the "less motion corrected" volume from the merged file with respect to the epi-pe in terms of rotation around x, y and z axis).
-
-        in_image    = Image(in_image, must_exist=True,  msg="Subject.epi.get_closest_volume")
-        ref_image   = Image(ref_image, must_exist=True, msg="Subject.epi.get_closest_volume")
-
-        input_dir   = in_image.dir
-
-        # create temp folder, copy there epi and epi_pe, unzip and run mc (then I can simply remove it when ended)
-        temp_distorsion_mc  = os.path.join(input_dir, "temp_distorsion_mc")
-        os.makedirs(temp_distorsion_mc, exist_ok=True)
-        temp_epi            = Image(os.path.join(temp_distorsion_mc, in_image.name))
-        temp_epi_ref        = Image(os.path.join(temp_distorsion_mc, in_image.name + "_ref"))
-
-        if not os.path.isfile(temp_epi.upath):
-            if os.path.isfile(in_image.upath):
-                in_image.cp(temp_epi.upath)
-            else:
-                in_image.unzip(temp_epi.upath, replace=False)
-
-        if not os.path.isfile(temp_epi_ref.upath):
-            if os.path.isfile(ref_image.upath):
-                ref_image.cp(temp_epi_ref.upath)
-            else:
-                ref_image.unzip(temp_epi_ref.upath, replace=False)
-
-        if ref_volume == -1:
-            # 0
-            epi_pe_nvols    = ref_image.getnvol()
-            ref_volume      = epi_pe_nvols // 2     # odd values:   returns the middle volume in a zero-based context
-                                                    #               3//2 -> 1 which is the middle volume in 0,(1),2 context
-                                                    # even values:  returns second middle volume in a zero-based context
-                                                    #               4//2 -> 2, 0,1,(2),3
-
-        # estimate BUT NOT reslice
-        self.spm_motion_correction(temp_epi, temp_epi_ref, ref_volume, spm_template_name="subj_spm_fmri_realign_estimate_to_given_vol")
-
-        # 3: call matlab function that calculates best volume (1-based):
-        best_vol = call_matlab_function("least_mov", [self._global.spm_functions_dir], "\"" + os.path.join(temp_distorsion_mc, "rp_" + in_image.name + "_ref" + '.txt' + "\""))[1]
-        rmtree(temp_distorsion_mc)
-
-        return int(best_vol) - 1    # 0-based volume
 
     #endregion
     # ==================================================================================================================================================

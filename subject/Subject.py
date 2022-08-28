@@ -603,7 +603,7 @@ class Subject:
                         self.rs_data.cp(ap_distorted)
 
                     try:
-                        self.epi.topup_correction(self.rs_data, self.rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
+                        self.epi.topup_corrections([self.rs_data], self.rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
                     except Exception as e:
                         print("UNRECOVERABLE ERROR: " + str(e))
                         ap_distorted.mv(self.rs_data, logFile=log)
@@ -716,7 +716,7 @@ class Subject:
                         self.fmri_data.cp(ap_distorted, logFile=log)
 
                     try:
-                        self.epi.topup_correction(self.fmri_data, self.fmri_pa_data, self.project.topup_fmri_params, motion_corr=True, logFile=log)
+                        self.epi.topup_corrections([self.fmri_data], self.fmri_pa_data, self.project.topup_fmri_params, motion_corr=True, logFile=log)
                     except Exception as e:
                         print("UNRECOVERABLE ERROR: " + str(e))
                         ap_distorted.mv(self.rs_data, logFile=log)
