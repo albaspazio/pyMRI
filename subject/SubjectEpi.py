@@ -110,7 +110,7 @@ class SubjectEpi:
     # 5 motion correction using closest_vol to PA (or given one) [fmri do it, rs default not]
     # 6: applytopup --> choose images whose distortion we want to correct
     # returns 0-based volume
-    def topup_corrections(self, in_ap_images, in_pa_img, acq_params, ap_ref_vol=-1, pa_ref_vol=-1, config="b02b0.cnf", motion_corr=True, logFile=None):
+    def topup_corrections(self, in_ap_images, in_pa_img, acq_params, ap_ref_vol=-1, pa_ref_vol=-1, config="b02b0.cnf", motion_corr=True, cleanup=True, logFile=None):
 
         #  /a/b/c/name.nii.gz
         in_ap_images    = Images(in_ap_images)
@@ -120,7 +120,7 @@ class SubjectEpi:
 
         ap_distorted    = Images()
         for img in in_ap_images:
-            ap_distorted.append(img.add_postfix2name("_distorted"))
+            ap_distorted.append(Image(img).add_postfix2name("_distorted"))
 
         in_ap_img       = in_ap_images[0]
         in_pa_img       = Image(in_pa_img)
@@ -167,13 +167,13 @@ class SubjectEpi:
         # 6 applytopup to input images
         # again, these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
         for img in in_ap_images:
-            rrun("applytopup --imain=" + img + " --topup=" + ap_pa_ref_topup + " --datain=" + acq_params + " --inindex=1 --method=jac --interp=spline --out=" + in_ap_img, logFile=logFile)
+            rrun("applytopup --imain=" + img + " --topup=" + ap_pa_ref_topup + " --datain=" + acq_params + " --inindex=1 --method=jac --interp=spline --out=" + img, logFile=logFile)
 
-        # clean up
-        os.system("rm " + input_dir + "/" + "ap_*")
-        os.system("rm " + input_dir + "/" + "pa_*")
-        os.system("rm " + input_dir + "/" + "mean*")
-        os.system("rm " + input_dir + "/" + "*mat")
+        # clean up?
+        if cleanup:
+            os.system("rm " + input_dir + "/" + "ap_*")
+            os.system("rm " + input_dir + "/" + "pa_*")
+            os.system("rm " + input_dir + "/" + "*mat")
 
         print("topup correction of subj: " + self.subject.label + " finished. closest volume is: " + str(closest_vol))
         return closest_vol
@@ -204,7 +204,7 @@ class SubjectEpi:
 
         # check if ref image is valid (if not specified, use in_img)
         if ref_image is None:
-            ref_volume = "'" + images2correct[0].upath + ',' + str(ref_vol) + "'"
+            ref_volume = "'" + images2correct[0].upath + ',' + str(ref_vol) + "'\n"
             skip_ref = True
         else:
             ref_image  = Image(ref_image, must_exist=True, msg="Subject.epi.spm_motion_correction")
@@ -220,7 +220,7 @@ class SubjectEpi:
         epi_all_volumes                += ref_volume      # reference volume must be inserted as first volume
 
         first_image                     = Image(images2correct.pop(0))
-        epi_nvols                       = first_image.getnvol()
+        epi_nvols                       = first_image.upath.getnvol()
         for i in range(1, epi_nvols + 1):
             if i == ref_vol and skip_ref:
                 continue    # skip ref_vol if it belongs to the input image
@@ -230,7 +230,7 @@ class SubjectEpi:
 
         # all other sessions
         for img in images2correct:
-            epi_nvols = img.getnvol()
+            epi_nvols = img.upath.getnvol()
             img.check_if_uncompress()
 
             epi_all_volumes += '{'
@@ -253,7 +253,7 @@ class SubjectEpi:
         # 2: align all the volumes within merged file to epi_pe central volume (SPM12-Realign:Estimate)
         # 3: calculate the "less motion corrected" volume from the merged file with respect to the epi-pe in terms of rotation around x, y and z axis).
 
-        in_image    = Image(in_image, must_exist=True,  msg="Subject.epi.get_closest_volume")
+        in_image    = Image(in_image,  must_exist=True, msg="Subject.epi.get_closest_volume")
         ref_image   = Image(ref_image, must_exist=True, msg="Subject.epi.get_closest_volume")
 
         input_dir   = in_image.dir
@@ -277,7 +277,7 @@ class SubjectEpi:
                 ref_image.unzip(temp_epi_ref.upath, replace=False)
 
         if ref_volume == -1:
-            ref_volume = mid_0based(ref_image.getnvol())    # odd values:   returns the middle volume in a zero-based context       3//2 -> 1 which is the middle volume in 0,(1),2 context
+            ref_volume = mid_0based(ref_image.upath.getnvol())    # odd values:   returns the middle volume in a zero-based context       3//2 -> 1 which is the middle volume in 0,(1),2 context
                                                             # even values:  returns second middle volume in a zero-based context    4//2 -> 2, 0,1,(2),3
         # estimate BUT NOT reslice
         self.spm_motion_correction([temp_epi], temp_epi_ref, ref_volume, reslice=False)
@@ -373,7 +373,8 @@ class SubjectEpi:
 
         out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
 
-        mean_image = os.path.join(self.subject.fmri_dir, "mean" + self.subject.fmri_image_label + ".nii")
+        mean_image = valid_images[0].add_prefix2name("mean")
+        mean_image.check_if_uncompress()
 
         if not self.subject.t1_data.uexist:
             self.subject.t1_data.unzip(replace=False)
@@ -386,8 +387,8 @@ class SubjectEpi:
             epi_all_volumes = ''
             for img in valid_images:
 
-                epi_nvols = img.getnvol()
                 img.check_if_uncompress()
+                epi_nvols = img.upath.getnvol()
 
                 epi_all_volumes += '{'
                 for i in range(1, epi_nvols + 1):
@@ -410,21 +411,20 @@ class SubjectEpi:
         elif spm_template_name == "subj_spm_fmri_preprocessing_norealign" or spm_template_name == "subj_spm_fmri_preprocessing_norealign_mni":
 
             # input images are realigned images to be slice-timing processed
-            slice_timing_sessions = ""
+            slice_timing_sessions = "matlabbatch{1}.spm.temporal.st.scans = {\n"
             for i in range(nsessions):
-                slice_timing_sessions  += "matlabbatch{2}.spm.temporal.st.scans{" + str(i + 1) + "}(1) = "
-                epi_session_volumes     = ''
+                epi_session_volumes     = '{\n'
                 img                     = valid_images[i]
-                epi_nvols               = img.getnvol()
                 img.check_if_uncompress()
+                epi_nvols               = img.upath.getnvol()
 
-                epi_session_volumes += '{'
                 for v in range(1, epi_nvols + 1):
-                    epi_volume = "'" + img.upath + ',' + str(v) + "'"
-                    epi_session_volumes += (epi_volume + '\n')
+                    epi_session_volumes += ("'" + img.upath + ',' + str(v) + "'\n")
                 epi_session_volumes += '}\n'
 
                 slice_timing_sessions += epi_session_volumes
+
+            slice_timing_sessions += "}"
 
             # normalize write
             normalize_write_sessions = ""
@@ -442,8 +442,8 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<TA_VALUE>', str(TA))
         sed_inplace(out_batch_job, '<SLICETIMING_PARAMS>', ' '.join(slice_timing))
         sed_inplace(out_batch_job, '<REF_SLICE>', str(st_ref))
-        sed_inplace(out_batch_job, '<RESLICE_MEANIMAGE>', mean_image)
-        sed_inplace(out_batch_job, '<T1_IMAGE>', self.subject.t1_data + '.nii,1')
+        sed_inplace(out_batch_job, '<RESLICE_MEANIMAGE>', mean_image.upath)
+        sed_inplace(out_batch_job, '<T1_IMAGE>', self.subject.t1_data.upath + ',1')
         sed_inplace(out_batch_job, '<SPM_DIR>', self._global.spm_dir)
         sed_inplace(out_batch_job, '<SMOOTH_SCHEMA>', smooth_schema)
 
@@ -457,7 +457,6 @@ class SubjectEpi:
                 img.add_prefix2name("war").rm()
 
     #endregion
-    # ==================================================================================================================================================
 
     # ==================================================================================================================================================
     #region fMRI analysis
@@ -472,9 +471,10 @@ class SubjectEpi:
 
         num_slices  = fmri_params.num_slices
         TR          = fmri_params.tr
+        time_bins   = fmri_params.time_bins
 
         # takes central slice as a reference
-        ref_slice = mid_1based(num_slices)
+        time_onset  = mid_1based(time_bins)
 
         if rp_filename == "":
             rp_filename = os.path.join(self.subject.fmri_dir, "rp_" + self.subject.fmri_image_label + ".txt")
@@ -492,8 +492,8 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<SPM_DIR>',         stats_dir)
         sed_inplace(out_batch_job, '<EVENTS_UNIT>',     events_unit)
         sed_inplace(out_batch_job, '<TR_VALUE>',        str(TR))
-        sed_inplace(out_batch_job, '<MICROTIME_RES>',   str(num_slices))
-        sed_inplace(out_batch_job, '<MICROTIME_ONSET>', str(ref_slice))
+        sed_inplace(out_batch_job, '<MICROTIME_RES>',   time_bins)
+        sed_inplace(out_batch_job, '<MICROTIME_ONSET>', time_onset)
         sed_inplace(out_batch_job, '<SMOOTHED_VOLS>',   epi_all_volumes)
         sed_inplace(out_batch_job, '<MOTION_PARAMS>',   rp_filename)
 
@@ -559,7 +559,6 @@ class SubjectEpi:
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
     #endregion
-    # ==================================================================================================================================================
 
     # ===============================================================================
     #region SBFC
@@ -571,7 +570,6 @@ class SubjectEpi:
         pass
 
     #endregion
-    # ===============================================================================
 
     # ==================================================================================================================================================
     #region ACCESSORY

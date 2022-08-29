@@ -18,6 +18,7 @@ matlabbatch{1}.spm.spatial.realign.estwrite.roptions.interp = 4;
 matlabbatch{1}.spm.spatial.realign.estwrite.roptions.wrap = [0 0 0];
 matlabbatch{1}.spm.spatial.realign.estwrite.roptions.mask = 1;
 matlabbatch{1}.spm.spatial.realign.estwrite.roptions.prefix = 'r';
+
 <SLICE_TIMING_SESSIONS>
 matlabbatch{2}.spm.temporal.st.nslices = <NUM_SLICES>;
 matlabbatch{2}.spm.temporal.st.tr = <TR_VALUE>;
@@ -25,6 +26,7 @@ matlabbatch{2}.spm.temporal.st.ta = <TA_VALUE>;
 matlabbatch{2}.spm.temporal.st.so = [<SLICETIMING_PARAMS>];
 matlabbatch{2}.spm.temporal.st.refslice = <REF_SLICE>;
 matlabbatch{2}.spm.temporal.st.prefix = 'a';
+
 matlabbatch{3}.spm.spatial.coreg.estimate.ref(1) = cfg_dep('Realign: Estimate & Reslice: Mean Image', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','rmean'));
 matlabbatch{3}.spm.spatial.coreg.estimate.source = {'<T1_IMAGE>'};
 matlabbatch{3}.spm.spatial.coreg.estimate.other = {''};
@@ -32,6 +34,7 @@ matlabbatch{3}.spm.spatial.coreg.estimate.eoptions.cost_fun = 'nmi';
 matlabbatch{3}.spm.spatial.coreg.estimate.eoptions.sep = [4 2];
 matlabbatch{3}.spm.spatial.coreg.estimate.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
 matlabbatch{3}.spm.spatial.coreg.estimate.eoptions.fwhm = [7 7];
+
 matlabbatch{4}.spm.spatial.preproc.channel.vols(1) = cfg_dep('Coregister: Estimate: Coregistered Images', substruct('.','val', '{}',{3}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','cfiles'));
 matlabbatch{4}.spm.spatial.preproc.channel.biasreg = 0.001;
 matlabbatch{4}.spm.spatial.preproc.channel.biasfwhm = 60;
@@ -67,13 +70,15 @@ matlabbatch{4}.spm.spatial.preproc.warp.affreg = 'mni';
 matlabbatch{4}.spm.spatial.preproc.warp.fwhm = 0;
 matlabbatch{4}.spm.spatial.preproc.warp.samp = 3;
 matlabbatch{4}.spm.spatial.preproc.warp.write = [0 1];
+
 matlabbatch{5}.spm.spatial.normalise.write.subj.def(1) = cfg_dep('Segment: Forward Deformations', substruct('.','val', '{}',{4}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','fordef', '()',{':'}));
 <NORMALIZE_WRITE_SESSIONS>
-matlabbatch{4}.spm.spatial.normalise.write.woptions.bb = [   -90  -126   -72
+matlabbatch{5}.spm.spatial.normalise.write.woptions.bb = [   -90  -126   -72
                                                               90    90   108];
-matlabbatch{4}.spm.spatial.normalise.write.woptions.vox = [2 2 2];
-matlabbatch{4}.spm.spatial.normalise.write.woptions.interp = 4;
+matlabbatch{5}.spm.spatial.normalise.write.woptions.vox = [2 2 2];
+matlabbatch{5}.spm.spatial.normalise.write.woptions.interp = 4;
 matlabbatch{5}.spm.spatial.normalise.write.woptions.prefix = 'w';
+
 matlabbatch{6}.spm.spatial.smooth.data(1) = cfg_dep('Normalise: Write: Normalised Images (Subj 1)', substruct('.','val', '{}',{5}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('()',{1}, '.','files'));
 matlabbatch{6}.spm.spatial.smooth.fwhm = <SMOOTH_SCHEMA>;
 matlabbatch{6}.spm.spatial.smooth.dtype = 0;

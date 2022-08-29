@@ -45,7 +45,11 @@ class Project:
         self.tbss_dir = os.path.join(self.group_analysis_dir, "tbss")
 
         self.topup_rs_params        = os.path.join(self.script_dir, "topup_acqpar_rs.txt")
+        self.topup_rs2_params       = os.path.join(self.script_dir, "topup_acqpar_rs2.txt")
+
         self.topup_fmri_params      = os.path.join(self.script_dir, "topup_acqpar_fmri.txt")
+        self.topup_fmri2_params     = os.path.join(self.script_dir, "topup_acqpar_fmri2.txt")
+
         self.topup_dti_params       = os.path.join(self.script_dir, "topup_acqpar_dti.txt")
         self.eddy_dti_json          = os.path.join(self.script_dir, "dti_ap.json")
         self.eddy_index             = os.path.join(self.script_dir, "eddy_index.txt")

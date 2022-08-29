@@ -472,26 +472,36 @@ class Image(str):
         return Image(self.fpathnoext + postfix + self.ext)
 
     def add_prefix2name(self, prefix):
-        return Image(os.path.join(self.dir, prefix + self.fpathnoext + self.ext))
+        return Image(os.path.join(self.dir, prefix + self.name + self.ext))
 
 
 class Images(list):
 
     def __new__(cls, value=None, must_exist=False, msg=""):
-        ivalues = []
-        if value is not None:
-            for v in value:
-                ivalues.append(Image(v, must_exist, msg))
+        return super(Images, cls).__new__(cls, value)
 
-        return super(Images, cls).__new__(cls, ivalues)
+    # def __new__(cls, value=None, must_exist=False, msg=""):
+    #     ivalues = []
+    #     if value is not None:
+    #         for v in value:
+    #             ivalues.append(Image(v, must_exist, msg))
+    #
+    #     return super(Images, cls).__new__(cls, ivalues)
+
+    def __init__(self, value=None, must_exist=False, msg=""):
+        super().__init__()
+        if value is None:
+            value = []
+        for v in value:
+            self.append(Image(v, must_exist, msg))
 
     def rm(self, logFile=None):
 
         for file in self:
             Image(file).rm(logFile)
 
-    def append(self, __object) -> None:
-        self.append(Image(__object))
+    # def append(self, __object) -> None:
+    #     self.append(Image(__object))
 
     # move a series of images defined by wildcard string ( e.g.   *fast*
     def move(self, destdir, logFile=None):

@@ -208,14 +208,12 @@ class Subject:
         self.fmri_dir       = os.path.join(self.dir, "fmri")
         self.fmri_data      = Image(os.path.join(self.fmri_dir, self.fmri_image_label))
         self.fmri_pa_data   = Image(os.path.join(self.fmri_dir, self.fmri_image_label + "_PA"))
+        self.fmri_pa_data2  = Image(os.path.join(self.fmri_dir, self.fmri_image_label + "_PA2"))
 
         self.fmri_data_mc           = Image(os.path.join(self.fmri_dir, "ra" + self.fmri_image_label))   # assumes motion correction after slice timings
 
         self.fmri_examplefunc       = Image(os.path.join(self.roi_fmri_dir, "example_func"))
         self.fmri_examplefunc_mask  = Image(os.path.join(self.roi_fmri_dir, "mask_example_func"))
-
-        self.fmri_pe_data           = Image(os.path.join(self.fmri_dir, self.fmri_image_label + "_pe"))
-        self.fmri_acq_params        = os.path.join(self.fmri_dir, "acqparams.txt")
 
         self.fmri_aroma_dir             = os.path.join(self.fmri_dir, "ica_aroma")
         self.fmri_icafix_dir            = os.path.join(self.fmri_dir, "ica_fix")
@@ -447,11 +445,13 @@ class Subject:
                  do_freesurfer=False, do_complete_fs=False, fs_seg_over_bet=False,
                  do_first=False, first_struct="", first_odn="",
 
-                 do_rs=True, do_epirm2vol=0, do_susc_corr=False,
+                 do_susc_corr=False,
+
+                 do_rs=True, do_epirm2vol=0, rs_pa_data=None,
                  do_aroma=True, do_nuisance=True, hpfsec=100, feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
                  do_featinitreg=False, do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=True,
 
-                 do_fmri=True, fmri_params=None, fmri_images=None,
+                 do_fmri=True, fmri_params=None, fmri_images=None, fmri_pa_data=None,
 
                  do_dtifit=True, do_pa_eddy=False, do_eddy_gpu=False, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
                  do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",
@@ -592,7 +592,11 @@ class Subject:
                 # ------------------------------------------------------------------------------------------------------
                 # susceptibility correction ?
                 # ------------------------------------------------------------------------------------------------------
-                if self.rs_pa_data.exist and do_susc_corr:  # want to correct
+                if rs_pa_data is None:
+                    rs_pa_data = self.rs_pa_data
+                rs_pa_data = Image(rs_pa_data)
+
+                if rs_pa_data.exist and do_susc_corr:  # want to correct
 
                     ap_distorted = self.rs_data.add_postfix2name("_distorted")
 
@@ -603,7 +607,7 @@ class Subject:
                         self.rs_data.cp(ap_distorted)
 
                     try:
-                        self.epi.topup_corrections([self.rs_data], self.rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
+                        self.epi.topup_corrections([self.rs_data], rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
                     except Exception as e:
                         print("UNRECOVERABLE ERROR: " + str(e))
                         ap_distorted.mv(self.rs_data, logFile=log)
@@ -669,7 +673,7 @@ class Subject:
 
                 if not postmel_img.exist and do_melodic:
                     if not os.path.isfile(melodic_model + ".fsf"):
-                        print("===========>>>> resting template file (" + self.label + " " + melodic_model + ".fsf) is missing...skipping 1st level resting")
+                        print("===========>>>> resting template file (" + self.label + " " + melodic_model + ".fsf) is missing...skipping 1st level rs")
                     else:
                         if os.path.isdir(mel_out_dir):
                             rmtree(mel_out_dir, ignore_errors=True)
@@ -703,7 +707,11 @@ class Subject:
             # ------------------------------------------------------------------------------------------------------
             # if susceptibility correction is selected. it performs topup correction after motion correction (realignment).
             # ------------------------------------------------------------------------------------------------------
-            if self.fmri_pa_data.exist and do_susc_corr:    # want to correct
+            if fmri_pa_data is None:
+                fmri_pa_data = self.fmri_pa_data
+            fmri_pa_data = Image(fmri_pa_data)
+
+            if fmri_pa_data.exist and do_susc_corr:    # want to correct
 
                 ap_distorted = self.fmri_data.add_postfix2name("_distorted")
                 if ap_distorted.exist and not do_overwrite:
@@ -716,7 +724,7 @@ class Subject:
                         self.fmri_data.cp(ap_distorted, logFile=log)
 
                     try:
-                        self.epi.topup_corrections([self.fmri_data], self.fmri_pa_data, self.project.topup_fmri_params, motion_corr=True, logFile=log)
+                        self.epi.topup_corrections([self.fmri_data], fmri_pa_data, self.project.topup_fmri_params, motion_corr=True, logFile=log)
                     except Exception as e:
                         print("UNRECOVERABLE ERROR: " + str(e))
                         ap_distorted.mv(self.rs_data, logFile=log)

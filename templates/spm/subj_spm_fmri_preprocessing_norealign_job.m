@@ -10,6 +10,7 @@ matlabbatch{1}.spm.temporal.st.ta = <TA_VALUE>;
 matlabbatch{1}.spm.temporal.st.so = [<SLICETIMING_PARAMS>];
 matlabbatch{1}.spm.temporal.st.refslice = <REF_SLICE>;
 matlabbatch{1}.spm.temporal.st.prefix = 'a';
+
 matlabbatch{2}.spm.spatial.coreg.estwrite.ref = {'<RESLICE_MEANIMAGE>'};
 matlabbatch{2}.spm.spatial.coreg.estwrite.source = {'<T1_IMAGE>'};
 matlabbatch{2}.spm.spatial.coreg.estwrite.other = {''};
@@ -57,6 +58,7 @@ matlabbatch{3}.spm.spatial.preproc.warp.affreg = 'mni';
 matlabbatch{3}.spm.spatial.preproc.warp.fwhm = 0;
 matlabbatch{3}.spm.spatial.preproc.warp.samp = 3;
 matlabbatch{3}.spm.spatial.preproc.warp.write = [0 1];
+
 matlabbatch{4}.spm.spatial.normalise.write.subj.def(1) = cfg_dep('Segment: Forward Deformations', substruct('.','val', '{}',{3}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','fordef', '()',{':'}));
 matlabbatch{4}.spm.spatial.normalise.write.subj.resample(1) = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess 1)', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('()',{1}, '.','files'));
 matlabbatch{4}.spm.spatial.normalise.write.woptions.bb = [-78 -112 -70
@@ -66,7 +68,7 @@ matlabbatch{4}.spm.spatial.normalise.write.woptions.interp = 4;
 matlabbatch{4}.spm.spatial.normalise.write.woptions.prefix = 'w';
 
 matlabbatch{5}.spm.spatial.smooth.data(1) = cfg_dep('Normalise: Write: Normalised Images (Subj 1)', substruct('.','val', '{}',{4}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('()',{1}, '.','files'));
-matlabbatch{6}.spm.spatial.smooth.fwhm = <SMOOTH_SCHEMA>;
+matlabbatch{5}.spm.spatial.smooth.fwhm = <SMOOTH_SCHEMA>;
 matlabbatch{5}.spm.spatial.smooth.dtype = 0;
 matlabbatch{5}.spm.spatial.smooth.im = 0;
 matlabbatch{5}.spm.spatial.smooth.prefix = 's';

@@ -105,7 +105,7 @@ if __name__ == "__main__":
         #              do_first=False, first_struct="", first_odn="",
         #
         #              do_rs=True, do_epirm2vol=0, do_susc_corr=False,
-        #              do_aroma=True, do_nuisance=True, hpfsec=100, feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
+        #              do_aroma=True, do_nuisance=True, hpfsec=100, feat_preproc_odn="rs", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
         #              do_featinitreg=False, do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=True,
         #
         #              do_fmri=True,
