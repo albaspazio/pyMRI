@@ -60,7 +60,7 @@ matlabbatch{3}.spm.spatial.preproc.warp.samp = 3;
 matlabbatch{3}.spm.spatial.preproc.warp.write = [0 1];
 
 matlabbatch{4}.spm.spatial.normalise.write.subj.def(1) = cfg_dep('Segment: Forward Deformations', substruct('.','val', '{}',{3}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','fordef', '()',{':'}));
-matlabbatch{4}.spm.spatial.normalise.write.subj.resample(1) = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess 1)', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('()',{1}, '.','files'));
+<NORMALIZE_WRITE_SESSIONS>
 matlabbatch{4}.spm.spatial.normalise.write.woptions.bb = [-78 -112 -70
                                                           78 76 85];
 matlabbatch{4}.spm.spatial.normalise.write.woptions.vox = [2 2 2];

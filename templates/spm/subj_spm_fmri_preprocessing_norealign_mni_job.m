@@ -11,20 +11,15 @@ matlabbatch{1}.spm.temporal.st.so = [<SLICETIMING_PARAMS>];
 matlabbatch{1}.spm.temporal.st.refslice = <REF_SLICE>;
 matlabbatch{1}.spm.temporal.st.prefix = 'a';
 
-matlabbatch{2}.spm.spatial.coreg.estwrite.ref = {'<RESLICE_MEANIMAGE>'};
-matlabbatch{2}.spm.spatial.coreg.estwrite.source = {'<T1_IMAGE>'};
-matlabbatch{2}.spm.spatial.coreg.estwrite.other = {''};
-matlabbatch{2}.spm.spatial.coreg.estwrite.eoptions.cost_fun = 'nmi';
-matlabbatch{2}.spm.spatial.coreg.estwrite.eoptions.sep = [4 2];
-matlabbatch{2}.spm.spatial.coreg.estwrite.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
-matlabbatch{2}.spm.spatial.coreg.estwrite.eoptions.fwhm = [7 7];
-matlabbatch{2}.spm.spatial.coreg.estwrite.roptions.interp = 7;
-matlabbatch{2}.spm.spatial.coreg.estwrite.roptions.wrap = [0 0 0];
-matlabbatch{2}.spm.spatial.coreg.estwrite.roptions.mask = 0;
-matlabbatch{2}.spm.spatial.coreg.estwrite.roptions.prefix = 'r';
+matlabbatch{2}.spm.spatial.coreg.estimate.ref = {'<RESLICE_MEANIMAGE>'};
+matlabbatch{2}.spm.spatial.coreg.estimate.source = {'<T1_IMAGE>'};
+matlabbatch{2}.spm.spatial.coreg.estimate.other = {''};
+matlabbatch{2}.spm.spatial.coreg.estimate.eoptions.cost_fun = 'nmi';
+matlabbatch{2}.spm.spatial.coreg.estimate.eoptions.sep = [4 2];
+matlabbatch{2}.spm.spatial.coreg.estimate.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+matlabbatch{2}.spm.spatial.coreg.estimate.eoptions.fwhm = [7 7];
 
-matlabbatch{3}.spm.spatial.preproc.channel.vols(1) = cfg_dep('Coregister: Estimate & Reslice: Resliced Images', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','rfiles'));
-%matlabbatch{3}.spm.spatial.preproc.channel.vols(1) = cfg_dep('Coregister: Estimate & Reslice: Coregistered Images', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','cfiles'));
+matlabbatch{3}.spm.spatial.preproc.channel.vols(1) = cfg_dep('Coregister: Estimate: Coregistered Images', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','cfiles'));
 matlabbatch{3}.spm.spatial.preproc.channel.biasreg = 0.001;
 matlabbatch{3}.spm.spatial.preproc.channel.biasfwhm = 60;
 matlabbatch{3}.spm.spatial.preproc.channel.write = [0 1];
@@ -61,7 +56,7 @@ matlabbatch{3}.spm.spatial.preproc.warp.samp = 3;
 matlabbatch{3}.spm.spatial.preproc.warp.write = [0 1];
 
 matlabbatch{4}.spm.spatial.normalise.write.subj.def(1) = cfg_dep('Segment: Forward Deformations', substruct('.','val', '{}',{3}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','fordef', '()',{':'}));
-matlabbatch{4}.spm.spatial.normalise.write.subj.resample(1) = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess 1)', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('()',{1}, '.','files'));
+<NORMALIZE_WRITE_SESSIONS>
 matlabbatch{4}.spm.spatial.normalise.write.woptions.bb = [   -90  -126   -72
                                                               90    90   108];
 matlabbatch{4}.spm.spatial.normalise.write.woptions.vox = [2 2 2];

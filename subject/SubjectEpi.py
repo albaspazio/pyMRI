@@ -6,6 +6,9 @@ from numpy import arange, concatenate, array
 from Global import Global
 from data.utilities import list2spm_text_column
 from group.SPMStatsUtils import SPMStatsUtils
+from group.SPMContrasts import SPMContrasts
+from group.SPMResults import SPMResults
+
 from utility.images.Image import Image, Images
 from utility.images.transform_images import flirt
 from utility.images.images import mid_1based, mid_0based
@@ -405,7 +408,7 @@ class SubjectEpi:
             # normalize write
             normalize_write_sessions = ""
             for i in range(nsessions):
-                normalize_write_sessions += "matlabbatch{5}.spm.spatial.normalise.write.subj.resample(" + str(i + 1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess 1)', substruct('.', 'val', '{}', {2}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i + 1) + "}, '.', 'files'));\n"
+                normalize_write_sessions += "matlabbatch{5}.spm.spatial.normalise.write.subj.resample(" + str(i + 1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess " + str(i + 1) + ")', substruct('.', 'val', '{}', {2}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i + 1) + "}, '.', 'files'));\n"
 
 
         elif spm_template_name == "subj_spm_fmri_preprocessing_norealign" or spm_template_name == "subj_spm_fmri_preprocessing_norealign_mni":
@@ -424,25 +427,25 @@ class SubjectEpi:
 
                 slice_timing_sessions += epi_session_volumes
 
-            slice_timing_sessions += "}"
+            slice_timing_sessions += "};"
 
             # normalize write
             normalize_write_sessions = ""
             for i in range(nsessions):
-                normalize_write_sessions += "matlabbatch{4}.spm.spatial.normalise.write.subj.resample(" + str(i + 1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess 1)', substruct('.', 'val', '{}', {2}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i + 1) + "}, '.', 'files'));\n"
+                normalize_write_sessions += "matlabbatch{4}.spm.spatial.normalise.write.subj.resample(" + str(i + 1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess " + str(i + 1) + ")', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i + 1) + "}, '.', 'files'));\n"
 
         else:
             raise Exception("Error in SubjectEpi.spm_fmri_preprocessing...unrecognized template")
 
-        sed_inplace(out_batch_job, '<SLICE_TIMING_SESSIONS>', slice_timing_sessions)
-        sed_inplace(out_batch_job, '<NORMALIZE_WRITE_SESSIONS>', normalize_write_sessions)
+        sed_inplace(out_batch_job, '<SLICE_TIMING_SESSIONS>',       slice_timing_sessions)
+        sed_inplace(out_batch_job, '<NORMALIZE_WRITE_SESSIONS>',    normalize_write_sessions)
 
-        sed_inplace(out_batch_job, '<NUM_SLICES>', str(num_slices))
-        sed_inplace(out_batch_job, '<TR_VALUE>', str(TR))
-        sed_inplace(out_batch_job, '<TA_VALUE>', str(TA))
+        sed_inplace(out_batch_job, '<NUM_SLICES>',  str(num_slices))
+        sed_inplace(out_batch_job, '<TR_VALUE>',    str(TR))
+        sed_inplace(out_batch_job, '<TA_VALUE>',    str(TA))
         sed_inplace(out_batch_job, '<SLICETIMING_PARAMS>', ' '.join(slice_timing))
         sed_inplace(out_batch_job, '<REF_SLICE>', str(st_ref))
-        sed_inplace(out_batch_job, '<RESLICE_MEANIMAGE>', mean_image.upath)
+        sed_inplace(out_batch_job, '<RESLICE_MEANIMAGE>', mean_image.upath + ',1')
         sed_inplace(out_batch_job, '<T1_IMAGE>', self.subject.t1_data.upath + ',1')
         sed_inplace(out_batch_job, '<SPM_DIR>', self._global.spm_dir)
         sed_inplace(out_batch_job, '<SMOOTH_SCHEMA>', smooth_schema)
@@ -502,8 +505,8 @@ class SubjectEpi:
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
     # sessions x conditions_lists[{"name", "onsets", "duration"}, ....]
-    def spm_fmri_1st_level_multisessions_custom_analysis(self, analysis_name, input_images, fmri_params, conditions_lists,
-                                                         spm_template_name='subj_spm_fmri_stats_1st_level', rp_filenames=None):
+    def spm_fmri_1st_level_multisessions_custom_analysis(self, analysis_name, input_images, fmri_params, conditions_lists, contrasts=None, res_report=None,
+                                                         spm_template_name="subj_spm_fmri_stats_1st_level", rp_filenames=None):
         nsessions = len(input_images)
 
         # unzip whether necessary
@@ -512,14 +515,16 @@ class SubjectEpi:
 
         # default params:
         stats_dir = os.path.join(self.subject.fmri_dir, "stats", analysis_name)
+        spmpath   = os.path.join(stats_dir, "SPM.mat")
         os.makedirs(stats_dir, exist_ok=True)
 
         num_slices  = fmri_params.nslices
         TR          = fmri_params.tr
+        time_bins   = fmri_params.time_bins
         events_unit = fmri_params.events_unit
 
         # takes central slice as a reference
-        ref_slice = mid_1based(num_slices)
+        time_onset  = mid_1based(time_bins)
 
         if rp_filenames is None:
             rp_filename = os.path.join(self.subject.fmri_dir, "rp_" + self.subject.fmri_image_label + ".txt")
@@ -529,8 +534,8 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<SPM_DIR>',         stats_dir)
         sed_inplace(out_batch_job, '<EVENTS_UNIT>',     events_unit)
         sed_inplace(out_batch_job, '<TR_VALUE>',        str(TR))
-        sed_inplace(out_batch_job, '<MICROTIME_RES>',   str(num_slices))
-        sed_inplace(out_batch_job, '<MICROTIME_ONSET>', str(ref_slice))
+        sed_inplace(out_batch_job, '<MICROTIME_RES>',   str(time_bins))
+        sed_inplace(out_batch_job, '<MICROTIME_ONSET>', str(time_onset))
 
         for s in range(nsessions):
 
@@ -553,6 +558,20 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<COND21_ONSETS>', list2spm_text_column(conditions_lists[1][0][:]))
         sed_inplace(out_batch_job, '<COND22_ONSETS>', list2spm_text_column(conditions_lists[1][1][:]))
         sed_inplace(out_batch_job, '<COND23_ONSETS>', list2spm_text_column(conditions_lists[1][2][:]))
+
+        if contrasts is None:
+            sed_inplace(out_batch_job, '<CONTRASTS>'     , "")
+            sed_inplace(out_batch_job, '<RESULTS_REPORT>', "")
+        else:
+            if not isinstance(contrasts, list):
+                raise Exception("Error in SubjectEpi.spm_fmri_1st_level_multisessions_custom_analysis, given contrasts")
+
+            str_contrasts   = SPMContrasts.spm_get_1stlevel_contrasts(spmpath, contrasts)
+            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report.multcorr, res_report.pvalue)
+
+            sed_inplace(out_batch_job, '<CONTRASTS>'     , str_contrasts)
+            sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
+
 
         # SPMStatsUtils.spm_replace_fmri_subj_stats_conditions_string(out_batch_job, conditions_lists)
 

@@ -12,7 +12,6 @@ from utility.utilities import sed_inplace, remove_ext
 
 class SPMStatsUtils:
 
-    # create spm fmri 1st level contrasts onsets
     # conditions is a dictionary list with field: [name, onsets, duration]
     @staticmethod
     def spm_replace_fmri_subj_stats_conditions_string(out_batch_job, conditions):
@@ -394,6 +393,20 @@ class PostModel:
         # if res_conv_params is None, do not create a default value, means I don't want to convert results
         if not isSpm and bool(res_conv_params):
             self.results_conv_params = res_conv_params
+
+
+class SubjResults:
+    def __init__(self, multcorr="FWE", pvalue=0.05, sessrep="none"):
+        self.multcorr       = multcorr
+        self.pvalue         = pvalue
+        self.sessrep        = sessrep
+
+
+class SubjContrast:
+    def __init__(self, name, weights, sessrep="none"):
+        self.name      = name
+        self.weights   = weights
+        self.sessrep   = sessrep
 
 
 class Peak:

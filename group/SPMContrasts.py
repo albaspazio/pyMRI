@@ -3,6 +3,28 @@ from utility.utilities import sed_inplace
 
 class SPMContrasts:
 
+
+    # first level fmri contrasts
+    # contrasts is a list of dictionaries with the following field:  name, weights, sessrep
+    @staticmethod
+    def spm_get_1stlevel_contrasts(spmmath, contrasts, deleteexisting=True, idstep=4):
+
+        constrasts_str = "matlabbatch{" + str(idstep) + "}.spm.stats.con.spmmat = {'" + spmmath + "'};\n"
+
+        for num, con in enumerate(contrasts):
+            constrasts_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.con.consess{" + str(num+1) + "}.tcon.name = '" + con.name + "';\n")
+            constrasts_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.con.consess{" + str(num+1) + "}.tcon.weights = " + con.weights + ";\n")
+            constrasts_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.con.consess{" + str(num+1) + "}.tcon.sessrep = '" + con.sessrep + "';\n")
+
+        if deleteexisting:
+            constrasts_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.con.delete = 1;\n")
+        else:
+            constrasts_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.con.delete = 0;\n")
+
+        return constrasts_str
+
+
+
     # create multregr contrasts for spm and cat
     @staticmethod
     def replace_1group_multregr_contrasts(out_batch_job, post_model, batch_id=1):
