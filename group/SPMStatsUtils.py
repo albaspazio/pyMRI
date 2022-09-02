@@ -6,27 +6,47 @@ from data.SubjectsDataDict import SubjectsDataDict
 from data.utilities import list2spm_text_column
 from utility.exceptions import DataFileException
 from utility.images.Image import Image
+from utility.images.images import mid_1based
 from utility.matlab import call_matlab_function_noret, call_matlab_spmbatch
-from utility.utilities import sed_inplace, remove_ext
+from utility.utilities import sed_inplace, remove_ext, is_list_of
 
 
 class SPMStatsUtils:
 
-    # conditions is a dictionary list with field: [name, onsets, duration]
+    # conditions is a list of SubjCondition(name, onsets, duration)
     @staticmethod
-    def spm_replace_fmri_subj_stats_conditions_string(out_batch_job, conditions):
+    def spm_get_fmri_subj_stats_conditions_string_1session(conditions):
+
+        if not is_list_of(conditions, SubjCondition):
+            raise Exception("Error in SPMStatsUtils.spm_get_fmri_subj_stats_conditions_string_1session, conditions list is not valid")
 
         conditions_string = ""
         for c in range(1, len(conditions) + 1):
-            onsets = list2spm_text_column(conditions[c - 1]["onsets"])  # ends with a "\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").name = \'" + conditions[c - 1]["name"] + "\';" + "\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").onset = [" + onsets + "];\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").tmod = 0;\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").duration = " + str(conditions[c - 1]["duration"]) + ";\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").pmod = struct('name', {}, 'param', {}, 'poly', {});\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").orth = 1;\n"
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").name = \'" + conditions[c - 1].name + "\';" + "\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").onset = [" + conditions[c - 1].onsets + "];\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").tmod = 0;\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").duration = " + conditions[c - 1].duration + ";\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").pmod = struct('name', {}, 'param', {}, 'poly', {});\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").orth = " + conditions[c - 1].orth + ";\n")
 
-        sed_inplace(out_batch_job, "<CONDITION_STRING>", conditions_string)
+        return conditions_string
+
+    @staticmethod
+    def spm_get_fmri_subj_stats_conditions_string_ithsession(conditions, sessid):
+
+        if not is_list_of(conditions, SubjCondition):
+            raise Exception("Error in SPMStatsUtils.spm_get_fmri_subj_stats_conditions_string_1session, conditions list is not valid")
+
+        conditions_string = ""
+        for c in range(1, len(conditions) + 1):
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").name = \'" + conditions[c - 1].name + "\';" + "\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").onset = [" + conditions[c - 1].onsets + "];\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").tmod = 0;\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").duration = " + conditions[c - 1].duration + ";\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").pmod = struct('name', {}, 'param', {}, 'poly', {});\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").orth = " + conditions[c - 1].orth + ";\n")
+
+        return conditions_string
 
     # ---------------------------------------------------
     #region compose images string
@@ -408,6 +428,25 @@ class SubjContrast:
         self.weights   = weights
         self.sessrep   = sessrep
 
+class SubjCondition:
+    def __init__(self, name, onsets, duration="0", orth="1"):
+        self.name        = name
+        self._onsets     = onsets
+        self._duration   = str(duration)
+        self._orth       = str(orth)
+
+    @property
+    def duration(self):
+        return str(self._duration)
+
+    @property
+    def onsets(self):
+        return list2spm_text_column(self._onsets)
+
+    @property
+    def orth(self):
+        return str(self._orth)
+
 
 class Peak:
 
@@ -454,12 +493,16 @@ class Nuisance(Regressor):
 
 
 class FmriProcParams:
-    def __init__(self, tr, nsl, sl_tim, st_ref, time_bins, acq_sch=0, ta=0, smooth=6, events_unit="secs"):
+    def __init__(self, tr, nsl, sl_tim, st_ref, time_bins, time_onset=None, acq_sch=0, ta=0, smooth=6, events_unit="secs"):
         self.tr             = tr
         self.nslices        = nsl
         self.slice_timing   = sl_tim
         self.st_ref         = st_ref
         self.time_bins      = time_bins
+        if time_onset is None:
+            self.time_onset = mid_1based(time_bins)
+        else:
+            self.time_onset = time_onset
         self.acq_scheme     = acq_sch
         self.ta             = ta
         self.smooth         = smooth

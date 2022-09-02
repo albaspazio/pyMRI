@@ -5,16 +5,16 @@ from numpy import arange, concatenate, array
 
 from Global import Global
 from data.utilities import list2spm_text_column
-from group.SPMStatsUtils import SPMStatsUtils
+from group.SPMStatsUtils import SPMStatsUtils, SubjCondition
 from group.SPMContrasts import SPMContrasts
 from group.SPMResults import SPMResults
 
 from utility.images.Image import Image, Images
 from utility.images.transform_images import flirt
-from utility.images.images import mid_1based, mid_0based
+from utility.images.images import mid_0based
 from utility.myfsl.utils.run import rrun
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
-from utility.utilities import sed_inplace, compress, copytree, get_filename
+from utility.utilities import sed_inplace, copytree, get_filename, is_list_of
 
 
 class SubjectEpi:
@@ -465,66 +465,114 @@ class SubjectEpi:
     #region fMRI analysis
     # ==================================================================================================================================================
     # conditions_lists[{"name", "onsets", "duration"}, ....]
-    def spm_fmri_1st_level_analysis(self, analysis_name, fmri_params, conditions_lists, events_unit="secs",
-                                    spm_template_name='subj_spm_fmri_stats_1st_level', rp_filename=""):
-
-        # default params:
-        stats_dir = os.path.join(self.subject.fmri_dir, "stats", analysis_name)
-        os.makedirs(stats_dir, exist_ok=True)
-
-        num_slices  = fmri_params.num_slices
-        TR          = fmri_params.tr
-        time_bins   = fmri_params.time_bins
-
-        # takes central slice as a reference
-        time_onset  = mid_1based(time_bins)
-
-        if rp_filename == "":
-            rp_filename = os.path.join(self.subject.fmri_dir, "rp_" + self.subject.fmri_image_label + ".txt")
-
-        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
-
-        # substitute for all the volumes
-        epi_nvols       = self.subject.fmri_data.nvols
-        epi_path        = Image(os.path.join(self.subject.fmri_dir, "swar" + self.subject.fmri_image_label))
-        epi_all_volumes = ""
-        for i in range(1, epi_nvols + 1):
-            epi_volume = "'" + epi_path.upath + ',' + str(i) + "'"
-            epi_all_volumes = epi_all_volumes + epi_volume + '\n'  # + "'"
-
-        sed_inplace(out_batch_job, '<SPM_DIR>',         stats_dir)
-        sed_inplace(out_batch_job, '<EVENTS_UNIT>',     events_unit)
-        sed_inplace(out_batch_job, '<TR_VALUE>',        str(TR))
-        sed_inplace(out_batch_job, '<MICROTIME_RES>',   time_bins)
-        sed_inplace(out_batch_job, '<MICROTIME_ONSET>', time_onset)
-        sed_inplace(out_batch_job, '<SMOOTHED_VOLS>',   epi_all_volumes)
-        sed_inplace(out_batch_job, '<MOTION_PARAMS>',   rp_filename)
-
-        SPMStatsUtils.spm_replace_fmri_subj_stats_conditions_string(out_batch_job, conditions_lists)
-
-        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
-
-    # sessions x conditions_lists[{"name", "onsets", "duration"}, ....]
-    def spm_fmri_1st_level_multisessions_custom_analysis(self, analysis_name, input_images, fmri_params, conditions_lists, contrasts=None, res_report=None,
-                                                         spm_template_name="subj_spm_fmri_stats_1st_level", rp_filenames=None):
+    def spm_fmri_1st_level_analysis(self, analysis_name, input_images, fmri_params, conditions_lists, contrasts=None, res_report=None, rp_filenames=None,
+                                                         spm_template_name="subj_spm_fmri_stats_1st_level"):
+        if input_images is None:
+            input_images = Images([self.subject.fmri_data])
+        else:
+            input_images = Images(input_images)
+        input_images.check_if_uncompress()  # unzip whether necessary
         nsessions = len(input_images)
 
-        # unzip whether necessary
-        for img in input_images:
-            Image(img).check_if_uncompress()
+        if not is_list_of(conditions_lists[0], SubjCondition):
+            raise Exception("Error in SubjectEpi.spm_fmri_1st_level_analysis, condition_list is not valid")
 
         # default params:
         stats_dir = os.path.join(self.subject.fmri_dir, "stats", analysis_name)
         spmpath   = os.path.join(stats_dir, "SPM.mat")
         os.makedirs(stats_dir, exist_ok=True)
 
-        num_slices  = fmri_params.nslices
         TR          = fmri_params.tr
         time_bins   = fmri_params.time_bins
         events_unit = fmri_params.events_unit
+        time_onset  = fmri_params.time_onset
 
-        # takes central slice as a reference
-        time_onset  = mid_1based(time_bins)
+        if rp_filenames is None:
+            rp_filenames = [os.path.join(self.subject.fmri_dir, "rp_" + self.subject.fmri_image_label + ".txt")]
+
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
+
+        sed_inplace(out_batch_job, '<SPM_DIR>', stats_dir)
+        sed_inplace(out_batch_job, '<EVENTS_UNIT>', events_unit)
+        sed_inplace(out_batch_job, '<TR_VALUE>', str(TR))
+        sed_inplace(out_batch_job, '<MICROTIME_RES>', str(time_bins))
+        sed_inplace(out_batch_job, '<MICROTIME_ONSET>', str(time_onset))
+
+        conditions_str = ""
+        if nsessions == 1:
+
+            # images
+            fmri_data = input_images[0]
+            fmri_data.check_if_uncompress()
+            epi_nvols = fmri_data.upath.nvols
+            conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.scans = {\n"
+            for i in range(1, epi_nvols + 1):
+                conditions_str += ("'" + fmri_data.upath + ',' + str(i) + "'\n")
+            conditions_str += "};\n"
+
+            # conditions
+            conditions_str += (SPMStatsUtils.spm_get_fmri_subj_stats_conditions_string_1session(conditions_lists[0]) + ";\n")
+
+            conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.multi = {''};\n"
+            conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.regress = struct('name', {}, 'val', {});\n"
+            conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess.multi_reg = {'" + rp_filenames[0] + "'};\n")
+            conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.hpf = 128;\n"
+
+        else:
+            for im,fmri_data in enumerate(input_images):
+
+                fmri_data.check_if_uncompress()
+                epi_nvols       = fmri_data.upath.nvols
+                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").scans = {\n"
+                for i in range(1, epi_nvols + 1):
+                    conditions_str += ("'" + fmri_data.upath + ',' + str(i) + "'\n")
+                conditions_str += "};\n"
+
+                # conditions
+                conditions_str += (SPMStatsUtils.spm_get_fmri_subj_stats_conditions_string_ithsession(conditions_lists[im], im+1) + ";\n")
+
+                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess" + str(im+1) + ".multi = {''};\n"
+                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess" + str(im+1) + ".regress = struct('name', {}, 'val', {});\n"
+                conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess" + str(im+1) + ".multi_reg = {'" + rp_filenames[im] + "'};\n")
+                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess" + str(im+1) + ".hpf = 128;\n"
+
+        sed_inplace(out_batch_job, '<SESSIONS_CONDITIONS>', conditions_str)
+
+        if contrasts is None:
+            sed_inplace(out_batch_job, '<CONTRASTS>', "")
+            sed_inplace(out_batch_job, '<RESULTS_REPORT>', "")
+        else:
+            if not isinstance(contrasts, list):
+                raise Exception("Error in SubjectEpi.spm_fmri_1st_level_multisessions_custom_analysis, given contrasts")
+
+            str_contrasts   = SPMContrasts.spm_get_1stlevel_contrasts(spmpath, contrasts)
+            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report.multcorr, res_report.pvalue)
+
+            sed_inplace(out_batch_job, '<CONTRASTS>', str_contrasts)
+            sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
+
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
+
+    # sessions x conditions_lists[{"name", "onsets", "duration"}, ....]
+    def spm_fmri_1st_level_multisessions_custom_analysis(self, analysis_name, input_images, fmri_params, conditions_lists, contrasts=None, res_report=None, rp_filenames=None,
+                                                         spm_template_name="subj_spm_fmri_stats_1st_level"):
+        if input_images is None:
+            input_images = Images([self.subject.fmri_data])
+        else:
+            input_images = Images(input_images)
+        input_images.check_if_uncompress()  # unzip whether necessary
+        nsessions = len(input_images)
+
+        # default params:
+        stats_dir = os.path.join(self.subject.fmri_dir, "stats", analysis_name)
+        spmpath   = os.path.join(stats_dir, "SPM.mat")
+        os.makedirs(stats_dir, exist_ok=True)
+
+        TR          = fmri_params.tr
+        time_bins   = fmri_params.time_bins
+        events_unit = fmri_params.events_unit
+        time_onset  = fmri_params.time_onset
+
 
         if rp_filenames is None:
             rp_filename = os.path.join(self.subject.fmri_dir, "rp_" + self.subject.fmri_image_label + ".txt")
@@ -573,7 +621,6 @@ class SubjectEpi:
             sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
 
 
-        # SPMStatsUtils.spm_replace_fmri_subj_stats_conditions_string(out_batch_job, conditions_lists)
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 

@@ -5,6 +5,11 @@ import shutil
 import tempfile
 import zipfile
 
+def is_list_of(_list, _type):
+    if isinstance(_list, list):
+        if isinstance(_list[0], _type):
+            return True
+    return False
 
 def extractall_zip(src, dest, replace=True):
 
@@ -164,6 +169,6 @@ def listToString(_list, separator='\t'):
     _str = ""
     # traverse the list and concatenate to String variable
     for element in _list:
-        _str += (element + separator)
+        _str += (str(element) + separator)
 
     return _str
