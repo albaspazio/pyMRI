@@ -531,10 +531,10 @@ class SubjectEpi:
                 # conditions
                 conditions_str += (SPMStatsUtils.spm_get_fmri_subj_stats_conditions_string_ithsession(conditions_lists[im], im+1) + ";\n")
 
-                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess" + str(im+1) + ".multi = {''};\n"
-                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess" + str(im+1) + ".regress = struct('name', {}, 'val', {});\n"
-                conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess" + str(im+1) + ".multi_reg = {'" + rp_filenames[im] + "'};\n")
-                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess" + str(im+1) + ".hpf = 128;\n"
+                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").multi = {''};\n"
+                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").regress = struct('name', {}, 'val', {});\n"
+                conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").multi_reg = {'" + rp_filenames[im] + "'};\n")
+                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").hpf = 128;\n"
 
         sed_inplace(out_batch_job, '<SESSIONS_CONDITIONS>', conditions_str)
 

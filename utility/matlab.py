@@ -111,6 +111,7 @@ def call_matlab_spmbatch(func, standard_paths=None, logfile=None, endengine=True
             engine = None
             print("quitting matlab session of " + batch_file)
 
+        os.remove(func)
         return engine
 
     except Exception as e:
