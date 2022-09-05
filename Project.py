@@ -138,7 +138,7 @@ class Project:
     def get_subjects_labels(self, grouplabel_or_subjlist=None, sess_id=1, must_exist=True):
         if grouplabel_or_subjlist is None:
             if len(self.subjects_labels) == 0:
-                raise SubjectListException("get_subjects_labels", "given grouplabel_or_subjlist is None and no group is loaded")
+                raise SubjectListException("get_subjects_labels", "given grouplabel_or_subjlist (" + grouplabel_or_subjlist + ") is None and no group is loaded")
             else:
                 return self.subjects_labels         # if != form 0, they have been already validated
         elif isinstance(grouplabel_or_subjlist, str):  # must be a group_label and have its associated subjects list
@@ -176,7 +176,7 @@ class Project:
                     return self.__get_valid_subjlabels(grp["list"], sess_id)
                 else:
                     return grp["list"]
-        raise SubjectListException("__get_valid_subjlabels_from_group", "given group_label does not exist in subjects_lists")
+        raise SubjectListException("__get_valid_subjlabels_from_group", "given group_label (" + group_label + ") does not exist in subjects_lists")
 
     # SUBJLABELS LIST => VALID SUBJLABELS LIST or []
     # check whether all subjects listed in subj_labels are valid

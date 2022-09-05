@@ -17,10 +17,10 @@ from utility.utilities import argsort, reorder_list, string2num, write_text_file
 
 class SubjectsDataDict(dict):
 
-    def __new__(cls, value=None, filepath="", tonum=True, delimiter='\t'):
-        return super(SubjectsDataDict, cls).__new__(cls, value)
+    def __new__(cls, filepath="", tonum=True, delimiter='\t'):
+        return super(SubjectsDataDict, cls).__new__(cls, None)
 
-    def __init__(self, value=None, filepath="", tonum=True, delimiter='\t'):
+    def __init__(self, filepath="", tonum=True, delimiter='\t'):
 
         super().__init__()
         self.labels     = []
@@ -195,8 +195,8 @@ class SubjectsDataDict(dict):
         res = []
         lab = []
 
-        for subj in subj_labels:
-            try:
+        try:
+            for subj in subj_labels:
                 subj_dic = self[subj]
                 subj_row = []
                 for colname in colnames:
@@ -204,8 +204,8 @@ class SubjectsDataDict(dict):
                 res.append(subj_row)
                 lab.append(subj)
 
-            except KeyError:
-                raise DataFileException("SubjectsDataDict.get_filtered_columns", "data of given subject (" + subj + ") is not present in the loaded data")
+        except KeyError:
+            raise DataFileException("SubjectsDataDict.get_filtered_columns", "data of given subject (" + subj + ") is not present in the loaded data")
 
         if sort:
             sort_schema = argsort(res)

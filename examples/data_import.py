@@ -26,7 +26,7 @@ if __name__ == "__main__":
         datafile = os.path.join(project.script_dir, "data.dat")  # is a tab limited data matrix with a header in the first row
         # ==================================================================================================================
         # test getting filtered data columns
-        data = SubjectsDataDict(datafile)
+        data = SubjectsDataDict(filepath=datafile)
 
         age             = data.get_column("age")
         age_subj_subset = data.get_filtered_column("age", project.get_subjects_labels("test"))  # extract age from a subset of loaded subjects
