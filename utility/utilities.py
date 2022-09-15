@@ -6,7 +6,7 @@ import tempfile
 import zipfile
 
 
-def is_list_of(_list, _type, checkall=False):
+def is_list_of(_list, _type, checkall=True):
     if isinstance(_list, list):
         if not checkall:
             if isinstance(_list[0], _type):

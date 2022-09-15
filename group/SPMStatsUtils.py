@@ -1,14 +1,13 @@
 import os
 # import ssl    # it was needed, can't remember when
 
-from Global import Global
 from data.SubjectsDataDict import SubjectsDataDict
 from data.utilities import list2spm_text_column
+from group.spm_utilities import SubjCondition
 from utility.exceptions import DataFileException
 from utility.images.Image import Image
-from utility.images.images import mid_1based
 from utility.matlab import call_matlab_function_noret, call_matlab_spmbatch
-from utility.utilities import sed_inplace, remove_ext, is_list_of
+from utility.utilities import sed_inplace, is_list_of
 
 
 class SPMStatsUtils:
@@ -54,27 +53,17 @@ class SPMStatsUtils:
     # group_instances is a list of subjects' instances
     # image_description: {"type": ct | dartel | vbm, "folder": root path for dartel}
     @staticmethod
-    def compose_images_string_1GROUP_MULTREGR(group_instances, out_batch_job, img_description):
+    def compose_images_string_1GROUP_MULTREGR(group_instances, out_batch_job, grp_input_imgs):
 
-        img_type = img_description["type"]
-        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
-            print("ERROR in compose_images_string_1W: given img_description[type] (" + img_type + ") is not valid")
-            return
-
-        img_folder  = ""
-        if img_type == "dartel":
-            if not os.path.isdir(img_description["folder"]):
-                print("ERROR in compose_images_string_1W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
-                return
-            else:
-                img_folder = img_description["folder"]
+        img_type    = grp_input_imgs.type
+        img_folder  = grp_input_imgs.folder
 
         cells_images = "\r"
 
         img = ""
         for subj in group_instances:
             if img_type == "ct":
-                img = eval("subj.t1_cat_resampled_surface")
+                img = subj.t1_cat_resampled_surface
             elif img_type == "dartel":
                 img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
 
@@ -84,20 +73,10 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
 
     @staticmethod
-    def compose_images_string_1W(groups_instances, out_batch_job, img_description):
+    def compose_images_string_1W(groups_instances, out_batch_job, grp_input_imgs):
 
-        img_type = img_description["type"]
-        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
-            print("ERROR in compose_images_string_1W: given img_description[type] (" + img_type + ") is not valid")
-            return
-
-        img_folder  = ""
-        if img_type == "dartel":
-            if not os.path.isdir(img_description["folder"]):
-                print("ERROR in compose_images_string_1W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
-                return
-            else:
-                img_folder = img_description["folder"]
+        img_type    = grp_input_imgs.type
+        img_folder  = grp_input_imgs.folder
 
         cells_images = ""
         gr = 0
@@ -110,7 +89,7 @@ class SPMStatsUtils:
             for subj in subjs:
 
                 if img_type == "ct":
-                    img = eval("subj.t1_cat_resampled_surface")
+                    img = subj.t1_cat_resampled_surface
                 elif img_type == "dartel":
                     img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
 
@@ -124,20 +103,10 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
 
     @staticmethod
-    def compose_images_string_2W(factors, out_batch_job, img_description):
+    def compose_images_string_2W(factors, out_batch_job, grp_input_imgs):
 
-        img_type = img_description["type"]
-        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
-            print("ERROR in compose_images_string_2W: given img_description[type] (" + img_type + ") is not valid")
-            return
-
-        img_folder  = ""
-        if img_type == "dartel":
-            if not os.path.isdir(img_description["folder"]):
-                print("ERROR in compose_images_string_2W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
-                return
-            else:
-                img_folder = img_description["folder"]
+        img_type    = grp_input_imgs.type
+        img_folder  = grp_input_imgs.folder
 
         factors_labels  = factors["labels"]
         cells           = factors["cells"]
@@ -179,20 +148,10 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<FACTORS_CELLS>",   cells_images)
 
     @staticmethod
-    def compose_images_string_2sTT(groups_instances, out_batch_job, img_description):
+    def compose_images_string_2sTT(groups_instances, out_batch_job, grp_input_imgs):
 
-        img_type = img_description["type"]
-        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
-            print("ERROR in compose_images_string_2sTT: given img_description[type] (" + img_type + ") is not valid")
-            return
-
-        img_folder  = ""
-        if img_type == "dartel":
-            if not os.path.isdir(img_description["folder"]):
-                print("ERROR in compose_images_string_2sTT: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
-                return
-            else:
-                img_folder = img_description["folder"]
+        img_type    = grp_input_imgs.type
+        img_folder  = grp_input_imgs.folder
 
         subjs1      = groups_instances[0]
         subjs2      = groups_instances[1]
@@ -202,9 +161,11 @@ class SPMStatsUtils:
         for subj in subjs1:
 
             if img_type == "ct":
-                img = eval("subj.t1_cat_resampled_surface")
+                img = subj.t1_cat_resampled_surface
             elif img_type == "dartel":
                 img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
+            elif img_type == "fmri":
+                img = os.path.join(subj.fmri_dir, "stats", img_folder, grp_input_imgs.name + ".nii")
 
             img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_2sTT")
 
@@ -215,9 +176,11 @@ class SPMStatsUtils:
         for subj in subjs2:
 
             if img_type == "ct":
-                img = eval("subj.t1_cat_resampled_surface")
+                img = subj.t1_cat_resampled_surface
             elif img_type == "dartel":
                 img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
+            elif img_type == "fmri":
+                img = os.path.join(subj.fmri_dir, "stats", img_folder, grp_input_imgs.name + ".nii")
 
             img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_2sTT")
 
@@ -369,141 +332,3 @@ class SPMStatsUtils:
             else:
                 call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir], eng=eng, endengine=False)
     #endregion
-
-
-class ResultsParams:
-    def __init__(self, multcorr="FWE", pvalue=0.05, clustext=0):
-        self.mult_corr      = multcorr
-        self.pvalue         = pvalue
-        self.cluster_extend = clustext
-
-
-class CatConvResultsParams:
-    def __init__(self, multcorr="FWE", pvalue=0.05, clustext="none"):
-        self.mult_corr      = multcorr
-        self.pvalue         = pvalue    # "FWE" | "FDR" | "none"
-        self.cluster_extend = clustext  # "none" | "en_corr" | "en_nocorr"
-
-
-class PostModel:
-    def __init__(self, templ_name, regressors, contr_names=None, res_params=None, res_conv_params=None, isSpm=True):
-
-        if contr_names is None:
-            contr_names = []
-
-        templ_name = remove_ext(templ_name)
-
-        # check if template name is valid according to the specification applied in Project.adapt_batch_files
-        # it can be a full path (without extension) of an existing file, or a file name present in pymri/templates/spm (without "_job.m)
-        if not os.path.exists(templ_name + ".m"):
-            if not os.path.exists(os.path.join(Global.get_spm_template_dir(), templ_name + "_job.m")):
-                raise Exception("given post_model template name (" + templ_name + ") is not valid")
-
-        self.template_name = templ_name
-
-        self.contrast_names = contr_names   # list of strings
-        self.regressors     = regressors    # list of subtypes of Regressors
-        self.isSpm          = isSpm
-
-        if res_params is None:
-            self.results_params = ResultsParams()   # standard (FWE, 0.05, 0)
-        else:
-            self.results_params = res_params  # of type (CatConv)ResultsParams
-
-        # if res_conv_params is None, do not create a default value, means I don't want to convert results
-        if not isSpm and bool(res_conv_params):
-            self.results_conv_params = res_conv_params
-
-
-class SubjResults:
-    def __init__(self, multcorr="FWE", pvalue=0.05, sessrep="none"):
-        self.multcorr       = multcorr
-        self.pvalue         = pvalue
-        self.sessrep        = sessrep
-
-
-class SubjContrast:
-    def __init__(self, name, weights, sessrep="none"):
-        self.name      = name
-        self.weights   = weights
-        self.sessrep   = sessrep
-
-class SubjCondition:
-    def __init__(self, name, onsets, duration="0", orth="1"):
-        self.name        = name
-        self._onsets     = onsets
-        self._duration   = str(duration)
-        self._orth       = str(orth)
-
-    @property
-    def duration(self):
-        return str(self._duration)
-
-    @property
-    def onsets(self):
-        return list2spm_text_column(self._onsets)
-
-    @property
-    def orth(self):
-        return str(self._orth)
-
-
-class Peak:
-
-    def __init__(self, pfwe, pfdr, t, zscore, punc, x, y, z):
-        self.pfwe   = pfwe
-        self.pfdr   = pfdr
-        self.t      = t
-        self.zscore = zscore
-        self.punc   = punc
-        self.x      = x
-        self.y      = y
-        self.z      = z
-
-
-class Cluster:
-
-    def __init__(self, _id, pfwe, pfdr, k, punc, firstpeak):
-        self.id     = _id
-        self.pfwe   = pfwe
-        self.pfdr   = pfdr
-        self.k      = k
-        self.punc   = punc
-        self.peaks  = []
-        self.peaks.append(firstpeak)
-
-    def add_peak(self, peak):
-        self.peaks.append(peak)
-
-
-class Regressor:
-    def __init__(self, name, isNuisance):
-        self.name       = name
-        self.isNuisance = isNuisance
-
-
-class Covariate(Regressor):
-    def __init__(self, name):
-        super().__init__(name, False)
-
-
-class Nuisance(Regressor):
-    def __init__(self, name):
-        super().__init__(name, True)
-
-
-class FmriProcParams:
-    def __init__(self, tr, nsl, sl_tim, st_ref, time_bins, time_onset=None, acq_sch=0, ta=0, smooth=6, events_unit="secs"):
-        self.tr             = tr
-        self.nslices        = nsl
-        self.slice_timing   = sl_tim
-        self.st_ref         = st_ref
-        self.time_bins      = time_bins
-        if time_onset is None:
-            self.time_onset = mid_1based(time_bins)
-        else:
-            self.time_onset = time_onset
-        self.acq_scheme     = acq_sch
-        self.ta             = ta
-        self.smooth         = smooth
-        self.events_unit    = events_unit

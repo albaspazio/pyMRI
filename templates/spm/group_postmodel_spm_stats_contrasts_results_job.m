@@ -3,14 +3,13 @@
 % spm SPM - SPM12 (7487)
 % cfg_basicio BasicIO - Unknown
 %-----------------------------------------------------------------------
-matlabbatch{1}.spm.stats.con.spmmat = {'<SPM_MAT>'};
+
 
 <CONTRASTS>
 
 
 
 
-matlabbatch{1}.spm.stats.con.delete = 1;
 matlabbatch{2}.spm.stats.results.spmmat(1) = cfg_dep('Contrast Manager: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));
 matlabbatch{2}.spm.stats.results.conspec.titlestr = '';
 matlabbatch{2}.spm.stats.results.conspec.contrasts = Inf;

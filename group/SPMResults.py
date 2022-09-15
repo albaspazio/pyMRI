@@ -1,7 +1,7 @@
 import csv
 import os
 
-from group.SPMStatsUtils import CatConvResultsParams, Peak, Cluster
+from group.spm_utilities import CatConvResultsParams, Peak, Cluster
 from utility.matlab import call_matlab_spmbatch
 from utility.utilities import fillnumber2fourdigits, write_text_file
 
