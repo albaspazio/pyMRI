@@ -2,8 +2,7 @@ import os
 from distutils.file_util import copy_file
 
 from data.utilities import validate_data_with_covs
-from group.SPMStatsUtils import Covariate, Nuisance
-
+from group.spm_utilities import Covariate, Nuisance
 
 # create factorial designs, multiple regressions, t-test
 from utility.myfsl.utils.run import rrun

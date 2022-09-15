@@ -75,7 +75,7 @@ class Image(str):
     # ===============================================================================================================================
     # get the whole extension  (e.g. abc.nii.gz => nii.gz )
     # return [path/filename_noext, ext]
-    def img_split_ext(self, img_formats=None):
+    def split_ext(self, img_formats=None):
 
         if img_formats is None:
             img_formats = self.IMAGE_FORMATS
@@ -93,21 +93,21 @@ class Image(str):
         if os.path.isdir(self):
             return [self, "", ""]
 
-        parts = self.img_split_ext()
+        parts = self.split_ext()
         return [ntpath.dirname(parts[0]), ntpath.basename(parts[0]), parts[1]]
 
     # return imgname_noext
     def imgname(self):
-        namepath = self.img_split_ext()[0]
+        namepath = self.split_ext()[0]
         return ntpath.basename(namepath)
 
     def imgdir(self):
-        namepath = self.img_split_ext()[0]
+        namepath = self.split_ext()[0]
         return ntpath.dirname(namepath)
 
     # return basename of given image (useful to return "image" from "image.nii.gz")
     def remove_image_ext(self):
-        return self.img_split_ext()[0]
+        return self.split_ext()[0]
 
     # ===========================================================================================================
     # EXIST, COPY, REMOVE, MOVE, MASS MOVE
@@ -204,7 +204,7 @@ class Image(str):
             ext = ".nii.gz"
 
         dest            = Image(dest)
-        fileparts_dst   = dest.img_split_ext()
+        fileparts_dst   = dest.split_ext()
 
         if dest.is_dir:
             fileparts_dst[0] = os.path.join(dest, self.name)  # dest dir + source filename
@@ -343,8 +343,8 @@ class Image(str):
         # preserve only the last two dots (those relating to ".nii.gz")
         num_dot = temp.count(".")
         if num_dot > 2:
-            temp = temp.replace(".", "", num_dot - 2)
-        file_extension = temp.img_split_ext(img_formats)[1]
+            temp = Image(temp.replace(".", "", num_dot - 2))
+        file_extension = temp.split_ext(img_formats)[1]
 
         if file_extension in img_formats:
             return True
@@ -416,8 +416,8 @@ class Image(str):
 
         compress(self.upath, udest, replace)
 
-    # unzip file to a given path, deleting (by default) the original nii.gz
-    def unzip(self, dest=None, replace=True):
+    # unzip file to a given path, preserving (by default) the original nii.gz
+    def unzip(self, dest=None, replace=False):
 
         if dest is None:
             udest   = self.upath

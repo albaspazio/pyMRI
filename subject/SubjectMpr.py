@@ -277,11 +277,9 @@ class SubjectMpr:
 
         inputimage = Image(inputimage, must_exist=True, msg="SubjectMpr.bet input anatomical image is missing")
 
-
         T1              = Image(os.path.join(anatdir, T1))  # T1 is now an absolute path
         lesionmask      = Image(os.path.join(anatdir, lesionmask))
         lesionmaskinv   = Image(os.path.join(anatdir, lesionmask + "inv"))
-
 
         # check given lesionmask presence, otherwise exit
         if use_lesionmask and not lesionmask.exist:
@@ -425,10 +423,8 @@ class SubjectMpr:
         srcinputimage       = Image(os.path.join(anatdir, T1 + "_biascorr"))
         inputimage          = Image(os.path.join(self.subject.t1_spm_dir, T1 + "_" + self.subject.label))
 
-        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
-
         brain_mask          = Image(os.path.join(self.subject.t1_spm_dir, "brain_mask.nii.gz"))
-        skullstripped_mask = os.path.join(self.subject.t1_spm_dir, "skullstripped_mask.nii.gz")
+        skullstripped_mask  = Image(os.path.join(self.subject.t1_spm_dir, "skullstripped_mask.nii.gz"))
 
         icv_file            = os.path.join(self.subject.t1_spm_dir, "icv_" + self.subject.label + ".dat")
 
@@ -459,12 +455,12 @@ class SubjectMpr:
 
             seg_templ = Image(seg_templ, must_exist=True, msg="SubjectMPR.spm_segment given template tissue")
 
+            out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
+
             sed_inplace(out_batch_job, "<T1_IMAGE>", inputimage.upath)
             sed_inplace(out_batch_job, "<ICV_FILE>", icv_file)
             sed_inplace(out_batch_job, '<SPM_DIR>', self._global.spm_dir)
             sed_inplace(out_batch_job, '<TEMPLATE_TISSUES>', seg_templ)
-
-            out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
 
             call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir], log)
 

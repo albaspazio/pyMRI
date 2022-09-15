@@ -2,7 +2,7 @@ import os
 
 from Global import Global
 from Project import Project
-from group.SPMStatsUtils import FmriProcParams
+from group.spm_utilities import FmriProcParams
 from subject.Subject import Subject
 from numpy import sort
 

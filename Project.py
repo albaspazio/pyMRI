@@ -39,10 +39,12 @@ class Project:
         self.melodic_dr_dir         = os.path.join(self.resting_dir, "dr")
         self.sbfc_dir               = os.path.join(self.resting_dir, "sbfc")
 
+        self.fmri_dir               = os.path.join(self.group_analysis_dir, "fmri")
+
         self.vbm_dir                = os.path.join(self.mpr_dir, "vbm")
         self.ct_dir                 = os.path.join(self.mpr_dir, "ct")
 
-        self.tbss_dir = os.path.join(self.group_analysis_dir, "tbss")
+        self.tbss_dir               = os.path.join(self.group_analysis_dir, "tbss")
 
         self.topup_rs_params        = os.path.join(self.script_dir, "topup_acqpar_rs.txt")
         self.topup_rs2_params       = os.path.join(self.script_dir, "topup_acqpar_rs2.txt")
@@ -54,7 +56,7 @@ class Project:
         self.eddy_dti_json          = os.path.join(self.script_dir, "dti_ap.json")
         self.eddy_index             = os.path.join(self.script_dir, "eddy_index.txt")
 
-        self.globaldata = globaldata
+        self.globaldata             = globaldata
 
         self.subjects           = []
         self.subjects_labels    = []
@@ -93,7 +95,6 @@ class Project:
 
         return self.data
 
-
     # if must_exist=true:   loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
     # if must_exist=false:  only create
     # returns this list
@@ -114,15 +115,18 @@ class Project:
         return subjects
 
     # get a deepcopy of subject with given label
-    def get_subject_by_label(self, subj_label, sess=1):
+    def get_subject_by_label(self, subj_label, sess=1, must_exist=True):
 
-        for subj in self.subjects:
-            if subj.label == subj_label:
-                if subj.sessid == sess:
-                    return deepcopy(subj)
-                else:
-                    return subj.set_properties(sess, rollback=True)  # it returns a deepcopy of requested session
-        return None
+        if must_exist:
+            for subj in self.subjects:
+                if subj.label == subj_label:
+                    if subj.sessid == sess:
+                        return deepcopy(subj)
+                    else:
+                        return subj.set_properties(sess, rollback=True)  # it returns a deepcopy of requested session
+            return None
+        else:
+            return Subject(subj_label, self, sess)
 
     # ==================================================================================================================
     #region GET SUBJECTS' LABELS or INSTANCES
@@ -323,7 +327,7 @@ class Project:
                 print("skipping prepare_mpr_for_setorigin1 for subj " + subj.label)
                 continue
 
-            subj.t1_data.cpath.unzip(niifile)
+            subj.t1_data.cpath.unzip(niifile, replace=True)
             print("unzipped " + subj.label + " mri")
 
     def prepare_mpr_for_setorigin2(self, group_label, sess_id=1):
@@ -503,21 +507,21 @@ class Project:
     # ==================================================================================================================
     # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subj_labels) > 1 ...pass that same kwparams[0] to all subjects
     # if subj_labels is not given...use the loaded subjects
-    def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, group_or_subjlabels=None):
+    def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, group_or_subjlabels=None, sess_id=1, must_exist=True):
 
         if method_type != "" and method_type != "mpr" and method_type != "dti" and method_type != "epi" and method_type != "transform":
             print("ERROR in run_subjects_methods: the method type does not correspond to any of the allowed values (\"\", mpr, epi, dti, transform")
             return
 
         print("run_subjects_methods: validating given subjects")
-        valid_subjlabels    = self.get_subjects_labels(group_or_subjlabels)
+        valid_subjlabels    = self.get_subjects_labels(group_or_subjlabels, sess_id, must_exist)
         nsubj               = len(valid_subjlabels)
         if nsubj == 0:
             print("ERROR in run_subjects_methods: subject list is empty")
             return
 
         # check number of NECESSARY (without a default value) method params
-        subj = self.get_subject_by_label(valid_subjlabels[0])    # subj appear unused, but is instead used in the eval()
+        subj = self.get_subject_by_label(valid_subjlabels[0], sess_id, must_exist)    # subj appear unused, but is instead used in the eval()
         if method_type == "":
             method = eval("subj." + method_name)
         else:
@@ -574,7 +578,7 @@ class Project:
 
             for s in range(len(subjects[bl])):
 
-                subj = self.get_subject_by_label(subjects[bl][s])
+                subj = self.get_subject_by_label(subjects[bl][s], sess_id, must_exist)
 
                 if subj is not None:
 

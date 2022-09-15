@@ -328,7 +328,8 @@ class Subject:
 
         # rename special file
         # in sXX.mesh.thickness.resampled_32K.....gii, it loads the corresponding .dat, change such reference)
-        sed_inplace(self.t1_cat_resampled_surface, self.label, new_label)
+        new_t1_cat_resampled_surface = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.T1_" + new_label + ".gii"))
+        sed_inplace(new_t1_cat_resampled_surface, self.label, new_label)
 
         os.makedirs(os.path.join(self.project.dir, "subjects", new_label))
         os.rename(self.dir, os.path.join(self.project.dir, "subjects", new_label, "s" + str(session_id)))

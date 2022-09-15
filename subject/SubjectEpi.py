@@ -5,7 +5,8 @@ from numpy import arange, concatenate, array
 
 from Global import Global
 from data.utilities import list2spm_text_column
-from group.SPMStatsUtils import SPMStatsUtils, SubjCondition
+from group.SPMStatsUtils import SPMStatsUtils
+from group.spm_utilities import SubjCondition
 from group.SPMContrasts import SPMContrasts
 from group.SPMResults import SPMResults
 
@@ -545,10 +546,9 @@ class SubjectEpi:
             if not isinstance(contrasts, list):
                 raise Exception("Error in SubjectEpi.spm_fmri_1st_level_multisessions_custom_analysis, given contrasts")
 
-            str_contrasts   = SPMContrasts.spm_get_1stlevel_contrasts(spmpath, contrasts)
+            SPMContrasts.replace_1stlevel_contrasts(out_batch_job, spmpath, contrasts)
             str_res_rep     = SPMResults.get_1stlevel_results_report(res_report.multcorr, res_report.pvalue)
 
-            sed_inplace(out_batch_job, '<CONTRASTS>', str_contrasts)
             sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
@@ -614,13 +614,10 @@ class SubjectEpi:
             if not isinstance(contrasts, list):
                 raise Exception("Error in SubjectEpi.spm_fmri_1st_level_multisessions_custom_analysis, given contrasts")
 
-            str_contrasts   = SPMContrasts.spm_get_1stlevel_contrasts(spmpath, contrasts)
+            SPMContrasts.replace_1stlevel_contrasts(out_batch_job, spmpath, contrasts)
             str_res_rep     = SPMResults.get_1stlevel_results_report(res_report.multcorr, res_report.pvalue)
 
-            sed_inplace(out_batch_job, '<CONTRASTS>'     , str_contrasts)
             sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
-
-
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 

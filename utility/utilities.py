@@ -5,11 +5,19 @@ import shutil
 import tempfile
 import zipfile
 
-def is_list_of(_list, _type):
+
+def is_list_of(_list, _type, checkall=False):
     if isinstance(_list, list):
-        if isinstance(_list[0], _type):
+        if not checkall:
+            if isinstance(_list[0], _type):
+                return True
+        else:
+            for i in _list:
+                if not isinstance(i, _type):
+                    return False
             return True
     return False
+
 
 def extractall_zip(src, dest, replace=True):
 
