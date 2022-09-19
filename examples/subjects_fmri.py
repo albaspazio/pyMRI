@@ -2,7 +2,7 @@ import os
 
 from Global import Global
 from Project import Project
-from group.spm_utilities import FmriProcParams
+from group.spm_utilities import FmriProcParams, Contrast
 from subject.Subject import Subject
 from numpy import sort
 
@@ -27,31 +27,64 @@ if __name__ == "__main__":
         num_slices      = 72
         slice_timing    = [0.31, 0, 0.3875, 0.0775, 0.465, 0.155, 0.5425, 0.2325, 0.6225, 0.31, 0, 0.3875, 0.0775, 0.465, 0.155, 0.5425, 0.2325, 0.6225, 0.31, 0, 0.3875, 0.0775, 0.465, 0.155, 0.5425, 0.2325, 0.6225, 0.31, 0, 0.3875, 0.0775, 0.465, 0.155, 0.5425, 0.2325, 0.6225, 0.31, 0, 0.3875, 0.0775, 0.465, 0.155, 0.5425, 0.2325, 0.6225, 0.31, 0, 0.3875, 0.0775, 0.465, 0.155, 0.5425, 0.2325, 0.6225, 0.31, 0, 0.3875, 0.0775, 0.465, 0.155, 0.5425, 0.2325, 0.6225, 0.31, 0, 0.3875, 0.0775, 0.465,
                            0.155, 0.5425, 0.2325, 0.6225]
-        ref_slice       = 0.31
-        fmri_params     = FmriProcParams(TR, num_slices, slice_timing, ref_slice)
+        st_refslice     = 0.31
+        time_bins       = 9     # 72/8
+
+        fmri_params     = FmriProcParams(TR, num_slices, slice_timing, st_refslice, time_bins)
+
+        contrasts_trg   = [Contrast("c1", "[1 0 1 0 1]"),
+                           Contrast("c2: same > neutral", "[-1 0 1]"),
+                           Contrast("c3: neutral > same", "[1 0 -1]")
+                          ]
 
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        epi_names   = ["target", "frame"]
+        epi_names       = ["target", "frame"]
 
         # ---------------------------------------------------------------------------------------------------------------------
-        group_label = "test"
-        subjects    = project.load_subjects(group_label, SESS_ID)
-        # ---------------------------------------------------------------------------------------------------------------------
-
-
-        # ---------------------------------------------------------------------------------------------------------------------
-        # PREPROCESSING (coregistration, segment, normalize, smooth)
-        # ---------------------------------------------------------------------------------------------------------------------
-        # def spm_fmri_preprocessing(self, num_slices, TR, TA=-1, acq_scheme=0, ref_slice=-1, slice_timing=None,
-        #                            epi_images=None, smooth=6, spm_template_name='subj_spm_fmri_full_preprocessing'):
+        subjects        = project.load_subjects(group_label, SESS_ID)
         kwparams = []
         for s in subjects:
-            kwparams.append({"epi_images":[os.path.join(s.fmri_dir, s.label + "-fmri_" + epi_names[0]), os.path.join(s.fmri_dir, s.label + "-fmri_" + epi_names[1])],
-                             "fmri_params":fmri_params, "spm_template_name":"subj_spm_fmri_full_preprocessing"})
-
+            kwparams.append({"epi_images":[os.path.join(s.fmri_dir, s.label + "-fmri_" + epi_names[0] ), os.path.join(s.fmri_dir, s.label + "-fmri_" + epi_names[1])],
+                             "fmri_params":fmri_params, "spm_template_name":"subj_spm_fmri_full_preprocessing_mni"})
         project.run_subjects_methods("epi", "spm_fmri_preprocessing", kwparams, ncore=num_cpu)
+
+        # ---------------------------------------------------------------------------------------------------------------------
+        # 1st level stat analysis: two separate sessions, 3 regressors
+        # ---------------------------------------------------------------------------------------------------------------------
+        subjects        = project.load_subjects(group_label, SESS_ID)
+        epi_names       = ["target", "frame"]
+        images_type     = "swar"
+
+        import matlab.engine
+        eng = matlab.engine.start_matlab()
+
+        kwparams     = []
+
+        for s in subjects:
+            rp_filenames = []
+            input_images = []
+            sessions_cond= []
+
+            for epi_name in epi_names:
+                conditions = eng.load(os.path.join(project.script_dir, "fmri", "fmri_logs", s.label + "_" + epi_name + ".mat"), nargout=1)
+
+                session = []
+                session.append(SubjCondition(epi_name + ": neutral",    sort(conditions["task_onsets"]["onsets_neutral"][:]._data)))
+                session.append(SubjCondition(epi_name + ": same",       sort(conditions["task_onsets"]["onsets_same"][:]._data)))
+                session.append(SubjCondition(epi_name + ": opposite",   sort(conditions["task_onsets"]["onsets_opposite"][:]._data)))
+                sessions_cond.append(session)
+
+                input_images.append(os.path.join(s.fmri_dir, images_type + s.label + "-fmri_" + epi_name + ".nii"))
+                rp_filenames.append(os.path.join(s.fmri_dir, "rp_" + s.label + "-fmri_" + epi_name + ".txt"))
+
+            kwparams.append({"analysis_name": "stats_2sessions_3regr", "fmri_params": fmri_params, "contrasts": contrasts_full, "res_report": result_report,
+                             "input_images": input_images, "conditions_lists": sessions_cond, "rp_filenames": rp_filenames})
+
+        project.run_subjects_methods("epi", "spm_fmri_1st_level_analysis", kwparams, ncore=num_cpu)
+
+
 
 
 
@@ -120,76 +153,6 @@ if __name__ == "__main__":
         # #
         # subjects    = project.load_subjects(group_label, SESS_ID)
         # project.run_subjects_methods("epi_smooth",  [{"epi_image":"WAR", "fwhm":6}] , project.get_subjects_labels(), nthread=num_cpu)
-
-        # ---------------------------------------------------------------------------------------------------------------------
-        # 1st level stat analysis 5 regressors
-        # ---------------------------------------------------------------------------------------------------------------------
-        # import matlab.engine
-        # eng     = matlab.engine.start_matlab()
-        # subjects = project.load_subjects(group_label, SESS_ID)
-        # kwparams = []
-        # for s in subjects:
-        #     a       = eng.load(os.path.join(project.dir, "subjects", s.label, "s1", "epi", "stimuli", "sub" + s.label + ".mat"), nargout=1)
-        #     onsets  = []
-        #     onsets.append(a["sub_salva"]["Time_ref"][:]._data)
-        #     onsets.append(a["sub_salva"]["Time_bisDX"][:]._data)
-        #     onsets.append(a["sub_salva"]["Time_bisSX"][:]._data)
-        #     onsets.append(a["sub_salva"]["Time_locDX"][:]._data)
-        #     onsets.append(a["sub_salva"]["Time_locSX"][:]._data)
-        #
-        #     kwparams.append({"analysis_name":"stats_10cond_SWAR", "num_slices":num_slices, "TR":TR, "events_unit":"secs", "input_images": "SWAR", "spm_template_name":"/data/MRI/projects/BISECTION_PISA2/script/epi/spm/template_individual_stats_10contr_analysis_job.m", "onsets":onsets})
-        #
-        # project.run_subjects_methods("epi_spm_fmri_1st_level_analysis", kwparams, project.get_subjects_labels(), nthread=num_cpu)
-
-        # ---------------------------------------------------------------------------------------------------------------------
-        # 1st level stat analysis 3 regressors
-        # ---------------------------------------------------------------------------------------------------------------------
-        # import matlab.engine
-        # eng      = matlab.engine.start_matlab()
-        # subjects = project.load_subjects(group_label, SESS_ID)
-        # kwparams = []
-        # for s in subjects:
-        #     a       = eng.load(os.path.join(project.dir, "subjects", s.label, "s1", "epi", "stimuli", "sub" + s.label + ".mat"), nargout=1)
-        #     onsets  = []
-        #
-        #     onsets.append(a["sub_salva"]["Time_ref"][:]._data)
-        #     onsets.append(sort(a["sub_salva"]["Time_bisDX"][:]._data + a["sub_salva"]["Time_bisSX"][:]._data))
-        #     onsets.append(sort(a["sub_salva"]["Time_locDX"][:]._data + a["sub_salva"]["Time_locSX"][:]._data))
-        #     kwparams.append({"analysis_name":"stats_3regr_7cond_AR", "num_slices":num_slices, "TR":TR, "events_unit":"secs", "input_images": "AR", "spm_template_name":"/data/MRI/projects/BISECTION_PISA2/script/epi/spm/template_individual_stats_3regr_7contr_analysis_job.m", "onsets":onsets})
-        #
-        # project.run_subjects_methods("epi_spm_fmri_1st_level_analysis", kwparams, project.get_subjects_labels(), nthread=num_cpu)
-
-        # ---------------------------------------------------------------------------------------------------------------------
-        # 1st level stat analysis: single sessions 3 regressors
-        # ---------------------------------------------------------------------------------------------------------------------
-        # images_type = "ra"
-        #
-        # import matlab.engine
-        #
-        # eng = matlab.engine.start_matlab()
-        # subjects = project.load_subjects(group_label, SESS_ID)
-        # kwparams = []
-        # rp_filenames = []
-        # input_images = []
-        # for s in subjects:
-        #     onsets = []
-        #     for epi_name in epi_names:
-        #         session = []
-        #         a = eng.load(os.path.join(project.dir, "subjects", s.label, "s1", "fmri", "stimuli", s.label + "_" + epi_name + ".mat"), nargout=1)
-        #
-        #         if "bis" in epi_name:
-        #             session.append(a["sub_salva_single"]["Time_ref"][:]._data)
-        #             session.append(sort(a["sub_salva_single"]["Time_bisDX"][:]._data + a["sub_salva_single"]["Time_bisSX"][:]._data))
-        #         else:
-        #             session.append(sort(a["sub_salva_single"]["Time_locDX"][:]._data + a["sub_salva_single"]["Time_locSX"][:]._data))
-        #         onsets.append(session)
-        #         input_images.append(os.path.join(project.dir, "subjects", s.label, "s1", "fmri", images_type + s.label + "-epi_" + epi_name + ".nii"))
-        #         rp_filenames.append(os.path.join(project.dir, "subjects", s.label, "s1", "fmri", "rp_a" + s.label + "-epi_" + epi_name + ".txt"))
-        #
-        #     kwparams.append({"analysis_name": "stats_multisessions_3regr_7cond_AR", "num_slices": num_slices, "TR": TR, "events_unit": "secs", "input_images": input_images, "spm_template_name": os.path.join(project.script_dir, "fmri", "spm", "template_individual_stats_multisessions_3regr_7contr_analysis"), "conditions_lists": onsets, "rp_filenames": rp_filenames})
-        #
-        # project.run_subjects_methods("epi", "spm_fmri_1st_level_multisessions_custom_analysis", kwparams, project.get_subjects_labels(), nthread=num_cpu)
-
 
     except Exception as e:
         print(e)

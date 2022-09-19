@@ -735,8 +735,6 @@ class Subject:
 
             else:
                 self.epi.spm_fmri_preprocessing(fmri_images, fmri_params, "subj_spm_fmri_full_preprocessing")
-                pass
-
 
             self.transform.transform_fmri(logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
             break
@@ -773,7 +771,6 @@ class Subject:
                         self.dti.eddy(exe_ver=self._global.eddy_gpu_exe_name, logFile=log)
                     else:
                         self.dti.eddy(exe_ver="eddy_openmp", logFile=log)
-
 
                 self.dti.fit(log)
 
