@@ -1,4 +1,4 @@
-from group.spm_utilities import Contrast
+from group.spm_utilities import Contrast, TContrast, FContrast
 from utility.utilities import sed_inplace, is_list_of
 
 
@@ -18,9 +18,14 @@ class SPMContrasts:
         constrasts_str = "matlabbatch{" + str(batch_id) + "}.spm.stats.con.spmmat = {'" + spmmath + "'};\n"
 
         for num, con in enumerate(contrasts):
-            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}.tcon.name = '" + con.name + "';\n")
-            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}.tcon.weights = " + con.weights + ";\n")
-            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}.tcon.sessrep = '" + con.sessrep + "';\n")
+            if isinstance(con, TContrast):
+                con_type = "tcon"
+            else:
+                con_type = "fcon"
+
+            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}." + con_type + ".name = '" + con.name + "';\n")
+            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}." + con_type + ".weights = " + con.weights + ";\n")
+            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}." + con_type + ".sessrep = '" + con.sessrep + "';\n")
 
         if deleteexisting:
             constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.delete = 1;\n")
@@ -50,9 +55,15 @@ class SPMContrasts:
         constrasts_str = "matlabbatch{" + str(batch_id) + "}." + con_str + ".spmmat = {'" + spmmath + "'};\n"
 
         for num, con in enumerate(post_model.contrasts):
-            constrasts_str += ("matlabbatch{" + str(batch_id) + "}." + con_str + ".consess{" + str(num + 1) + "}.tcon.name = '" + con.name + "';\n")
-            constrasts_str += ("matlabbatch{" + str(batch_id) + "}." + con_str + ".consess{" + str(num + 1) + "}.tcon.weights = " + con.weights + ";\n")
-            constrasts_str += ("matlabbatch{" + str(batch_id) + "}." + con_str + ".consess{" + str(num + 1) + "}.tcon.sessrep = '" + con.sessrep + "';\n")
+
+            if isinstance(con, TContrast):
+                con_type = "tcon"
+            else:
+                con_type = "fcon"
+
+            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}." + con_type + ".name = '" + con.name + "';\n")
+            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}." + con_type + ".weights = " + con.weights + ";\n")
+            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}." + con_type + ".sessrep = '" + con.sessrep + "';\n")
 
         if deleteexisting:
             constrasts_str += ("matlabbatch{" + str(batch_id) + "}." + con_str + ".delete = 1;\n")
@@ -136,7 +147,7 @@ class SPMContrasts:
         nlevels = len(post_model.contrasts)
         if nlevels == 3:
             constrasts_str += "matlabbatch{" + str(batch_id) + "}." + con_str + ".consess{1}.fcon.weights = [1 -1 0"
-            constrasts_str += "                                                                            0 1 -1]"
+            constrasts_str += "                                                                              0 1 -1]"
         elif nlevels == 4:
             constrasts_str += "matlabbatch{" + str(batch_id) + "}." + con_str + ".consess{1}.fcon.weights = [1 -1 0 0"
             constrasts_str += "                                                                            0 1 -1 0]"

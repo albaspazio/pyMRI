@@ -5,7 +5,8 @@ from Global import Global
 from Project import Project
 from group.GroupAnalysis import GroupAnalysis
 from group.SPMModels import SPMModels
-from group.spm_utilities import PostModel, Covariate, Nuisance
+from group.SPMPostModel import PostModel
+from group.spm_utilities import Covariate, Nuisance
 
 if __name__ == "__main__":
 

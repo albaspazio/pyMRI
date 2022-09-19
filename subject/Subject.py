@@ -4,7 +4,7 @@ import traceback
 from copy import deepcopy
 from shutil import move, rmtree
 
-from utility.images.Image import Image
+from utility.images.Image import Image, Images
 from utility.myfsl.utils.run import rrun
 from subject.SubjectDti import SubjectDti
 from subject.SubjectEpi import SubjectEpi
@@ -141,7 +141,7 @@ class Subject:
         self.dti_nodiff_brain_data      = Image(os.path.join(self.roi_dti_dir, "nodif_brain"))
         self.dti_nodiff_brainmask_data  = Image(os.path.join(self.roi_dti_dir, "nodif_brain_mask"))
 
-        self.dti_fit_FA                 = Image(os.path.join(self.roi_dti_dir, self.dti_fit_label + "_FA"))
+        self.dti_fit_FA                 = Image(os.path.join(self.dti_dir, self.dti_fit_label + "_FA"))
 
         self.dti_bedpostx_mean_S0_label = "mean_S0samples"
 
@@ -596,23 +596,25 @@ class Subject:
                 if rs_pa_data is None:
                     rs_pa_data = self.rs_pa_data
                 rs_pa_data = Image(rs_pa_data)
+                ap_distorted = self.rs_data.add_postfix2name("_distorted")
 
-                if rs_pa_data.exist and do_susc_corr:  # want to correct
+                if ap_distorted.exist and self.rs_data.exist and not do_overwrite:
+                    pass    # already done and I don't want to re-do it
+                else:
+                    if rs_pa_data.exist and do_susc_corr:  # want to correct
 
-                    ap_distorted = self.rs_data.add_postfix2name("_distorted")
+                        if ap_distorted.exist and do_overwrite:      # already done and I want to re-do it  ==> rollback changes
+                            self.rs_data.rm(logFile=log)
+                            ap_distorted.cp(self.rs_data, logFile=log)
+                        elif not ap_distorted.exist:                 # never done ==> create backup copy
+                            self.rs_data.cp(ap_distorted)
 
-                    if ap_distorted.exist and do_overwrite:      # already done and I want to re-do it  ==> rollback changes
-                        self.rs_data.rm(logFile=log)
-                        ap_distorted.cp(self.rs_data, logFile=log)
-                    elif not ap_distorted.exist:                 # never done ==> create backup copy
-                        self.rs_data.cp(ap_distorted)
-
-                    try:
-                        self.epi.topup_corrections([self.rs_data], rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
-                    except Exception as e:
-                        print("UNRECOVERABLE ERROR: " + str(e))
-                        ap_distorted.mv(self.rs_data, logFile=log)
-                        break
+                        try:
+                            self.epi.topup_corrections([self.rs_data], rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
+                        except Exception as e:
+                            print("UNRECOVERABLE ERROR: " + str(e))
+                            ap_distorted.mv(self.rs_data, logFile=log)
+                            break
 
                 # ------------------------------------------------------------------------------------------------------
                 # FEAT PRE PROCESSING  (hp filt, mcflirt, spatial smoothing, melodic exploration, NO REG)
@@ -712,11 +714,17 @@ class Subject:
                 fmri_pa_data = self.fmri_pa_data
             fmri_pa_data = Image(fmri_pa_data)
 
-            if fmri_pa_data.exist and do_susc_corr:    # want to correct
+            epi_images = Images(fmri_images)
 
-                ap_distorted = self.fmri_data.add_postfix2name("_distorted")
-                if ap_distorted.exist and not do_overwrite:
-                    pass
+            ap_distorted = self.fmri_data.add_postfix2name("_distorted")
+
+            if do_susc_corr:        # want to correct
+                if not fmri_pa_data.exist:
+                    print("Error in welcome...user want to correct for susceptibility but PA image does not exist...skip fmri processing...continue other")
+                    break
+
+                if ap_distorted.exist and self.fmri_data.exist and not do_overwrite:
+                    pass  # already done and I don't want to re-do it
                 else:
                     if ap_distorted.exist:          # already done  ==> rollback changes
                         self.fmri_data.rm(logFile=log)
@@ -731,10 +739,10 @@ class Subject:
                         ap_distorted.mv(self.rs_data, logFile=log)
                         break
 
-                self.epi.spm_fmri_preprocessing(fmri_images, fmri_params, "subj_spm_fmri_preprocessing_norealign")
+                self.epi.spm_fmri_preprocessing(fmri_images, fmri_params, "subj_spm_fmri_preprocessing_norealign", do_overwrite=do_overwrite)
 
             else:
-                self.epi.spm_fmri_preprocessing(fmri_images, fmri_params, "subj_spm_fmri_full_preprocessing")
+                self.epi.spm_fmri_preprocessing(fmri_images, fmri_params, "subj_spm_fmri_full_preprocessing", do_overwrite=do_overwrite)
 
             self.transform.transform_fmri(logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
             break

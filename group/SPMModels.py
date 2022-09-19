@@ -7,22 +7,13 @@ from group.SPMStatsUtils    import SPMStatsUtils
 from group.spm_utilities    import GrpInImages
 from utility.matlab         import call_matlab_spmbatch
 from utility.utilities      import sed_inplace
+from group.SPMConstants import SPMConstants
+
 
 # create factorial designs, multiple regressions, t-test
 class SPMModels:
 
-    MULTREGR    = 1
-    OSTT        = 2
-    TSTT        = 3
-    OWA         = 4
-    TWA         = 5
 
-    VBM_DARTEL  = 11
-    CAT         = 12
-    FMRI        = 13
-
-    stats_types     = [MULTREGR, OSTT, TSTT, OWA, TWA]
-    analysis_types  = [VBM_DARTEL, CAT, FMRI]
 
     def __init__(self, proj):
 
@@ -33,7 +24,7 @@ class SPMModels:
     # stat_type is: MULTREGR, tstt, ostt, owa, twa
     def batchrun_group_stats(self, root_outdir, stat_type, anal_type, anal_name, groups_instances, input_images=None,
                              covs=None, cov_interactions=None, cov_centering=False, data_file=None,
-                             glob_calc=None, expl_mask="icv", spm_template_name="group_model_spm_stats_1group_multiregr_estimate",
+                             glob_calc=None, expl_mask="icv", spm_template_name=None,
                              post_model=None, runit=True):
 
         # ---------------------------------------------------------------------------------------------------------------------------------
@@ -42,18 +33,20 @@ class SPMModels:
             data_file = self.project.validate_data(data_file)
             validate_data_with_covs(data_file, covs)
         else:
-            if stat_type == self.MULTREGR:
+            if stat_type == SPMConstants.MULTREGR:
                 raise Exception("Error in batchrun_group_stats: covs cannot be empty or none when one group mult regr is asked")
 
-        if stat_type not in self.stats_types:
+        if stat_type not in SPMConstants.stats_types:
             raise Exception("Error in batchrun_group_stats: unrecognized stat type: " + str(stat_type))
 
-        if anal_type not in self.anal_types:
+        if anal_type not in SPMConstants.analysis_types:
             raise Exception("Error in batchrun_group_stats: unrecognized analysis type: " + str(anal_type))
 
         # ---------------------------------------------------------------------------------------------------------------------------------
-        statsdir = ""
-        if anal_type == self.VBM_DARTEL:
+        statsdir        = ""
+        batch_folder    = ""
+        batch_prefix    = ""
+        if anal_type == SPMConstants.VBM_DARTEL:
             subjs_dir = os.path.join(root_outdir, "subjects")
             if input_images is None:
                 input_images = GrpInImages("dartel", subjs_dir)
@@ -68,17 +61,16 @@ class SPMModels:
             batch_prefix    = "vbmdartel_"
             statsdir        = os.path.join(root_outdir, "stats", anal_name)
 
-        elif anal_type == self.CAT:
+        elif anal_type == SPMConstants.CAT:
             input_images = GrpInImages("ct")
             glob_calc       = ""
-            statsdir        = os.path.join(root_outdir, anal_name)
 
             batch_folder    = "mpr"
             batch_prefix    = "cat_"
             expl_mask       = None
             statsdir        = os.path.join(root_outdir, anal_name)
 
-        elif anal_type == self.FMRI:
+        elif anal_type == SPMConstants.FMRI:
             if input_images is None:
                 raise Exception("Error in batchrun_fmri_stats_factdes_2samplesttest: input_images cannot be None")
             glob_calc       = ""
@@ -89,13 +81,13 @@ class SPMModels:
 
         # create template files
         if spm_template_name is None:
-            if stat_type == self.MULTREGR:
+            if stat_type == SPMConstants.MULTREGR:
                 spm_template_name = "group_model_spm_stats_1group_multiregr_estimate"
-            elif stat_type == self.TSTT:
+            elif stat_type == SPMConstants.TSTT:
                 spm_template_name = "group_model_spm_stats_2samples_ttest_estimate"
-            elif stat_type == self.OWA:
+            elif stat_type == SPMConstants.OWA:
                 spm_template_name = "group_model_spm_stats_1Wanova_estimate"
-            elif stat_type == self.TWA:
+            elif stat_type == SPMConstants.TWA:
                 spm_template_name = "group_model_spm_stats_2Wanova_estimate"
         out_batch_job, out_batch_start  = self.project.adapt_batch_files(spm_template_name, batch_folder, batch_prefix + anal_name)
 
@@ -104,13 +96,13 @@ class SPMModels:
         sed_inplace(out_batch_job, "<STATS_DIR>", statsdir)
 
         # compose images string
-        if stat_type == self.MULTREGR:
+        if stat_type == SPMConstants.MULTREGR:
             SPMStatsUtils.compose_images_string_1GROUP_MULTREGR(groups_instances[0], out_batch_job, input_images)
-        elif stat_type == self.TSTT:
+        elif stat_type == SPMConstants.TSTT:
             SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, input_images)
-        elif stat_type == self.OWA:
+        elif stat_type == SPMConstants.OWA:
             SPMStatsUtils.compose_images_string_1W(groups_instances, out_batch_job, input_images)
-        elif stat_type == self.TWA:
+        elif stat_type == SPMConstants.TWA:
             SPMStatsUtils.compose_images_string_2W(groups_instances, out_batch_job, input_images)
 
         # global calculation
@@ -123,7 +115,7 @@ class SPMModels:
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
 
         # model estimate
-        if anal_type == self.CAT:
+        if anal_type == SPMConstants.CAT:
             sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=True))
         else:
             sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=False))
@@ -147,3 +139,6 @@ class SPMModels:
         if bool(eng):
             eng.quit()
         return os.path.join(statsdir, "SPM.mat")
+
+
+
