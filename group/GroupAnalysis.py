@@ -31,7 +31,7 @@ class GroupAnalysis:
     # create a folder name and its subfolders : subjects (normalized images), flowfields, stats
     # RC1_IMAGES:    {  '/media/data/MRI/projects/ELA/subjects/0202/s1/mpr/rc20202-t1.nii,1'
     #                   '/media/data/MRI/projects/ELA/subjects/0503/s1/mpr/rc20503-t1.nii,1'}
-    def create_vbm_spm_template_normalize(self, name, subjects_list, spm_template_name="spm_dartel_createtemplate_normalize"):
+    def create_vbm_spm_template_normalize(self, name, subjects_list, spm_template_name="group_spm_dartel_createtemplate_normalize"):
 
         self.subjects_list = subjects_list
         if len(self.subjects_list) == 0:
@@ -46,22 +46,22 @@ class GroupAnalysis:
         # START !!!!
         # =======================================================
         # create job file
-        T1_darteled_images_1 = "{\r"
-        T1_darteled_images_2 = "{\r"
-        T1_images_1 = "{\r"
+        T1_darteled_images_1    = "{\r"
+        T1_darteled_images_2    = "{\r"
+        T1_images_1             = "{\r"
 
         for subj in self.subjects_list:
-            T1_darteled_images_1 = T1_darteled_images_1 + "\'" + os.path.join(subj.t1_spm_dir, "rc1T1_" + subj.label + ".nii") + ",1\'\r"
-            T1_darteled_images_2 = T1_darteled_images_2 + "\'" + os.path.join(subj.t1_spm_dir, "rc2T1_" + subj.label + ".nii") + ",1\'\r"
-            T1_images_1 = T1_images_1 + "\'" + os.path.join(subj.t1_spm_dir, "c1T1_" + subj.label + ".nii") + "\'\r"
+            T1_darteled_images_1    = T1_darteled_images_1 + "\'" + subj.t1_dartel_rc1.upath + ",1\'\r"
+            T1_darteled_images_2    = T1_darteled_images_2 + "\'" + subj.t1_dartel_rc2.upath + ",1\'\r"
+            T1_images_1             = T1_images_1 + "\'" + subj.t1_dartel_c1.upath + "\'\r"
 
-        T1_darteled_images_1 = T1_darteled_images_1 + "\r}"
-        T1_darteled_images_2 = T1_darteled_images_2 + "\r}"
-        T1_images_1 = T1_images_1 + "\r}"
+        T1_darteled_images_1    = T1_darteled_images_1 + "\r}"
+        T1_darteled_images_2    = T1_darteled_images_2 + "\r}"
+        T1_images_1             = T1_images_1 + "\r}"
 
         sed_inplace(out_batch_job, "<RC1_IMAGES>", T1_darteled_images_1)
         sed_inplace(out_batch_job, "<RC2_IMAGES>", T1_darteled_images_2)
-        sed_inplace(out_batch_job, "<C1_IMAGES>", T1_images_1)
+        sed_inplace(out_batch_job, "<C1_IMAGES>" , T1_images_1)
         sed_inplace(out_batch_job, "<TEMPLATE_NAME>", name)
         sed_inplace(out_batch_job, "<TEMPLATE_ROOT_DIR>", self.project.vbm_dir)
 
@@ -102,7 +102,6 @@ class GroupAnalysis:
         rrun("fslmaths GM_merg" + " -Tmean -thr 0.05 -bin GM_mask -odt char")
 
         shutil.rmtree(struct_dir)
-
 
     def tbss_run_fa(self, subjects_list, odn, prepare=True, proc=True, postreg="S", prestat_thr=0.2):
 

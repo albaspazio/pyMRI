@@ -10,7 +10,8 @@ from group.spm_utilities import SubjCondition
 from group.SPMContrasts import SPMContrasts
 from group.SPMResults import SPMResults
 
-from utility.images.Image import Image, Images
+from utility.images.Image import Image
+from utility.images.Images import Images
 from utility.images.transform_images import flirt
 from utility.images.images import mid_0based
 from utility.myfsl.utils.run import rrun
@@ -340,7 +341,19 @@ class SubjectEpi:
         residual.rm()
         tempMean.rm()
 
-    def spm_fmri_preprocessing(self, fmri_params, epi_images=None, spm_template_name='subj_spm_fmri_full_preprocessing', clean=True):
+    def spm_fmri_preprocessing(self, fmri_params, epi_images=None, spm_template_name='subj_spm_fmri_full_preprocessing', clean=True, do_overwrite=False):
+
+        epi_images = Images(epi_images)
+
+        if not epi_images.exist:
+            raise Exception("Error in spm_fmri_preprocessing")
+
+        swar_images = epi_images.add_prefix2name("swar")
+        swa_images  = epi_images.add_prefix2name("swa")
+
+        if (swar_images.exist or swa_images.exist) and not do_overwrite:
+            print("Skipping spm_fmri_preprocessing of subject " + self.subject.label + ", swar images already exist")
+            return
 
         num_slices  = fmri_params.nslices
         TR          = fmri_params.tr
@@ -410,7 +423,6 @@ class SubjectEpi:
             normalize_write_sessions = ""
             for i in range(nsessions):
                 normalize_write_sessions += "matlabbatch{5}.spm.spatial.normalise.write.subj.resample(" + str(i + 1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess " + str(i + 1) + ")', substruct('.', 'val', '{}', {2}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i + 1) + "}, '.', 'files'));\n"
-
 
         elif spm_template_name == "subj_spm_fmri_preprocessing_norealign" or spm_template_name == "subj_spm_fmri_preprocessing_norealign_mni":
 
