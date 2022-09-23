@@ -3,7 +3,8 @@ import os
 import traceback
 
 from Global import Global
-from utility.images.Image import Image, Images
+from utility.images.Image import Image
+from utility.images.Images import Images
 from utility.images.images import mass_images_move
 from utility.matlab import call_matlab_spmbatch, call_matlab_function_noret
 from utility.myfsl.fslfun import run
@@ -73,15 +74,15 @@ class SubjectMpr:
             # init or append log file
             if os.path.isfile(logfile):
                 with open(logfile, "a") as text_file:
-                    print("******************************************************************", file=text_file)
-                    print("updating directory", file=text_file)
+                    print("# ******************************************************************", file=text_file)
+                    print("# updating directory", file=text_file)
                     print(" ", file=text_file)
             else:
                 with open(logfile, "w") as text_file:
                     # some initial reporting for the log file
-                    print("Script invoked from directory = " + os.getcwd(), file=text_file)
-                    print("Output directory " + anatdir, file=text_file)
-                    print("Input image is " + inputimage, file=text_file)
+                    print("# Script invoked from directory = " + os.getcwd(), file=text_file)
+                    print("# Output directory " + anatdir, file=text_file)
+                    print("# Input image is " + inputimage, file=text_file)
                     print(" " + anatdir, file=text_file)
 
             log = open(logfile, "a")
@@ -122,7 +123,7 @@ class SubjectMpr:
             # output: " + T1 + " (modified) [ and " + T1 + "_orig and .mat ]
             if not os.path.isfile(T1 + "_orig2std.mat") or do_overwrite:
                 if do_reorient:
-                    print(self.subject.label + " :Reorienting to standard orientation")
+                    print("# " + self.subject.label + " :Reorienting to standard orientation")
                     rrun("fslmaths " + T1 + " " + T1 + "_orig", logFile=log)
                     # os.system("fslreorient2std " + T1 + " > " + T1 + "_orig2std.mat")
                     run("fslreorient2std " + T1 + " > " + T1 + "_orig2std.mat", logFile=log)
@@ -135,7 +136,7 @@ class SubjectMpr:
             fullfov = Image(T1 + "_fullfov")
             if not fullfov.exist or do_overwrite:
                 if do_crop:
-                    print(self.subject.label + " :Automatically cropping the image")
+                    print("# " + self.subject.label + " :Automatically cropping the image")
                     T1.mv(fullfov)
                     run(os.path.join(os.path.join(os.getenv('FSLDIR'), "bin"), "robustfov -i " + fullfov + " -r " + T1 + " -m " + T1 + "_roi2nonroi.mat | grep [0-9] | tail -1 > " + T1 + "_roi.log"), logFile=log)
                     # combine this mat file and the one above (if generated)
@@ -171,7 +172,7 @@ class SubjectMpr:
                 if biascorr_type > self.BIAS_TYPE_NO:
                     if biascorr_type == self.BIAS_TYPE_STRONG:
                         print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-                        print(self.subject.label + " :Estimating and removing field (stage 1 -large-scale fields)")
+                        print("# " + self.subject.label + " :Estimating and removing field (stage 1 -large-scale fields)")
                         # for the first step (very gross bias field) don't worry about the lesionmask
                         # the following is a replacement for : run $FSLDIR/bin/fslmaths " + T1 + " -s 20 " + T1 + "_s20
                         T1.quick_smooth(T1 + "_s20", logFile=log)
@@ -201,7 +202,7 @@ class SubjectMpr:
                         rrun("fslmaths " + T1 + "_hpf2_brain -div " + str(med1) + " -mul " + med0 + " " + T1 + "_hpf2_brain", logFile=log)
 
                         print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-                        print(self.subject.label + " :Estimating and removing bias field (stage 2 - detailed fields)")
+                        print("# " + self.subject.label + " :Estimating and removing bias field (stage 2 - detailed fields)")
                         rrun("fslmaths " + T1 + "_hpf2_brain -mas " + lesionmaskinv + " " + T1 + "_hpf2_maskedbrain", logFile=log)
                         rrun("fast -o " + T1 + "_initfast -l " + str(smooth) + " -b -B -t " + str(imgtype) + " --iter=" + str(niter) + " --nopve --fixed=0 -v " + T1 + "_hpf2_maskedbrain", logFile=log)
                         rrun("fslmaths " + T1 + "_initfast_restore -mas " + lesionmaskinv + " " + T1 + "_initfast_maskedrestore", logFile=log)
