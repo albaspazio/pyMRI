@@ -31,6 +31,7 @@ class Contrast:
         self.type       = _type
         self.sessrep    = sessrep
 
+
 class TContrast(Contrast):
     def __init__(self, name, weights, sessrep="none"):
         super().__init__(name, weights, True, sessrep)
@@ -106,7 +107,7 @@ class Nuisance(Regressor):
 
 
 class FmriProcParams:
-    def __init__(self, tr, nsl, sl_tim, st_ref, time_bins, time_onset=None, acq_sch=0, ta=0, smooth=6, events_unit="secs"):
+    def __init__(self, tr, nsl, sl_tim, st_ref, time_bins, time_onset=None, acq_sch=0, hpf=128, hrf_deriv=True, ta=0, smooth=6, events_unit="secs"):
         self.tr             = tr
         self.nslices        = nsl
         self.slice_timing   = sl_tim
@@ -117,6 +118,8 @@ class FmriProcParams:
         else:
             self.time_onset = time_onset
         self.acq_scheme     = acq_sch
+        self.hpf            = hpf
+        self.hrf_deriv      = hrf_deriv
         self.ta             = ta
         self.smooth         = smooth
         self.events_unit    = events_unit

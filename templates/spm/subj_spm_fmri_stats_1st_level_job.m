@@ -12,7 +12,7 @@ matlabbatch{1}.spm.stats.fmri_spec.timing.fmri_t0 = <MICROTIME_ONSET>;
 <SESSIONS_CONDITIONS>
 
 matlabbatch{1}.spm.stats.fmri_spec.fact = struct('name', {}, 'levels', {});
-matlabbatch{1}.spm.stats.fmri_spec.bases.hrf.derivs = [1 0];
+matlabbatch{1}.spm.stats.fmri_spec.bases.hrf.derivs = <HRF_DERIV>;
 matlabbatch{1}.spm.stats.fmri_spec.volt = 1;
 matlabbatch{1}.spm.stats.fmri_spec.global = 'None';
 matlabbatch{1}.spm.stats.fmri_spec.mthresh = 0.8;

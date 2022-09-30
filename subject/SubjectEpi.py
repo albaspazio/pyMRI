@@ -25,14 +25,18 @@ class SubjectEpi:
         self.subject = subject
         self._global = _global
 
-    def get_example_function(self, seq="rs", vol_num=None, overwrite=False, logFile=None):
+    def get_example_function(self, seq="rs", vol_num=None, fmri_images=None, overwrite=False, logFile=None):
 
         if seq == "rs":
             data    = self.subject.rs_data
             exfun   = self.subject.rs_examplefunc
             m_exfun = self.subject.rs_examplefunc_mask
         elif seq == "fmri":
-            data    = self.subject.fmri_data
+
+            if fmri_images is None:
+                data    = self.subject.fmri_data
+            else:
+                data = fmri_images[0]   # I assume other sessions are co-registered to first one
             exfun   = self.subject.fmri_examplefunc
             m_exfun = self.subject.fmri_examplefunc_mask
         else:
@@ -483,7 +487,7 @@ class SubjectEpi:
         if input_images is None:
             input_images = Images([self.subject.fmri_data])
         else:
-            input_images = Images(input_images)
+            input_images = Images(input_images, must_exist=True, msg="Error in spm_fmri_1st_level_analysis. input images")
         input_images.check_if_uncompress()  # unzip whether necessary
         nsessions = len(input_images)
 
@@ -499,6 +503,12 @@ class SubjectEpi:
         time_bins   = fmri_params.time_bins
         events_unit = fmri_params.events_unit
         time_onset  = fmri_params.time_onset
+        hrf_deriv   = fmri_params.hrf_deriv
+
+        if hrf_deriv:
+            str_hrf_deriv = "[1 0]"
+        else:
+            str_hrf_deriv = "[0 0]"
 
         if rp_filenames is None:
             rp_filenames = [os.path.join(self.subject.fmri_dir, "rp_" + self.subject.fmri_image_label + ".txt")]
@@ -510,6 +520,7 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<TR_VALUE>', str(TR))
         sed_inplace(out_batch_job, '<MICROTIME_RES>', str(time_bins))
         sed_inplace(out_batch_job, '<MICROTIME_ONSET>', str(time_onset))
+        sed_inplace(out_batch_job, '<HRF_DERIV>', str_hrf_deriv)
 
         conditions_str = ""
         if nsessions == 1:
@@ -518,6 +529,9 @@ class SubjectEpi:
             fmri_data = input_images[0]
             fmri_data.check_if_uncompress()
             epi_nvols = fmri_data.upath.nvols
+
+            if epi_nvols == 0:
+                raise Exception("Error in SubjectEpi.spm_fmri_1st_level_analysis: input images have zero volumes. e.g. when nii and nii.gz are both present or image is corrupted")
             conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.scans = {\n"
             for i in range(1, epi_nvols + 1):
                 conditions_str += ("'" + fmri_data.upath + ',' + str(i) + "'\n")
@@ -526,10 +540,10 @@ class SubjectEpi:
             # conditions
             conditions_str += (SPMStatsUtils.spm_get_fmri_subj_stats_conditions_string_1session(conditions_lists[0]) + ";\n")
 
-            conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.multi = {''};\n"
-            conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.regress = struct('name', {}, 'val', {});\n"
+            conditions_str +=  "matlabbatch{1}.spm.stats.fmri_spec.sess.multi = {''};\n"
+            conditions_str +=  "matlabbatch{1}.spm.stats.fmri_spec.sess.regress = struct('name', {}, 'val', {});\n"
             conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess.multi_reg = {'" + rp_filenames[0] + "'};\n")
-            conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.hpf = 128;\n"
+            conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess.hpf = " + str(fmri_params.hpf) + ";\n")
 
         else:
             for im,fmri_data in enumerate(input_images):
@@ -544,10 +558,10 @@ class SubjectEpi:
                 # conditions
                 conditions_str += (SPMStatsUtils.spm_get_fmri_subj_stats_conditions_string_ithsession(conditions_lists[im], im+1) + ";\n")
 
-                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").multi = {''};\n"
-                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").regress = struct('name', {}, 'val', {});\n"
+                conditions_str +=  "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").multi = {''};\n"
+                conditions_str +=  "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").regress = struct('name', {}, 'val', {});\n"
                 conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").multi_reg = {'" + rp_filenames[im] + "'};\n")
-                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").hpf = 128;\n"
+                conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").hpf = " + str(fmri_params.hpf) + ";\n")
 
         sed_inplace(out_batch_job, '<SESSIONS_CONDITIONS>', conditions_str)
 
@@ -632,7 +646,6 @@ class SubjectEpi:
             sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
-
     #endregion
 
     # ===============================================================================
@@ -643,7 +656,6 @@ class SubjectEpi:
 
     def sbfc_several_1roi_feat(self):
         pass
-
     #endregion
 
     # ==================================================================================================================================================

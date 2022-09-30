@@ -461,7 +461,7 @@ class SubjectTransforms:
 
     # it creates (10) : example_func, fmri2hr_mat , hr2fmri_mat , fmri2std_mat , std2fmri_mat , fmri2std4_mat , std42fmri_mat
     #                                                             fmri2std_warp, std2fmri_warp, fmri2std4_warp, std42fmri_warp
-    def transform_fmri(self, do_bbr=False, wmseg="", overwrite=False, logFile=None):
+    def transform_fmri(self, fmri_images=None, do_bbr=False, wmseg="", overwrite=False, logFile=None):
 
         check = self.subject.check_template()
         if check[0] != "":
@@ -472,7 +472,7 @@ class SubjectTransforms:
         print(self.subject.label + " :STARTED transform_fmri")
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # check or create example function
-        exfun = self.subject.epi.get_example_function(seq="fmri", logFile=logFile)
+        exfun = self.subject.epi.get_example_function(seq="fmri", fmri_images=fmri_images, logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #  fmri <--> HIGHRES (linear, bbr or not)
@@ -685,9 +685,9 @@ class SubjectTransforms:
 
     # it creates (4): rs2fmri_mat , fmri2rs_mat
     #                 rs2fmri_warp, fmri2rs_warp
-    def transform_extra(self, overwrite=False, logFile=None):
+    def transform_extra(self, overwrite=False, fmri_images=None, logFile=None):
 
-        if self.subject.hasFMRI and self.subject.hasRS:
+        if self.subject.hasFMRI(fmri_images) and self.subject.hasRS:
 
             check_concat_mat(self.rs2fmri_mat, self.rs2hr_mat, self.hr2fmri_mat, overwrite=overwrite, logFile=logFile)
             check_invert_mat(self.fmri2rs_mat, self.rs2fmri_mat, overwrite=overwrite, logFile=logFile)
@@ -1051,7 +1051,7 @@ class SubjectTransforms:
     # this method takes base images (t1/t1_brain, epi_example_function, dti_nodiff/dti_nodiff_brain, t2/t2_brain) and coregister to all other modalities and standard
     # creates up to 14 folders, 7 for linear and 7 for non linear transformation towards the 7 different space (hr, rs, frmi, dti, t2, std, std4)
     # user can select from which seq to which seq create the transforms
-    def test_all_coregistration(self, test_dir, _from=None, _to=None, extended=False, overwrite=False):
+    def test_all_coregistration(self, test_dir, _from=None, _to=None, extended=False, fmri_images=None, overwrite=False):
 
         if _from is None:
             _from = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]
@@ -1156,7 +1156,7 @@ class SubjectTransforms:
                                    rois=[self.subject.std4_head_img])
                 self.transform_roi("std4TOrs", pathtype="abs", outdir=l_rs, islin=True, rois=[self.subject.std4_img])
 
-            if self.subject.hasFMRI:  # connect RS with FMRI
+            if self.subject.hasFMRI(fmri_images):  # connect RS with FMRI
 
                 exfun_fmri = self.subject.epi.get_example_function("fmri")
 
@@ -1183,7 +1183,7 @@ class SubjectTransforms:
         #       FMRI <--> STD
         #       FMRI <--> STD4 if hasRS  (fmri <--> was done previously)
         # --------------------------------------------------------------
-        if self.subject.hasFMRI:  # goes to HR, STD and STD4, RS
+        if self.subject.hasFMRI(fmri_images):  # goes to HR, STD and STD4, RS
 
             nl_fmri = os.path.join(nldir, "fmri")
             l_fmri = os.path.join(ldir, "fmri")
@@ -1322,13 +1322,13 @@ class SubjectTransforms:
                                        rois=[self.subject.dti_nodiff_brain_data])
 
     # open fsleyes with a sequences list coregistered to one given seq = [t1, t2, dti, rs, fmri, std, std4]
-    def view_space_images(self, seq, _from=None):
+    def view_space_images(self, seq, _from=None, fmri_images=None):
 
         outdir = os.path.join(self.subject.roi_dir, "check_coregistration", seq)
         os.makedirs(outdir, exist_ok=True)
 
         if seq == "t1":
-            if self.subject.hasFMRI and "fmri" in _from:
+            if self.subject.hasFMRI(fmri_images) and "fmri" in _from:
 
                 if not Image(os.path.join(outdir, self.subject.label + "_fmri_example_func_nonlin" + "_hr")).exist:
                     self.transform_roi("fmriTOhr", pathtype="abs", outdir=outdir,
@@ -1372,7 +1372,7 @@ class SubjectTransforms:
             self.subject.t1_brain_data.cp(outdir)
 
         elif seq == "t2":
-            if self.subject.hasFMRI and "fmri" in _from:
+            if self.subject.hasFMRI(fmri_images) and "fmri" in _from:
                 if not Image(os.path.join(outdir, self.subject.label + "_fmri_example_func_nonlin" + "_t2")).exist:
                     self.transform_roi("fmriTOt2", pathtype="abs", outdir=outdir,
                                        outname=self.subject.label + "_fmri_example_func_nonlin", islin=False,
@@ -1415,7 +1415,7 @@ class SubjectTransforms:
             self.subject.t2_brain_data.cp(outdir)
 
         elif seq == "dti":
-            if self.subject.hasFMRI and "fmri" in _from:
+            if self.subject.hasFMRI(fmri_images) and "fmri" in _from:
                 if not Image(os.path.join(outdir, self.subject.label + "_fmri_example_func_nonlin" + "_dti")).exist:
                     self.transform_roi("fmriTOdti", pathtype="abs", outdir=outdir,
                                        outname=self.subject.label + "_fmri_example_func_nonlin", islin=False,
@@ -1458,7 +1458,7 @@ class SubjectTransforms:
             self.subject.dti_nodiff_brain_data.cp(outdir)
 
         elif seq == "rs":
-            if self.subject.hasFMRI and "fmri" in _from:
+            if self.subject.hasFMRI(fmri_images) and "fmri" in _from:
                 if not Image(os.path.join(outdir, self.subject.label + "_fmri_example_func_nonlin" + "_rs")).exist:
                     self.transform_roi("fmriTOrs", pathtype="abs", outdir=outdir,
                                        outname=self.subject.label + "_fmri_example_func_nonlin", islin=False,
@@ -1554,7 +1554,7 @@ class SubjectTransforms:
                                        outname=self.subject.label + "_rs_example_func_lin", islin=True,
                                        rois=[self.subject.rs_examplefunc])
 
-            if self.subject.hasFMRI and "fmri" in _from:
+            if self.subject.hasFMRI(fmri_images) and "fmri" in _from:
                 if not Image(os.path.join(outdir, self.subject.label + "_fmri_example_func_nonlin" + "_std")).exist:
                     self.transform_roi("fmriTOstd", pathtype="abs", outdir=outdir,
                                        outname=self.subject.label + "_fmri_example_func_nonlin", islin=False,
@@ -1607,7 +1607,7 @@ class SubjectTransforms:
                                        outname=self.subject.label + "_rs_example_func_lin", islin=True,
                                        rois=[self.subject.rs_examplefunc])
 
-            if self.subject.hasFMRI and "fmri" in _from:
+            if self.subject.hasFMRI(fmri_images) and "fmri" in _from:
                 if not Image(os.path.join(outdir, self.subject.label + "_fmri_example_func_nonlin" + "_std4")).exist:
                     self.transform_roi("fmriTOstd4", pathtype="abs", outdir=outdir,
                                        outname=self.subject.label + "_fmri_example_func_nonlin", islin=False,

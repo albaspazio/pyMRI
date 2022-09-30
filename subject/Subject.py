@@ -64,9 +64,11 @@ class Subject:
     def hasT2(self):
         return self.t2_data.exist
 
-    @property
-    def hasFMRI(self):
-        return self.fmri_data.exist
+    def hasFMRI(self, images=None):
+        if images is None:
+            return self.fmri_data.exist
+        else:
+            return Images(images).exist
 
     @property
     def hasWB(self):
@@ -728,7 +730,7 @@ class Subject:
         # ==============================================================================================================================================================
         # FMRI DATA
         # ==============================================================================================================================================================
-        while self.hasFMRI and do_fmri:
+        while self.hasFMRI(fmri_images) and do_fmri:
 
             # sanity checks
             if fmri_params is None:
@@ -737,7 +739,7 @@ class Subject:
             if fmri_images is None:
                 fmri_images = Images([self.fmri_data])
             else:
-                fmri_images = Images([fmri_images])
+                fmri_images = Images(fmri_images)
 
             if not fmri_images.exist:
                 print("Error in welcome...user want to perform fmri analysis but fmri image(s) does not exist...skip fmri processing...continue other")
@@ -759,7 +761,7 @@ class Subject:
                     print("Error in welcome...user want to correct for susceptibility but PA image does not exist...skip fmri processing...continue other")
                     break
 
-                if ap_distorted.exist and self.fmri_data.exist and not do_overwrite:
+                if ap_distorted.exist and fmri_images.exist and not do_overwrite:
                     pass  # already done and I don't want to re-do it
                 else:
                     if ap_distorted.exist:          # already done  ==> rollback changes
@@ -780,7 +782,7 @@ class Subject:
             else:
                 self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_full_preprocessing", do_overwrite=do_overwrite)
 
-            self.transform.transform_fmri(logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
+            self.transform.transform_fmri(fmri_images, logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
             break
 
         # ==============================================================================================================================================================
