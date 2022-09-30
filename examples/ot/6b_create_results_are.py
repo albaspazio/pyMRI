@@ -6,10 +6,10 @@ from Global import Global
 from Project import Project
 from data.SubjectsDataDict import SubjectsDataDict
 from data.utilities import process_results
+from utility.images.Image import Image
 from utility.myfsl.fslfun import run_notexisting_img
 from utility.myfsl.utils.run import rrun
-from data import plot_data, utilities
-from utility.images.images import imtest
+from data import plot_data
 
 if __name__ == "__main__":
 
@@ -20,36 +20,30 @@ if __name__ == "__main__":
     try:
         globaldata = Global(fsl_code)
 
-    except Exception as e:
-        print(e)
-        exit()
+        # ======================================================================================================================
+        # HEADER
+        # ======================================================================================================================
+        proj_dir = "/media/alba/dados/MRI/projects/temperamento_murcia"
+        project = Project(proj_dir, globaldata)
+        SESS_ID = 1
+        num_cpu = 4
+        group_label = "single"
 
-    # ======================================================================================================================
-    # HEADER
-    # ======================================================================================================================
-    proj_dir = "/media/alba/dados/MRI/projects/temperamento_murcia"
-    project = Project(proj_dir, globaldata)
-    SESS_ID = 1
-    num_cpu = 4
-    group_label = "single"
+        # ======================================================================================================================
+        # PROCESSING
+        # ======================================================================================================================
 
-    # ======================================================================================================================
-    # PROCESSING
-    # ======================================================================================================================
 
-    try:
         # ======================================================================================================================
         # init vars
         # ======================================================================================================================
         subjects_list_name = "are_2groups_71"  # label of the subjects list within the json file
         subjects_data_file = "data_temperamento71_ARE2groups.txt"  # contains subjects data
-        num_cpu = 1
 
         DO_REGISTER = True
         DO_MELODIC_RES = False
         DO_SBFC_RES = False
 
-        SESS_ID = 1
         template_file_name = "subjects71_melodic_T71"
         population_name = "subjects_temperamento71"
         PTHRESH = 0.95
@@ -65,13 +59,11 @@ if __name__ == "__main__":
 
         # ======================================================================================================================
         # ======================================================================================================================
-        project = Project(proj_dir, globaldata)
-
         project.load_subjects(subjects_list_name)
         subjects = project.subjects_labels
         NUM_SUBJ = len(subjects)
 
-        # load resting template
+        # load rs template
         with open(template_file_name + ".json") as templfile:
             melodic_template = json.load(templfile)
 
@@ -98,7 +90,7 @@ if __name__ == "__main__":
         # -----------------------------------------------------
         # registering results to standard 2mm
         # -----------------------------------------------------
-        if DO_REGISTER is True:
+        if DO_REGISTER:
 
             # calculate tranform from bgimage(4mm) to standard(2mm)
             # => /dr/templ_subjects_2x56_melodic_ST/subjects_2x56/results/standard2/bg_image_standard.nii.gz
@@ -115,30 +107,25 @@ if __name__ == "__main__":
             # -----------------------------------------------------
             cnt = 0
             for rsn_id in arr_rsn_id:
-                src_res_file = os.path.join(TEMPL_STATS_DIR, "thresh_zstat" + str(rsn_id))
-                dest_res_file = os.path.join(TEMPL_STATS_DIR, arr_rsn_labels[cnt])
+                src_res_file    = os.path.join(TEMPL_STATS_DIR, "thresh_zstat" + str(rsn_id))
+                dest_res_file   = Image(os.path.join(TEMPL_STATS_DIR, arr_rsn_labels[cnt]))
 
-                if imtest(dest_res_file) is False:
-                    rrun(
-                        "flirt - in " + src_res_file + " -ref " + std_MNI_2mm_brain + " -applyxfm -init " + templ2std_mat + " -out " + dest_res_file)
+                if not dest_res_file.exist:
+                    rrun("flirt - in " + src_res_file + " -ref " + std_MNI_2mm_brain + " -applyxfm -init " + templ2std_mat + " -out " + dest_res_file)
                     rrun("fslmaths " + dest_res_file + " -thr 2.7 " + dest_res_file)
 
                 cnt = cnt + 1
 
             # -----------------------------------------------------
-            # transform resting results from 4mm to 2mm
+            # transform rs results from 4mm to 2mm
             # -----------------------------------------------------
             for foldimg in arr_images_names:
                 img = os.path.basename(foldimg)
-                src_res_file = os.path.join(DR_DIR, foldimg)
+                src_res_file = Image(os.path.join(DR_DIR, foldimg), must_exist=True)
                 dest_res_file = os.path.join(RESULTS2_OUT_DIR, img)
                 inputmat = os.path.join(RESULTS2_OUT_DIR, "bg2std.mat")
 
-                if imtest(src_res_file) is False:
-                    print(src_res_file + " is missing !!")
-                    exit(1)
-
-                if os.path.exists(templ2std_mat) is False:
+                if not os.path.exists(templ2std_mat):
                     print(inputmat + " is missing !!")
                     exit(1)
 
@@ -147,25 +134,17 @@ if __name__ == "__main__":
                 # $FSLDIR/bin/fslmaths $dest_res_file -thr $PTHRESH $dest_res_file
 
         # -----------------------------------------------------
-        # extracting PE from resting analysis (dr_stage2_000X_diff)
+        # extracting PE from rs analysis (dr_stage2_000X_diff)
         # -----------------------------------------------------
-        if DO_MELODIC_RES is True:
+        if DO_MELODIC_RES:
             for roi in arr_roi_2_extract_melodic:
 
-                ic_image = os.path.join(DR_DIR, roi["rsn"], input_rsn_image)
-                if imtest(ic_image) is False:
-                    raise Exception("IC image(" + ic_image + ") is missing")
+                ic_image = Image(os.path.join(DR_DIR, roi["rsn"], input_rsn_image), must_exist=True)
+                maskpath = Image(os.path.join(RESULTS4_OUT_DIR, roi["roi"]), must_exist=True)
 
-                maskpath = os.path.join(RESULTS4_OUT_DIR, roi["roi"])
-
-                if imtest(maskpath) is False:
-                    raise Exception("ROI mask (" + maskpath + ") image is missing")
-
-                maskname = os.path.basename(roi["roi"])
-                raw_res_file_name = os.path.join(RESULTS4_OUT_DIR,
-                                                 melodic_template["template_name"] + "_" + maskname + "_raw.txt")
-                res_file_name = os.path.join(RESULTS4_OUT_DIR,
-                                             melodic_template["template_name"] + "_" + maskname + ".txt")
+                maskname            = os.path.basename(roi["roi"])
+                raw_res_file_name   = os.path.join(RESULTS4_OUT_DIR, melodic_template["template_name"] + "_" + maskname + "_raw.txt")
+                res_file_name       = os.path.join(RESULTS4_OUT_DIR, melodic_template["template_name"] + "_" + maskname + ".txt")
                 print(maskname)
                 rrun("fslmeants -i " + ic_image + " -o " + raw_res_file_name + " -m " + maskpath)
                 # str_lists = process_results2tp(raw_res_file_name, subjects, res_file_name)
@@ -180,7 +159,7 @@ if __name__ == "__main__":
         # -----------------------------------------------------
         # extracting PE from 2nd level SBFC analysis
         # -----------------------------------------------------
-        if DO_SBFC_RES is True:
+        if DO_SBFC_RES:
 
             res_mask = sbfc_3rd_level_RES_img + "_mask"
             rrun("fslmaths " + sbfc_3rd_level_RES_img + " -thr 2.3 -bin " + res_mask)

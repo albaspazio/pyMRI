@@ -1,7 +1,6 @@
 from Global import Global
 from Project import Project
 from utility.myfsl.utils.run import rrun
-from utility import images
 
 if __name__ == "__main__":
 
@@ -30,6 +29,6 @@ if __name__ == "__main__":
     subjects = project.load_subjects("full", SESS_ID)
     for subject in subjects:
         # subject.mpr2nifti(subject.t1_dir, 1)
-        hdr = images.read_header(subject.t1_data)
-        print(str(images.get_image_dimension(subject.t1_data)))
+        hdr = subject.t1_data.read_header()
+        print(str(subject.t1_data.get_image_dimension()))
         rrun("fsleyes " + subject.t1_data + " " + subject.t1_brain_data)

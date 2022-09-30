@@ -6,11 +6,14 @@ import matlab.engine.engineerror
 
 
 # start a new matlab session (if no session are active) or connect to the first one available or return None.
-def start_matlab(paths2add=[], conn2first=True):
+def start_matlab(paths2add=None, conn2first=True):
+
+    if paths2add is None:
+        paths2add = []
     existing_sessions = matlab.engine.find_matlab()
 
     if len(existing_sessions) > 0:
-        if conn2first is True:
+        if conn2first:
             eng = matlab.engine.connect_matlab(existing_sessions[0])
         else:
             print("More than one matlab sessions are presently open...returning")
@@ -26,7 +29,9 @@ def start_matlab(paths2add=[], conn2first=True):
     return eng
 
 
-def call_matlab_function(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
+def call_matlab_function(func, standard_paths=None, params="", logfile=None, endengine=True, eng=None):
+    if standard_paths is None:
+        standard_paths = []
     if eng is None:
         engine = start_matlab(standard_paths)
         if engine is None:
@@ -41,14 +46,17 @@ def call_matlab_function(func, standard_paths=[], params="", logfile=None, enden
     print("running matlab function: " + batch_file, file=logfile)
     res = eval("engine." + batch_file + "(" + params + ")")
 
-    if endengine is True:
+    if endengine:
         engine.quit()
+        engine = None
         print("quitting matlab session of " + batch_file)
 
     return [engine, res]
 
 
-def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
+def call_matlab_function_noret(func, standard_paths=None, params="", logfile=None, endengine=True, eng=None):
+    if standard_paths is None:
+        standard_paths = []
     if eng is None:
         engine = start_matlab(standard_paths)
         if engine is None:
@@ -68,15 +76,18 @@ def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None,
     print("running matlab function: " + batch_file, file=logfile)
     eval("engine." + batch_file + str_params)
 
-    if endengine is True:
+    if endengine:
         engine.quit()
+        engine = None
         print("quitting matlab session of " + batch_file)
 
     return engine
 
 
 # subcase of call_matlab_function_noret: call a SPM batch file that does not return anything
-def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True, eng=None):
+def call_matlab_spmbatch(func, standard_paths=None, logfile=None, endengine=True, eng=None):
+    if standard_paths is None:
+        standard_paths = []
     batch_file = os.path.basename(os.path.splitext(func)[0])
     # err = io.StringIO
 
@@ -95,10 +106,12 @@ def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True, 
         eval("engine." + batch_file + "(nargout=0)")
         # eval("engine." + batch_file + "(nargout=0, stderr=err)")
 
-        if endengine is True:
+        if endengine:
             engine.quit()
+            engine = None
             print("quitting matlab session of " + batch_file)
 
+        os.remove(func)
         return engine
 
     except Exception as e:
@@ -152,7 +165,7 @@ def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True, 
 #             params_str = "(" + params[f] + ")"
 #         eval("engine." + os.path.basename(os.path.splitext(functions[f])[0]) + "(nargout=0)")
 #
-#     if endengine is True:
+#     if endengine:
 #         engine.quit()
 #         print("quitting matlab session")
 #

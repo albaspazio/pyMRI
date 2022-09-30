@@ -1,33 +1,51 @@
 import os
+# import ssl    # it was needed, can't remember when
 
-from Global import Global
 from data.SubjectsDataDict import SubjectsDataDict
 from data.utilities import list2spm_text_column
+from group.spm_utilities import SubjCondition
 from utility.exceptions import DataFileException
-from utility.images.images import imtest
-import ssl
+from utility.images.Image import Image
 from utility.matlab import call_matlab_function_noret, call_matlab_spmbatch
-from utility.utilities import sed_inplace, remove_ext
+from utility.utilities import sed_inplace, is_list_of
 
 
 class SPMStatsUtils:
 
-    # create spm fmri 1st level contrasts onsets
-    # conditions is a dictionary list with field: [name, onsets, duration]
+    # conditions is a list of SubjCondition(name, onsets, duration)
     @staticmethod
-    def spm_replace_fmri_subj_stats_conditions_string(out_batch_job, conditions):
+    def spm_get_fmri_subj_stats_conditions_string_1session(conditions):
+
+        if not is_list_of(conditions, SubjCondition):
+            raise Exception("Error in SPMStatsUtils.spm_get_fmri_subj_stats_conditions_string_1session, conditions list is not valid")
 
         conditions_string = ""
         for c in range(1, len(conditions) + 1):
-            onsets = list2spm_text_column(conditions[c - 1]["onsets"])  # ends with a "\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").name = \'" + conditions[c - 1]["name"] + "\';" + "\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").onset = [" + onsets + "];\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").tmod = 0;\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").duration = " + str(conditions[c - 1]["duration"]) + ";\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").pmod = struct('name', {}, 'param', {}, 'poly', {});\n"
-            conditions_string = conditions_string + "matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").orth = 1;\n"
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").name = \'" + conditions[c - 1].name + "\';" + "\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").onset = [" + conditions[c - 1].onsets + "];\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").tmod = 0;\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").duration = " + conditions[c - 1].duration + ";\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").pmod = struct('name', {}, 'param', {}, 'poly', {});\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").orth = " + conditions[c - 1].orth + ";\n")
 
-        sed_inplace(out_batch_job, "<CONDITION_STRING>", conditions_string)
+        return conditions_string
+
+    @staticmethod
+    def spm_get_fmri_subj_stats_conditions_string_ithsession(conditions, sessid):
+
+        if not is_list_of(conditions, SubjCondition):
+            raise Exception("Error in SPMStatsUtils.spm_get_fmri_subj_stats_conditions_string_1session, conditions list is not valid")
+
+        conditions_string = ""
+        for c in range(1, len(conditions) + 1):
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").name = \'" + conditions[c - 1].name + "\';" + "\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").onset = [" + conditions[c - 1].onsets + "];\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").tmod = 0;\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").duration = " + conditions[c - 1].duration + ";\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").pmod = struct('name', {}, 'param', {}, 'poly', {});\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(sessid) + ").cond(" + str(c) + ").orth = " + conditions[c - 1].orth + ";\n")
+
+        return conditions_string
 
     # ---------------------------------------------------
     #region compose images string
@@ -35,49 +53,30 @@ class SPMStatsUtils:
     # group_instances is a list of subjects' instances
     # image_description: {"type": ct | dartel | vbm, "folder": root path for dartel}
     @staticmethod
-    def compose_images_string_1GROUP_MULTREGR(group_instances, out_batch_job, img_description):
+    def compose_images_string_1GROUP_MULTREGR(group_instances, out_batch_job, grp_input_imgs):
 
-        img_type = img_description["type"]
-        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
-            print("ERROR in compose_images_string_1W: given img_description[type] (" + img_type + ") is not valid")
-            return
-
-        img_folder  = ""
-        if img_type == "dartel":
-            if os.path.isdir(img_description["folder"]) is False:
-                print("ERROR in compose_images_string_1W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
-                return
-            else:
-                img_folder = img_description["folder"]
+        img_type    = grp_input_imgs.type
+        img_folder  = grp_input_imgs.folder
 
         cells_images = "\r"
 
         img = ""
         for subj in group_instances:
             if img_type == "ct":
-                img = eval("subj.t1_cat_resampled_surface")
+                img = subj.t1_cat_resampled_surface
             elif img_type == "dartel":
                 img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
 
+            img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_1GROUP_MULTREGR")
             cells_images = cells_images + "\'" + img + "\'\r"
 
         sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
 
     @staticmethod
-    def compose_images_string_1W(groups_instances, out_batch_job, img_description):
+    def compose_images_string_1W(groups_instances, out_batch_job, grp_input_imgs):
 
-        img_type = img_description["type"]
-        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
-            print("ERROR in compose_images_string_1W: given img_description[type] (" + img_type + ") is not valid")
-            return
-
-        img_folder  = ""
-        if img_type == "dartel":
-            if os.path.isdir(img_description["folder"]) is False:
-                print("ERROR in compose_images_string_1W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
-                return
-            else:
-                img_folder = img_description["folder"]
+        img_type    = grp_input_imgs.type
+        img_folder  = grp_input_imgs.folder
 
         cells_images = ""
         gr = 0
@@ -90,9 +89,11 @@ class SPMStatsUtils:
             for subj in subjs:
 
                 if img_type == "ct":
-                    img = eval("subj.t1_cat_resampled_surface")
+                    img = subj.t1_cat_resampled_surface
                 elif img_type == "dartel":
                     img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
+
+                img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_1W")
 
                 grp1_images = grp1_images + "\'" + img + "\'\n"
             grp1_images = grp1_images + "\n};"
@@ -102,20 +103,10 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
 
     @staticmethod
-    def compose_images_string_2W(factors, out_batch_job, img_description):
+    def compose_images_string_2W(factors, out_batch_job, grp_input_imgs):
 
-        img_type = img_description["type"]
-        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
-            print("ERROR in compose_images_string_2W: given img_description[type] (" + img_type + ") is not valid")
-            return
-
-        img_folder  = ""
-        if img_type == "dartel":
-            if os.path.isdir(img_description["folder"]) is False:
-                print("ERROR in compose_images_string_2W: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
-                return
-            else:
-                img_folder = img_description["folder"]
+        img_type    = grp_input_imgs.type
+        img_folder  = grp_input_imgs.folder
 
         factors_labels  = factors["labels"]
         cells           = factors["cells"]
@@ -145,6 +136,8 @@ class SPMStatsUtils:
                     elif img_type == "dartel":
                         img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
 
+                    img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_2W")
+
                     cells_images = cells_images + "'" + img + "'\n"
                 cells_images = cells_images + "};"
 
@@ -155,20 +148,10 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<FACTORS_CELLS>",   cells_images)
 
     @staticmethod
-    def compose_images_string_2sTT(groups_instances, out_batch_job, img_description):
+    def compose_images_string_2sTT(groups_instances, out_batch_job, grp_input_imgs):
 
-        img_type = img_description["type"]
-        if img_type != "ct" and img_type != "dartel": # and img_type != "vbm":
-            print("ERROR in compose_images_string_2sTT: given img_description[type] (" + img_type + ") is not valid")
-            return
-
-        img_folder  = ""
-        if img_type == "dartel":
-            if os.path.isdir(img_description["folder"]) is False:
-                print("ERROR in compose_images_string_2sTT: given img_description[folder] (" + img_description["folder"] + ") is not valid a valid folder")
-                return
-            else:
-                img_folder = img_description["folder"]
+        img_type    = grp_input_imgs.type
+        img_folder  = grp_input_imgs.folder
 
         subjs1      = groups_instances[0]
         subjs2      = groups_instances[1]
@@ -178,9 +161,13 @@ class SPMStatsUtils:
         for subj in subjs1:
 
             if img_type == "ct":
-                img = eval("subj.t1_cat_resampled_surface")
+                img = subj.t1_cat_resampled_surface
             elif img_type == "dartel":
                 img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
+            elif img_type == "fmri":
+                img = os.path.join(subj.fmri_dir, "stats", img_folder, grp_input_imgs.name + ".nii")
+
+            img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_2sTT")
 
             grp1_images = grp1_images + "\'" + img + "\'\n"
         grp1_images = grp1_images + "\n}"
@@ -189,9 +176,13 @@ class SPMStatsUtils:
         for subj in subjs2:
 
             if img_type == "ct":
-                img = eval("subj.t1_cat_resampled_surface")
+                img = subj.t1_cat_resampled_surface
             elif img_type == "dartel":
                 img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
+            elif img_type == "fmri":
+                img = os.path.join(subj.fmri_dir, "stats", img_folder, grp_input_imgs.name + ".nii")
+
+            img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_2sTT")
 
             grp2_images = grp2_images + "\'" + img + "\'\n"
         grp2_images = grp2_images + "\n}"
@@ -215,8 +206,7 @@ class SPMStatsUtils:
             if expl_mask == "icv":
                 mask = _global.spm_icv_mask + ",1"
             else:
-                if imtest(expl_mask) is False:
-                    raise Exception("ERROR in explicit_mask, given explicit mask does not exist")
+                expl_mask = Image(expl_mask, must_exist=True, msg="SPMStatsUtils.spm_replace_explicit_mask")
                 mask = expl_mask + ",1"
 
             masking = "matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.masking.tm.tma.athresh = " + str(athresh) + ";\n" \
@@ -245,7 +235,7 @@ class SPMStatsUtils:
 
         if method == "subj_icv":  # read icv file from each subject/mpr/spm folder
 
-            if project.data.exist_filled_column("icv", slabels) is True:
+            if project.data.exist_filled_column("icv", slabels):
                 str_icvs = list2spm_text_column(project.get_filtered_column("icv", slabels)[0])
                 # raise DataFileException("spm_replace_global_calculation", "given data_file does not contain the column icv")
             else:
@@ -255,20 +245,20 @@ class SPMStatsUtils:
                 str_icvs = list2spm_text_column(icvs)
             gc_str = user_corr_str1 + str_icvs + user_corr_str2
         elif method == "subj_tiv":  # read tiv file from each subject/mpr/cat folder
-            # if project.data.exist_filled_column("tiv", slabels) is False:
+            # if not project.data.exist_filled_column("tiv", slabels):
             #
 
             gc_str = no_corr_str
         elif method == "":  # don't correct
             gc_str = no_corr_str
 
-        elif isinstance(method, str) is True and data_file is not None:  # must be a column in the given data_file list of
+        elif isinstance(method, str) and data_file is not None:  # must be a column in the given data_file list of
 
-            if os.path.exists(data_file) is False:
+            if not os.path.exists(data_file):
                 raise DataFileException("spm_replace_global_calculation", "given data_file does not exist")
             data = SubjectsDataDict(data_file)
 
-            if data.exist_filled_column(method, slabels) is False:
+            if not data.exist_filled_column(method, slabels):
                 raise DataFileException("spm_replace_global_calculation", "given data_file does not contain a valid value of column " + method + " for all subjects")
 
             str_icvs = list2spm_text_column(data.get_filtered_column(method, slabels)[0])
@@ -278,10 +268,10 @@ class SPMStatsUtils:
     #endregion
 
     # ---------------------------------------------------------------------------
-    #region CHECK REVIEW
+    #region CHECK REVIEW ESTIMATE
 
     @staticmethod
-    def spm_get_cat_check(out_batch_job, idstep=2):
+    def spm_get_cat_check(idstep=2):
 
         return  "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.spmmat(1) = cfg_dep(\'Factorial design specification: SPM.mat File\', substruct(\'.\', 'val', '{}', {1}, \'.\', \'val\', '{}', {1}, \'.\', \'val\', \'{}\', {1}), substruct(\'.\', \'spmmat\'));\n" \
                 "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.check_SPM_cov.do_check_cov.use_unsmoothed_data = 1;\n" \
@@ -292,11 +282,21 @@ class SPMStatsUtils:
                 "matlabbatch{" + str(idstep) + "}.spm.tools.cat.tools.check_SPM.check_SPM_ortho = 1;\n"
 
     @staticmethod
-    def spm_get_review_model(out_batch_job, string, idstep=2):
+    def spm_get_review_model(idstep=2):
 
-        return  "matlabbatch{2}.spm.stats.review.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));\n" \
-                "matlabbatch{2}.spm.stats.review.display.matrix = 1;\n" \
-                "matlabbatch{2}.spm.stats.review.print = 'ps';\n"
+        return  "matlabbatch{" + str(idstep) + "}.spm.stats.review.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));\n" \
+                "matlabbatch{" + str(idstep) + "}.spm.stats.review.display.matrix = 1;\n" \
+                "matlabbatch{" + str(idstep) + "}.spm.stats.review.print = 'ps';\n"
+
+    @staticmethod
+    def get_spm_model_estimate(isSurf=False, idstep=3):
+
+        if isSurf:
+            return "matlabbatch{" + str(idstep) + "}.spm.tools.cat.stools.SPM.spmmat = cfg_dep('Factorial design specification: SPM.mat File', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'spmmat'));"
+        else:
+            return "matlabbatch{" + str(idstep) + "}.spm.stats.fmri_est.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'spmmat'));\n \
+                    matlabbatch{" + str(idstep) + "}.spm.stats.fmri_est.write_residuals = 0;\n \
+                    matlabbatch{" + str(idstep) + "}.spm.stats.fmri_est.method.Classical = 1;\n"
 
     #endregion
 
@@ -305,17 +305,11 @@ class SPMStatsUtils:
 
     # create a gifti image with ones in correspondence of each vmask voxel
     @staticmethod
-    def batchrun_spm_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths, distance=8):
+    def batchrun_spm_surface_mask_from_volume_mask(vmask, ref_surf, out_surf, matlab_paths): #, distance=8):
 
-        if imtest(vmask) is False:
-            print("Error in create_surface_mask_from_volume_mask: input vmask does not exist")
-            return
-
-        if imtest(ref_surf) is False:
-            print("Error in create_surface_mask_from_volume_mask: input ref_surf does not exist")
-            return
-
-        call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths,"'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
+        Image(vmask, must_exist=True, msg="SPMStatsUtils.batchrun_spm_surface_mask_from_volume_mask vmask")
+        Image(ref_surf, must_exist=True, msg="SPMStatsUtils.batchrun_spm_surface_mask_from_volume_mask ref_surf")
+        call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths, "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
 
     @staticmethod
     def batchrun_cat_surface_smooth(project, _global, subj_instances, sfilt=12, spm_template_name="cat_surf_smooth", nproc=1, eng=None, runit=True):
@@ -332,99 +326,9 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<SPFILT>", str(sfilt))
         sed_inplace(out_batch_job, "<N_PROC>", str(nproc))
 
-        if runit is True:
+        if runit:
             if eng is None:
                 call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir])
             else:
                 call_matlab_spmbatch(out_batch_start, [_global.spm_functions_dir, _global.spm_dir], eng=eng, endengine=False)
     #endregion
-
-
-
-class ResultsParams:
-    def __init__(self, multcorr="FWE", pvalue=0.05, clustext=0):
-        self.mult_corr      = multcorr
-        self.pvalue         = pvalue
-        self.cluster_extend = clustext
-
-class CatResultsParams:
-    def __init__(self, multcorr="FWE", pvalue=0.05, clustext="none"):
-        self.mult_corr      = multcorr
-        self.pvalue         = pvalue    # "FWE" | "FDR" | "none"
-        self.cluster_extend = clustext  # "none" | "en_corr" | "en_nocorr"
-
-class CatConvResultsParams:
-    def __init__(self, multcorr="FWE", pvalue=0.05, clustext="none"):
-        self.mult_corr      = multcorr
-        self.pvalue         = pvalue
-        self.cluster_extend = clustext
-
-
-class PostModel:
-    def __init__(self, templ_name, regressors, contr_names=[], res_params=None, isSpm=True):
-
-        templ_name = remove_ext(templ_name)
-
-        # check if template name is valid according to the specification applied in Project.adapt_batch_files
-        # it can be a full path (without extension) of an existing file, or a file name present in pymri/templates/spm (without "_job.m)
-        if os.path.exists(templ_name + ".m") is False:
-            if os.path.exists(os.path.join(Global.get_spm_template_dir(), templ_name + "_job.m")) is False:
-                raise Exception("given post_model template name (" + templ_name + ") is not valid")
-
-        self.template_name = templ_name
-
-        self.contrast_names = contr_names   # list of strings
-        self.regressors     = regressors    # list of subtypes of Regressors
-        self.isSpm          = isSpm
-
-        if res_params is None:
-            if isSpm is True:
-                self.results_params = ResultsParams()   # standard (FWE, 0.05, 0)
-            else:
-                self.results_params = CatResultsParams()  # standard (FWE, 0.05, "none")
-        else:
-            self.results_params = res_params    # of type (Cat)ResultsParams
-
-
-
-
-class Peak:
-
-    def __init__(self, pfwe, pfdr, t, zscore, punc, x, y, z):
-        self.pfwe   = pfwe
-        self.pfdr   = pfdr
-        self.t      = t
-        self.zscore = zscore
-        self.punc   = punc
-        self.x      = x
-        self.y      = y
-        self.z      = z
-
-class Cluster:
-
-    def __init__(self, id, pfwe, pfdr, k, punc, firstpeak):
-        self.id     = id
-        self.pfwe   = pfwe
-        self.pfdr   = pfdr
-        self.k      = k
-        self.punc   = punc
-        self.peaks  = []
-        self.peaks.append(firstpeak)
-
-    def add_peak(self, peak):
-        self.peaks.append(peak)
-
-
-
-class Regressor:
-    def __init__(self, name, isNuisance):
-        self.name       = name
-        self.isNuisance = isNuisance
-
-class Covariate(Regressor):
-    def __init__(self, name):
-        super().__init__(name, False)
-
-class Nuisance(Regressor):
-    def __init__(self, name):
-        super().__init__(name, True)

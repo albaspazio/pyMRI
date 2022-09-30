@@ -104,9 +104,8 @@ if __name__ == "__main__":
                                            "mw_com_Template_1_Age_0070.nii")
     calc_surfaces = 1
     subjects = project.load_subjects(group_label, SESS_ID)
-    project.run_subjects_methods("cat_segment", [
-        {"do_overwrite": True, "seg_templ": segmentation_template, "coreg_templ": coregistration_template,
-         "calc_surfaces": calc_surfaces, "num_proc": 1}], ncore=num_cpu, group_or_subjlabels=project.loaded_subjects)
+    project.run_subjects_methods("mpr", "cat_segment", [{"do_overwrite": True, "seg_templ": segmentation_template, "coreg_templ": coregistration_template,
+                                                         "calc_surfaces": calc_surfaces, "num_proc": 1}], ncore=num_cpu, group_or_subjlabels=project.subjects)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # SPM TISSUE VOLUMES

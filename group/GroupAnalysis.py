@@ -6,7 +6,7 @@ import numpy
 
 from data import plot_data
 from group.SPMModels import SPMModels
-from utility.images.images import imcp, imtest, immv, imrm, remove_image_ext, filter_volumes, get_image_nvoxels, get_image_mean, mask_image
+from utility.images.Image import Image
 from utility.matlab import call_matlab_spmbatch
 from utility.myfsl.utils.run import rrun
 from utility.utilities import sed_inplace
@@ -31,7 +31,7 @@ class GroupAnalysis:
     # create a folder name and its subfolders : subjects (normalized images), flowfields, stats
     # RC1_IMAGES:    {  '/media/data/MRI/projects/ELA/subjects/0202/s1/mpr/rc20202-t1.nii,1'
     #                   '/media/data/MRI/projects/ELA/subjects/0503/s1/mpr/rc20503-t1.nii,1'}
-    def create_vbm_spm_template_normalize(self, name, subjects_list, spm_template_name="spm_dartel_createtemplate_normalize"):
+    def create_vbm_spm_template_normalize(self, name, subjects_list, spm_template_name="group_spm_dartel_createtemplate_normalize"):
 
         self.subjects_list = subjects_list
         if len(self.subjects_list) == 0:
@@ -40,28 +40,28 @@ class GroupAnalysis:
 
         self.working_dir = os.path.join(self.project.vbm_dir, name)
 
-        out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr")
+        out_batch_job, out_batch_start = self.project.adapt_batch_files(spm_template_name, "mpr", "vbmtemplnorm_" + name)
 
         # =======================================================
         # START !!!!
         # =======================================================
         # create job file
-        T1_darteled_images_1 = "{\r"
-        T1_darteled_images_2 = "{\r"
-        T1_images_1 = "{\r"
+        T1_darteled_images_1    = "{\r"
+        T1_darteled_images_2    = "{\r"
+        T1_images_1             = "{\r"
 
         for subj in self.subjects_list:
-            T1_darteled_images_1 = T1_darteled_images_1 + "\'" + os.path.join(subj.t1_spm_dir, "rc1T1_" + subj.label + ".nii") + ",1\'\r"
-            T1_darteled_images_2 = T1_darteled_images_2 + "\'" + os.path.join(subj.t1_spm_dir, "rc2T1_" + subj.label + ".nii") + ",1\'\r"
-            T1_images_1 = T1_images_1 + "\'" + os.path.join(subj.t1_spm_dir, "c1T1_" + subj.label + ".nii") + "\'\r"
+            T1_darteled_images_1    = T1_darteled_images_1 + "\'" + subj.t1_dartel_rc1.upath + ",1\'\r"
+            T1_darteled_images_2    = T1_darteled_images_2 + "\'" + subj.t1_dartel_rc2.upath + ",1\'\r"
+            T1_images_1             = T1_images_1 + "\'" + subj.t1_dartel_c1.upath + "\'\r"
 
-        T1_darteled_images_1 = T1_darteled_images_1 + "\r}"
-        T1_darteled_images_2 = T1_darteled_images_2 + "\r}"
-        T1_images_1 = T1_images_1 + "\r}"
+        T1_darteled_images_1    = T1_darteled_images_1 + "\r}"
+        T1_darteled_images_2    = T1_darteled_images_2 + "\r}"
+        T1_images_1             = T1_images_1 + "\r}"
 
         sed_inplace(out_batch_job, "<RC1_IMAGES>", T1_darteled_images_1)
         sed_inplace(out_batch_job, "<RC2_IMAGES>", T1_darteled_images_2)
-        sed_inplace(out_batch_job, "<C1_IMAGES>", T1_images_1)
+        sed_inplace(out_batch_job, "<C1_IMAGES>" , T1_images_1)
         sed_inplace(out_batch_job, "<TEMPLATE_NAME>", name)
         sed_inplace(out_batch_job, "<TEMPLATE_ROOT_DIR>", self.project.vbm_dir)
 
@@ -88,12 +88,11 @@ class GroupAnalysis:
         os.makedirs(struct_dir, exist_ok=True)
 
         for subj in self.subjects_list:
-            imcp(os.path.join(smw_folder, "smwc1T1_biascorr_" + subj.label),
-                 os.path.join(struct_dir, "smwc1T1_biascorr_" + subj.label))
+            Image(os.path.join(smw_folder, "smwc1T1_biascorr_" + subj.label)).cp(os.path.join(struct_dir, "smwc1T1_biascorr_" + subj.label))
             rrun("fslmaths " + os.path.join(struct_dir, "smwc1T1_biascorr_" + subj.label) + " -thr 0.1 " + os.path.join(struct_dir, "smwc1T1_biascorr_" + subj.label))
 
         # create merged image
-        cur_dir = os.getcwd()
+        # cur_dir = os.getcwd()
         os.chdir(stats_dir)
 
         # trick...since there are nii and nii.gz. by adding ".gz" in the check I consider only the nii
@@ -103,7 +102,6 @@ class GroupAnalysis:
         rrun("fslmaths GM_merg" + " -Tmean -thr 0.05 -bin GM_mask -odt char")
 
         shutil.rmtree(struct_dir)
-
 
     def tbss_run_fa(self, subjects_list, odn, prepare=True, proc=True, postreg="S", prestat_thr=0.2):
 
@@ -118,15 +116,15 @@ class GroupAnalysis:
         os.makedirs(os.path.join(root_analysis_folder, "design"), exist_ok=True)
 
         # copy DTIFIT IMAGES to MAIN_ANALYSIS_FOLDER
-        if prepare is True:
+        if prepare:
 
             print("copy subjects' corresponding dtifit_FA images to analysis folder")
             for subj in self.subjects_list:
-                src_img = os.path.join(subj.dti_dir, subj.dti_fit_label + "_FA")
-                dest_img = os.path.join(root_analysis_folder, subj.dti_fit_label + "_FA")
-                imcp(src_img, dest_img)
+                src_img     = Image(os.path.join(subj.dti_dir, subj.dti_fit_label + "_FA"))
+                dest_img    = os.path.join(root_analysis_folder, subj.dti_fit_label + "_FA")
+                src_img.cp(dest_img)
 
-        if proc is True:
+        if proc:
             curr_dir = os.getcwd()
             os.chdir(root_analysis_folder)
 
@@ -154,7 +152,7 @@ class GroupAnalysis:
         input_stats = os.path.join(input_folder, "stats")
 
         # copy DTIFIT IMAGES to MAIN_ANALYSIS_FOLDER
-        if prepare is True:
+        if prepare:
 
             print("copy subjects' corresponding dtifit_XX images to analysis folder")
             for subj in self.subjects_list:
@@ -163,22 +161,19 @@ class GroupAnalysis:
                     alternative_folder = os.path.join(input_folder, mod)  # /group_analysis/tbss/population/MD
                     os.makedirs(alternative_folder, exist_ok=True)
 
-                    src_img = os.path.join(subj.dti_dir, subj.dti_fit_label + "_" + mod)
-                    dest_img = os.path.join(alternative_folder, subj.dti_fit_label + "_" + mod)
-                    imcp(src_img, dest_img)
+                    src_img     = Image(os.path.join(subj.dti_dir, subj.dti_fit_label + "_" + mod), must_exist=True, msg="GroupAnalysis.tbss_run_alternatives")
+                    dest_img    = os.path.join(alternative_folder, subj.dti_fit_label + "_" + mod)
+                    src_img.cp(dest_img)
 
-                    src_img = os.path.join(alternative_folder, subj.dti_fit_label + "_" + mod)
-                    dest_img = os.path.join(alternative_folder, subj.dti_fit_label + "_FA")
-                    immv(src_img, dest_img)
+                    src_img     = Image(os.path.join(alternative_folder, subj.dti_fit_label + "_" + mod), must_exist=True, msg="GroupAnalysis.tbss_run_alternatives")
+                    dest_img    = os.path.join(alternative_folder, subj.dti_fit_label + "_FA")
+                    src_img.mv(dest_img)
 
-                    imcp(os.path.join(input_stats, "mean_FA_skeleton_mask_dst"),
-                         os.path.join(input_stats, "mean_" + mod + "_skeleton_mask_dst"))
-                    imcp(os.path.join(input_stats, "mean_FA_skeleton_mask"),
-                         os.path.join(input_stats, "mean_" + mod + "_skeleton_mask"))
-                    imcp(os.path.join(input_stats, "mean_FA_skeleton"),
-                         os.path.join(input_stats, "mean_" + mod + "_skeleton_mask"))
+                    Image(os.path.join(input_stats, "mean_FA_skeleton_mask_dst")).cp(os.path.join(input_stats, "mean_" + mod + "_skeleton_mask_dst"))
+                    Image(os.path.join(input_stats, "mean_FA_skeleton_mask")).cp(os.path.join(input_stats, "mean_" + mod + "_skeleton_mask"))
+                    Image(os.path.join(input_stats, "mean_FA_skeleton")).cp(os.path.join(input_stats, "mean_" + mod + "_skeleton_mask"))
 
-        if proc is True:
+        if proc:
             curr_dir = os.getcwd()
             os.chdir(input_folder)
 
@@ -193,7 +188,7 @@ class GroupAnalysis:
     # here it assumes [integer, integer, integer, integer, integer, float4]
     def add_icv_2_data_matrix(self, grouplabel_or_subjlist, input_data_file=None, sess_id=1):
 
-        if os.path.exists(input_data_file) is False:
+        if not os.path.exists(input_data_file):
             print("ERROR in add_icv_2_data_matrix, given data_file does not exist")
             return
 
@@ -240,7 +235,8 @@ class GroupAnalysis:
 
     # ---------------------------------------------------
     #region MELODIC
-    def group_melodic(self, out_dir_name, subjects_list, tr):
+    @staticmethod
+    def group_melodic(out_dir_name, subjects_list, tr):
 
         if os.path.exists(out_dir_name):
             os.removedirs(out_dir_name)
@@ -254,7 +250,7 @@ class GroupAnalysis:
 
         for subj in subjects_list:
 
-            if imtest(subj.rs_final_regstd_image) is True and imtest(subj.rs_final_regstd_bgimage) and imtest(subj.rs_final_regstd_bgimage):
+            if subj.rs_final_regstd_image.exist and subj.rs_final_regstd_bgimage.exist and subj.rs_final_regstd_bgimage.exist:
                 subjs       = subjs + " " + subj.rs_final_regstd_image
                 bgimages    = subjs + " " + subj.rs_final_regstd_bgimage
                 masks       = masks + " " + subj.rs_final_regstd_mask
@@ -319,34 +315,34 @@ class GroupAnalysis:
             # ------------------------------------------------
             # threshold tbss input, copy to out_folder, get number of voxels
             name            = os.path.basename(tbss_result_image)
-            thr_input       = os.path.join(out_folder, name)
+            thr_input       = Image(os.path.join(out_folder, name))
             rrun("fslmaths " + tbss_result_image + " -thr " + str(thr) + " -bin " + thr_input)
-            original_voxels = get_image_nvoxels(thr_input)
+            original_voxels = thr_input.get_nvoxels()
 
             out_str = ""
             for tract in tracts_labels:
-                tr_img              = os.path.join(tracts_dir, "FMRIB58_FA-skeleton_1mm_" + tract + "_mask")
-                tract_tot_voxels    = get_image_nvoxels(tr_img)
-                out_img             = os.path.join(out_folder, "sk_" + tract)
+                tr_img              = Image(os.path.join(tracts_dir, "FMRIB58_FA-skeleton_1mm_" + tract + "_mask"))
+                tract_tot_voxels    = tr_img.get_nvoxels()
+                out_img             = Image(os.path.join(out_folder, "sk_" + tract))
                 rrun("fslmaths " + thr_input + " -mas " + tr_img + " " + out_img)
 
-                res                 = get_image_nvoxels(out_img)
+                res                 = out_img.get_nvoxels()
                 if res > 0:
                     tot_voxels = tot_voxels + res
                     out_str = out_str + tract + "\t" + str(res) + " out of " + str(tract_tot_voxels) + " voxels = " + str(round((res * 100) / tract_tot_voxels, 2)) + " %" + "\n"
                     classified_tracts.append(out_img)
                 else:
-                    imrm(out_img)
+                    out_img.rm()
 
             # ------------------------------------------------
             # create unclassified image
-            unclass_img = os.path.join(out_folder, "unclass_" + os.path.basename(out_folder))
+            unclass_img = Image(os.path.join(out_folder, "unclass_" + os.path.basename(out_folder)))
             cmd_str = "fslmaths " + thr_input
             for img in classified_tracts:
                 cmd_str = cmd_str + " -sub " + img + " -bin "
             cmd_str = cmd_str + unclass_img
             rrun(cmd_str)
-            unclass_vox = get_image_nvoxels(unclass_img)
+            unclass_vox = unclass_img.get_nvoxels()
 
             # ------------------------------------------------
             # write log file
@@ -361,7 +357,8 @@ class GroupAnalysis:
     # clust_res_dir: output folder of tbss's results clustering
     # datas is a tuple of two elements containing the list of values and subj_labels
     # returns tracts_data
-    def tbss_summarize_clusterized_folder(self, in_clust_res_dir, datas, data_label, tbss_folder, modality="FA",
+    @staticmethod
+    def tbss_summarize_clusterized_folder(in_clust_res_dir, datas, data_label, tbss_folder, modality="FA",
                                           subj_img_postfix="_FA_FA_to_target", ofn="scatter_tracts_", doplot=False):
 
         subjects_images = os.path.join(tbss_folder, modality)  # folder containing tbss subjects' folder of that modality
@@ -374,34 +371,34 @@ class GroupAnalysis:
         for entry in os.scandir(in_clust_res_dir):
             if not entry.name.startswith('.') and not entry.is_dir():
                 if entry.name.startswith("sk_"):
-                    lab         = remove_image_ext(entry.name[3:])
+                    lab         = Image(entry.name[3:]).fpathnoext
                     tracts_labels.append(lab)
                     str_data    = str_data + "\t" + lab
         str_data = str_data + "\n"
 
         tracts_data = []
-        [tracts_data.append([]) for t in range(len(tracts_labels))]
+        [tracts_data.append([]) for _ in range(len(tracts_labels))]
         nsubj = len(datas[0])
         for i in range(nsubj):
             subj_label      = datas[1][i]
-            subj_img        = os.path.join(subjects_images, subj_label + "-dti_fit" + subj_img_postfix)
-            subj_img_masked = subj_img + "_masked"
+            subj_img        = Image(os.path.join(subjects_images, subj_label + "-dti_fit" + subj_img_postfix))
+            subj_img_masked = Image(subj_img + "_masked")
             n_tracts        = 0
             str_data        = str_data + subj_label + "\t" + str(datas[0][i])
 
             for entry in os.scandir(in_clust_res_dir):
                 if not entry.name.startswith('.') and not entry.is_dir():
                     if entry.name.startswith("sk_"):
-                        mask_image(subj_img, entry.path, subj_img_masked)
-                        val = get_image_mean(subj_img_masked)
-                        imrm([subj_img_masked])
+                        subj_img.mask_image(entry.path, subj_img_masked)
+                        val = subj_img_masked.get_image_mean()
+                        subj_img_masked.rm()
 
                         str_data = str_data + "\t" + str(val)
                         tracts_data[n_tracts].append(val)
                         n_tracts = n_tracts + 1
             str_data = str_data + "\n"
 
-        if doplot is True:
+        if doplot:
             for t in range(len(tracts_labels)):
                 fig_file = os.path.join(results_folder, tracts_labels[t] + "_" + data_label + ".png")
                 plot_data.scatter_plot_dataserie(datas[0], tracts_data[t], fig_file)
@@ -415,7 +412,8 @@ class GroupAnalysis:
 
     # create a new tbss analysis folder (only stats one), filtering an existing analysis folder
     # vols2keep: 0-based list of indices to keep
-    def create_analysis_folder_from_existing(self, src_folder, new_folder, vols2keep, modalities=None):
+    @staticmethod
+    def create_analysis_folder_from_existing(src_folder, new_folder, vols2keep, modalities=None):
 
         if modalities is None:
             modalities = ["FA", "MD", "L1", "L23"]
@@ -425,14 +423,14 @@ class GroupAnalysis:
         os.makedirs(new_stats_folder, exist_ok=True)
 
         for mod in modalities:
-            orig_image = os.path.join(src_folder, "stats", "all_" + mod + "_skeletonised")
-            dest_image = os.path.join(new_folder, "stats", "all_" + mod + "_skeletonised")
+            orig_image      = Image(os.path.join(src_folder, "stats", "all_" + mod + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing")
+            dest_image      = os.path.join(new_folder, "stats", "all_" + mod + "_skeletonised")
 
-            orig_mean_image = os.path.join(src_folder, "stats", "mean_" + mod + "_skeleton_mask")
+            orig_mean_image = Image(os.path.join(src_folder, "stats", "mean_" + mod + "_skeleton_mask"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing")
             dest_mean_image = os.path.join(new_folder, "stats", "mean_" + mod + "_skeleton_mask")
 
-            filter_volumes(orig_image, vols2keep, dest_image)
+            orig_image.filter_volumes(vols2keep, dest_image)
 
-            imcp(orig_mean_image, dest_mean_image)
+            orig_mean_image.cp(dest_mean_image)
 
     #endregion

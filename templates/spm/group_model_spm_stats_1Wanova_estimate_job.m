@@ -26,10 +26,5 @@ matlabbatch{1}.spm.stats.factorial_design.multi_cov = struct('files', {}, 'iCFI'
 matlabbatch{2}.spm.stats.review.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));
 matlabbatch{2}.spm.stats.review.display.matrix = 1;
 matlabbatch{2}.spm.stats.review.print = 'ps';
-matlabbatch{3}.spm.tools.cat.tools.check_SPM.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));
-matlabbatch{3}.spm.tools.cat.tools.check_SPM.check_SPM_cov.do_check_cov.use_unsmoothed_data = 1;
-matlabbatch{3}.spm.tools.cat.tools.check_SPM.check_SPM_cov.do_check_cov.adjust_data = 1;
-matlabbatch{3}.spm.tools.cat.tools.check_SPM.check_SPM_ortho = 1;
-matlabbatch{4}.spm.stats.fmri_est.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));
-matlabbatch{4}.spm.stats.fmri_est.write_residuals = 0;
-matlabbatch{4}.spm.stats.fmri_est.method.Classical = 1;
+<MODEL_ESTIMATE>
+

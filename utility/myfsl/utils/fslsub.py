@@ -134,7 +134,7 @@ def submit(command,
 
     base_cmd.append(command)
 
-    return (runfsl(*base_cmd).strip(),)
+    return runfsl(*base_cmd).strip(),
 
 
 def info(job_id):
@@ -160,7 +160,7 @@ def info(job_id):
     return res
 
 
-def output(job_id, logdir='.', command=None, name=None):
+def output(job_id, logdir='.'): #, command=None, name=None):
     """Returns the output of the given job.
 
     :arg job_id:  String containing job ID.
@@ -208,7 +208,7 @@ def wait(job_ids):
     for job_id in job_ids:
         log.debug('Waiting for job {}'.format(job_id))
         while len(info(job_id)) > 0:
-            wait_time = min(max(1, (time.time() - start_time) / 3.), 20)
+            wait_time = min(max(1, int((time.time() - start_time) / 3.)), 20)
             time.sleep(wait_time)
         log.debug('Job {} finished, continuing to next'.format(job_id))
     log.debug('All jobs have finished')

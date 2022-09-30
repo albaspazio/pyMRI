@@ -6,10 +6,10 @@ from Global import Global
 from Project import Project
 from data.SubjectsDataDict import SubjectsDataDict
 from data.utilities import process_results
+from utility.images.Image import Image
 from utility.myfsl.fslfun import run_notexisting_img
 from utility.myfsl.utils.run import rrun
-from data import plot_data, utilities
-from utility.images.images import imtest
+from data import plot_data
 
 if __name__ == "__main__":
 
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         subjects = project.subjects_labels
         NUM_SUBJ = len(subjects)
 
-        # load resting template
+        # load rs template
         with open(template_file_name + ".json") as templfile:
             melodic_template = json.load(templfile)
 
@@ -98,7 +98,7 @@ if __name__ == "__main__":
         # -----------------------------------------------------
         # registering results to standard 2mm
         # -----------------------------------------------------
-        if DO_REGISTER is True:
+        if DO_REGISTER:
 
             # calculate tranform from bgimage(4mm) to standard(2mm)
             # => /dr/templ_subjects_2x56_melodic_ST/subjects_2x56/results/std2/bg_image_std.nii.gz
@@ -116,9 +116,9 @@ if __name__ == "__main__":
             cnt = 0
             for rsn_id in arr_rsn_id:
                 src_res_file = os.path.join(TEMPL_STATS_DIR, "thresh_zstat" + str(rsn_id))
-                dest_res_file = os.path.join(TEMPL_STATS_DIR, arr_rsn_labels[cnt])
+                dest_res_file = Image(os.path.join(TEMPL_STATS_DIR, arr_rsn_labels[cnt]))
 
-                if imtest(dest_res_file) is False:
+                if not dest_res_file.exist:
                     rrun(
                         "flirt - in " + src_res_file + " -ref " + std_MNI_2mm_brain + " -applyxfm -init " + templ2std_mat + " -out " + dest_res_file)
                     rrun("fslmaths " + dest_res_file + " -thr 2.7 " + dest_res_file)
@@ -126,40 +126,33 @@ if __name__ == "__main__":
                 cnt = cnt + 1
 
             # -----------------------------------------------------
-            # transform resting results from 4mm to 2mm
+            # transform rs results from 4mm to 2mm
             # -----------------------------------------------------
             for foldimg in arr_images_names:
-                img = os.path.basename(foldimg)
-                src_res_file = os.path.join(DR_DIR, foldimg)
-                dest_res_file = os.path.join(RESULTS2_OUT_DIR, img)
-                inputmat = os.path.join(RESULTS2_OUT_DIR, "bg2std.mat")
+                img             = os.path.basename(foldimg)
+                src_res_file    = Image(os.path.join(DR_DIR, foldimg))
+                dest_res_file   = os.path.join(RESULTS2_OUT_DIR, img)
+                inputmat        = os.path.join(RESULTS2_OUT_DIR, "bg2std.mat")
 
-                if imtest(src_res_file) is False:
+                if not src_res_file.exist:
                     print(src_res_file + " is missing !!")
                     exit(1)
 
-                if os.path.exists(templ2std_mat) is False:
+                if not os.path.exists(templ2std_mat):
                     print(inputmat + " is missing !!")
                     exit(1)
 
-                rrun(
-                    "flirt -in " + src_res_file + " -ref " + std_MNI_2mm_brain + " -applyxfm -init " + templ2std_mat + " -out " + dest_res_file)
+                rrun("flirt -in " + src_res_file + " -ref " + std_MNI_2mm_brain + " -applyxfm -init " + templ2std_mat + " -out " + dest_res_file)
                 # $FSLDIR/bin/fslmaths $dest_res_file -thr $PTHRESH $dest_res_file
 
         # -----------------------------------------------------
-        # extracting PE from resting analysis (dr_stage2_000X_diff)
+        # extracting PE from rs analysis (dr_stage2_000X_diff)
         # -----------------------------------------------------
-        if DO_MELODIC_RES is True:
+        if DO_MELODIC_RES:
             for roi in arr_roi_2_extract_melodic:
 
-                ic_image = os.path.join(DR_DIR, roi["rsn"], input_rsn_image)
-                if imtest(ic_image) is False:
-                    raise Exception("IC image(" + ic_image + ") is missing")
-
-                maskpath = os.path.join(RESULTS4_OUT_DIR, roi["roi"])
-
-                if imtest(maskpath) is False:
-                    raise Exception("ROI mask (" + maskpath + ") image is missing")
+                ic_image = Image(os.path.join(DR_DIR, roi["rsn"], input_rsn_image), must_exist=True, msg="IC image is missing")
+                maskpath = Image(os.path.join(RESULTS4_OUT_DIR, roi["roi"]), must_exist=True, msg="ROI mask is missing")
 
                 maskname = os.path.basename(roi["roi"])
                 raw_res_file_name = os.path.join(RESULTS4_OUT_DIR,
@@ -186,7 +179,7 @@ if __name__ == "__main__":
         # -----------------------------------------------------
         # extracting PE from 2nd level SBFC analysis
         # -----------------------------------------------------
-        if DO_SBFC_RES is True:
+        if DO_SBFC_RES:
 
             res_mask = sbfc_3rd_level_RES_img + "_mask"
             rrun("fslmaths " + sbfc_3rd_level_RES_img + " -thr 2.3 -bin " + res_mask)

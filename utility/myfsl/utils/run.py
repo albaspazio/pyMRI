@@ -214,11 +214,11 @@ def rrun(*args, **kwargs):
     submit = kwargs.get('submit', {})
     stop_on_error = kwargs.get('stop_on_error', True)
 
-    log = kwargs.get('log', {})
-    tee = log.get('tee', False)
-    logStdout = log.get('stdout', None)
-    logStderr = log.get('stderr', None)
-    logCmd = log.get('cmd', False)
+    _log = kwargs.get('log', {})
+    tee = _log.get('tee', False)
+    logStdout = _log.get('stdout', None)
+    logStderr = _log.get('stderr', None)
+    logCmd = _log.get('cmd', False)
 
     # added to write cmd string, returns and error to the given file descriptor
     logFile = kwargs.get('logFile', None)
@@ -233,7 +233,7 @@ def rrun(*args, **kwargs):
         returnStderr = False
         returnExitcode = False
 
-        if submit is True:
+        if submit:
             submit = dict()
 
     if submit is not None and not isinstance(submit, collections.Mapping):
@@ -254,23 +254,23 @@ def rrun(*args, **kwargs):
 
     if not returnExitcode and (exitcode != 0 or len(stderr)):
 
-        str = '{} returned non-zero exit code or error: {}\nmessage: {}\n full command: {}'.format(args[0], exitcode, stderr, " ".join(args))
+        _str = '{} returned non-zero exit code or error: {}\nmessage: {}\n full command: {}'.format(args[0], exitcode, stderr, " ".join(args))
         if logFile is not None:
-            print(str, file=logFile)
+            print(_str, file=logFile)
 
-        print(str)
-        if stop_on_error is True:
-            raise RuntimeError(str)
+        print(_str)
+        if stop_on_error:
+            raise RuntimeError(_str)
 
     results = []
     if returnStdout:   results.append(stdout)
     if returnStderr:   results.append(stderr)
     if returnExitcode: results.append(exitcode)
 
-    str = '{} returned {}'.format(" ".join(args), stdout)
+    _str = '{} returned {}'.format(" ".join(args), stdout)
 
     if logFile is not None:
-        print(str, file=logFile)
+        print(_str, file=logFile)
 
     if len(results) == 1:
         return results[0]
@@ -284,7 +284,7 @@ def _dryrun(submit, returnStdout, returnStderr, returnExitcode, *args):
     """
 
     if submit:
-        return ('0',)
+        return '0',
 
     results = []
     stderr = ''
@@ -387,8 +387,6 @@ def runfsl(*args, **kwargs):
     """Call a FSL command and return its output. This function simply prepends
     ``$FSLDIR/bin/`` to the command before passing it to :func:`run`.
     """
-
-    prefix = None
 
     # if FSL_PREFIX is not None:
     #     prefix = FSL_PREFIX

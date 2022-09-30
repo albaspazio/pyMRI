@@ -1,21 +1,18 @@
 import json
 import math
+import ntpath
 import os
 import shutil
-import ntpath
-
 from copy import deepcopy
 from inspect import signature
-from threading import Thread
 from shutil import copyfile
+from threading import Thread
 
-import numpy
-
-from subject.Subject import Subject
 from data.SubjectsDataDict import SubjectsDataDict
+from subject.Subject import Subject
 from utility.exceptions import SubjectListException
-from utility.images.images import imcp, imrm
-from utility.utilities import gunzip, compress, sed_inplace, remove_ext
+from utility.images.Image import Image
+from utility.utilities import gunzip, sed_inplace, remove_ext
 
 
 class Project:
@@ -31,7 +28,7 @@ class Project:
 
         self.subjects_dir       = os.path.join(self.dir, "subjects")
         self.group_analysis_dir = os.path.join(self.dir, "group_analysis")
-        self.script_dir         = os.path.join(self.dir, "script")
+        self.script_dir         = os.path.join(globaldata.project_scripts_dir, self.name)
 
         self.glm_template_dir = os.path.join(self.script_dir, "glm", "templates")
 
@@ -42,17 +39,24 @@ class Project:
         self.melodic_dr_dir         = os.path.join(self.resting_dir, "dr")
         self.sbfc_dir               = os.path.join(self.resting_dir, "sbfc")
 
+        self.fmri_dir               = os.path.join(self.group_analysis_dir, "fmri")
+
         self.vbm_dir                = os.path.join(self.mpr_dir, "vbm")
         self.ct_dir                 = os.path.join(self.mpr_dir, "ct")
 
-        self.tbss_dir = os.path.join(self.group_analysis_dir, "tbss")
+        self.tbss_dir               = os.path.join(self.group_analysis_dir, "tbss")
+
+        self.topup_rs_params        = os.path.join(self.script_dir, "topup_acqpar_rs.txt")
+        self.topup_rs2_params       = os.path.join(self.script_dir, "topup_acqpar_rs2.txt")
+
+        self.topup_fmri_params      = os.path.join(self.script_dir, "topup_acqpar_fmri.txt")
+        self.topup_fmri2_params     = os.path.join(self.script_dir, "topup_acqpar_fmri2.txt")
 
         self.topup_dti_params       = os.path.join(self.script_dir, "topup_acqpar_dti.txt")
-        self.topup_rs_params        = os.path.join(self.script_dir, "topup_acqpar_rs.txt")
-        self.topup_fmri_params      = os.path.join(self.script_dir, "topup_acqpar_fmri.txt")
+        self.eddy_dti_json          = os.path.join(self.script_dir, "dti_ap.json")
         self.eddy_index             = os.path.join(self.script_dir, "eddy_index.txt")
 
-        self.globaldata = globaldata
+        self.globaldata             = globaldata
 
         self.subjects           = []
         self.subjects_labels    = []
@@ -91,61 +95,73 @@ class Project:
 
         return self.data
 
-
-    # loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
+    # if must_exist=true:   loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
+    # if must_exist=false:  only create
     # returns this list
-    def load_subjects(self, group_label, sess_id=1):
+    def load_subjects(self, group_label, sess_id=1, must_exist=True):
 
         try:
-            self.subjects           = self.get_subjects(group_label, sess_id)
+            subjects           = self.get_subjects(group_label, sess_id, must_exist)
 
         except SubjectListException as e:
             raise SubjectListException("load_subjects", e.param)    # send whether the group label was not present
                                                                     # or one of the subjects was not valid
 
-        self.subjects_labels    = [subj.label for subj in self.subjects]
-        self.nsubj              = len(self.subjects)
-        return self.subjects
+        if must_exist:
+            self.subjects           = subjects
+            self.subjects_labels    = [subj.label for subj in self.subjects]
+            self.nsubj              = len(self.subjects)
+
+        return subjects
 
     # get a deepcopy of subject with given label
-    def get_subject_by_label(self, subj_label, sess=1):
+    def get_subject_by_label(self, subj_label, sess=1, must_exist=True):
 
-        for subj in self.subjects:
-            if subj.label == subj_label:
-                if subj.sessid == sess:
-                    return deepcopy(subj)
-                else:
-                    return subj.set_properties(sess, rollback=True)  # it returns a deepcopy of requested session
-        return None
+        if must_exist:
+            for subj in self.subjects:
+                if subj.label == subj_label:
+                    if subj.sessid == sess:
+                        return deepcopy(subj)
+                    else:
+                        return subj.set_properties(sess, rollback=True)  # it returns a deepcopy of requested session
+            return None
+        else:
+            return Subject(subj_label, self, sess)
 
     # ==================================================================================================================
     #region GET SUBJECTS' LABELS or INSTANCES
     # ==================================================================================================================
+    # GROUP_LABEL or SUBLABELS LIST => VALID SUBJECT INSTANCES LIST
+    # create and returns a list of valid subjects instances given a grouplabel or a subjlabels list
+    def get_subjects(self, group_or_subjlabels, sess_id=1, must_exist=True):
+        valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, sess_id, must_exist)
+        return self.__get_subjects_from_labels(valid_subj_labels, sess_id, must_exist)
+
     # GROUP_LABEL or SUBLABELS LIST or SUBJINSTANCES LIST => VALID SUBLABELS LIST
-    def get_subjects_labels(self, grouplabel_or_subjlist=None, sess_id=1):
+    # returns [labels]
+    def get_subjects_labels(self, grouplabel_or_subjlist=None, sess_id=1, must_exist=True):
         if grouplabel_or_subjlist is None:
             if len(self.subjects_labels) == 0:
-                raise SubjectListException("get_subjects_labels", "given grouplabel_or_subjlist is None and no group is loaded")
+                raise SubjectListException("get_subjects_labels", "given grouplabel_or_subjlist (" + grouplabel_or_subjlist + ") is None and no group is loaded")
             else:
                 return self.subjects_labels         # if != form 0, they have been already validated
         elif isinstance(grouplabel_or_subjlist, str):  # must be a group_label and have its associated subjects list
-            return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, sess_id)
+            return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, sess_id, must_exist)
 
         elif isinstance(grouplabel_or_subjlist, list):
             if isinstance(grouplabel_or_subjlist[0], str) is True:
-                return self.__get_valid_subjlabels(grouplabel_or_subjlist, sess_id)
+                # list of subjects' names
+                if must_exist:
+                    return self.__get_valid_subjlabels(grouplabel_or_subjlist, sess_id)
+                else:
+                    return grouplabel_or_subjlist   # [string]
+
             elif isinstance(grouplabel_or_subjlist[0], Subject):
                 return [subj.label for subj in grouplabel_or_subjlist]
             else:
                 raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a string list, first value is: " + str(grouplabel_or_subjlist[0]))
         else:
             raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a valid param (None, string  or string list), is: " + str(grouplabel_or_subjlist))
-
-    # GROUP_LABEL or SUBLABELS LIST => VALID SUBJECT INSTANCES LIST
-    # create and returns a list of valid subjects instances given a grouplabel or a subjlabels list
-    def get_subjects(self, group_or_subjlabels, sess_id=1):
-        valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, sess_id)
-        return self.__get_subjects_from_labels(valid_subj_labels, sess_id)
 
 
 #endregion
@@ -157,25 +173,29 @@ class Project:
     # GROUP_LAB => VALID SUBJLABELS LIST or []
     # check whether all subjects belonging to the given group_label are valid
     # returns such subject list if all valid
-    def __get_valid_subjlabels_from_group(self, group_label, sess_id=1):
+    def __get_valid_subjlabels_from_group(self, group_label, sess_id=1, must_exist=True):
         for grp in self.subjects_lists:
             if grp["label"] == group_label:
-                return self.__get_valid_subjlabels(grp["list"], sess_id)
-        raise SubjectListException("__get_valid_subjlabels_from_group", "given group_label does not exist in subjects_lists")
+                if must_exist:
+                    return self.__get_valid_subjlabels(grp["list"], sess_id)
+                else:
+                    return grp["list"]
+        raise SubjectListException("__get_valid_subjlabels_from_group", "given group_label (" + group_label + ") does not exist in subjects_lists")
 
     # SUBJLABELS LIST => VALID SUBJLABELS LIST or []
     # check whether all subjects listed in subj_labels are valid
     # returns given list if all valid
     def __get_valid_subjlabels(self, subj_labels, sess_id=1):
         for lab in subj_labels:
-            if Subject(lab, self, sess_id).exist() is False:
+            if not Subject(lab, self, sess_id).exist():
                 raise SubjectListException("__get_valid_subjlabels", "given subject (" + lab + ") does not exist in file system")
         return subj_labels
 
     # SUBJLABELS LIST => VALID SUBJS INSTANCES or []
     # create and returns a list of valid subjects instances given a subjlabels list
-    def __get_subjects_from_labels(self, subj_labels, sess_id=1):
-        subj_labels = self.__get_valid_subjlabels(subj_labels)
+    def __get_subjects_from_labels(self, subj_labels, sess_id=1, must_exist=True):
+        if must_exist:
+            subj_labels = self.__get_valid_subjlabels(subj_labels)
         return [Subject(subj_lab, self, sess_id) for subj_lab in subj_labels]
 
     #endregion
@@ -201,7 +221,7 @@ class Project:
         invalid_subjs = ""
         valid_subjs = self.get_subjects(group_or_subjlabels, sess_id)
         for subj in valid_subjs:
-            if subj.can_run_analysis(analysis_type, analysis_params) is False:
+            if not subj.can_run_analysis(analysis_type, analysis_params):
                 invalid_subjs = invalid_subjs + subj.label + ", "
 
         if len(invalid_subjs) > 0:
@@ -296,28 +316,28 @@ class Project:
     # the latter zip and clean up
     def prepare_mpr_for_setorigin1(self, group_label, sess_id=1, replaceOrig=False, overwrite=False):
         subjects = self.load_subjects(group_label, sess_id)
+
         for subj in subjects:
+            if not replaceOrig:
+                subj.t1_data.cp(subj.t1_data + "_old_origin")
 
-            if replaceOrig is False:
-                imcp(subj.t1_data, subj.t1_data + "_old_origin")
+            niifile = Image(os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii"))
 
-            niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
-
-            if os.path.exists(niifile) is True and overwrite is False:
+            if niifile.uexist and not overwrite:
                 print("skipping prepare_mpr_for_setorigin1 for subj " + subj.label)
                 continue
 
-            gunzip(subj.t1_data + ".nii.gz", niifile)
+            subj.t1_data.cpath.unzip(niifile, replace=True)
             print("unzipped " + subj.label + " mri")
 
     def prepare_mpr_for_setorigin2(self, group_label, sess_id=1):
 
         subjects = self.load_subjects(group_label, sess_id)
         for subj in subjects:
-            niifile = os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")
-            imrm([subj.t1_data + ".nii.gz"])
-            compress(niifile, subj.t1_data + ".nii.gz")
-            imrm([niifile])
+            niifile = Image(os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii"))
+            subj.t1_data.cpath.rm()
+            niifile.compress(subj.t1_data.cpath)
+            niifile.rm()
             print("zipped " + subj.label + " mri")
     #endregion
 
@@ -355,7 +375,7 @@ class Project:
         subj_list   = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
         valid_data  = self.validate_data(data)
         if valid_data is not None:
-            return valid_data.get_filtered_column_by_value(column, value, "=", subj_list, sort=sort)
+            return valid_data.get_filtered_column_by_value(column, value, operation, subj_list, sort=sort)
         else:
             return None
 
@@ -380,20 +400,17 @@ class Project:
             if bool(self.data):
                 return self.data
             else:
-                print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is neither a dict nor a string")
-                return None
+                raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is None and project's data is not loaded")
         else:
             if isinstance(data, SubjectsDataDict):
                 return data
             elif isinstance(data, str):
-                if os.path.exists(data) is True:
+                if os.path.exists(data):
                     return SubjectsDataDict(data)
                 else:
-                    print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is a string that does not point to a valid file to load")
-                    return None
+                    raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is a string that does not point to a valid file to load")
             else:
-                print("ERROR in get_filtered_columns: given data param (" + str(data) + ") is neither a dict nor a string")
-                return None
+                raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is neither a SubjectsDataDict nor a string")
 
     def add_icv_to_data(self, grouplabel_or_subjlist=None, updatefile=False, sess_id=1):
 
@@ -408,7 +425,7 @@ class Project:
 
     def get_subjects_icv(self, grouplabel_or_subjlist, sess_id=1):
 
-        if isinstance(grouplabel_or_subjlist[0], Subject) is True:  # so caller does not have to set also the sess_id, is a xprojects parameter
+        if isinstance(grouplabel_or_subjlist[0], Subject):  # so caller does not have to set also the sess_id, is a xprojects parameter
             subjects_list = grouplabel_or_subjlist
         else:
             subjects_list = self.get_subjects(grouplabel_or_subjlist, sess_id)
@@ -450,10 +467,13 @@ class Project:
         return out_batch_job, out_batch_start
 
     # returns out_batch_job, taken from an existing spm batch template
-    def adapt_batch_files(self, templfile_noext, seq, prefix=""):
+    def adapt_batch_files(self, templfile_noext, seq, prefix="", postfix=""):
 
         if prefix != "":
             prefix = prefix + "_"
+
+        if postfix != "":
+            postfix =  "_" + postfix
 
         # force input template to be without ext
         templfile_noext     = remove_ext(templfile_noext)
@@ -464,13 +484,13 @@ class Project:
 
         in_batch_start = os.path.join(self.globaldata.spm_templates_dir, "spm_job_start.m")
 
-        if os.path.exists(templfile_noext + ".m") is True:
+        if os.path.exists(templfile_noext + ".m"):
             in_batch_job = templfile_noext + ".m"
         else:
             in_batch_job = os.path.join(self.globaldata.spm_templates_dir, templfile_noext + "_job.m")
 
-        out_batch_start = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + "_start.m")
-        out_batch_job   = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + ".m")
+        out_batch_start = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + postfix + "_start.m")
+        out_batch_job   = os.path.join(out_batch_dir, prefix + "create_" + input_batch_name + postfix + ".m")
 
         # set job file
         copyfile(in_batch_job, out_batch_job)
@@ -487,21 +507,21 @@ class Project:
     # ==================================================================================================================
     # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subj_labels) > 1 ...pass that same kwparams[0] to all subjects
     # if subj_labels is not given...use the loaded subjects
-    def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, group_or_subjlabels=None):
+    def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, group_or_subjlabels=None, sess_id=1, must_exist=True):
 
         if method_type != "" and method_type != "mpr" and method_type != "dti" and method_type != "epi" and method_type != "transform":
             print("ERROR in run_subjects_methods: the method type does not correspond to any of the allowed values (\"\", mpr, epi, dti, transform")
             return
 
         print("run_subjects_methods: validating given subjects")
-        valid_subjlabels    = self.get_subjects_labels(group_or_subjlabels)
+        valid_subjlabels    = self.get_subjects_labels(group_or_subjlabels, sess_id, must_exist)
         nsubj               = len(valid_subjlabels)
         if nsubj == 0:
             print("ERROR in run_subjects_methods: subject list is empty")
             return
 
         # check number of NECESSARY (without a default value) method params
-        subj = self.get_subject_by_label(valid_subjlabels[0])    # subj appear unused, but is instead used in the eval()
+        subj = self.get_subject_by_label(valid_subjlabels[0], sess_id, must_exist)    # subj appear unused, but is instead used in the eval()
         if method_type == "":
             method = eval("subj." + method_name)
         else:
@@ -558,7 +578,7 @@ class Project:
 
             for s in range(len(subjects[bl])):
 
-                subj = self.get_subject_by_label(subjects[bl][s])
+                subj = self.get_subject_by_label(subjects[bl][s], sess_id, must_exist)
 
                 if subj is not None:
 

@@ -8,10 +8,16 @@ import matlab.engine.engineerror
 
 
 class MatlabManager:
-    SESSION_NEW_PERSISTENT = 1
-    SESSION_NEW_NOTSHARED = 2
-    SESSION_REUSE_FIRST = 3
-    SESSION_REUSE_NAME = 4
+
+    SESSION_NEW_PERSISTENT  = 1
+    SESSION_NEW_NOTSHARED   = 2
+    SESSION_REUSE_FIRST     = 3
+    SESSION_REUSE_NAME      = 4
+
+    # def __new__(cls):
+    #     if not hasattr(cls, 'instance'):
+    #         cls.instance = super(MatlabManager, cls).__new__(cls)
+    #     return cls.instance
 
     # start a new matlab session or connect to an existing one:
     #   persistent=False : start a new NOT-SHARED one if not existing or connect to an existing SHARED (given by conn2existing) or the first available
@@ -20,7 +26,10 @@ class MatlabManager:
     # (if no session are active) or connect to the first one available or return None.
 
     @staticmethod
-    def start_matlab(paths2add=[], sess_type=SESSION_REUSE_FIRST, conn2existing=""):
+    def start_matlab(paths2add=None, sess_type=SESSION_REUSE_FIRST, conn2existing=""):
+
+        if paths2add is None:
+            paths2add = []
 
         if sess_type == MatlabManager.SESSION_NEW_PERSISTENT:
             if len(conn2existing) == 0:
@@ -29,7 +38,7 @@ class MatlabManager:
             # os.system('matlab -r \"matlab.engine.shareEngine(''' + conn2existing + ')\"')
             # os.system('matlab -r \"matlab.engine.shareEngine\"')
             # process = subprocess.run(['matlab', '-r', 'matlab.engine.shareEngine(\"' + conn2existing + '\")'])
-            process = subprocess.run(['matlab', '-r \"matlab.engine.shareEngine\"'])
+            subprocess.run(['matlab', '-r \"matlab.engine.shareEngine\"'])
 
             # rrun("matlab -r \"matlab.engine.shareEngine(\'" + conn2existing + "\')\"")
             while True:
@@ -37,6 +46,7 @@ class MatlabManager:
                 if conn2existing in existing_sessions:
                     eng = matlab.engine.connect_matlab(conn2existing)
                     break
+            raise Exception("matlab session not found")
 
         elif sess_type == MatlabManager.SESSION_NEW_NOTSHARED:
             eng = matlab.engine.start_matlab()
@@ -71,8 +81,10 @@ class MatlabManager:
         return eng
 
     @staticmethod
-    def call_matlab_function(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
+    def call_matlab_function(func, standard_paths=None, params="", logfile=None, endengine=True, eng=None):
 
+        if standard_paths is None:
+            standard_paths = []
         if eng is None:
             engine = MatlabManager.start_matlab(standard_paths)
             if engine is None:
@@ -87,15 +99,17 @@ class MatlabManager:
         print("running matlab function: " + batch_file, file=logfile)
         res = eval("engine." + batch_file + "(" + params + ")")
 
-        if endengine is True:
+        if endengine:
             engine.quit()
             print("quitting matlab session of " + batch_file)
 
         return [engine, res]
 
     @staticmethod
-    def call_matlab_function_noret(func, standard_paths=[], params="", logfile=None, endengine=True, eng=None):
+    def call_matlab_function_noret(func, standard_paths=None, params="", logfile=None, endengine=True, eng=None):
 
+        if standard_paths is None:
+            standard_paths = []
         if eng is None:
             engine = MatlabManager.start_matlab(standard_paths, MatlabManager.SESSION_REUSE_FIRST)
             if engine is None:
@@ -115,7 +129,7 @@ class MatlabManager:
         print("running matlab function: " + batch_file, file=logfile)
         eval("engine." + batch_file + str_params)
 
-        if endengine is True:
+        if endengine:
             engine.quit()
             print("quitting matlab session of " + batch_file)
 
@@ -123,8 +137,10 @@ class MatlabManager:
 
     # subcase of call_matlab_function_noret: call a SPM batch file that does not return anything
     @staticmethod
-    def call_matlab_spmbatch(func, standard_paths=[], logfile=None, endengine=True, eng=None):
+    def call_matlab_spmbatch(func, standard_paths=None, logfile=None, endengine=True, eng=None):
 
+        if standard_paths is None:
+            standard_paths = []
         batch_file = os.path.basename(os.path.splitext(func)[0])
         # err = io.StringIO
 
@@ -143,7 +159,7 @@ class MatlabManager:
             eval("engine." + batch_file + "(nargout=0)")
             # eval("engine." + batch_file + "(nargout=0, stderr=err)")
 
-            if endengine is True:
+            if endengine:
                 engine.quit()
                 print("quitting matlab session of " + batch_file)
 
@@ -200,7 +216,7 @@ class MatlabManager:
     #             params_str = "(" + params[f] + ")"
     #         eval("engine." + os.path.basename(os.path.splitext(functions[f])[0]) + "(nargout=0)")
     #
-    #     if endengine is True:
+    #     if endengine:
     #         engine.quit()
     #         print("quitting matlab session")
     #

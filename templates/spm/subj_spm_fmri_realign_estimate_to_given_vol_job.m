@@ -1,14 +1,9 @@
 %-----------------------------------------------------------------------
-% Job saved on 22-Aug-2019 13:14:59 by cfg_util (rev $Rev: 7345 $)
-% spm SPM - SPM12 (7487)
-% cfg_basicio BasicIO - Unknown
+% used by SubjectEpi.get_closest_volume
 %-----------------------------------------------------------------------
 %%
 matlabbatch{1}.spm.spatial.realign.estimate.data = {
-                                                    {
-'<REF_IMAGE,refvol>'
-<TO_ALIGN_IMAGES,1-n_vols>
-                                                    }
+                                                     <FMRI_IMAGES>
                                                    };
 %%
 matlabbatch{1}.spm.spatial.realign.estimate.eoptions.quality = 0.9;

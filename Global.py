@@ -2,6 +2,7 @@ import inspect
 import os
 
 from data.utilities import read_varlist_file
+from utility.images.Image import Image
 from utility.myfsl import fsl_switcher
 
 
@@ -26,13 +27,14 @@ class Global:
         local_settings      = os.path.join(self.framework_dir, "local.settings")
 
         # check its presence
-        if os.path.isfile(local_settings) is False:
+        if not os.path.isfile(local_settings):
             raise Exception(
                 "ERROR. the file \"local.settings\" must be present in the framework root folder (" + self.framework_dir + ")\n" +
                 "copy and rename the file " + os.path.join(self.framework_dir, "examples", "local.settings") + " there and modify its content according to your local settings")
 
         local_settings_data         = read_varlist_file(local_settings)
 
+        self.project_scripts_dir    = local_settings_data["project_scripts_dir"]
         self.spm_dir                = local_settings_data["spm_dir"]
         self.cat_version            = local_settings_data["cat_version"]
         self.marsbar                = local_settings_data["marsbar"]
@@ -40,6 +42,7 @@ class Global:
         self.ica_aroma_script       = local_settings_data["ica_aroma_script"]
         self.trackvis_bin           = local_settings_data["trackvis_bin"]
         self.autoptx_script_dir     = local_settings_data["autoptx_script_dir"]
+        self.eddy_gpu_exe_name      = local_settings_data["eddy_gpu_exe_name"]
 
         self.cat_foldername         = self.cat_version.split('.')[0]
         self.cat_dir                = os.path.join(self.spm_dir, "toolbox", self.cat_foldername)
@@ -59,33 +62,37 @@ class Global:
 
         if self.cat_version.startswith("cat12.7"):
             # cat 12.7
-            self.cat_dartel_template        = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_1.50mm", "Template_1_IXI555_MNI152.nii")
+            self.cat_dartel_template        = Image(os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_1.50mm", "Template_1_IXI555_MNI152.nii"), must_exist=True, msg="CAT Dartel template not present")
             self.cat_template_name          = "cat27_segment_customizedtemplate_tiv_smooth"
         else:
             # cat 12.8
+            self.cat_dartel_template        = Image(os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_1_Dartel.nii"), must_exist=True, msg="CAT Dartel template not present")
+            self.cat_shooting_template      = Image(os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_0_GS.nii"), must_exist=True, msg="CAT Dartel template not present")
+            self.cat_template_name          = "cat28_segment_shooting_tiv_smooth"
             self.cat_dartel_template        = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_1_Dartel.nii")
             self.cat_shooting_template      = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_0_GS.nii")
-            self.cat_template_name          = "cat28_segment_shooting_tiv_smooth"
+            self.cat_template_name          = "subj_cat28_segment_shooting_tiv_smooth"
+        self.cat_smooth_surf                = 12
 
-        self.spm_tissue_map                 = os.path.join(self.spm_dir, "tpm", "TPM.nii")
-        self.spm_icv_mask                   = os.path.join(self.spm_dir, "tpm", "mask_ICV.nii")
+        self.spm_tissue_map                 = Image(os.path.join(self.spm_dir, "tpm", "TPM.nii"), must_exist=True, msg="SPM's Standard Images not present")
+        self.spm_icv_mask                   = Image(os.path.join(self.spm_dir, "tpm", "mask_ICV.nii"), must_exist=True, msg="SPM's Standard Images not present")
 
         self.fsl_bin                        = os.path.join(self.fsl_dir, "bin")
         self.fsl_data_std_dir               = os.path.join(self.fsl_dir, "data", "standard")
-        self.fsl_std_mni_2mm_head           = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm")
-        self.fsl_std_mni_2mm_brain          = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain")
-        self.fsl_std_mni_2mm_brain_mask     = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask")
-        self.fsl_std_mni_2mm_brain_mask_dil = os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask_dil")
+        self.fsl_std_mni_2mm_head           = Image(os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm"), must_exist=True, msg="FSL's Standard Images not present")
+        self.fsl_std_mni_2mm_brain          = Image(os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain"), must_exist=True, msg="FSL's Standard Images not present")
+        self.fsl_std_mni_2mm_brain_mask     = Image(os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask"), must_exist=True, msg="FSL's Standard Images not present")
+        self.fsl_std_mni_2mm_brain_mask_dil = Image(os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask_dil"), must_exist=True, msg="FSL's Standard Images not present")
         self.fsl_std_mni_2mm_cnf            = os.path.join(self.fsl_dir, "etc", "flirtsch", "T1_2_MNI152_2mm.cnf")
 
         # useful for melodic analysis
-        self.fsl_std_mni_4mm_head           = os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm")
-        self.fsl_std_mni_4mm_brain          = os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain")
-        self.fsl_std_mni_4mm_brain_mask     = os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain_mask")
-        self.fsl_std_mni_4mm_brain_mask_dil = os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain_mask_dil")
+        self.fsl_std_mni_4mm_head           = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
+        self.fsl_std_mni_4mm_brain          = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
+        self.fsl_std_mni_4mm_brain_mask     = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain_mask"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
+        self.fsl_std_mni_4mm_brain_mask_dil = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain_mask_dil"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
         self.fsl_std_mni_4mm_cnf            = os.path.join(self.framework_dir, "templates", "images", "T1_2_MNI152_4mm.cnf")
 
-        self.fsl_std_mean_skeleton          = os.path.join(self.fsl_data_std_dir, "FMRIB58_FA-skeleton_1mm")
+        self.fsl_std_mean_skeleton          = Image(os.path.join(self.fsl_data_std_dir, "FMRIB58_FA-skeleton_1mm"), must_exist=True, msg="FSL's Standard Images not present")
 
         self.std_aal_atlas_2mm              = os.path.join(self.global_data_templates, "mpr", "aal_262_standard")
 
@@ -101,25 +108,30 @@ class Global:
         filename            = inspect.getframeinfo(inspect.currentframe()).filename
         return os.path.join(os.path.dirname(os.path.abspath(filename)), "templates", "spm")
 
-
     def check_paths(self):
 
+        if len(self.project_scripts_dir) > 0:
+            if os.path.isdir(self.project_scripts_dir) is False:
+                raise Exception("Error: Scripts folder is not present")
+        else:
+            raise Exception("Error: Scripts folder (e.g. /data/MRI/projects/SCRIPT) is not specified")
+
         if len(self.spm_dir) > 0:
-            if os.path.isdir(self.spm_dir) is False:
+            if not os.path.isdir(self.spm_dir):
                 raise Exception("Error: SPM is not present")
         else:
             if not self.ignore_warnings:
                 print("Warning: SPM has not been specified")
 
         if len(self.cat_version) > 0:
-            if os.path.isdir(self.cat_dir) is False:
+            if not os.path.isdir(self.cat_dir):
                 raise Exception("Error: CAT is not present")
         else:
             if not self.ignore_warnings:
                 print("Warning: CAT has not been specified")
 
         if len(self.ica_aroma_script) > 0:
-            if os.path.isfile(self.ica_aroma_script) is False:
+            if not os.path.isfile(self.ica_aroma_script):
                 raise Exception("Error: ICA-AROMA script is not present")
         else:
             if not self.ignore_warnings:

@@ -6,10 +6,23 @@ import tempfile
 import zipfile
 
 
+def is_list_of(_list, _type, checkall=True):
+    if isinstance(_list, list):
+        if not checkall:
+            if isinstance(_list[0], _type):
+                return True
+        else:
+            for i in _list:
+                if not isinstance(i, _type):
+                    return False
+            return True
+    return False
+
+
 def extractall_zip(src, dest, replace=True):
 
     if os.path.exists(dest):
-        if replace is True:
+        if replace:
             os.removedirs(dest)
         else:
             return
@@ -28,7 +41,7 @@ def gunzip(src, dest, replace=False):
     fp.write(bindata)
     fp.close()
 
-    if replace is True:
+    if replace:
         os.remove(src)
 
 
@@ -38,7 +51,7 @@ def compress(src, dest, replace=False):
         f.write(fp.read())
     fp.close()
 
-    if replace is True:
+    if replace:
         os.remove(src)
 
 
@@ -47,11 +60,16 @@ def write_text_file(path, text):
         f.write(text)
 
 
-def sed_inplace(filename, pattern, repl):
-    '''
+def append_text_file(path, text):
+    with open(path, "a") as f:
+        f.write(text)
+
+
+def sed_inplace(filename, pattern, repl, must_exist=False):
+    """
     Perform the pure-Python equivalent of in-place `sed` substitution: e.g.,
     `sed -i -e 's/'${pattern}'/'${repl}' "${filename}"`.
-    '''
+    """
     # For efficiency, precompile the passed regular expression.
     pattern_compiled = re.compile(pattern)
 
@@ -59,10 +77,20 @@ def sed_inplace(filename, pattern, repl):
     # writing with updating). This is usually a good thing. In this case,
     # however, binary writing imposes non-trivial encoding constraints trivially
     # resolved by switching to text writing. Let's do that.
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp_file:
-        with open(filename) as src_file:
-            for line in src_file:
-                tmp_file.write(pattern_compiled.sub(repl, line))
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp_file:
+            with open(filename) as src_file:
+                for line in src_file:
+                    tmp_file.write(pattern_compiled.sub(repl, line))
+    except FileNotFoundError:
+        if must_exist is True:
+            raise Exception("file " + filename + " not found")
+        else:
+            print("file " + filename + " not found, skipping!!")
+            return
+
+
+
 
     # Overwrite the original file with the munged temporary file in a
     # manner preserving file attributes (e.g., permissions).
@@ -78,8 +106,8 @@ def argsort(seq):
 
 
 # apply the given permutation to a list
-def reorder_list(list, neworder):
-    return [list[i] for i in neworder]
+def reorder_list(_list, neworder):
+    return [_list[i] for i in neworder]
 
 
 def get_filename(fullpath):
@@ -103,11 +131,11 @@ def copytree(src, dst, symlinks=False, ignore=None):
 # read a file where each line is a string and returns them as list (pruning the '\n')
 def read_list_from_file(srcfile):
     with open(srcfile, 'r') as f:
-        str = f.readlines()
+        _str = f.readlines()
 
-    for s in range(len(str)):
-        str[s] = str[s].strip()
-    return str
+    for s in range(len(_str)):
+        _str[s] = _str[s].strip()
+    return _str
 
 
 def fillnumber2fourdigits(num):
@@ -127,11 +155,12 @@ def fillnumber2fourdigits(num):
 
     return str_num
 
+
 # if is a string => cast to int or float (when appropriate) or keep it string
 # if not         => don't do anything, return input param unchanged
 def string2num(string):
     try:
-        if isinstance(string, str) is False:
+        if not isinstance(string, str):
             return string
 
         fl_string = float(string)
@@ -143,11 +172,11 @@ def string2num(string):
         return string
 
 
-def listToString(list, separator='\t'):
+def listToString(_list, separator='\t'):
 
-    str = ""
+    _str = ""
     # traverse the list and concatenate to String variable
-    for element in list:
-        str += (element + separator)
+    for element in _list:
+        _str += (str(element) + separator)
 
-    return str
+    return _str
