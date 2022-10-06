@@ -4,24 +4,28 @@ from utility.images.images import mid_1based
 
 
 class ResultsParams:
-    def __init__(self, multcorr="FWE", pvalue=0.05, clustext=0):
+
+    def __init__(self, multcorr="FWE", pvalue=0.05, clustext=None):
         self.mult_corr      = multcorr
         self.pvalue         = pvalue
         self.cluster_extend = clustext
 
 
-class CatConvResultsParams:
+class CatConvResultsParams(ResultsParams):
+
     def __init__(self, multcorr="FWE", pvalue=0.05, clustext="none"):
-        self.mult_corr      = multcorr
-        self.pvalue         = pvalue    # "FWE" | "FDR" | "none"
-        self.cluster_extend = clustext  # "none" | "en_corr" | "en_nocorr"
+        if clustext is None:
+            clustext = "none"
+        else:
+            if clustext not in ["none", "en_corr", "en_nocorr"]:
+                raise Exception("Error in CatConvResultsParams: clustext param (" + clustext + ") is not one of: none, en_corr, en_nocorr")
+        super().__init__(multcorr, pvalue, clustext)
 
 
-class SubjResults:
-    def __init__(self, multcorr="FWE", pvalue=0.05, sessrep="none"):
-        self.multcorr       = multcorr
-        self.pvalue         = pvalue
-        self.sessrep        = sessrep
+class SubjResultsParam(ResultsParams):
+    def __init__(self, multcorr, pvalue, clustext=0, sessrep="none"):
+        super().__init__(multcorr, pvalue, clustext)
+        self.sessrep    = sessrep
 
 
 class Contrast:

@@ -345,15 +345,30 @@ class SubjectEpi:
         residual.rm()
         tempMean.rm()
 
-    def spm_fmri_preprocessing(self, fmri_params, epi_images=None, spm_template_name='subj_spm_fmri_full_preprocessing', clean=True, do_overwrite=False):
+    def spm_fmri_preprocessing(self, fmri_params, epi_images=None, spm_template_name='subj_spm_fmri_full_preprocessing', clean=False, can_skip_input=False, do_overwrite=False):
 
-        epi_images = Images(epi_images)
+        # add sessions
+        valid_images = Images()
+        if epi_images is None:
+            valid_images.append(self.subject.fmri_data)
+        else:
+            for img in epi_images:
+                img = Image(img)
+                if img.exist:
+                    valid_images.append(img)
+                else:
+                    if can_skip_input:
+                        print("WARNING in subj: " + self.subject.label + ", given image (" + img + " is missing...skipping this image")
+                    else:
+                        raise Exception("Error in spm_fmri_preprocessing, one of the input image (" + img + ") is missing")
 
-        if not epi_images.exist:
+        nsessions = len(valid_images)
+
+        if not valid_images.exist:
             raise Exception("Error in spm_fmri_preprocessing")
 
-        swar_images = epi_images.add_prefix2name("swar")
-        swa_images  = epi_images.add_prefix2name("swa")
+        swar_images = valid_images.add_prefix2name("swar")
+        swa_images  = valid_images.add_prefix2name("swa")
 
         if (swar_images.exist or swa_images.exist) and not do_overwrite:
             print("Skipping spm_fmri_preprocessing of subject " + self.subject.label + ", swar images already exist")
@@ -367,26 +382,12 @@ class SubjectEpi:
         smooth      = fmri_params.smooth
         slice_timing = fmri_params.slice_timing
 
-        # add sessions
-        valid_images = Images()
-        if epi_images is None:
-            valid_images.append(self.subject.fmri_data)
-        else:
-            for img in epi_images:
-                img = Image(img)
-                if img.exist:
-                    valid_images.append(img)
-                else:
-                    print("WARNING in subj: " + self.subject.label + ", given image (" + img + " is missing...skipping this image")
-        nsessions = len(valid_images)
-
         if slice_timing is None:
             slice_timing = self.get_slicetiming_params(num_slices, acq_scheme)
 
             # TA - if not otherwise indicated, it assumes the acquisition is continuous and TA = TR - (TR/num slices)
             if TA == 0:
                 TA = TR - (TR / num_slices)
-
         else:
             num_slices      = len(slice_timing)
             slice_timing    = [str(p) for p in slice_timing]
@@ -469,9 +470,9 @@ class SubjectEpi:
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
+        img.upath.rm()
         if clean:
             for img in valid_images:
-                img.upath.rm()
                 img.add_prefix2name("r").rm()
                 img.add_prefix2name("ar").rm()
                 img.add_prefix2name("war").rm()
@@ -573,7 +574,7 @@ class SubjectEpi:
                 raise Exception("Error in SubjectEpi.spm_fmri_1st_level_multisessions_custom_analysis, given contrasts")
 
             SPMContrasts.replace_1stlevel_contrasts(out_batch_job, spmpath, contrasts)
-            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report.multcorr, res_report.pvalue)
+            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report)
 
             sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
 
@@ -641,7 +642,7 @@ class SubjectEpi:
                 raise Exception("Error in SubjectEpi.spm_fmri_1st_level_multisessions_custom_analysis, given contrasts")
 
             SPMContrasts.replace_1stlevel_contrasts(out_batch_job, spmpath, contrasts)
-            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report.multcorr, res_report.pvalue)
+            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report)
 
             sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
 

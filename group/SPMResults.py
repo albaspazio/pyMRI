@@ -8,16 +8,19 @@ from utility.utilities import fillnumber2fourdigits, write_text_file
 
 class SPMResults:
 
-
     @staticmethod
-    def get_1stlevel_results_report(corr="FWE", thresh="0.05", idstep=5):
+    def get_1stlevel_results_report(result_report, idstep=5):
+
+        multcorr= result_report.mult_corr
+        pvalue  = result_report.pvalue
+        extent  = result_report.cluster_extend
 
         res_rep_str =  ("matlabbatch{" + str(idstep) + "}.spm.stats.results.spmmat(1) = cfg_dep('Contrast Manager: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));\n")
         res_rep_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.results.conspec.titlestr = '';\n")
         res_rep_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.results.conspec.contrasts = Inf;\n")
-        res_rep_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.results.conspec.threshdesc = '" + corr + "';\n")
-        res_rep_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.results.conspec.thresh = " + str(thresh) + ";\n")
-        res_rep_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.results.conspec.extent = 0;\n")
+        res_rep_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.results.conspec.threshdesc = '" + multcorr + "';\n")
+        res_rep_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.results.conspec.thresh = " + str(pvalue) + ";\n")
+        res_rep_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.results.conspec.extent = " + str(extent) + ";\n")
         res_rep_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.results.conspec.conjunction = 1;\n")
         res_rep_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.results.conspec.mask.none = 1;\n")
         res_rep_str += ("matlabbatch{" + str(idstep) + "}.spm.stats.results.units = 1;\n")
