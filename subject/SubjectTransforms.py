@@ -689,6 +689,8 @@ class SubjectTransforms:
 
         if self.subject.hasFMRI(fmri_images) and self.subject.hasRS:
 
+            print(self.subject.label + "# :STARTED transform_extra: rs<->fmri")
+
             check_concat_mat(self.rs2fmri_mat, self.rs2hr_mat, self.hr2fmri_mat, overwrite=overwrite, logFile=logFile)
             check_invert_mat(self.fmri2rs_mat, self.rs2fmri_mat, overwrite=overwrite, logFile=logFile)
 

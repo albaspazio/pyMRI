@@ -398,8 +398,10 @@ class SubjectEpi:
         mean_image = valid_images[0].add_prefix2name("mean")
         mean_image.check_if_uncompress()
 
-        if not self.subject.t1_data.uexist:
-            self.subject.t1_data.unzip(replace=False)
+        temp_t1_dir = os.path.join(self.subject.t1_dir, "temp")
+        temp_t1     = os.path.join(temp_t1_dir, "t1")
+        os.makedirs(temp_t1_dir, exist_ok=True)
+        self.subject.t1_data.unzip(dest=temp_t1, replace=False)
 
         smooth_schema = "[" + str(smooth) + " " + str(smooth) + " " + str(smooth) + "]"
 
@@ -453,6 +455,7 @@ class SubjectEpi:
                 normalize_write_sessions += "matlabbatch{4}.spm.spatial.normalise.write.subj.resample(" + str(i + 1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess " + str(i + 1) + ")', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i + 1) + "}, '.', 'files'));\n"
 
         else:
+            os.removedirs(temp_dir)
             raise Exception("Error in SubjectEpi.spm_fmri_preprocessing...unrecognized template")
 
         sed_inplace(out_batch_job, '<SLICE_TIMING_SESSIONS>',       slice_timing_sessions)
@@ -470,6 +473,7 @@ class SubjectEpi:
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
+        os.removedirs(temp_t1_dir)  # remove T1 temp dir with spm segmentation (for coregistration)
         img.upath.rm()
         if clean:
             for img in valid_images:
