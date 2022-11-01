@@ -3,7 +3,8 @@ import os
 
 from group.spm_utilities import CatConvResultsParams, Peak, Cluster
 from utility.matlab import call_matlab_spmbatch
-from utility.utilities import fillnumber2fourdigits, write_text_file
+from utility.utilities import fillnumber2fourdigits
+from utility.fileutilities import write_text_file
 
 
 class SPMResults:

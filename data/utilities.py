@@ -13,7 +13,8 @@ from data.SubjectsDataDict import SubjectsDataDict
 from utility.exceptions import DataFileException
 
 # read file as:   lab1=val1\nlab2=val2\n....etc
-from utility.utilities import listToString, write_text_file
+from utility.utilities import listToString
+from utility.fileutilities import write_text_file
 
 
 def read_varlist_file(filepath, comment_char="#"):

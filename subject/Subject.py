@@ -11,7 +11,7 @@ from subject.SubjectEpi import SubjectEpi
 from subject.SubjectMpr import SubjectMpr
 from subject.SubjectTransforms import SubjectTransforms
 from utility.myfsl.fslfun import runsystem
-from utility.utilities import extractall_zip, sed_inplace
+from utility.fileutilities import extractall_zip, sed_inplace
 
 
 class Subject:

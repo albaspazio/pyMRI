@@ -9,7 +9,7 @@ from utility.matlab import call_matlab_spmbatch, call_matlab_function_noret
 from utility.myfsl.fslfun import run
 from utility.myfsl.fslfun import run_notexisting_img, runpipe, run_move_notexisting_img
 from utility.myfsl.utils.run import rrun
-from utility.utilities import sed_inplace, gunzip, write_text_file
+from utility.fileutilities import sed_inplace, write_text_file
 
 
 # ==================================================================================================================================================

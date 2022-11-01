@@ -7,7 +7,8 @@ from group.spm_utilities import SubjCondition
 from utility.exceptions import DataFileException
 from utility.images.Image import Image
 from utility.matlab import call_matlab_function_noret, call_matlab_spmbatch
-from utility.utilities import sed_inplace, is_list_of
+from utility.utilities import is_list_of
+from utility.fileutilities import sed_inplace
 
 
 class SPMStatsUtils:

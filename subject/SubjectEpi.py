@@ -15,7 +15,8 @@ from utility.images.transform_images import flirt
 from utility.images.images import mid_0based
 from utility.myfsl.utils.run import rrun
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
-from utility.utilities import sed_inplace, copytree, get_filename, is_list_of
+from utility.fileutilities import sed_inplace, copytree, get_filename
+from utility.utilities import is_list_of
 
 
 class SubjectEpi:

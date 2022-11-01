@@ -6,7 +6,8 @@ import os
 # =====================================================================================
 # returns       [ {"subj":..., "col1":..., "col2":... }, {"subj":..., "col1":..., "col2":... }, ....]
 from utility.exceptions import DataFileException
-from utility.utilities import string2num, listToString, write_text_file
+from utility.utilities import string2num, listToString
+from utility.fileutilities import write_text_file
 
 
 class DataDict:

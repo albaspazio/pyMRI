@@ -5,7 +5,8 @@ from collections import Counter
 from typing import List
 
 from utility.exceptions import DataFileException
-from utility.utilities import argsort, reorder_list, string2num, write_text_file, listToString
+from utility.utilities import argsort, reorder_list, string2num, listToString
+from utility.fileutilities import write_text_file
 
 
 # =====================================================================================
@@ -103,13 +104,23 @@ class SubjectsDataDict(dict):
     # return a list of subjects values
 
     def exist_subject(self, subj_name) -> bool:
-        return bool(self[subj_name])
+        try:
+            return bool(self[subj_name])
+        except:
+            return False
 
     def get_subject(self, subj_lab) -> dict:
         return self[subj_lab]
 
-    def pop(self) -> tuple:
-        return self.popitem()
+    def mypop(self, k=None) -> tuple:
+        if k is None:
+            return self.popitem()
+        else:
+            try:
+                v = self.pop(k)
+                return k, v
+            except:
+                return ()
 
     def get_subjects_list(self, subj_names=None) -> list:
 
@@ -360,6 +371,14 @@ class SubjectsDataDict(dict):
                 return False
 
         return True
+
+    # assoc_dict is a dictionary where key is current name and value is the new one
+    def rename_subjects(self, assoc_dict):
+        for i, (k, v) in enumerate(assoc_dict.items()):
+            tup = self.mypop(k)
+            if tup:
+                self[v] = tup[1]
+
 
     # save some columns of a subset of the subjects in given file
     def save_data(self, data_file=None, subj_labels=None, incolnames=None, outcolnames=None, separator="\t"):

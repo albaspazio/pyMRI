@@ -2,7 +2,7 @@ import os
 
 from Global import Global
 from Project import Project
-from group.spm_utilities import FmriProcParams, Contrast
+from group.spm_utilities import FmriProcParams, Contrast, SubjCondition
 from subject.Subject import Subject
 from numpy import sort
 
@@ -22,6 +22,7 @@ if __name__ == "__main__":
         project  = Project(proj_dir, globaldata)
         SESS_ID  = 1
         num_cpu  = 1
+        group_label = "test"
 
         TR              = 0.72
         num_slices      = 72
@@ -79,7 +80,7 @@ if __name__ == "__main__":
                 input_images.append(os.path.join(s.fmri_dir, images_type + s.label + "-fmri_" + epi_name + ".nii"))
                 rp_filenames.append(os.path.join(s.fmri_dir, "rp_" + s.label + "-fmri_" + epi_name + ".txt"))
 
-            kwparams.append({"analysis_name": "stats_2sessions_3regr", "fmri_params": fmri_params, "contrasts": contrasts_full, "res_report": result_report,
+            kwparams.append({"analysis_name": "stats_2sessions_3regr", "fmri_params": fmri_params, "contrasts": contrasts_trg, "res_report": result_report,
                              "input_images": input_images, "conditions_lists": sessions_cond, "rp_filenames": rp_filenames})
 
         project.run_subjects_methods("epi", "spm_fmri_1st_level_analysis", kwparams, ncore=num_cpu)

@@ -12,7 +12,7 @@ from data.SubjectsDataDict import SubjectsDataDict
 from subject.Subject import Subject
 from utility.exceptions import SubjectListException
 from utility.images.Image import Image
-from utility.utilities import gunzip, sed_inplace, remove_ext
+from utility.fileutilities import gunzip, sed_inplace, remove_ext
 
 
 class Project:

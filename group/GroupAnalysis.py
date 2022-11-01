@@ -9,7 +9,7 @@ from group.SPMModels import SPMModels
 from utility.images.Image import Image
 from utility.matlab import call_matlab_spmbatch
 from utility.myfsl.utils.run import rrun
-from utility.utilities import sed_inplace
+from utility.fileutilities import sed_inplace
 
 
 class GroupAnalysis:

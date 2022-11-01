@@ -1,5 +1,5 @@
 from data.utilities import list2spm_text_column
-from utility.utilities import sed_inplace
+from utility.fileutilities import sed_inplace
 
 # class used to replace covariates strings in SPM batch
 class SPMCovariates:

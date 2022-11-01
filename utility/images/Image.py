@@ -8,7 +8,8 @@ import collections
 # https://stackoverflow.com/questions/30045106/python-how-to-extend-str-and-overload-its-constructor
 from utility.exceptions import NotExistingImageException
 from utility.myfsl.utils.run import rrun
-from utility.utilities import compress, gunzip, fillnumber2fourdigits
+from utility.utilities import fillnumber2fourdigits
+from utility.fileutilities import compress, gunzip
 
 
 class Image(str):

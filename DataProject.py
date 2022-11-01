@@ -1,18 +1,7 @@
 import json
-import math
-import ntpath
 import os
-import shutil
-from copy import deepcopy
-from inspect import signature
-from shutil import copyfile
-from threading import Thread
-
 from data.SubjectsDataDict import SubjectsDataDict
-from subject.Subject import Subject
 from utility.exceptions import SubjectListException
-from utility.images.Image import Image
-from utility.utilities import gunzip, sed_inplace, remove_ext
 
 
 class DataProject:

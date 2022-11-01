@@ -5,7 +5,7 @@ from shutil import copyfile
 
 from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
-from utility.utilities import write_text_file
+from utility.fileutilities import write_text_file
 
 class SubjectDti:
 

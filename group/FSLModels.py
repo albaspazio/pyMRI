@@ -6,7 +6,7 @@ from group.spm_utilities import Covariate, Nuisance
 
 # create factorial designs, multiple regressions, t-test
 from utility.myfsl.utils.run import rrun
-from utility.utilities import remove_ext, append_text_file
+from utility.fileutilities import remove_ext, append_text_file
 
 
 class FSLModels:

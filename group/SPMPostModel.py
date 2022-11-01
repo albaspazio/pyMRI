@@ -5,7 +5,7 @@ from group.SPMContrasts import SPMContrasts
 from group.SPMConstants import SPMConstants
 from group.spm_utilities import ResultsParams
 from utility.matlab import call_matlab_spmbatch
-from utility.utilities import sed_inplace, remove_ext
+from utility.fileutilities import sed_inplace, remove_ext
 
 
 class SPMPostModel:
