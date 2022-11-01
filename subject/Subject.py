@@ -1,10 +1,12 @@
 import glob
 import os
+import shutil
 import traceback
 from copy import deepcopy
 from shutil import move, rmtree
 
-from utility.images.Image import Image, Images
+from utility.images.Image import Image
+from utility.images.Images import Images
 from utility.myfsl.utils.run import rrun
 from subject.SubjectDti import SubjectDti
 from subject.SubjectEpi import SubjectEpi
@@ -22,7 +24,7 @@ class Subject:
     TYPE_DTI_B0 = 5     # does not have bval/bvec
     TYPE_T2 = 6
 
-    def __init__(self, label, project, sessid, stdimg=""):
+    def __init__(self, label, project, sessid=1, stdimg=""):
 
         self.label  = label
         self.sessid = sessid
@@ -46,12 +48,31 @@ class Subject:
         self.dti        = SubjectDti(self, self._global)
         self.epi        = SubjectEpi(self, self._global)
 
-        self.hasT1  = self.t1_data.exist
-        self.hasRS  = self.rs_data.exist
-        self.hasDTI = self.dti_data.exist
-        self.hasT2  = self.t2_data.exist
-        self.hasFMRI= self.fmri_data.exist
-        self.hasWB  = self.wb_data.exist
+    @property
+    def hasT1(self):
+        return self.t1_data.exist
+
+    @property
+    def hasRS(self):
+        return self.rs_data.exist
+
+    @property
+    def hasDTI(self):
+        return self.dti_data.exist
+
+    @property
+    def hasT2(self):
+        return self.t2_data.exist
+
+    def hasFMRI(self, images=None):
+        if images is None:
+            return self.fmri_data.exist
+        else:
+            return Images(images).exist
+
+    @property
+    def hasWB(self):
+        return self.wb_data.exist
 
     def get_properties(self, sess):
         return self.set_properties(sess, True)
@@ -111,6 +132,10 @@ class Subject:
         self.t1_cat_resampled_surface   = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.T1_" + self.label + ".gii"))
         self.t1_cat_resampled_surface_longitudinal = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.rT1_" + self.label + ".gii"))
 
+        self.t1_dartel_c1               = Image(os.path.join(self.t1_spm_dir, "c1T1_" + self.label))
+        self.t1_dartel_rc1              = Image(os.path.join(self.t1_spm_dir, "rc1T1_" + self.label))
+        self.t1_dartel_rc2              = Image(os.path.join(self.t1_spm_dir, "rc2T1_" + self.label))
+
         self.t1_spm_icv_file = os.path.join(self.t1_spm_dir, "icv_" + self.label + ".dat")
 
         # ------------------------------------------------------------------------------------------------------------------------
@@ -142,6 +167,9 @@ class Subject:
         self.dti_nodiff_brainmask_data  = Image(os.path.join(self.roi_dti_dir, "nodif_brain_mask"))
 
         self.dti_fit_FA                 = Image(os.path.join(self.dti_dir, self.dti_fit_label + "_FA"))
+        self.dti_fit_MD                 = Image(os.path.join(self.dti_dir, self.dti_fit_label + "_MD"))
+        self.dti_fit_L1                 = Image(os.path.join(self.dti_dir, self.dti_fit_label + "_L1"))
+        self.dti_fit_L23                = Image(os.path.join(self.dti_dir, self.dti_fit_label + "_L23"))
 
         self.dti_bedpostx_mean_S0_label = "mean_S0samples"
 
@@ -593,21 +621,24 @@ class Subject:
                 # ------------------------------------------------------------------------------------------------------
                 # susceptibility correction ?
                 # ------------------------------------------------------------------------------------------------------
-                if rs_pa_data is None:
-                    rs_pa_data = self.rs_pa_data
-                rs_pa_data = Image(rs_pa_data)
-                ap_distorted = self.rs_data.add_postfix2name("_distorted")
+                if do_susc_corr:        # want to correct
+                    ap_distorted = self.rs_data.add_postfix2name("_distorted")
 
-                if ap_distorted.exist and self.rs_data.exist and not do_overwrite:
-                    pass    # already done and I don't want to re-do it
-                else:
-                    if rs_pa_data.exist and do_susc_corr:  # want to correct
+                    if rs_pa_data is None:
+                        rs_pa_data = self.rs_pa_data
+                    rs_pa_data = Image(rs_pa_data)  # don't want an exception, create without must_exist and then simply break if does not exist
+                    if not rs_pa_data.exist:
+                        print("Error in welcome...user want to correct for susceptibility but PA image does not exist...skip rs processing...continue other")
+                        break
 
-                        if ap_distorted.exist and do_overwrite:      # already done and I want to re-do it  ==> rollback changes
+                    if ap_distorted.exist and self.rs_data.exist and not do_overwrite:
+                        pass    # already done and I don't want to re-do it
+                    else:
+                        if ap_distorted.exist:              # already done  ==> rollback changes
                             self.rs_data.rm(logFile=log)
                             ap_distorted.cp(self.rs_data, logFile=log)
-                        elif not ap_distorted.exist:                 # never done ==> create backup copy
-                            self.rs_data.cp(ap_distorted)
+                        else:        # never done ==> create backup copy
+                            self.rs_data.cp(ap_distorted, logFile=log)
 
                         try:
                             self.epi.topup_corrections([self.rs_data], rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
@@ -699,10 +730,20 @@ class Subject:
         # ==============================================================================================================================================================
         # FMRI DATA
         # ==============================================================================================================================================================
-        while self.hasFMRI and do_fmri:
+        while self.hasFMRI(fmri_images) and do_fmri:
 
+            # sanity checks
             if fmri_params is None:
                 raise Exception("Error in Subject.wellcome of subj " + self.label)
+
+            if fmri_images is None:
+                fmri_images = Images([self.fmri_data])
+            else:
+                fmri_images = Images(fmri_images)
+
+            if not fmri_images.exist:
+                print("Error in welcome...user want to perform fmri analysis but fmri image(s) does not exist...skip fmri processing...continue other")
+                break
 
             log_file    = os.path.join(self.fmri_dir, "log_fmri_processing.txt")
             log         = open(log_file, "a")
@@ -710,41 +751,38 @@ class Subject:
             # ------------------------------------------------------------------------------------------------------
             # if susceptibility correction is selected. it performs topup correction after motion correction (realignment).
             # ------------------------------------------------------------------------------------------------------
-            if fmri_pa_data is None:
-                fmri_pa_data = self.fmri_pa_data
-            fmri_pa_data = Image(fmri_pa_data)
-
-            epi_images = Images(fmri_images)
-
-            ap_distorted = self.fmri_data.add_postfix2name("_distorted")
-
             if do_susc_corr:        # want to correct
+                ap_distorted = fmri_images.add_postfix2name("_distorted")
+
+                if fmri_pa_data is None:
+                    fmri_pa_data = self.fmri_pa_data
+                fmri_pa_data = Image(fmri_pa_data)  # don't want an exception, create without must_exist and then simply break if does not exist
                 if not fmri_pa_data.exist:
                     print("Error in welcome...user want to correct for susceptibility but PA image does not exist...skip fmri processing...continue other")
                     break
 
-                if ap_distorted.exist and self.fmri_data.exist and not do_overwrite:
+                if ap_distorted.exist and fmri_images.exist and not do_overwrite:
                     pass  # already done and I don't want to re-do it
                 else:
                     if ap_distorted.exist:          # already done  ==> rollback changes
-                        self.fmri_data.rm(logFile=log)
-                        ap_distorted.cp(self.fmri_data, logFile=log)
+                        fmri_images.rm(logFile=log)
+                        ap_distorted.cp(fmri_images, logFile=log)
                     else:                           # never done ==> create backup copy
-                        self.fmri_data.cp(ap_distorted, logFile=log)
+                        fmri_images.cp(ap_distorted, logFile=log)
 
                     try:
-                        self.epi.topup_corrections([self.fmri_data], fmri_pa_data, self.project.topup_fmri_params, motion_corr=True, logFile=log)
+                        self.epi.topup_corrections(fmri_images, fmri_pa_data, self.project.topup_fmri_params, motion_corr=True, logFile=log)
                     except Exception as e:
                         print("UNRECOVERABLE ERROR: " + str(e))
-                        ap_distorted.mv(self.rs_data, logFile=log)
+                        ap_distorted.mv(fmri_images, logFile=log)
                         break
 
-                self.epi.spm_fmri_preprocessing(fmri_images, fmri_params, "subj_spm_fmri_preprocessing_norealign", do_overwrite=do_overwrite)
+                self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_preprocessing_norealign", do_overwrite=do_overwrite)
 
             else:
-                self.epi.spm_fmri_preprocessing(fmri_images, fmri_params, "subj_spm_fmri_full_preprocessing", do_overwrite=do_overwrite)
+                self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_full_preprocessing", do_overwrite=do_overwrite)
 
-            self.transform.transform_fmri(logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
+            self.transform.transform_fmri(fmri_images, logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
             break
 
         # ==============================================================================================================================================================
@@ -752,7 +790,6 @@ class Subject:
         # ==============================================================================================================================================================
         if self.hasT2:
 
-            self.hasT2 = True
             os.makedirs(os.path.join(self.roi_dir, "reg_t2"), exist_ok=True)
 
             if not self.t2_brain_data:
@@ -762,7 +799,7 @@ class Subject:
         # ==============================================================================================================================================================
         # DTI data
         # ==============================================================================================================================================================
-        if self.hasDTI:
+        while self.hasDTI:
 
             log_file = os.path.join(self.dti_dir, "log_dti_processing.txt")
             log = open(log_file, "a")
@@ -806,11 +843,16 @@ class Subject:
                 self.dti.conn_matrix(struct_conn_atlas_path, struct_conn_atlas_nroi)  # . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_dti_conn_matrix.sh $SUBJ_NAME $PROJ_DIR
 
             log.close()
+            break
 
         # ==============================================================================================================================================================
         # EXTRA
         # ==============================================================================================================================================================
-        self.transform.transform_extra()
+        try:
+            self.transform.transform_extra()
+        except Exception:
+            if do_fmri and do_rs:       # because the method check for the presence of both images and raises an error if other stuff is missing
+                print("Error in Subject.welcome: transform_extra could not be completed")
 
     # ==================================================================================================================================================
     # DATA CONVERSIONS
@@ -959,6 +1001,57 @@ class Subject:
     def unzip_data(self, src_zip, dest_dir, replace=True):
         extractall_zip(src_zip, dest_dir, replace)
         pass
+
+    def copy_final_data(self, dest_proj, t1=True, t1_surf=True, vbmspm=True, rs=True, fmri=None, dti=True, sess_id=1):
+
+        subj_in_dest_project = Subject(self.label, dest_proj, sess_id)
+        subj_in_dest_project.create_file_system()
+
+        if t1:
+            self.t1_data.cp_notexisting(subj_in_dest_project.t1_data)
+            self.t1_brain_data.cp_notexisting(subj_in_dest_project.t1_brain_data)
+            self.t1_brain_data_mask.cp_notexisting(subj_in_dest_project.t1_brain_data_mask)
+
+        if t1_surf:
+            os.makedirs(subj_in_dest_project.t1_cat_surface_dir, exist_ok=True)
+
+            self.t1_cat_resampled_surface.gpath.cp_notexisting(subj_in_dest_project.t1_cat_resampled_surface.gpath)
+            shutil.copyfile(self.t1_cat_resampled_surface.fpathnoext + ".dat", subj_in_dest_project.t1_cat_resampled_surface.fpathnoext + ".dat")
+
+        if vbmspm:
+            os.makedirs(subj_in_dest_project.t1_spm_dir, exist_ok=True)
+
+            shutil.copyfile(self.t1_spm_icv_file, subj_in_dest_project.t1_spm_icv_file)
+
+            self.t1_dartel_c1.cp_notexisting(subj_in_dest_project.t1_dartel_c1)
+            self.t1_dartel_rc1.cp_notexisting(subj_in_dest_project.t1_dartel_rc1)
+            self.t1_dartel_rc2.cp_notexisting(subj_in_dest_project.t1_dartel_rc2)
+
+        if dti:
+            self.dti_fit_FA.cp_notexisting(subj_in_dest_project.dti_fit_FA)
+            self.dti_fit_MD.cp_notexisting(subj_in_dest_project.dti_fit_MD)
+            self.dti_fit_L1.cp_notexisting(subj_in_dest_project.dti_fit_L1)
+            self.dti_fit_L23.cp_notexisting(subj_in_dest_project.dti_fit_L23)
+
+        if fmri is not None:
+
+            if not isinstance(fmri, list):
+                print("Error in copy_final_data")
+                return
+
+            for img in fmri:
+
+                # Image(img).copy
+                pass
+
+        if rs:
+            os.system("cp -r " + self.rs_final_regstd_dir + " " + subj_in_dest_project.rs_final_regstd_dir)
+
+        os.system("cp -r " + self.roi_dir + " " + subj_in_dest_project.roi_dir)
+
+
+
+
 
     # ==================================================================================================================================================
     def can_run_analysis(self, analysis_type, analysis_params=None):

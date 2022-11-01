@@ -10,7 +10,8 @@ from group.spm_utilities import SubjCondition
 from group.SPMContrasts import SPMContrasts
 from group.SPMResults import SPMResults
 
-from utility.images.Image import Image, Images
+from utility.images.Image import Image
+from utility.images.Images import Images
 from utility.images.transform_images import flirt
 from utility.images.images import mid_0based
 from utility.myfsl.utils.run import rrun
@@ -25,14 +26,18 @@ class SubjectEpi:
         self.subject = subject
         self._global = _global
 
-    def get_example_function(self, seq="rs", vol_num=None, overwrite=False, logFile=None):
+    def get_example_function(self, seq="rs", vol_num=None, fmri_images=None, overwrite=False, logFile=None):
 
         if seq == "rs":
             data    = self.subject.rs_data
             exfun   = self.subject.rs_examplefunc
             m_exfun = self.subject.rs_examplefunc_mask
         elif seq == "fmri":
-            data    = self.subject.fmri_data
+
+            if fmri_images is None:
+                data    = self.subject.fmri_data
+            else:
+                data = fmri_images[0]   # I assume other sessions are co-registered to first one
             exfun   = self.subject.fmri_examplefunc
             m_exfun = self.subject.fmri_examplefunc_mask
         else:
@@ -341,15 +346,7 @@ class SubjectEpi:
         residual.rm()
         tempMean.rm()
 
-    def spm_fmri_preprocessing(self, fmri_params, epi_images=None, spm_template_name='subj_spm_fmri_full_preprocessing', clean=True):
-
-        num_slices  = fmri_params.nslices
-        TR          = fmri_params.tr
-        TA          = fmri_params.ta
-        acq_scheme  = fmri_params.acq_scheme
-        st_ref      = fmri_params.st_ref
-        smooth      = fmri_params.smooth
-        slice_timing = fmri_params.slice_timing
+    def spm_fmri_preprocessing(self, fmri_params, epi_images=None, spm_template_name='subj_spm_fmri_full_preprocessing', clean=False, can_skip_input=False, do_overwrite=False):
 
         # add sessions
         valid_images = Images()
@@ -361,8 +358,30 @@ class SubjectEpi:
                 if img.exist:
                     valid_images.append(img)
                 else:
-                    print("WARNING in subj: " + self.subject.label + ", given image (" + img + " is missing...skipping this image")
+                    if can_skip_input:
+                        print("WARNING in subj: " + self.subject.label + ", given image (" + img + " is missing...skipping this image")
+                    else:
+                        raise Exception("Error in spm_fmri_preprocessing, one of the input image (" + img + ") is missing")
+
         nsessions = len(valid_images)
+
+        if not valid_images.exist:
+            raise Exception("Error in spm_fmri_preprocessing")
+
+        swar_images = valid_images.add_prefix2name("swar")
+        swa_images  = valid_images.add_prefix2name("swa")
+
+        if (swar_images.exist or swa_images.exist) and not do_overwrite:
+            print("Skipping spm_fmri_preprocessing of subject " + self.subject.label + ", swar images already exist")
+            return
+
+        num_slices  = fmri_params.nslices
+        TR          = fmri_params.tr
+        TA          = fmri_params.ta
+        acq_scheme  = fmri_params.acq_scheme
+        st_ref      = fmri_params.st_ref
+        smooth      = fmri_params.smooth
+        slice_timing = fmri_params.slice_timing
 
         if slice_timing is None:
             slice_timing = self.get_slicetiming_params(num_slices, acq_scheme)
@@ -370,7 +389,6 @@ class SubjectEpi:
             # TA - if not otherwise indicated, it assumes the acquisition is continuous and TA = TR - (TR/num slices)
             if TA == 0:
                 TA = TR - (TR / num_slices)
-
         else:
             num_slices      = len(slice_timing)
             slice_timing    = [str(p) for p in slice_timing]
@@ -381,8 +399,10 @@ class SubjectEpi:
         mean_image = valid_images[0].add_prefix2name("mean")
         mean_image.check_if_uncompress()
 
-        if not self.subject.t1_data.uexist:
-            self.subject.t1_data.unzip(replace=False)
+        temp_t1_dir = os.path.join(self.subject.t1_dir, "temp")
+        temp_t1     = os.path.join(temp_t1_dir, "t1")
+        os.makedirs(temp_t1_dir, exist_ok=True)
+        self.subject.t1_data.unzip(dest=temp_t1, replace=False)
 
         smooth_schema = "[" + str(smooth) + " " + str(smooth) + " " + str(smooth) + "]"
 
@@ -412,7 +432,6 @@ class SubjectEpi:
             for i in range(nsessions):
                 normalize_write_sessions += "matlabbatch{5}.spm.spatial.normalise.write.subj.resample(" + str(i + 1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess " + str(i + 1) + ")', substruct('.', 'val', '{}', {2}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i + 1) + "}, '.', 'files'));\n"
 
-
         elif spm_template_name == "subj_spm_fmri_preprocessing_norealign" or spm_template_name == "subj_spm_fmri_preprocessing_norealign_mni":
 
             # input images are realigned images to be slice-timing processed
@@ -437,6 +456,7 @@ class SubjectEpi:
                 normalize_write_sessions += "matlabbatch{4}.spm.spatial.normalise.write.subj.resample(" + str(i + 1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess " + str(i + 1) + ")', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i + 1) + "}, '.', 'files'));\n"
 
         else:
+            os.removedirs(temp_dir)
             raise Exception("Error in SubjectEpi.spm_fmri_preprocessing...unrecognized template")
 
         sed_inplace(out_batch_job, '<SLICE_TIMING_SESSIONS>',       slice_timing_sessions)
@@ -454,9 +474,10 @@ class SubjectEpi:
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
+        os.removedirs(temp_t1_dir)  # remove T1 temp dir with spm segmentation (for coregistration)
+        img.upath.rm()
         if clean:
             for img in valid_images:
-                img.upath.rm()
                 img.add_prefix2name("r").rm()
                 img.add_prefix2name("ar").rm()
                 img.add_prefix2name("war").rm()
@@ -472,7 +493,7 @@ class SubjectEpi:
         if input_images is None:
             input_images = Images([self.subject.fmri_data])
         else:
-            input_images = Images(input_images)
+            input_images = Images(input_images, must_exist=True, msg="Error in spm_fmri_1st_level_analysis. input images")
         input_images.check_if_uncompress()  # unzip whether necessary
         nsessions = len(input_images)
 
@@ -488,6 +509,12 @@ class SubjectEpi:
         time_bins   = fmri_params.time_bins
         events_unit = fmri_params.events_unit
         time_onset  = fmri_params.time_onset
+        hrf_deriv   = fmri_params.hrf_deriv
+
+        if hrf_deriv:
+            str_hrf_deriv = "[1 0]"
+        else:
+            str_hrf_deriv = "[0 0]"
 
         if rp_filenames is None:
             rp_filenames = [os.path.join(self.subject.fmri_dir, "rp_" + self.subject.fmri_image_label + ".txt")]
@@ -499,6 +526,7 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<TR_VALUE>', str(TR))
         sed_inplace(out_batch_job, '<MICROTIME_RES>', str(time_bins))
         sed_inplace(out_batch_job, '<MICROTIME_ONSET>', str(time_onset))
+        sed_inplace(out_batch_job, '<HRF_DERIV>', str_hrf_deriv)
 
         conditions_str = ""
         if nsessions == 1:
@@ -507,6 +535,9 @@ class SubjectEpi:
             fmri_data = input_images[0]
             fmri_data.check_if_uncompress()
             epi_nvols = fmri_data.upath.nvols
+
+            if epi_nvols == 0:
+                raise Exception("Error in SubjectEpi.spm_fmri_1st_level_analysis: input images have zero volumes. e.g. when nii and nii.gz are both present or image is corrupted")
             conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.scans = {\n"
             for i in range(1, epi_nvols + 1):
                 conditions_str += ("'" + fmri_data.upath + ',' + str(i) + "'\n")
@@ -515,10 +546,10 @@ class SubjectEpi:
             # conditions
             conditions_str += (SPMStatsUtils.spm_get_fmri_subj_stats_conditions_string_1session(conditions_lists[0]) + ";\n")
 
-            conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.multi = {''};\n"
-            conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.regress = struct('name', {}, 'val', {});\n"
+            conditions_str +=  "matlabbatch{1}.spm.stats.fmri_spec.sess.multi = {''};\n"
+            conditions_str +=  "matlabbatch{1}.spm.stats.fmri_spec.sess.regress = struct('name', {}, 'val', {});\n"
             conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess.multi_reg = {'" + rp_filenames[0] + "'};\n")
-            conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess.hpf = 128;\n"
+            conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess.hpf = " + str(fmri_params.hpf) + ";\n")
 
         else:
             for im,fmri_data in enumerate(input_images):
@@ -533,10 +564,10 @@ class SubjectEpi:
                 # conditions
                 conditions_str += (SPMStatsUtils.spm_get_fmri_subj_stats_conditions_string_ithsession(conditions_lists[im], im+1) + ";\n")
 
-                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").multi = {''};\n"
-                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").regress = struct('name', {}, 'val', {});\n"
+                conditions_str +=  "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").multi = {''};\n"
+                conditions_str +=  "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").regress = struct('name', {}, 'val', {});\n"
                 conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").multi_reg = {'" + rp_filenames[im] + "'};\n")
-                conditions_str += "matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").hpf = 128;\n"
+                conditions_str += ("matlabbatch{1}.spm.stats.fmri_spec.sess(" + str(im+1) + ").hpf = " + str(fmri_params.hpf) + ";\n")
 
         sed_inplace(out_batch_job, '<SESSIONS_CONDITIONS>', conditions_str)
 
@@ -548,7 +579,7 @@ class SubjectEpi:
                 raise Exception("Error in SubjectEpi.spm_fmri_1st_level_multisessions_custom_analysis, given contrasts")
 
             SPMContrasts.replace_1stlevel_contrasts(out_batch_job, spmpath, contrasts)
-            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report.multcorr, res_report.pvalue)
+            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report)
 
             sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
 
@@ -616,12 +647,11 @@ class SubjectEpi:
                 raise Exception("Error in SubjectEpi.spm_fmri_1st_level_multisessions_custom_analysis, given contrasts")
 
             SPMContrasts.replace_1stlevel_contrasts(out_batch_job, spmpath, contrasts)
-            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report.multcorr, res_report.pvalue)
+            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report)
 
             sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
-
     #endregion
 
     # ===============================================================================
@@ -632,7 +662,6 @@ class SubjectEpi:
 
     def sbfc_several_1roi_feat(self):
         pass
-
     #endregion
 
     # ==================================================================================================================================================

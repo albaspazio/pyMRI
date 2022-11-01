@@ -4,24 +4,28 @@ from utility.images.images import mid_1based
 
 
 class ResultsParams:
-    def __init__(self, multcorr="FWE", pvalue=0.05, clustext=0):
+
+    def __init__(self, multcorr="FWE", pvalue=0.05, clustext=None):
         self.mult_corr      = multcorr
         self.pvalue         = pvalue
         self.cluster_extend = clustext
 
 
-class CatConvResultsParams:
+class CatConvResultsParams(ResultsParams):
+
     def __init__(self, multcorr="FWE", pvalue=0.05, clustext="none"):
-        self.mult_corr      = multcorr
-        self.pvalue         = pvalue    # "FWE" | "FDR" | "none"
-        self.cluster_extend = clustext  # "none" | "en_corr" | "en_nocorr"
+        if clustext is None:
+            clustext = "none"
+        else:
+            if clustext not in ["none", "en_corr", "en_nocorr"]:
+                raise Exception("Error in CatConvResultsParams: clustext param (" + clustext + ") is not one of: none, en_corr, en_nocorr")
+        super().__init__(multcorr, pvalue, clustext)
 
 
-class SubjResults:
-    def __init__(self, multcorr="FWE", pvalue=0.05, sessrep="none"):
-        self.multcorr       = multcorr
-        self.pvalue         = pvalue
-        self.sessrep        = sessrep
+class SubjResultsParam(ResultsParams):
+    def __init__(self, multcorr, pvalue, clustext=0, sessrep="none"):
+        super().__init__(multcorr, pvalue, clustext)
+        self.sessrep    = sessrep
 
 
 class Contrast:
@@ -30,6 +34,7 @@ class Contrast:
         self.weights    = weights
         self.type       = _type
         self.sessrep    = sessrep
+
 
 class TContrast(Contrast):
     def __init__(self, name, weights, sessrep="none"):
@@ -106,7 +111,7 @@ class Nuisance(Regressor):
 
 
 class FmriProcParams:
-    def __init__(self, tr, nsl, sl_tim, st_ref, time_bins, time_onset=None, acq_sch=0, ta=0, smooth=6, events_unit="secs"):
+    def __init__(self, tr, nsl, sl_tim, st_ref, time_bins, time_onset=None, acq_sch=0, hpf=128, hrf_deriv=True, ta=0, smooth=6, events_unit="secs"):
         self.tr             = tr
         self.nslices        = nsl
         self.slice_timing   = sl_tim
@@ -117,6 +122,8 @@ class FmriProcParams:
         else:
             self.time_onset = time_onset
         self.acq_scheme     = acq_sch
+        self.hpf            = hpf
+        self.hrf_deriv      = hrf_deriv
         self.ta             = ta
         self.smooth         = smooth
         self.events_unit    = events_unit

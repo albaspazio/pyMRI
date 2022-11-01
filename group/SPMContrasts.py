@@ -62,9 +62,9 @@ class SPMContrasts:
             else:
                 con_type = "fcon"
 
-            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}." + con_type + ".name = '" + con.name + "';\n")
-            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}." + con_type + ".weights = " + con.weights + ";\n")
-            constrasts_str += ("matlabbatch{" + str(batch_id) + "}.spm.stats.con.consess{" + str(num + 1) + "}." + con_type + ".sessrep = '" + con.sessrep + "';\n")
+            constrasts_str += ("matlabbatch{" + str(batch_id) + "}." + con_str + ".consess{" + str(num + 1) + "}." + con_type + ".name = '" + con.name + "';\n")
+            constrasts_str += ("matlabbatch{" + str(batch_id) + "}." + con_str + ".consess{" + str(num + 1) + "}." + con_type + ".weights = " + con.weights + ";\n")
+            constrasts_str += ("matlabbatch{" + str(batch_id) + "}." + con_str + ".consess{" + str(num + 1) + "}." + con_type + ".sessrep = '" + con.sessrep + "';\n")
 
         if deleteexisting:
             constrasts_str += ("matlabbatch{" + str(batch_id) + "}." + con_str + ".delete = 1;\n")

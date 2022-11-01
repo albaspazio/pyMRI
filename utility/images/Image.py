@@ -60,6 +60,10 @@ class Image(str):
         return Image(self.fpathnoext + ".nii.gz")
 
     @property
+    def gpath(self):
+        return Image(self.fpathnoext + ".gii")
+
+    @property
     def nslices(self):
         return self.getnslices()
 
@@ -203,6 +207,8 @@ class Image(str):
             ext = ".nii"
         elif os.path.isfile(self.cpath):
             ext = ".nii.gz"
+        elif os.path.isfile(self.gpath):
+            ext = ".gii"
 
         dest            = Image(dest)
         fileparts_dst   = dest.split_ext()
@@ -238,7 +244,7 @@ class Image(str):
                 print("ERROR in mv. src image (" + self + ") does not exist")
                 return
             else:
-                print("WARNING in mv. src image (" + self + ") does not exist, skip copy and continue")
+                print("WARNING in mv. src image (" + self + ") does not exist, skip rename and continue")
 
         ext = ""
         if os.path.isfile(self.upath):
@@ -475,54 +481,6 @@ class Image(str):
     def add_prefix2name(self, prefix):
         return Image(os.path.join(self.dir, prefix + self.name + self.ext))
 
-
-class Images(list):
-
-    def __new__(cls, value=None, must_exist=False, msg=""):
-        return super(Images, cls).__new__(cls, value)
-
-    # def __new__(cls, value=None, must_exist=False, msg=""):
-    #     ivalues = []
-    #     if value is not None:
-    #         for v in value:
-    #             ivalues.append(Image(v, must_exist, msg))
-    #
-    #     return super(Images, cls).__new__(cls, ivalues)
-
-    def __init__(self, value=None, must_exist=False, msg=""):
-        super().__init__()
-        if value is None:
-            value = []
-        for v in value:
-            self.append(Image(v, must_exist, msg))
-
-    def rm(self, logFile=None):
-
-        for file in self:
-            Image(file).rm(logFile)
-
-    # def append(self, __object) -> None:
-    #     self.append(Image(__object))
-
-    # move a series of images defined by wildcard string ( e.g.   *fast*
-    def move(self, destdir, logFile=None):
-
-        images = []
-        for f in self:
-            f = Image(f)
-            if f.is_image():
-                if f.exist:
-                    images.append(f)
-
-        for img in images:
-            dest_file = os.path.join(destdir, os.path.basename(img))
-            move(img, dest_file)
-            if logFile is not None:
-                print("mv " + img + " " + dest_file, file=logFile)
-
-    def check_if_uncompress(self, replace=False):
-        for img in self:
-            Image(img).check_if_uncompress(replace)
 
 def immerge(out_img, premerge_labels=None):
     seq_string = " "

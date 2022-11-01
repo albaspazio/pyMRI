@@ -7,6 +7,7 @@ from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
 from utility.fileutilities import write_text_file
 
+
 class SubjectDti:
 
     def __init__(self, subject, _global):
@@ -45,7 +46,7 @@ class SubjectDti:
 
         if not self.subject.dti_data.exist:
             print("WARNING in dti eddy of subject: " + self.subject.label + ",dti image is missing...skipping subject")
-            return
+            return      # in normal usage, welcome script, self.hasDTI has been checked, this is used for single call
 
         if acq_params is None:
             acq_params = self.subject.project.topup_dti_params
@@ -58,21 +59,17 @@ class SubjectDti:
             return
 
         if not os.path.exists(acq_params):
-            print("ERROR in eddy of subject: " + self.subject.label + ", acq_params file does not exist, exiting.....")
-            return
+            raise Exception("ERROR in eddy of subject: " + self.subject.label + ", acq_params file does not exist, exiting.....")
 
         if not os.path.exists(json):
             if (rep_out == "both" or rep_out == "gw" or rep_out == "sw") or slice2vol > 0:
-                print("ERROR in eddy of subject: " + self.subject.label + ", json file does not exist and repol type was set or mporder > 0 , exiting.....")
-                return
+                raise Exception("ERROR in eddy of subject: " + self.subject.label + ", json file does not exist and repol type was set or mporder > 0 , exiting.....")
 
         if not os.path.exists(self.subject.project.eddy_index):
-            print("ERROR in eddy of subject: " + self.subject.label + ", eddy_index file does not exist, exiting.....")
-            return
+            raise Exception("ERROR in eddy of subject: " + self.subject.label + ", eddy_index file does not exist, exiting.....")
 
         if not self.subject.dti_pa_data.exist:
-            print("ERROR in eddy, PA sequence is not available, cannot do eddy")
-            return
+            raise Exception("ERROR in eddy, PA sequence is not available, cannot do eddy")
 
         # ----------------------------------------------------------------
         # parameters
