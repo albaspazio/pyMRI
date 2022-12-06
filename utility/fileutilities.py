@@ -124,6 +124,8 @@ def read_keys_values_from_file(srcfile, separator="\t", mustbeunique=True):
                 return None
             res[arr[0]] = arr[1]
         except:
-            res[arr[0]] = arr[1]
-
+            try:
+                res[arr[0]] = arr[1]
+            except:
+                pass
     return res

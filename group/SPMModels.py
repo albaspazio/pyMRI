@@ -7,7 +7,7 @@ from group.SPMStatsUtils    import SPMStatsUtils
 from group.spm_utilities    import GrpInImages
 from utility.matlab         import call_matlab_spmbatch
 from utility.fileutilities  import sed_inplace
-from group.SPMConstants import SPMConstants
+from group.SPMConstants     import SPMConstants
 
 
 # create factorial designs, multiple regressions, t-test

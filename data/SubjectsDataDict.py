@@ -13,15 +13,15 @@ from utility.fileutilities import write_text_file
 # DATA EXTRACTION FROM A "SUBJ" DICTIONARY
 # =====================================================================================
 # assumes that the first column represents subjects' labels (it will act as dictionary's key).
-# creates a dictionary with subj label as key and data columns as a dictionary
+# creates a dictionary with subj label as key and a dictionary of data columns as  value
 # returns   { "label1":{"col1", ..., "colN"}, "label2":{"col1", ..., "colN"}, .....}
 
 class SubjectsDataDict(dict):
 
-    def __new__(cls, filepath="", tonum=True, delimiter='\t'):
+    def __new__(cls, filepath="", validcols=None, tonum=True, delimiter='\t'):
         return super(SubjectsDataDict, cls).__new__(cls, None)
 
-    def __init__(self, filepath="", tonum=True, delimiter='\t'):
+    def __init__(self, filepath="", validcols=None, tonum=True, delimiter='\t'):
 
         super().__init__()
         self.labels     = []
@@ -29,6 +29,7 @@ class SubjectsDataDict(dict):
 
         if filepath != "":
             self.load(filepath, tonum, delimiter)
+            self.filter_columns(validcols)
 
     @property
     def header(self) -> list:
@@ -43,7 +44,8 @@ class SubjectsDataDict(dict):
     # =====================================================================================
 
     # assumes that the first column represents subjects' labels (it will act as dictionary's key).
-    # creates a dictionary with subj label as key and data columns as a dictionary  {subjlabel:{"a":..., "b":..., }}
+    # creates a dictionary with key = subj label and values = dictionary of data columns   => {subjlabel:{"a":..., "b":..., }}
+    # validcols=[list of column to include]
     # tonum defines whether checking string(ed) type and convert to int/float
     # filepath CANNOT be empty
     def load(self, filepath, tonum=True, delimiter='\t') -> dict:
@@ -72,6 +74,7 @@ class SubjectsDataDict(dict):
                                 casted_elem     = elem
                             data_row[header[cnt]]   = casted_elem
                         cnt = cnt + 1
+
                     self[subj_lab] = data_row
                     self.labels.append(subj_lab)
 
@@ -101,7 +104,13 @@ class SubjectsDataDict(dict):
 
         self.update(newsubjs)
 
-    # return a list of subjects values
+    def filter_columns(self, validcols):
+        for subj in self:
+            sub_values = {}
+            for col in self[subj]:
+                if col in validcols:
+                    sub_values[col] = self[subj][col]
+            self[subj] = sub_values
 
     def exist_subject(self, subj_name) -> bool:
         try:
@@ -142,6 +151,7 @@ class SubjectsDataDict(dict):
                 sdict[k] = v
         return sdict
 
+    # return a list of subjects values
     def get_subjects_filtered_columns(self, colnames, subj_names=None):
 
         if subj_names is None:
@@ -379,7 +389,6 @@ class SubjectsDataDict(dict):
             if tup:
                 self[v] = tup[1]
 
-
     # save some columns of a subset of the subjects in given file
     def save_data(self, data_file=None, subj_labels=None, incolnames=None, outcolnames=None, separator="\t"):
 
@@ -387,10 +396,10 @@ class SubjectsDataDict(dict):
             data_file = self.filepath
 
         if incolnames is None:
-            incolnames = self.header
+            incolnames = self.header[1:len(self.header)]
 
         if outcolnames is None:
-            outcolnames = self.header
+            outcolnames = self.header[1:len(self.header)]
 
         if subj_labels is None:
             data = self
