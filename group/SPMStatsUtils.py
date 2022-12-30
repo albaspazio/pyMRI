@@ -313,7 +313,7 @@ class SPMStatsUtils:
         call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths, "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
 
     @staticmethod
-    def batchrun_cat_surface_smooth(project, _global, subj_instances, sfilt=12, spm_template_name="cat_surf_smooth", nproc=1, eng=None, runit=True):
+    def batchrun_cat_surface_smooth(project, _global, subj_instances, sfilt=12, spm_template_name="subjs_cat_surf_smooth", nproc=1, eng=None, runit=True):
 
         # create template files
         out_batch_job, out_batch_start = project.adapt_batch_files(spm_template_name, "mpr")

@@ -83,4 +83,4 @@ matlabbatch{6}.spm.spatial.smooth.data(1) = cfg_dep('Normalise: Write: Normalise
 matlabbatch{6}.spm.spatial.smooth.fwhm = <SMOOTH_SCHEMA>;
 matlabbatch{6}.spm.spatial.smooth.dtype = 0;
 matlabbatch{6}.spm.spatial.smooth.im = 0;
-matlabbatch{6}.spm.spatial.smooth.prefix = 's';
+matlabbatch{6}.spm.spatial.smooth.prefix = '<SMOOTH_PREFIX>';

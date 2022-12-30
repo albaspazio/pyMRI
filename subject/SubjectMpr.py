@@ -875,7 +875,7 @@ class SubjectMpr:
         if smooth_surf is None:
             smooth_surf = self.subject.t1_cat_surface_resamplefilt
 
-        spm_template_name = "mpr_cat_surf_resample"
+        spm_template_name = "subjs_cat_surf_resample"
 
         out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
         subj = self.subject.get_properties(session)

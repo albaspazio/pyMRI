@@ -346,7 +346,7 @@ class SubjectEpi:
         residual.rm()
         tempMean.rm()
 
-    def spm_fmri_preprocessing(self, fmri_params, epi_images=None, spm_template_name='subj_spm_fmri_full_preprocessing', clean=False, can_skip_input=False, do_overwrite=False):
+    def spm_fmri_preprocessing(self, fmri_params, epi_images=None, spm_template_name='subj_spm_fmri_full_preprocessing', smoothprefix="s", clean=False, can_skip_input=False, do_overwrite=False):
 
         # add sessions
         valid_images = Images()
@@ -400,8 +400,8 @@ class SubjectEpi:
         mean_image.check_if_uncompress()
 
         temp_t1_dir = os.path.join(self.subject.t1_dir, "temp")
-        temp_t1     = os.path.join(temp_t1_dir, "t1")
         os.makedirs(temp_t1_dir, exist_ok=True)
+        temp_t1     = Image(os.path.join(temp_t1_dir, "t1"))
         self.subject.t1_data.unzip(dest=temp_t1, replace=False)
 
         smooth_schema = "[" + str(smooth) + " " + str(smooth) + " " + str(smooth) + "]"
@@ -456,7 +456,7 @@ class SubjectEpi:
                 normalize_write_sessions += "matlabbatch{4}.spm.spatial.normalise.write.subj.resample(" + str(i + 1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess " + str(i + 1) + ")', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i + 1) + "}, '.', 'files'));\n"
 
         else:
-            os.removedirs(temp_dir)
+            os.removedirs(temp_t1_dir)
             raise Exception("Error in SubjectEpi.spm_fmri_preprocessing...unrecognized template")
 
         sed_inplace(out_batch_job, '<SLICE_TIMING_SESSIONS>',       slice_timing_sessions)
@@ -468,19 +468,55 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<SLICETIMING_PARAMS>', ' '.join(slice_timing))
         sed_inplace(out_batch_job, '<REF_SLICE>', str(st_ref))
         sed_inplace(out_batch_job, '<RESLICE_MEANIMAGE>', mean_image.upath + ',1')
-        sed_inplace(out_batch_job, '<T1_IMAGE>', self.subject.t1_data.upath + ',1')
+        sed_inplace(out_batch_job, '<T1_IMAGE>', temp_t1.upath + ',1')
         sed_inplace(out_batch_job, '<SPM_DIR>', self._global.spm_dir)
         sed_inplace(out_batch_job, '<SMOOTH_SCHEMA>', smooth_schema)
+        sed_inplace(out_batch_job, '<SMOOTH_PREFIX>', smoothprefix)
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
-        os.removedirs(temp_t1_dir)  # remove T1 temp dir with spm segmentation (for coregistration)
-        img.upath.rm()
+        rmtree(temp_t1_dir, ignore_errors=True)  # remove T1 temp dir with spm segmentation (for coregistration)
+
+        for img in valid_images:
+            img.upath.rm()
+
         if clean:
             for img in valid_images:
                 img.add_prefix2name("r").rm()
+                img.add_prefix2name("a").rm()
                 img.add_prefix2name("ar").rm()
                 img.add_prefix2name("war").rm()
+                img.add_prefix2name("wa").rm()
+
+    def spm_smooth(self, epi_images=None, smooth=6, smoothprefix="s", spm_template_name='subj_spm_smooth', logFile=None):
+
+        valid_images = Images()
+        if epi_images is None:
+            valid_images.append(self.subject.fmri_data)
+        else:
+            for img in epi_images:
+                img = Image(img)
+                if img.exist:
+                    valid_images.append(img)
+                else:
+                    print("WARNING in subj: " + self.subject.label + ", given image (" + img + " is missing...skipping this image")
+
+        for img in valid_images:
+
+            out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
+
+            img.check_if_uncompress()
+            epi_nvols = img.upath.getnvol()
+
+            epi_volumes = ""
+            for v in range(1, epi_nvols + 1):
+                epi_volumes += ("'" + img.upath + ',' + str(v) + "'\n")
+
+            smooth_schema = "[" + str(smooth) + " " + str(smooth) + " " + str(smooth) + "]"
+            sed_inplace(out_batch_job, '<IMAGE>', epi_volumes)
+            sed_inplace(out_batch_job, '<SMOOTH_SCHEMA>', smooth_schema)
+            sed_inplace(out_batch_job, '<SMOOTH_PREFIX>', smoothprefix)
+            call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
     #endregion
 

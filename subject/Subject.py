@@ -1108,5 +1108,10 @@ class Subject:
             src_imgB = Image(os.path.join(self.rs_dir, self.rs_post_nuisance_melodic_image_label))
             return src_imgA.exist or src_imgB.exist
 
-        # elif analysis_type == "fmri":
+        elif analysis_type == "fmri":
+            if analysis_params is None:
+                fmri_images = [self.fmri_data]
+            else:
+                fmri_images = Images(analysis_params)
 
+            return Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("a").exist or Images(fmri_images).add_prefix2name("wa").exist

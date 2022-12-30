@@ -415,13 +415,13 @@ class Project:
     def add_icv_to_data(self, grouplabel_or_subjlist=None, updatefile=False, sess_id=1):
 
         if grouplabel_or_subjlist is None:
-            grouplabel_or_subjlist = self.get_subjects_labels()
+            grouplabels = self.get_subjects_labels()
         else:
-            grouplabel_or_subjlist = self.get_subjects_labels(grouplabel_or_subjlist)
+            grouplabels = self.get_subjects_labels(grouplabel_or_subjlist)
 
-        icvs = self.get_subjects_icv(grouplabel_or_subjlist, sess_id)
+        icvs = self.get_subjects_icv(grouplabels, sess_id)
 
-        self.data.add_column("icv", icvs, updatefile)
+        self.data.add_column("icv", grouplabels, icvs, updatefile)
 
     def get_subjects_icv(self, grouplabel_or_subjlist, sess_id=1):
 
@@ -439,6 +439,9 @@ class Project:
 
             icv_scores.append(round(float(values[1]) + float(values[2]) + float(values[3]), 4))
         return icv_scores
+
+    def add_data_column(self, colname, labels, values, updatefile=False):
+        self.data.add_column(colname, labels, values, updatefile)
 
     #endregion ==================================================================================================================
 
