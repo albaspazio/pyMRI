@@ -29,7 +29,8 @@ class SubjectsDataDict(dict):
 
         if filepath != "":
             self.load(filepath, tonum, delimiter)
-            self.filter_columns(validcols)
+            if validcols is not None:
+                self.filter_columns(validcols)
 
     @property
     def header(self) -> list:

@@ -2,6 +2,7 @@ import os
 from data.utilities import list2spm_text_column
 from utility.images.images import mid_1based
 
+import numpy as np
 
 class ResultsParams:
 
@@ -50,12 +51,15 @@ class SubjCondition:
     def __init__(self, name, onsets, duration="0", orth="1"):
         self.name        = name
         self._onsets     = onsets
-        self._duration   = str(duration)
+        self._duration   = duration
         self._orth       = str(orth)
 
     @property
     def duration(self):
-        return str(self._duration)
+        if isinstance(self._duration, np.ndarray):
+            return list2spm_text_column(self._duration)
+        else:
+            return str(self._duration)
 
     @property
     def onsets(self):
