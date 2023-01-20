@@ -276,8 +276,8 @@ class Subject:
         self.de_brain_data  = Image(os.path.join(self.de_dir, self.de_image_label + "_brain"))
 
         # ------------------------------------------------------------------------------------------------------------------------
-        self_copy = deepcopy(self)
         if rollback:
+            self_copy = deepcopy(self)
             self.set_properties(self.sessid, False)
             return self_copy
         else:
@@ -656,6 +656,7 @@ class Subject:
                 if not preproc_img.exist:
                     if not os.path.isfile(feat_preproc_model + ".fsf"):
                         print("===========>>>> FEAT_PREPROC template file (" + self.label + " " + feat_preproc_model + ".fsf) is missing...skipping feat preprocessing")
+                        break
                     else:
                         if os.path.isdir(preproc_feat_dir):
                             rmtree(preproc_feat_dir, ignore_errors=True)
@@ -752,6 +753,17 @@ class Subject:
             # if susceptibility correction is selected. it performs topup correction after motion correction (realignment).
             # ------------------------------------------------------------------------------------------------------
             if do_susc_corr:        # want to correct
+
+                # check whether PA is present, if not try taking it from rs folder,
+                # if absent also there, skip all fmri preprocessing and inform user
+
+                if not self.fmri_pa_data.exist:
+                    if not self.rs_pa_data.exist:
+                        print("Error in wellcome...user wants to perform susceptibility correction of fmri data but a PA image is absent in both fmri and rs folder....skip fmri processing...continue other")
+                        break
+                    else:
+                        self.rs_pa_data.cp(self.fmri_pa_data)
+
                 ap_distorted = fmri_images.add_postfix2name("_distorted")
 
                 if fmri_pa_data is None:
@@ -807,16 +819,19 @@ class Subject:
             self.dti.get_nodiff()  # create nodif & nodif_brain in roi/reg_dti
 
             if not self.dti_fit_FA.exist and do_dtifit:
-                print("===========>>>> " + self.label + " : dtifit")
 
                 if not do_pa_eddy:
+                    print("===========>>>> " + self.label + " : eddy_correct")
                     self.dti.eddy_correct(do_overwrite, log)
                 else:
                     if do_eddy_gpu:
+                        print("===========>>>> " + self.label + " : eddy_gpu")
                         self.dti.eddy(exe_ver=self._global.eddy_gpu_exe_name, logFile=log)
                     else:
+                        print("===========>>>> " + self.label + " : eddy")
                         self.dti.eddy(exe_ver="eddy_openmp", logFile=log)
 
+                print("===========>>>> " + self.label + " : dtifit")
                 self.dti.fit(log)
 
                 # create L23 image

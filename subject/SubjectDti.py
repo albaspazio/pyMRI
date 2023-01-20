@@ -59,7 +59,7 @@ class SubjectDti:
             return
 
         if not os.path.exists(acq_params):
-            raise Exception("ERROR in eddy of subject: " + self.subject.label + ", acq_params file does not exist, exiting.....")
+            raise Exception("ERROR in eddy of subject: " + self.subject.label + ", topup_acqparams file does not exist, exiting.....")
 
         if not os.path.exists(json):
             if (rep_out == "both" or rep_out == "gw" or rep_out == "sw") or slice2vol > 0:

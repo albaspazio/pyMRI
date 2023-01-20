@@ -222,6 +222,8 @@ class SPMStatsUtils:
     #region global calculation
 
     # method can be: subj_icv, subj_tiv, "" (no correction) or a column name of the given data_file
+    # when analysing subjects from different groups, we must avoid validating data.
+    # Thus get_filtered_column must receive a Subject instances list, not a labels list  (16/1/2023)
     @staticmethod
     def spm_replace_global_calculation(project, out_batch_job, method="", groups_instances=None, data_file=None, idstep=1):
 
@@ -231,13 +233,15 @@ class SPMStatsUtils:
         gc_str          = ""
 
         slabels         = []
+        subjs_instances = []
         for subjs in groups_instances:
-            slabels = slabels + project.get_subjects_labels(subjs)
+            slabels         = slabels + project.get_subjects_labels(subjs)
+            subjs_instances = subjs_instances + subjs
 
         if method == "subj_icv":  # read icv file from each subject/mpr/spm folder
 
             if project.data.exist_filled_column("icv", slabels):
-                str_icvs = list2spm_text_column(project.get_filtered_column("icv", slabels)[0])
+                str_icvs = list2spm_text_column(project.get_filtered_column("icv", subjs_instances)[0])
                 # raise DataFileException("spm_replace_global_calculation", "given data_file does not contain the column icv")
             else:
                 icvs = []
