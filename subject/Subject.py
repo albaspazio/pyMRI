@@ -499,6 +499,14 @@ class Subject:
         # ==============================================================================================================================================================
         #  T1 data
         # ==============================================================================================================================================================
+        if not self.hasT1:
+
+            # check whether a previous processing has been aborted
+            orig_version = Image(os.path.join(self.t1_dir, self.label + "_orig"))
+            if orig_version.cexist:
+                # t1 has been already centered and prebet method has been aborted
+                orig_version.mv(self.t1_data)
+
         if self.hasT1:
 
             os.makedirs(self.roi_t1_dir, exist_ok=True)

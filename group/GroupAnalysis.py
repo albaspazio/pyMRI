@@ -103,7 +103,7 @@ class GroupAnalysis:
 
         shutil.rmtree(struct_dir)
 
-    def tbss_run_fa(self, subjects_list, odn, prepare=True, proc=True, postreg="S", prestat_thr=0.2):
+    def tbss_run_fa(self, subjects_list, odn, prepare=True, proc=True, postreg="S", prestat_thr=0.2, cleanup=True):
 
         self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
@@ -138,11 +138,16 @@ class GroupAnalysis:
 
             os.chdir(curr_dir)
 
+        if cleanup:
+            # shutil.rmtree(os.path.join(root_analysis_folder, "FA"))
+            shutil.rmtree(os.path.join(root_analysis_folder, "origdata"))
+            shutil.rmtree(os.path.join(root_analysis_folder, "design"))
+
         return root_analysis_folder
 
     # run tbss for other modalities = ["MD", "L1", ....]
     # you first must have done run_tbss_fa
-    def tbss_run_alternatives(self, subjects_list, input_folder, modalities, prepare=True, proc=True):
+    def tbss_run_alternatives(self, subjects_list, input_folder, modalities, prepare=True, proc=True, cleanup=True):
 
         self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
@@ -182,6 +187,13 @@ class GroupAnalysis:
                 rrun("tbss_non_FA " + mod)
 
             os.chdir(curr_dir)
+
+        if cleanup:
+            # shutil.rmtree(os.path.join(input_folder, "FA")) #
+            shutil.rmtree(os.path.join(input_folder, "L1"))
+            shutil.rmtree(os.path.join(input_folder, "L23"))
+            shutil.rmtree(os.path.join(input_folder, "MD"))
+
 
 
     # read a matrix file (not a classical subjects_data file) and add total ICV as last column
