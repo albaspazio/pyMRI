@@ -696,8 +696,88 @@ class SubjectEpi:
     def sbfc_1multiroi_feat(self):
         pass
 
-    def sbfc_several_1roi_feat(self):
-        pass
+    # -i input_ffd_name -f denoised_folder_postfix_name -o output_postfixname_series_and_folder or $0 subj_label proj_dir -p full_input_image_path -o output_postfixname_series_and_folder"
+    # rois can be indicated as a list of full paths or names (and rel_in_roi_dir must be not None and equal to a path relative to subj folder)
+    def sbfc_several_1roi_feat(self, rois_list, in_model="sbfc_feat_1roi", rel_in_roi_dir=None, ser_pfname="", epi_label="rs", in_file_name=None, std_image=None, tr=None, te=None):
+
+        if std_image is None:
+            std_image = self._global.fsl_std_mni_2mm_brain
+
+        # define & validate input epi image
+        if in_file_name is None:
+            if epi_label == "rs":
+                in_file_name    = self.subject.rs_post_nuisance_melodic_image_label
+                epi_dir         = self.subject.rs_dir
+            else:
+                in_file_name    = self.subject.fmri_image_label
+                epi_dir         = self.subject.fmri_dir
+        else:
+            if epi_label == "rs":
+                epi_dir         = self.subject.rs_dir
+            else:
+                epi_dir         = self.subject.fmri_dir
+
+        in_image    = os.path.join(epi_dir, in_file_name)
+        in_image    = Image(in_image, must_exist=True, msg="Error in sbfc_several_1roi_feat, given input image " + in_image + ", does not exist...exiting")
+        tot_vol_num = in_image.getnvol()
+
+        for roi_name in rois_list:
+
+            # compose & validate input roi path
+            if rel_in_roi_dir is None:
+                roi = roi_name
+            else:
+                roi = os.path.join(self.subject.dir, rel_in_roi_dir, roi_name)
+            roi = Image(roi, must_exist=True, msg="Error in sbfc_several_1roi_feat, given roi " + roi_name + ", does not exist...exiting")
+
+            # extract roi time-serie
+            output_serie    = os.path.join(self.subject.rs_series_dir, roi_name + "_ts" + ser_pfname + ".txt")
+            rrun("fslmeants -i " + in_image + " -o " + output_serie + " -m " + roi)    # <<<<<<<<<<<<<<<<<<--------------------
+
+            # create output model dir and file
+            in_model_path   = os.path.join(self.subject.project.glm_template_dir, in_model)
+            out_model_path  = os.path.join(self.subject.sbfc_dir, "feat_roi_" + in_model + "_" + roi_name + ser_pfname)
+            os.makedirs(os.path.join(epi_dir, "model"), exist_ok=True)
+            copyfile(in_model_path + ".fsf", out_model_path + ".fsf")
+
+            output_dir      = os.path.join(self.subject.sbfc_feat_dir, "feat_" + roi_name + ser_pfname)
+
+            # FEAT fsf -------------------------------------------------------------------------------------------------------------------------
+            with open(out_model_path + ".fsf", "a") as text_file:
+                # original_stdout = sys.stdout
+                # sys.stdout = text_file  # Change the standard output to the file we created.
+
+                print("", file=text_file)
+                print("################################################################", file=text_file)
+                print("# overriding parameters", file=text_file)
+                print("################################################################", file=text_file)
+
+                print("set fmri(npts) " + str(tot_vol_num), file=text_file)
+                print("set feat_files(1) " + in_image, file=text_file)
+                print("set highres_files(1) " + self.subject.t1_brain_data, file=text_file)
+
+                # if self.subject.wb_brain_data.is_image() and do_initreg:
+                #     print("set fmri(reginitial_highres_yn) 1", file=text_file)
+                #     print("set initial_highres_files(1) " + self.subject.wb_brain_data, file=text_file)
+                # else:
+                print("set fmri(reginitial_highres_yn) 0", file=text_file)
+
+                print("set fmri(outputdir) " + output_dir, file=text_file)
+                print("set fmri(regstandard) " + std_image, file=text_file)
+                print("set fmri(custom1) " + output_serie, file=text_file)
+
+                if tr is not None:
+                    print("set fmri(tr) " + str(tr), file=text_file)
+
+                if te is not None:
+                    print("set fmri(te) " + str(te), file=text_file)
+
+                print("subj: " + self.subject.label + ", starting ROI FEAT: " + roi_name)
+
+            rrun(os.path.join(self._global.fsl_bin, "feat") + " " + out_model_path + ".fsf")  # execute  FEAT
+            rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + output_dir + ".feat")
+
+
     #endregion
 
     # ==================================================================================================================================================

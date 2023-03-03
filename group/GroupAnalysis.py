@@ -305,6 +305,15 @@ class GroupAnalysis:
 
     #endregion
 
+    # ---------------------------------------------------
+    #region SBFC
+    @staticmethod
+    def group_sbfc(grouplabel_or_subjlist, firstlvl_fn, regressors, input_fsf, odp, ofn="mult_cov", data_file=None,
+                                               create_model=True, group_mean_contrasts=1, cov_mean_contrasts=2, compare_covs=False, ofn_postfix=""):
+        pass
+
+    #endregion
+
     # ====================================================================================================================================================
     #region TBSS
     # ====================================================================================================================================================

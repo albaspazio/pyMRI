@@ -186,8 +186,10 @@ class Subject:
         self.rs_pa_data     = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA"))
         self.rs_pa_data2    = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA2"))
 
-        self.sbfc_dir           = os.path.join(self.rs_dir, "sbfc")
-        self.rs_series_dir      = os.path.join(self.sbfc_dir, "series")
+        self.sbfc_dir           = os.path.join(self.rs_dir,     "sbfc")
+        self.rs_series_dir      = os.path.join(self.sbfc_dir,   "series")
+        self.sbfc_feat_dir      = os.path.join(self.sbfc_dir,   "feat")
+
         self.rs_melic_dir       = os.path.join(self.rs_dir, "melic")
         self.rs_default_mel_dir = os.path.join(self.rs_dir, "postmel.ica")
 
@@ -332,18 +334,18 @@ class Subject:
 
     def create_file_system(self):
 
-        os.makedirs(os.path.join(self.dir, "mpr"), exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "fmri"), exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "dti"), exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "t2"), exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "resting"), exist_ok=True)
+        os.makedirs(os.path.join(self.dir, "mpr"),      exist_ok=True)
+        os.makedirs(os.path.join(self.dir, "fmri"),     exist_ok=True)
+        os.makedirs(os.path.join(self.dir, "dti"),      exist_ok=True)
+        os.makedirs(os.path.join(self.dir, "t2"),       exist_ok=True)
+        os.makedirs(os.path.join(self.dir, "resting"),  exist_ok=True)
 
-        os.makedirs(self.roi_t1_dir, exist_ok=True)
-        os.makedirs(self.roi_std_dir, exist_ok=True)
-        os.makedirs(self.roi_dti_dir, exist_ok=True)
-        os.makedirs(self.roi_rs_dir, exist_ok=True)
-        os.makedirs(self.roi_fmri_dir, exist_ok=True)
-        os.makedirs(self.roi_t2_dir, exist_ok=True)
+        os.makedirs(self.roi_t1_dir,    exist_ok=True)
+        os.makedirs(self.roi_std_dir,   exist_ok=True)
+        os.makedirs(self.roi_dti_dir,   exist_ok=True)
+        os.makedirs(self.roi_rs_dir,    exist_ok=True)
+        os.makedirs(self.roi_fmri_dir,  exist_ok=True)
+        os.makedirs(self.roi_t2_dir,    exist_ok=True)
 
     def rename(self, new_label, session_id=1):
 

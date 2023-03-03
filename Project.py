@@ -32,11 +32,11 @@ class Project:
 
         self.glm_template_dir = os.path.join(self.script_dir, "glm", "templates")
 
-        self.resting_dir            = os.path.join(self.group_analysis_dir, "resting")
+        self.resting_dir            = os.path.join(self.group_analysis_dir, "rs")
         self.mpr_dir                = os.path.join(self.group_analysis_dir, "mpr")
 
-        self.melodic_templates_dir  = os.path.join(self.resting_dir, "group_templates")
-        self.melodic_dr_dir         = os.path.join(self.resting_dir, "dr")
+        self.melodic_templates_dir  = os.path.join(self.resting_dir, "melodic", "group_templates")
+        self.melodic_dr_dir         = os.path.join(self.resting_dir, "melodic", "dr")
         self.sbfc_dir               = os.path.join(self.resting_dir, "sbfc")
 
         self.fmri_dir               = os.path.join(self.group_analysis_dir, "fmri")
