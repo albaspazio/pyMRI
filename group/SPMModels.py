@@ -1,6 +1,5 @@
 import os
 
-from data.utilities         import validate_data_with_covs
 from group.SPMCovariates    import SPMCovariates
 from group.SPMPostModel     import SPMPostModel
 from group.SPMStatsUtils    import SPMStatsUtils
@@ -31,7 +30,7 @@ class SPMModels:
         # sanity check
         if bool(covs):
             data_file = self.project.validate_data(data_file)
-            validate_data_with_covs(data_file, covs)
+            data_file.validate_covs(covs)
         else:
             if stat_type == SPMConstants.MULTREGR:
                 raise Exception("Error in batchrun_group_stats: covs cannot be empty or none when one group mult regr is asked")

@@ -12,7 +12,7 @@ from data.SubjectsDataDict import SubjectsDataDict
 from subject.Subject import Subject
 from utility.exceptions import SubjectListException
 from utility.images.Image import Image
-from utility.fileutilities import gunzip, sed_inplace, remove_ext
+from utility.fileutilities import sed_inplace, remove_ext
 
 
 class Project:
@@ -106,7 +106,6 @@ class Project:
         except SubjectListException as e:
             raise SubjectListException("load_subjects", e.param)    # send whether the group label was not present
                                                                     # or one of the subjects was not valid
-
         if must_exist:
             self.subjects           = subjects
             self.subjects_labels    = [subj.label for subj in self.subjects]
@@ -129,22 +128,24 @@ class Project:
             return Subject(subj_label, self, sess)
 
     # ==================================================================================================================
-    #region GET SUBJECTS' LABELS or INSTANCES
+    # region GET SUBJECTS' LABELS or INSTANCES
     # ==================================================================================================================
-    # GROUP_LABEL or SUBLABELS LIST => VALID SUBJECT INSTANCES LIST
-    # create and returns a list of valid subjects instances given a grouplabel or a subjlabels list
+    # IN:   GROUP_LABEL | SUBLABELS LIST
+    # OUT:  [VALID SUBJECT INSTANCES LIST]
     def get_subjects(self, group_or_subjlabels, sess_id=1, must_exist=True):
         valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, sess_id, must_exist)
         return self.__get_subjects_from_labels(valid_subj_labels, sess_id, must_exist)
 
-    # GROUP_LABEL or SUBLABELS LIST or SUBJINSTANCES LIST => VALID SUBLABELS LIST
-    # returns [labels]
+    # IN:   GROUP_LABEL | SUBLABELS LIST | SUBJINSTANCES LIST
+    # OUT:  [VALID SUBLABELS LIST]
     def get_subjects_labels(self, grouplabel_or_subjlist=None, sess_id=1, must_exist=True):
+
         if grouplabel_or_subjlist is None:
             if len(self.subjects_labels) == 0:
-                raise SubjectListException("get_subjects_labels", "given grouplabel_or_subjlist (" + grouplabel_or_subjlist + ") is None and no group is loaded")
+                raise SubjectListException("get_subjects_labels", "given grouplabel_or_subjlist is None and no group is loaded")
             else:
-                return self.subjects_labels         # if != form 0, they have been already validated
+                return self.subjects_labels         # if != 0, a list of validated subjects exist
+
         elif isinstance(grouplabel_or_subjlist, str):  # must be a group_label and have its associated subjects list
             return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, sess_id, must_exist)
 
@@ -163,16 +164,16 @@ class Project:
         else:
             raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a valid param (None, string  or string list), is: " + str(grouplabel_or_subjlist))
 
-
-#endregion
+    # endregion
 
     # =========================================================================
-    #region PRIVATE VALIDATION ROUTINES
+    # region PRIVATE VALIDATION ROUTINES
     # =========================================================================
 
-    # GROUP_LAB => VALID SUBJLABELS LIST or []
-    # check whether all subjects belonging to the given group_label are valid
-    # returns such subject list if all valid
+    # must_exist=True   -> check list is valid and whether all subjects belonging to the given group_label are valid
+    # must_exist=False  -> if list if present, returns its associated subjects' labels without verifying their validity
+    # IN:   GROUP_LAB
+    # OUT:  [VALID SUBJLABELS LIST] or SubjectListException
     def __get_valid_subjlabels_from_group(self, group_label, sess_id=1, must_exist=True):
         for grp in self.subjects_lists:
             if grp["label"] == group_label:
@@ -182,17 +183,19 @@ class Project:
                     return grp["list"]
         raise SubjectListException("__get_valid_subjlabels_from_group", "given group_label (" + group_label + ") does not exist in subjects_lists")
 
-    # SUBJLABELS LIST => VALID SUBJLABELS LIST or []
     # check whether all subjects listed in subj_labels are valid
     # returns given list if all valid
+    # IN:   SUBJLABELS LIST
+    # OUT:  [VALID SUBJLABELS LIST] or SubjectListException
     def __get_valid_subjlabels(self, subj_labels, sess_id=1):
         for lab in subj_labels:
             if not Subject(lab, self, sess_id).exist():
                 raise SubjectListException("__get_valid_subjlabels", "given subject (" + lab + ") does not exist in file system")
         return subj_labels
 
-    # SUBJLABELS LIST => VALID SUBJS INSTANCES or []
     # create and returns a list of valid subjects instances given a subjlabels list
+    # IN:   SUBJLABELS LIST
+    # OUT:  VALID SUBJS INSTANCES
     def __get_subjects_from_labels(self, subj_labels, sess_id=1, must_exist=True):
         if must_exist:
             subj_labels = self.__get_valid_subjlabels(subj_labels)
@@ -394,7 +397,7 @@ class Project:
 
     # validate data dictionary. if param is none -> takes it from self.data
     #                           otherwise try to load it
-    def validate_data(self, data=None):
+    def validate_data(self, data=None) -> SubjectsDataDict:
 
         if data is None:
             if bool(self.data):
@@ -415,13 +418,13 @@ class Project:
     def add_icv_to_data(self, grouplabel_or_subjlist=None, updatefile=False, sess_id=1):
 
         if grouplabel_or_subjlist is None:
-            grouplabels = self.get_subjects_labels()
+            grouplabel_or_subjlist = self.get_subjects_labels()
         else:
-            grouplabels = self.get_subjects_labels(grouplabel_or_subjlist)
+            grouplabel_or_subjlist = self.get_subjects_labels(grouplabel_or_subjlist)
 
-        icvs = self.get_subjects_icv(grouplabels, sess_id)
+        icvs = self.get_subjects_icv(grouplabel_or_subjlist, sess_id)
 
-        self.data.add_column("icv", grouplabels, icvs, updatefile)
+        self.data.add_column("icv", grouplabel_or_subjlist, icvs, updatefile)
 
     def get_subjects_icv(self, grouplabel_or_subjlist, sess_id=1):
 

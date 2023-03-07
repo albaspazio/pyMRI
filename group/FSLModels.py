@@ -1,7 +1,6 @@
 import os
 from distutils.file_util import copy_file
 
-from data.utilities import validate_data_with_covs
 from group.spm_utilities import Covariate, Nuisance
 
 # create factorial designs, multiple regressions, t-test
@@ -74,7 +73,7 @@ class FSLModels:
 
         if bool(regressors):
             data = self.project.validate_data(data_file)
-            validate_data_with_covs(data, regressors)
+            data.validate_covs(regressors)
         else:
             data = None
 

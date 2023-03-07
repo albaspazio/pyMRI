@@ -42,17 +42,29 @@ def fillnumber2fourdigits(num):
 
 
 # if is a string => cast to int or float (when appropriate) or keep it string
-# if not         => don't do anything, return input param unchanged
-def string2num(string):
+# if not         => return input just rounding if requested
+def string2num(string, ndecim=-1):
     try:
-        if not isinstance(string, str):
+        if isinstance(string, float):
+            if ndecim == -1:
+                return string
+            else:
+                return float("{:." + str(ndecim) + "f}".format(str(string)))
+
+        elif isinstance(string, int):
             return string
 
-        fl_string = float(string)
-        if round(fl_string) == fl_string:
-            return int(fl_string)
-        else:
-            return fl_string
+        elif isinstance(string, str):
+            # is a string, check what really contains
+            fl_string = float(string)
+            if round(fl_string) == fl_string:
+                return int(fl_string)
+            else:
+                # is float
+                if ndecim == -1:
+                    return fl_string
+                else:
+                    return float("{:." + str(ndecim) + "f}".format(fl_string))      # round
     except ValueError:
         return string
 

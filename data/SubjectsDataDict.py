@@ -4,6 +4,7 @@ from collections import Counter
 
 from typing import List
 
+from data.utilities import demean_serie
 from utility.exceptions import DataFileException
 from utility.utilities import argsort, reorder_list, string2num, listToString
 from utility.fileutilities import write_text_file
@@ -24,7 +25,6 @@ class SubjectsDataDict(dict):
     def __init__(self, filepath="", validcols=None, tonum=True, delimiter='\t'):
 
         super().__init__()
-        self.labels     = []
         self.filepath   = filepath
 
         if filepath != "":
@@ -35,6 +35,9 @@ class SubjectsDataDict(dict):
     @property
     def header(self) -> list:
         return self.get_header()
+    @property
+    def labels(self) -> list:
+        return list(self.keys())
 
     @property
     def num(self) -> int:
@@ -77,7 +80,6 @@ class SubjectsDataDict(dict):
                         cnt = cnt + 1
 
                     self[subj_lab] = data_row
-                    self.labels.append(subj_lab)
 
             return self
 
@@ -181,7 +183,7 @@ class SubjectsDataDict(dict):
     # returns two vectors filtered by [subj labels]
     # - [values]
     # - [labels]
-    def get_filtered_column(self, colname, subj_labels=None, sort=False):
+    def get_filtered_column(self, colname, subj_labels=None, sort=False, demean=False, ndecim=4):
 
         if subj_labels is None:
             subj_labels = self.labels
@@ -196,6 +198,9 @@ class SubjectsDataDict(dict):
             except KeyError:
                 raise DataFileException("SubjectsDataDict.get_filtered_column", "data of given subject (" + subj + ") is not present in the loaded data")
 
+        if demean:
+            res = demean_serie(res, ndecim)
+
         if sort:
             sort_schema = argsort(res)
             res.sort()
@@ -209,32 +214,52 @@ class SubjectsDataDict(dict):
         return res_str, lab
 
     # returns a filtered matrix [subj x colnames]
-    def get_filtered_columns(self, colnames, subj_labels=None, sort=-1):
+    def get_filtered_columns(self, colnames, subj_labels=None, sort=False, demean_flags=None, ndecim=4):
 
         if subj_labels is None:
             subj_labels = self.labels
 
-        res = []
-        lab = []
+        subj_values = []
+        subj_lab = []
 
         try:
+            # create nsubj * ncols array
             for subj in subj_labels:
                 subj_dic = self[subj]
                 subj_row = []
                 for colname in colnames:
                     subj_row.append(subj_dic[colname])
-                res.append(subj_row)
-                lab.append(subj)
+                subj_values.append(subj_row)
+                subj_lab.append(subj)
+
+            if demean_flags is not None:
+                if len(colnames) != len(demean_flags):
+                    msg = "Error in get_filtered_columns...lenght of colnames is different from demean_flags"
+                    raise Exception(msg)
+                else:
+                    # demean requested columns
+                    for idcol, dem_col in enumerate(demean_flags):
+                        if dem_col:
+                            # calculate demeaned serie
+                            vals = []
+                            for subj_row in subj_values:
+                                vals.append(subj_row[idcol])
+
+                            vals = demean_serie(vals, ndecim)
+                            # substitute demenead serie
+                            for idsubj, subjvalues in enumerate(subj_values):
+                                subj_values[idsubj][idcol] = vals[idsubj]
+
 
         except KeyError:
             raise DataFileException("SubjectsDataDict.get_filtered_columns", "data of given subject (" + subj + ") is not present in the loaded data")
 
         if sort:
-            sort_schema = argsort(res)
-            res.sort()
-            lab = reorder_list(lab, sort_schema)
+            sort_schema = argsort(subj_values)
+            subj_values.sort()
+            subj_lab = reorder_list(subj_lab, sort_schema)
 
-        return res, lab
+        return subj_values, subj_lab
 
     # TODO:
     # def get_filtered_columns_str(self, colnames, subj_labels=None, sort=-1, ndecimals=3):
@@ -361,6 +386,21 @@ class SubjectsDataDict(dict):
             for field in self[row]:
                 header.append(field)
             break
+        return header
+
+    def validate_covs(self, covs):
+
+        header = self.get_header()  # get_header_of_tabbed_file(data_file)
+
+        # if all(elem in header for elem in regressors) is False:  if I don't want to understand which cov is absent
+        missing_covs = ""
+        for cov in covs:
+            if not cov.name in header:
+                missing_covs = missing_covs + cov.name + ", "
+
+        if len(missing_covs) > 0:
+            raise DataFileException("validate_covs",
+                                    "the following header are NOT present in the given datafile: " + missing_covs)
         return header
 
     def exist_column(self, colname):
