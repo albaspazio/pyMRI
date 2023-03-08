@@ -9,7 +9,7 @@ from group.SPMModels import SPMModels
 from utility.images.Image import Image
 from utility.matlab import call_matlab_spmbatch
 from utility.myfsl.utils.run import rrun
-from utility.utilities import sed_inplace
+from utility.fileutilities import sed_inplace
 
 
 class GroupAnalysis:
@@ -103,7 +103,7 @@ class GroupAnalysis:
 
         shutil.rmtree(struct_dir)
 
-    def tbss_run_fa(self, subjects_list, odn, prepare=True, proc=True, postreg="S", prestat_thr=0.2):
+    def tbss_run_fa(self, subjects_list, odn, prepare=True, proc=True, postreg="S", prestat_thr=0.2, cleanup=True):
 
         self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
@@ -138,11 +138,16 @@ class GroupAnalysis:
 
             os.chdir(curr_dir)
 
+        if cleanup:
+            # shutil.rmtree(os.path.join(root_analysis_folder, "FA"))
+            shutil.rmtree(os.path.join(root_analysis_folder, "origdata"))
+            shutil.rmtree(os.path.join(root_analysis_folder, "design"))
+
         return root_analysis_folder
 
     # run tbss for other modalities = ["MD", "L1", ....]
     # you first must have done run_tbss_fa
-    def tbss_run_alternatives(self, subjects_list, input_folder, modalities, prepare=True, proc=True):
+    def tbss_run_alternatives(self, subjects_list, input_folder, modalities, prepare=True, proc=True, cleanup=True):
 
         self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
@@ -182,6 +187,13 @@ class GroupAnalysis:
                 rrun("tbss_non_FA " + mod)
 
             os.chdir(curr_dir)
+
+        if cleanup:
+            # shutil.rmtree(os.path.join(input_folder, "FA")) #
+            shutil.rmtree(os.path.join(input_folder, "L1"))
+            shutil.rmtree(os.path.join(input_folder, "L23"))
+            shutil.rmtree(os.path.join(input_folder, "MD"))
+
 
 
     # read a matrix file (not a classical subjects_data file) and add total ICV as last column
@@ -289,6 +301,15 @@ class GroupAnalysis:
         # echo "declare -a arr_IC_labels=()" >> $template_file
         # echo "declare -a arr_pruning_ic_id=()" >> $template_file
         #
+        pass
+
+    #endregion
+
+    # ---------------------------------------------------
+    #region SBFC
+    @staticmethod
+    def group_sbfc(grouplabel_or_subjlist, firstlvl_fn, regressors, input_fsf, odp, ofn="mult_cov", data_file=None,
+                                               create_model=True, group_mean_contrasts=1, cov_mean_contrasts=2, compare_covs=False, ofn_postfix=""):
         pass
 
     #endregion

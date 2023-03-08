@@ -4,34 +4,40 @@ from collections import Counter
 
 from typing import List
 
+from data.utilities import demean_serie
 from utility.exceptions import DataFileException
-from utility.utilities import argsort, reorder_list, string2num, write_text_file, listToString
+from utility.utilities import argsort, reorder_list, string2num, listToString
+from utility.fileutilities import write_text_file
 
 
 # =====================================================================================
 # DATA EXTRACTION FROM A "SUBJ" DICTIONARY
 # =====================================================================================
 # assumes that the first column represents subjects' labels (it will act as dictionary's key).
-# creates a dictionary with subj label as key and data columns as a dictionary
+# creates a dictionary with subj label as key and a dictionary of data columns as  value
 # returns   { "label1":{"col1", ..., "colN"}, "label2":{"col1", ..., "colN"}, .....}
 
 class SubjectsDataDict(dict):
 
-    def __new__(cls, filepath="", tonum=True, delimiter='\t'):
+    def __new__(cls, filepath="", validcols=None, tonum=True, delimiter='\t'):
         return super(SubjectsDataDict, cls).__new__(cls, None)
 
-    def __init__(self, filepath="", tonum=True, delimiter='\t'):
+    def __init__(self, filepath="", validcols=None, tonum=True, delimiter='\t'):
 
         super().__init__()
-        self.labels     = []
         self.filepath   = filepath
 
         if filepath != "":
             self.load(filepath, tonum, delimiter)
+            if validcols is not None:
+                self.filter_columns(validcols)
 
     @property
     def header(self) -> list:
         return self.get_header()
+    @property
+    def labels(self) -> list:
+        return list(self.keys())
 
     @property
     def num(self) -> int:
@@ -42,7 +48,8 @@ class SubjectsDataDict(dict):
     # =====================================================================================
 
     # assumes that the first column represents subjects' labels (it will act as dictionary's key).
-    # creates a dictionary with subj label as key and data columns as a dictionary  {subjlabel:{"a":..., "b":..., }}
+    # creates a dictionary with key = subj label and values = dictionary of data columns   => {subjlabel:{"a":..., "b":..., }}
+    # validcols=[list of column to include]
     # tonum defines whether checking string(ed) type and convert to int/float
     # filepath CANNOT be empty
     def load(self, filepath, tonum=True, delimiter='\t') -> dict:
@@ -71,8 +78,8 @@ class SubjectsDataDict(dict):
                                 casted_elem     = elem
                             data_row[header[cnt]]   = casted_elem
                         cnt = cnt + 1
+
                     self[subj_lab] = data_row
-                    self.labels.append(subj_lab)
 
             return self
 
@@ -100,16 +107,32 @@ class SubjectsDataDict(dict):
 
         self.update(newsubjs)
 
-    # return a list of subjects values
+    def filter_columns(self, validcols):
+        for subj in self:
+            sub_values = {}
+            for col in self[subj]:
+                if col in validcols:
+                    sub_values[col] = self[subj][col]
+            self[subj] = sub_values
 
     def exist_subject(self, subj_name) -> bool:
-        return bool(self[subj_name])
+        try:
+            return bool(self[subj_name])
+        except:
+            return False
 
     def get_subject(self, subj_lab) -> dict:
         return self[subj_lab]
 
-    def pop(self) -> tuple:
-        return self.popitem()
+    def mypop(self, k=None) -> tuple:
+        if k is None:
+            return self.popitem()
+        else:
+            try:
+                v = self.pop(k)
+                return k, v
+            except:
+                return ()
 
     def get_subjects_list(self, subj_names=None) -> list:
 
@@ -131,6 +154,7 @@ class SubjectsDataDict(dict):
                 sdict[k] = v
         return sdict
 
+    # return a list of subjects values
     def get_subjects_filtered_columns(self, colnames, subj_names=None):
 
         if subj_names is None:
@@ -159,7 +183,7 @@ class SubjectsDataDict(dict):
     # returns two vectors filtered by [subj labels]
     # - [values]
     # - [labels]
-    def get_filtered_column(self, colname, subj_labels=None, sort=False):
+    def get_filtered_column(self, colname, subj_labels=None, sort=False, demean=False, ndecim=4):
 
         if subj_labels is None:
             subj_labels = self.labels
@@ -174,6 +198,9 @@ class SubjectsDataDict(dict):
             except KeyError:
                 raise DataFileException("SubjectsDataDict.get_filtered_column", "data of given subject (" + subj + ") is not present in the loaded data")
 
+        if demean:
+            res = demean_serie(res, ndecim)
+
         if sort:
             sort_schema = argsort(res)
             res.sort()
@@ -187,32 +214,52 @@ class SubjectsDataDict(dict):
         return res_str, lab
 
     # returns a filtered matrix [subj x colnames]
-    def get_filtered_columns(self, colnames, subj_labels=None, sort=-1):
+    def get_filtered_columns(self, colnames, subj_labels=None, sort=False, demean_flags=None, ndecim=4):
 
         if subj_labels is None:
             subj_labels = self.labels
 
-        res = []
-        lab = []
+        subj_values = []
+        subj_lab = []
 
         try:
+            # create nsubj * ncols array
             for subj in subj_labels:
                 subj_dic = self[subj]
                 subj_row = []
                 for colname in colnames:
                     subj_row.append(subj_dic[colname])
-                res.append(subj_row)
-                lab.append(subj)
+                subj_values.append(subj_row)
+                subj_lab.append(subj)
+
+            if demean_flags is not None:
+                if len(colnames) != len(demean_flags):
+                    msg = "Error in get_filtered_columns...lenght of colnames is different from demean_flags"
+                    raise Exception(msg)
+                else:
+                    # demean requested columns
+                    for idcol, dem_col in enumerate(demean_flags):
+                        if dem_col:
+                            # calculate demeaned serie
+                            vals = []
+                            for subj_row in subj_values:
+                                vals.append(subj_row[idcol])
+
+                            vals = demean_serie(vals, ndecim)
+                            # substitute demenead serie
+                            for idsubj, subjvalues in enumerate(subj_values):
+                                subj_values[idsubj][idcol] = vals[idsubj]
+
 
         except KeyError:
             raise DataFileException("SubjectsDataDict.get_filtered_columns", "data of given subject (" + subj + ") is not present in the loaded data")
 
         if sort:
-            sort_schema = argsort(res)
-            res.sort()
-            lab = reorder_list(lab, sort_schema)
+            sort_schema = argsort(subj_values)
+            subj_values.sort()
+            subj_lab = reorder_list(subj_lab, sort_schema)
 
-        return res, lab
+        return subj_values, subj_lab
 
     # TODO:
     # def get_filtered_columns_str(self, colnames, subj_labels=None, sort=-1, ndecimals=3):
@@ -341,6 +388,21 @@ class SubjectsDataDict(dict):
             break
         return header
 
+    def validate_covs(self, covs):
+
+        header = self.get_header()  # get_header_of_tabbed_file(data_file)
+
+        # if all(elem in header for elem in regressors) is False:  if I don't want to understand which cov is absent
+        missing_covs = ""
+        for cov in covs:
+            if not cov.name in header:
+                missing_covs = missing_covs + cov.name + ", "
+
+        if len(missing_covs) > 0:
+            raise DataFileException("validate_covs",
+                                    "the following header are NOT present in the given datafile: " + missing_covs)
+        return header
+
     def exist_column(self, colname):
         return colname in self.header
 
@@ -361,6 +423,13 @@ class SubjectsDataDict(dict):
 
         return True
 
+    # assoc_dict is a dictionary where key is current name and value is the new one
+    def rename_subjects(self, assoc_dict):
+        for i, (k, v) in enumerate(assoc_dict.items()):
+            tup = self.mypop(k)
+            if tup:
+                self[v] = tup[1]
+
     # save some columns of a subset of the subjects in given file
     def save_data(self, data_file=None, subj_labels=None, incolnames=None, outcolnames=None, separator="\t"):
 
@@ -368,10 +437,10 @@ class SubjectsDataDict(dict):
             data_file = self.filepath
 
         if incolnames is None:
-            incolnames = self.header
+            incolnames = self.header[1:len(self.header)]
 
         if outcolnames is None:
-            outcolnames = self.header
+            outcolnames = self.header[1:len(self.header)]
 
         if subj_labels is None:
             data = self

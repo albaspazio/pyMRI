@@ -13,7 +13,7 @@ from subject.SubjectEpi import SubjectEpi
 from subject.SubjectMpr import SubjectMpr
 from subject.SubjectTransforms import SubjectTransforms
 from utility.myfsl.fslfun import runsystem
-from utility.utilities import extractall_zip, sed_inplace
+from utility.fileutilities import extractall_zip, sed_inplace
 
 
 class Subject:
@@ -186,8 +186,10 @@ class Subject:
         self.rs_pa_data     = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA"))
         self.rs_pa_data2    = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA2"))
 
-        self.sbfc_dir           = os.path.join(self.rs_dir, "sbfc")
-        self.rs_series_dir      = os.path.join(self.sbfc_dir, "series")
+        self.sbfc_dir           = os.path.join(self.rs_dir,     "sbfc")
+        self.rs_series_dir      = os.path.join(self.sbfc_dir,   "series")
+        self.sbfc_feat_dir      = os.path.join(self.sbfc_dir,   "feat")
+
         self.rs_melic_dir       = os.path.join(self.rs_dir, "melic")
         self.rs_default_mel_dir = os.path.join(self.rs_dir, "postmel.ica")
 
@@ -276,8 +278,8 @@ class Subject:
         self.de_brain_data  = Image(os.path.join(self.de_dir, self.de_image_label + "_brain"))
 
         # ------------------------------------------------------------------------------------------------------------------------
-        self_copy = deepcopy(self)
         if rollback:
+            self_copy = deepcopy(self)
             self.set_properties(self.sessid, False)
             return self_copy
         else:
@@ -332,18 +334,18 @@ class Subject:
 
     def create_file_system(self):
 
-        os.makedirs(os.path.join(self.dir, "mpr"), exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "fmri"), exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "dti"), exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "t2"), exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "resting"), exist_ok=True)
+        os.makedirs(os.path.join(self.dir, "mpr"),      exist_ok=True)
+        os.makedirs(os.path.join(self.dir, "fmri"),     exist_ok=True)
+        os.makedirs(os.path.join(self.dir, "dti"),      exist_ok=True)
+        os.makedirs(os.path.join(self.dir, "t2"),       exist_ok=True)
+        os.makedirs(os.path.join(self.dir, "resting"),  exist_ok=True)
 
-        os.makedirs(self.roi_t1_dir, exist_ok=True)
-        os.makedirs(self.roi_std_dir, exist_ok=True)
-        os.makedirs(self.roi_dti_dir, exist_ok=True)
-        os.makedirs(self.roi_rs_dir, exist_ok=True)
-        os.makedirs(self.roi_fmri_dir, exist_ok=True)
-        os.makedirs(self.roi_t2_dir, exist_ok=True)
+        os.makedirs(self.roi_t1_dir,    exist_ok=True)
+        os.makedirs(self.roi_std_dir,   exist_ok=True)
+        os.makedirs(self.roi_dti_dir,   exist_ok=True)
+        os.makedirs(self.roi_rs_dir,    exist_ok=True)
+        os.makedirs(self.roi_fmri_dir,  exist_ok=True)
+        os.makedirs(self.roi_t2_dir,    exist_ok=True)
 
     def rename(self, new_label, session_id=1):
 
@@ -499,6 +501,14 @@ class Subject:
         # ==============================================================================================================================================================
         #  T1 data
         # ==============================================================================================================================================================
+        if not self.hasT1:
+
+            # check whether a previous processing has been aborted
+            orig_version = Image(os.path.join(self.t1_dir, self.label + "_orig"))
+            if orig_version.cexist:
+                # t1 has been already centered and prebet method has been aborted
+                orig_version.mv(self.t1_data)
+
         if self.hasT1:
 
             os.makedirs(self.roi_t1_dir, exist_ok=True)
@@ -656,6 +666,7 @@ class Subject:
                 if not preproc_img.exist:
                     if not os.path.isfile(feat_preproc_model + ".fsf"):
                         print("===========>>>> FEAT_PREPROC template file (" + self.label + " " + feat_preproc_model + ".fsf) is missing...skipping feat preprocessing")
+                        break
                     else:
                         if os.path.isdir(preproc_feat_dir):
                             rmtree(preproc_feat_dir, ignore_errors=True)
@@ -752,6 +763,17 @@ class Subject:
             # if susceptibility correction is selected. it performs topup correction after motion correction (realignment).
             # ------------------------------------------------------------------------------------------------------
             if do_susc_corr:        # want to correct
+
+                # check whether PA is present, if not try taking it from rs folder,
+                # if absent also there, skip all fmri preprocessing and inform user
+
+                if not self.fmri_pa_data.exist:
+                    if not self.rs_pa_data.exist:
+                        print("Error in wellcome...user wants to perform susceptibility correction of fmri data but a PA image is absent in both fmri and rs folder....skip fmri processing...continue other")
+                        break
+                    else:
+                        self.rs_pa_data.cp(self.fmri_pa_data)
+
                 ap_distorted = fmri_images.add_postfix2name("_distorted")
 
                 if fmri_pa_data is None:
@@ -807,16 +829,19 @@ class Subject:
             self.dti.get_nodiff()  # create nodif & nodif_brain in roi/reg_dti
 
             if not self.dti_fit_FA.exist and do_dtifit:
-                print("===========>>>> " + self.label + " : dtifit")
 
                 if not do_pa_eddy:
+                    print("===========>>>> " + self.label + " : eddy_correct")
                     self.dti.eddy_correct(do_overwrite, log)
                 else:
                     if do_eddy_gpu:
+                        print("===========>>>> " + self.label + " : eddy_gpu")
                         self.dti.eddy(exe_ver=self._global.eddy_gpu_exe_name, logFile=log)
                     else:
+                        print("===========>>>> " + self.label + " : eddy")
                         self.dti.eddy(exe_ver="eddy_openmp", logFile=log)
 
+                print("===========>>>> " + self.label + " : dtifit")
                 self.dti.fit(log)
 
                 # create L23 image
@@ -1108,5 +1133,10 @@ class Subject:
             src_imgB = Image(os.path.join(self.rs_dir, self.rs_post_nuisance_melodic_image_label))
             return src_imgA.exist or src_imgB.exist
 
-        # elif analysis_type == "fmri":
+        elif analysis_type == "fmri":
+            if analysis_params is None:
+                fmri_images = [self.fmri_data]
+            else:
+                fmri_images = Images(analysis_params)
 
+            return Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("a").exist or Images(fmri_images).add_prefix2name("wa").exist

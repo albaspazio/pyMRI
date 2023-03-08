@@ -1,5 +1,6 @@
 from group.spm_utilities import Contrast, TContrast, FContrast
-from utility.utilities import sed_inplace, is_list_of
+from utility.utilities import is_list_of
+from utility.fileutilities import sed_inplace
 
 
 class SPMContrasts:

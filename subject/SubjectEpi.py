@@ -16,7 +16,8 @@ from utility.images.transform_images import flirt
 from utility.images.images import mid_0based
 from utility.myfsl.utils.run import rrun
 from utility.matlab import call_matlab_spmbatch, call_matlab_function
-from utility.utilities import sed_inplace, copytree, get_filename, is_list_of
+from utility.fileutilities import sed_inplace, copytree, get_filename
+from utility.utilities import is_list_of
 
 
 class SubjectEpi:
@@ -345,15 +346,30 @@ class SubjectEpi:
         residual.rm()
         tempMean.rm()
 
-    def spm_fmri_preprocessing(self, fmri_params, epi_images=None, spm_template_name='subj_spm_fmri_full_preprocessing', clean=True, do_overwrite=False):
+    def spm_fmri_preprocessing(self, fmri_params, epi_images=None, spm_template_name='subj_spm_fmri_full_preprocessing', smoothprefix="s", clean=False, can_skip_input=False, do_overwrite=False):
 
-        epi_images = Images(epi_images)
+        # add sessions
+        valid_images = Images()
+        if epi_images is None:
+            valid_images.append(self.subject.fmri_data)
+        else:
+            for img in epi_images:
+                img = Image(img)
+                if img.exist:
+                    valid_images.append(img)
+                else:
+                    if can_skip_input:
+                        print("WARNING in subj: " + self.subject.label + ", given image (" + img + " is missing...skipping this image")
+                    else:
+                        raise Exception("Error in spm_fmri_preprocessing, one of the input image (" + img + ") is missing")
 
-        if not epi_images.exist:
+        nsessions = len(valid_images)
+
+        if not valid_images.exist:
             raise Exception("Error in spm_fmri_preprocessing")
 
-        swar_images = epi_images.add_prefix2name("swar")
-        swa_images  = epi_images.add_prefix2name("swa")
+        swar_images = valid_images.add_prefix2name("swar")
+        swa_images  = valid_images.add_prefix2name("swa")
 
         if (swar_images.exist or swa_images.exist) and not do_overwrite:
             print("Skipping spm_fmri_preprocessing of subject " + self.subject.label + ", swar images already exist")
@@ -367,26 +383,12 @@ class SubjectEpi:
         smooth      = fmri_params.smooth
         slice_timing = fmri_params.slice_timing
 
-        # add sessions
-        valid_images = Images()
-        if epi_images is None:
-            valid_images.append(self.subject.fmri_data)
-        else:
-            for img in epi_images:
-                img = Image(img)
-                if img.exist:
-                    valid_images.append(img)
-                else:
-                    print("WARNING in subj: " + self.subject.label + ", given image (" + img + " is missing...skipping this image")
-        nsessions = len(valid_images)
-
         if slice_timing is None:
             slice_timing = self.get_slicetiming_params(num_slices, acq_scheme)
 
             # TA - if not otherwise indicated, it assumes the acquisition is continuous and TA = TR - (TR/num slices)
             if TA == 0:
                 TA = TR - (TR / num_slices)
-
         else:
             num_slices      = len(slice_timing)
             slice_timing    = [str(p) for p in slice_timing]
@@ -397,8 +399,10 @@ class SubjectEpi:
         mean_image = valid_images[0].add_prefix2name("mean")
         mean_image.check_if_uncompress()
 
-        if not self.subject.t1_data.uexist:
-            self.subject.t1_data.unzip(replace=False)
+        temp_t1_dir = os.path.join(self.subject.t1_dir, "temp")
+        os.makedirs(temp_t1_dir, exist_ok=True)
+        temp_t1     = Image(os.path.join(temp_t1_dir, "t1"))
+        self.subject.t1_data.unzip(dest=temp_t1, replace=False)
 
         smooth_schema = "[" + str(smooth) + " " + str(smooth) + " " + str(smooth) + "]"
 
@@ -452,6 +456,7 @@ class SubjectEpi:
                 normalize_write_sessions += "matlabbatch{4}.spm.spatial.normalise.write.subj.resample(" + str(i + 1) + ") = cfg_dep('Slice Timing: Slice Timing Corr. Images (Sess " + str(i + 1) + ")', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('()', {" + str(i + 1) + "}, '.', 'files'));\n"
 
         else:
+            os.removedirs(temp_t1_dir)
             raise Exception("Error in SubjectEpi.spm_fmri_preprocessing...unrecognized template")
 
         sed_inplace(out_batch_job, '<SLICE_TIMING_SESSIONS>',       slice_timing_sessions)
@@ -463,18 +468,55 @@ class SubjectEpi:
         sed_inplace(out_batch_job, '<SLICETIMING_PARAMS>', ' '.join(slice_timing))
         sed_inplace(out_batch_job, '<REF_SLICE>', str(st_ref))
         sed_inplace(out_batch_job, '<RESLICE_MEANIMAGE>', mean_image.upath + ',1')
-        sed_inplace(out_batch_job, '<T1_IMAGE>', self.subject.t1_data.upath + ',1')
+        sed_inplace(out_batch_job, '<T1_IMAGE>', temp_t1.upath + ',1')
         sed_inplace(out_batch_job, '<SPM_DIR>', self._global.spm_dir)
         sed_inplace(out_batch_job, '<SMOOTH_SCHEMA>', smooth_schema)
+        sed_inplace(out_batch_job, '<SMOOTH_PREFIX>', smoothprefix)
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
+        rmtree(temp_t1_dir, ignore_errors=True)  # remove T1 temp dir with spm segmentation (for coregistration)
+
+        for img in valid_images:
+            img.upath.rm()
+
         if clean:
             for img in valid_images:
-                img.upath.rm()
                 img.add_prefix2name("r").rm()
+                img.add_prefix2name("a").rm()
                 img.add_prefix2name("ar").rm()
                 img.add_prefix2name("war").rm()
+                img.add_prefix2name("wa").rm()
+
+    def spm_smooth(self, epi_images=None, smooth=6, smoothprefix="s", spm_template_name='subj_spm_smooth', logFile=None):
+
+        valid_images = Images()
+        if epi_images is None:
+            valid_images.append(self.subject.fmri_data)
+        else:
+            for img in epi_images:
+                img = Image(img)
+                if img.exist:
+                    valid_images.append(img)
+                else:
+                    print("WARNING in subj: " + self.subject.label + ", given image (" + img + " is missing...skipping this image")
+
+        for img in valid_images:
+
+            out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
+
+            img.check_if_uncompress()
+            epi_nvols = img.upath.getnvol()
+
+            epi_volumes = ""
+            for v in range(1, epi_nvols + 1):
+                epi_volumes += ("'" + img.upath + ',' + str(v) + "'\n")
+
+            smooth_schema = "[" + str(smooth) + " " + str(smooth) + " " + str(smooth) + "]"
+            sed_inplace(out_batch_job, '<IMAGE>', epi_volumes)
+            sed_inplace(out_batch_job, '<SMOOTH_SCHEMA>', smooth_schema)
+            sed_inplace(out_batch_job, '<SMOOTH_PREFIX>', smoothprefix)
+            call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
     #endregion
 
@@ -573,7 +615,7 @@ class SubjectEpi:
                 raise Exception("Error in SubjectEpi.spm_fmri_1st_level_multisessions_custom_analysis, given contrasts")
 
             SPMContrasts.replace_1stlevel_contrasts(out_batch_job, spmpath, contrasts)
-            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report.multcorr, res_report.pvalue)
+            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report)
 
             sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
 
@@ -641,7 +683,7 @@ class SubjectEpi:
                 raise Exception("Error in SubjectEpi.spm_fmri_1st_level_multisessions_custom_analysis, given contrasts")
 
             SPMContrasts.replace_1stlevel_contrasts(out_batch_job, spmpath, contrasts)
-            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report.multcorr, res_report.pvalue)
+            str_res_rep     = SPMResults.get_1stlevel_results_report(res_report)
 
             sed_inplace(out_batch_job, '<RESULTS_REPORT>', str_res_rep)
 
@@ -654,8 +696,88 @@ class SubjectEpi:
     def sbfc_1multiroi_feat(self):
         pass
 
-    def sbfc_several_1roi_feat(self):
-        pass
+    # -i input_ffd_name -f denoised_folder_postfix_name -o output_postfixname_series_and_folder or $0 subj_label proj_dir -p full_input_image_path -o output_postfixname_series_and_folder"
+    # rois can be indicated as a list of full paths or names (and rel_in_roi_dir must be not None and equal to a path relative to subj folder)
+    def sbfc_several_1roi_feat(self, rois_list, in_model="sbfc_feat_1roi", rel_in_roi_dir=None, ser_pfname="", epi_label="rs", in_file_name=None, std_image=None, tr=None, te=None):
+
+        if std_image is None:
+            std_image = self._global.fsl_std_mni_2mm_brain
+
+        # define & validate input epi image
+        if in_file_name is None:
+            if epi_label == "rs":
+                in_file_name    = self.subject.rs_post_nuisance_melodic_image_label
+                epi_dir         = self.subject.rs_dir
+            else:
+                in_file_name    = self.subject.fmri_image_label
+                epi_dir         = self.subject.fmri_dir
+        else:
+            if epi_label == "rs":
+                epi_dir         = self.subject.rs_dir
+            else:
+                epi_dir         = self.subject.fmri_dir
+
+        in_image    = os.path.join(epi_dir, in_file_name)
+        in_image    = Image(in_image, must_exist=True, msg="Error in sbfc_several_1roi_feat, given input image " + in_image + ", does not exist...exiting")
+        tot_vol_num = in_image.getnvol()
+
+        for roi_name in rois_list:
+
+            # compose & validate input roi path
+            if rel_in_roi_dir is None:
+                roi = roi_name
+            else:
+                roi = os.path.join(self.subject.dir, rel_in_roi_dir, roi_name)
+            roi = Image(roi, must_exist=True, msg="Error in sbfc_several_1roi_feat, given roi " + roi_name + ", does not exist...exiting")
+
+            # extract roi time-serie
+            output_serie    = os.path.join(self.subject.rs_series_dir, roi_name + "_ts" + ser_pfname + ".txt")
+            rrun("fslmeants -i " + in_image + " -o " + output_serie + " -m " + roi)    # <<<<<<<<<<<<<<<<<<--------------------
+
+            # create output model dir and file
+            in_model_path   = os.path.join(self.subject.project.glm_template_dir, in_model)
+            out_model_path  = os.path.join(self.subject.sbfc_dir, "feat_roi_" + in_model + "_" + roi_name + ser_pfname)
+            os.makedirs(os.path.join(epi_dir, "model"), exist_ok=True)
+            copyfile(in_model_path + ".fsf", out_model_path + ".fsf")
+
+            output_dir      = os.path.join(self.subject.sbfc_feat_dir, "feat_" + roi_name + ser_pfname)
+
+            # FEAT fsf -------------------------------------------------------------------------------------------------------------------------
+            with open(out_model_path + ".fsf", "a") as text_file:
+                # original_stdout = sys.stdout
+                # sys.stdout = text_file  # Change the standard output to the file we created.
+
+                print("", file=text_file)
+                print("################################################################", file=text_file)
+                print("# overriding parameters", file=text_file)
+                print("################################################################", file=text_file)
+
+                print("set fmri(npts) " + str(tot_vol_num), file=text_file)
+                print("set feat_files(1) " + in_image, file=text_file)
+                print("set highres_files(1) " + self.subject.t1_brain_data, file=text_file)
+
+                # if self.subject.wb_brain_data.is_image() and do_initreg:
+                #     print("set fmri(reginitial_highres_yn) 1", file=text_file)
+                #     print("set initial_highres_files(1) " + self.subject.wb_brain_data, file=text_file)
+                # else:
+                print("set fmri(reginitial_highres_yn) 0", file=text_file)
+
+                print("set fmri(outputdir) " + output_dir, file=text_file)
+                print("set fmri(regstandard) " + std_image, file=text_file)
+                print("set fmri(custom1) " + output_serie, file=text_file)
+
+                if tr is not None:
+                    print("set fmri(tr) " + str(tr), file=text_file)
+
+                if te is not None:
+                    print("set fmri(te) " + str(te), file=text_file)
+
+                print("subj: " + self.subject.label + ", starting ROI FEAT: " + roi_name)
+
+            rrun(os.path.join(self._global.fsl_bin, "feat") + " " + out_model_path + ".fsf")  # execute  FEAT
+            rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + output_dir + ".feat")
+
+
     #endregion
 
     # ==================================================================================================================================================

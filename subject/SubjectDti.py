@@ -5,7 +5,7 @@ from shutil import copyfile
 
 from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
-from utility.utilities import write_text_file
+from utility.fileutilities import write_text_file
 
 
 class SubjectDti:
@@ -59,7 +59,7 @@ class SubjectDti:
             return
 
         if not os.path.exists(acq_params):
-            raise Exception("ERROR in eddy of subject: " + self.subject.label + ", acq_params file does not exist, exiting.....")
+            raise Exception("ERROR in eddy of subject: " + self.subject.label + ", topup_acqparams file does not exist, exiting.....")
 
         if not os.path.exists(json):
             if (rep_out == "both" or rep_out == "gw" or rep_out == "sw") or slice2vol > 0:

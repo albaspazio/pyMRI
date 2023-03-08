@@ -7,4 +7,5 @@ matlabbatch{1}.spm.tools.cat.stools.surfresamp.data_surf = {<LH_IMAGES>};
 matlabbatch{1}.spm.tools.cat.stools.surfresamp.merge_hemi = 1;
 matlabbatch{1}.spm.tools.cat.stools.surfresamp.mesh32k = 1;
 matlabbatch{1}.spm.tools.cat.stools.surfresamp.fwhm_surf = <SPFILT>;
+matlabbatch{1}.spm.tools.cat.stools.surfresamp.lazy = 0;
 matlabbatch{1}.spm.tools.cat.stools.surfresamp.nproc = <N_PROC>;

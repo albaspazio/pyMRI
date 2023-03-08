@@ -8,7 +8,8 @@ import collections
 # https://stackoverflow.com/questions/30045106/python-how-to-extend-str-and-overload-its-constructor
 from utility.exceptions import NotExistingImageException
 from utility.myfsl.utils.run import rrun
-from utility.utilities import compress, gunzip, fillnumber2fourdigits
+from utility.utilities import fillnumber2fourdigits
+from utility.fileutilities import compress, gunzip
 
 
 class Image(str):
@@ -192,12 +193,12 @@ class Image(str):
         # only gets to here if there was a hdr and an img file
         return True
 
-    def cp(self, dest, error_src_not_exist=True, logFile=None):
+    def cp(self, dest, error_src_not_exist=True, logFile=None) -> str:
 
         if not self.exist:
             if error_src_not_exist:
                 print("ERROR in cp. src image (" + self + ") does not exist")
-                return
+                return ""
             else:
                 print("WARNING in cp. src image (" + self + ") does not exist, skip copy and continue")
 
@@ -226,7 +227,9 @@ class Image(str):
         if logFile is not None:
             print("cp " + self.fpathnoext + ext + " " + fileparts_dst[0] + dest_ext, file=logFile)
 
-    def cp_notexisting(self, dest, error_src_not_exist=False, logFile=None):
+        return fileparts_dst[0] + dest_ext
+
+    def cp_notexisting(self, dest, error_src_not_exist=False, logFile=None) -> str:
 
         if not self.exist and error_src_not_exist:
             raise NotExistingImageException("Image.cp_notexisting", self)
@@ -234,7 +237,9 @@ class Image(str):
         dest = Image(dest)
 
         if not dest.exist:
-            self.cp(dest, logFile)
+            return self.cp(dest, logFile)
+        else:
+            return ""
 
     def mv(self, dest, error_src_not_exist=False, logFile=None):
 

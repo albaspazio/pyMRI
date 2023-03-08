@@ -1,6 +1,6 @@
 import csv
 import os
-
+from statistics import mean
 
 # =====================================================================================
 # ACCESSORY
@@ -9,11 +9,12 @@ import os
 # read files like:
 # var1=value1
 # varN=valueN
-from data.SubjectsDataDict import SubjectsDataDict
+# from data.SubjectsDataDict import SubjectsDataDict
 from utility.exceptions import DataFileException
 
 # read file as:   lab1=val1\nlab2=val2\n....etc
-from utility.utilities import listToString, write_text_file
+from utility.utilities import listToString
+from utility.fileutilities import write_text_file
 
 
 def read_varlist_file(filepath, comment_char="#"):
@@ -143,52 +144,7 @@ def get_file_header(filepath, delimiter='\t'):
     return []
 
 
-# ---------------------------------------------------------------------------
-# validate data
-# ---------------------------------------------------------------------------
-def validate_datafile_with_covs(data_file=None, covs=None):
+def demean_serie(serie, ndecim=4) -> list:
 
-    if covs is None:
-        covs = []
-
-    header = []
-    if data_file is not None:
-        if not os.path.exists(data_file):
-            raise DataFileException("validate_datafile_with_covs", "given data_file (" + str(data_file) + ") does not exist")
-
-        header = SubjectsDataDict(data_file).get_header()  # get_header_of_tabbed_file(data_file)
-
-        # if all(elem in header for elem in regressors) is False:  if I don't want to understand which cov is absent
-        missing_covs = ""
-        for cov in covs:
-            if not cov.name in header:
-                missing_covs = missing_covs + cov.name + ", "
-
-        if len(missing_covs) > 0:
-            raise DataFileException("validate_datafile_with_covs", "the following header are NOT present in the given datafile: " + missing_covs)
-
-    return header
-
-
-def validate_data_with_covs(data=None, covs=None):
-
-    if covs is None:
-        covs = []
-
-    if bool(data):
-        if isinstance(data, SubjectsDataDict):
-            header = data.get_header()  # get_header_of_tabbed_file(data_file)
-
-            # if all(elem in header for elem in regressors) is False:  if I don't want to understand which cov is absent
-            missing_covs = ""
-            for cov in covs:
-                if not cov.name in header:
-                    missing_covs = missing_covs + cov.name + ", "
-
-            if len(missing_covs) > 0:
-                raise DataFileException("validate_data_with_covs", "the following header are NOT present in the given datafile: " + missing_covs)
-
-            return header
-
-    raise DataFileException("validate_data_with_covs", "given data (" + str(data) + ") is not valid")
-
+    m = mean(serie)
+    return [round(v - m, ndecim) for v in serie]

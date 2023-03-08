@@ -689,6 +689,8 @@ class SubjectTransforms:
 
         if self.subject.hasFMRI(fmri_images) and self.subject.hasRS:
 
+            print(self.subject.label + "# :STARTED transform_extra: rs<->fmri")
+
             check_concat_mat(self.rs2fmri_mat, self.rs2hr_mat, self.hr2fmri_mat, overwrite=overwrite, logFile=logFile)
             check_invert_mat(self.fmri2rs_mat, self.rs2fmri_mat, overwrite=overwrite, logFile=logFile)
 
@@ -704,19 +706,22 @@ class SubjectTransforms:
     #               "abs"			: a full path (INPUTPATH)
     # outdir    =   ""              : save it into roi/reg_... folders
     #               dir path        : save to outdir
-    # std_img                       : can be specified a different templete.
+    # std_img                       : can be specified a different template.
     #                                 it must be in 2x2x2 for std transformation and 4x4x4 for std4 ones. correctness is here checked
     #                                 user must provide (in a same folder) the following images:
     #                                       -> stdimg, stdimg_brain, stdimg_brain_mask_dil
     #                                       -> stdimg4, stdimg4_brain, stdimg4_brain_mask_dil
-    # in linear transf, it must be betted (must contain the "_brain" text) in non-linear is must be a full head image.
+    #                                 in linear transf, it must be betted (must contain the "_brain" text)
+    #                                 in non-linear is must be a full head image.
+    #
     def transform_roi(self, regtype, pathtype="standard", outdir="", outname="", mask="", orf="", thresh=0, islin=True, rois=None):
 
         # ===========================================================
         # SANITY CHECK
         # ===========================================================
-        if rois is None:
-            rois = []
+        if rois is None or (isinstance(rois, list) and len(rois) == 0):
+            raise Exception("ERROR in transform_roi: given roi list is empty.....exiting")
+
         if outdir != "":
             if not os.path.isdir(outdir):
                 print("ERROR in transform_roi: given outdir (" + outdir + ") is not a folder.....exiting")
@@ -725,15 +730,10 @@ class SubjectTransforms:
         if mask != "":
             mask = Image(mask, must_exist=True, msg="SubjectTransforms.transform_roi mask image")
 
-        if len(rois) == 0:
-            print("Input ROI list is empty......exiting")
-            return
-
         try:
             bool(self.linear_registration_type[regtype])
-        except Exception:
-            print("ERROR in transform_roi: given regtype (" + regtype + ") is not valid.....exiting")
-            return
+        except Exception as e:
+            raise Exception("ERROR in transform_roi: given regtype (" + regtype + ") is not valid.....exiting")
         # ===========================================================
         from_space = regtype.split("TO")[0]
         to_space = regtype.split("TO")[1]
@@ -750,7 +750,7 @@ class SubjectTransforms:
             if pathtype == "abs":
                 input_roi = roi
             elif pathtype == "rel":
-                input_roi = os.path.join(self.subject.dir, roi)
+                input_roi = os.path.join(self.subject.dir, roi) # roi contains also the relative path (e.g.  rs/melodic/dr/templ_a/popul_b/results/standard4/roixx
             else:
                 # is a roi name
                 if from_space == "hr":
@@ -825,14 +825,17 @@ class SubjectTransforms:
             # ----------------------------------------------------------------------------------------------------------
             if thresh > 0:
                 output_roi_name     = os.path.basename(output_roi)
-                output_input_roi    = os.path.dirname(output_roi)
+                output_roi_dir    = os.path.dirname(output_roi)
 
-                rrun("fslmaths " + output_roi + " -thr " + str(thresh) + " -bin " + os.path.join(output_input_roi, "mask_" + output_roi_name))
-                v1 = rrun("fslstats " + os.path.join(output_input_roi, "mask_" + output_roi_name) + " -V")[0]
+                rrun("fslmaths " + output_roi + " -thr " + str(thresh) + " -bin " + os.path.join(output_roi_dir, "mask_" + output_roi_name))
+                v1 = rrun("fslstats " + os.path.join(output_roi_dir, "mask_" + output_roi_name) + " -V")[0]
 
-                if v1 == 0:
-                    if orf != "":
-                        print("subj: " + self.subject.label + ", roi: " + roi_name + " ... is empty, thr: " + str(thresh))  # TODO: print to file
+                if orf != "":
+                    with open(orf, "a") as text_file:
+                        if v1 == 0:
+                            print("subj: " + self.subject.label + "\t\t, roi: " + roi_name + " ... is empty, thr: " + str(thresh), file=text_file)  # TODO: print to file
+                        else:
+                            print("subj: " + self.subject.label + "\t\t, roi: " + roi_name + " nvoxels = " + str(v1) + ", thr: " + str(thresh), file=text_file)  # TODO: print to file
 
             return output_roi
 

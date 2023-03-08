@@ -7,7 +7,8 @@ from group.spm_utilities import SubjCondition
 from utility.exceptions import DataFileException
 from utility.images.Image import Image
 from utility.matlab import call_matlab_function_noret, call_matlab_spmbatch
-from utility.utilities import sed_inplace, is_list_of
+from utility.utilities import is_list_of
+from utility.fileutilities import sed_inplace
 
 
 class SPMStatsUtils:
@@ -221,6 +222,8 @@ class SPMStatsUtils:
     #region global calculation
 
     # method can be: subj_icv, subj_tiv, "" (no correction) or a column name of the given data_file
+    # when analysing subjects from different groups, we must avoid validating data.
+    # Thus get_filtered_column must receive a Subject instances list, not a labels list  (16/1/2023)
     @staticmethod
     def spm_replace_global_calculation(project, out_batch_job, method="", groups_instances=None, data_file=None, idstep=1):
 
@@ -230,13 +233,15 @@ class SPMStatsUtils:
         gc_str          = ""
 
         slabels         = []
+        subjs_instances = []
         for subjs in groups_instances:
-            slabels = slabels + project.get_subjects_labels(subjs)
+            slabels         = slabels + project.get_subjects_labels(subjs)
+            subjs_instances = subjs_instances + subjs
 
         if method == "subj_icv":  # read icv file from each subject/mpr/spm folder
 
             if project.data.exist_filled_column("icv", slabels):
-                str_icvs = list2spm_text_column(project.get_filtered_column("icv", slabels)[0])
+                str_icvs = list2spm_text_column(project.get_filtered_column("icv", subjs_instances)[0])
                 # raise DataFileException("spm_replace_global_calculation", "given data_file does not contain the column icv")
             else:
                 icvs = []
@@ -312,7 +317,7 @@ class SPMStatsUtils:
         call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths, "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
 
     @staticmethod
-    def batchrun_cat_surface_smooth(project, _global, subj_instances, sfilt=12, spm_template_name="cat_surf_smooth", nproc=1, eng=None, runit=True):
+    def batchrun_cat_surface_smooth(project, _global, subj_instances, sfilt=12, spm_template_name="subjs_cat_surf_smooth", nproc=1, eng=None, runit=True):
 
         # create template files
         out_batch_job, out_batch_start = project.adapt_batch_files(spm_template_name, "mpr")

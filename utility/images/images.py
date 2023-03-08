@@ -5,6 +5,8 @@ from shutil import move
 
 from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
+from utility.utilities import fillnumber2fourdigits
+
 
 # ===============================================================================================================================
 # FOLDERS, NAME, EXTENSIONS,
@@ -94,6 +96,31 @@ def mid_1based(nvol):
         return nvol//2 + 1
     else:                   # odd       1,2,3   -> 2
         return nvol//2 + 1
+
+
+# remove a list of i-th volumes (zero-based) from a 4D image and save a new image
+# TODO: fix the rrun("fslmerge -t " + outname + " TEMP*") command that does not work
+def remove_volumes_from_4D(inimg, vols2rem0based, outname):
+
+    inimg = Image(inimg)
+    indir = inimg.dir
+    temp_dir = os.path.join(indir, "TEMPXXXX")
+    os.makedirs(temp_dir, exist_ok=True)
+
+    tempimg = inimg.cp(temp_dir)
+
+    curr_dir = os.getcwd()
+    os.chdir(temp_dir)
+
+    rrun("fslsplit " + tempimg + " TEMP")
+
+    for v in vols2rem0based:
+        Image(os.path.join(temp_dir, "TEMP" + fillnumber2fourdigits(v))).rm()
+
+    # join remaining volumes
+    rrun("fslmerge -t " + outname + " TEMP*")
+
+    os.chdir(curr_dir)
 
 
 

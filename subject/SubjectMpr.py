@@ -10,7 +10,7 @@ from utility.matlab import call_matlab_spmbatch, call_matlab_function_noret
 from utility.myfsl.fslfun import run
 from utility.myfsl.fslfun import run_notexisting_img, runpipe, run_move_notexisting_img
 from utility.myfsl.utils.run import rrun
-from utility.utilities import sed_inplace, gunzip, write_text_file
+from utility.fileutilities import sed_inplace, write_text_file
 
 
 # ==================================================================================================================================================
@@ -875,7 +875,7 @@ class SubjectMpr:
         if smooth_surf is None:
             smooth_surf = self.subject.t1_cat_surface_resamplefilt
 
-        spm_template_name = "mpr_cat_surf_resample"
+        spm_template_name = "subjs_cat_surf_resample"
 
         out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
         subj = self.subject.get_properties(session)
