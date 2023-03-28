@@ -799,10 +799,9 @@ class Subject:
                         ap_distorted.mv(fmri_images, logFile=log)
                         break
 
-                self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_preprocessing_norealign", do_overwrite=do_overwrite)
-
-            else:
-                self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_full_preprocessing", do_overwrite=do_overwrite)
+                # self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_preprocessing_norealign", do_overwrite=do_overwrite)
+            # else:
+            self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_full_preprocessing", do_overwrite=do_overwrite)
 
             self.transform.transform_fmri(fmri_images, logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
             break

@@ -19,12 +19,15 @@ class SPMModels:
         self.project        = proj
         self.globaldata     = self.project.globaldata
 
-    # anal_type is: vbm, cat, fmri
-    # stat_type is: MULTREGR, tstt, ostt, owa, twa
-    def batchrun_group_stats(self, root_outdir, stat_type, anal_type, anal_name, groups_instances, input_images=None,
-                             covs=None, cov_interactions=None, cov_centering=False, data_file=None,
-                             glob_calc=None, expl_mask="icv", spm_template_name=None,
-                             post_model=None, runit=True):
+    def batchrun_group_stats(self,  root_outdir,        # group analysis root folder :  fmri_dir/ct_dir/vbm_template_dir
+                                    stat_type,          # MULTREGR, tstt, ostt, owa, twa
+                                    anal_type,          # vbm, ct, fmri, dartel
+                                    anal_name,          # output analysis name
+                                    groups_instances,   #
+                                    input_images=None,  # instance of class GrpInImages, containing info to retrieve input images
+                                    covs=None, cov_interactions=None, cov_centering=False, data_file=None,
+                                    glob_calc=None, expl_mask="icv", spm_template_name=None,
+                                    post_model=None, runit=True):
 
         # ---------------------------------------------------------------------------------------------------------------------------------
         # sanity check
@@ -45,6 +48,7 @@ class SPMModels:
         statsdir        = ""
         batch_folder    = ""
         batch_prefix    = ""
+
         if anal_type == SPMConstants.VBM_DARTEL:
             subjs_dir = os.path.join(root_outdir, "subjects")
             if input_images is None:
