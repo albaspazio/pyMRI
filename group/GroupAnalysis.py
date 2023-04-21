@@ -349,11 +349,12 @@ class GroupAnalysis:
 
                 res                 = out_img.get_nvoxels()
                 if res > 0:
-                    tot_voxels = tot_voxels + res
-                    out_str = out_str + tract + "\t" + str(res) + " out of " + str(tract_tot_voxels) + " voxels = " + str(round((res * 100) / tract_tot_voxels, 2)) + " %" + "\n"
                     classified_tracts.append(out_img)
                 else:
                     out_img.rm()
+
+                tot_voxels = tot_voxels + res
+                out_str = out_str + tract + "\t" + str(res) + " out of " + str(tract_tot_voxels) + " voxels = " + str(round((res * 100) / tract_tot_voxels, 2)) + " %" + "\n"
 
             # ------------------------------------------------
             # create unclassified image

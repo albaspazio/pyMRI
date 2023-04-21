@@ -145,7 +145,7 @@ if __name__ == "__main__":
         #              do_aroma=True, do_nuisance=True, hpfsec=100, feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
         #              do_featinitreg=False, do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=True,
         #
-        #              do_fmri=True, fmri_params=None, fmri_images=None, fmri_pa_data=None,
+        #              do_fmri=True, fmri_params=None, fmri_labels=None, fmri_pa_data=None,
         #
         #              do_dtifit=True, do_pa_eddy=False, do_eddy_gpu=False, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
         #              do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",

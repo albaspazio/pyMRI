@@ -1054,7 +1054,7 @@ class SubjectTransforms:
     # this method takes base images (t1/t1_brain, epi_example_function, dti_nodiff/dti_nodiff_brain, t2/t2_brain) and coregister to all other modalities and standard
     # creates up to 14 folders, 7 for linear and 7 for non linear transformation towards the 7 different space (hr, rs, frmi, dti, t2, std, std4)
     # user can select from which seq to which seq create the transforms
-    def test_all_coregistration(self, test_dir, _from=None, _to=None, extended=False, fmri_images=None, overwrite=False):
+    def test_all_coregistration(self, test_dir, _from=None, _to=None, extended=False, fmri_labels=None, overwrite=False):
 
         if _from is None:
             _from = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]
@@ -1159,7 +1159,7 @@ class SubjectTransforms:
                                    rois=[self.subject.std4_head_img])
                 self.transform_roi("std4TOrs", pathtype="abs", outdir=l_rs, islin=True, rois=[self.subject.std4_img])
 
-            if self.subject.hasFMRI(fmri_images):  # connect RS with FMRI
+            if self.subject.hasFMRI(fmri_labels):  # connect RS with FMRI
 
                 exfun_fmri = self.subject.epi.get_example_function("fmri")
 
@@ -1186,7 +1186,7 @@ class SubjectTransforms:
         #       FMRI <--> STD
         #       FMRI <--> STD4 if hasRS  (fmri <--> was done previously)
         # --------------------------------------------------------------
-        if self.subject.hasFMRI(fmri_images):  # goes to HR, STD and STD4, RS
+        if self.subject.hasFMRI(fmri_labels):  # goes to HR, STD and STD4, RS
 
             nl_fmri = os.path.join(nldir, "fmri")
             l_fmri = os.path.join(ldir, "fmri")

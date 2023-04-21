@@ -64,11 +64,12 @@ class Subject:
     def hasT2(self):
         return self.t2_data.exist
 
-    def hasFMRI(self, images=None):
-        if images is None:
+    def hasFMRI(self, images_labels=None):
+        if images_labels is None:
             return self.fmri_data.exist
         else:
-            return Images(images).exist
+            imgs = [os.path.join(self.fmri_dir, self.label + ilab) for ilab in images_labels]
+            return Images(imgs).exist
 
     @property
     def hasWB(self):
@@ -482,7 +483,7 @@ class Subject:
                  do_aroma=True, do_nuisance=True, hpfsec=100, feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
                  do_featinitreg=False, do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=True,
 
-                 do_fmri=True, fmri_params=None, fmri_images=None, fmri_pa_data=None,
+                 do_fmri=True, fmri_params=None, fmri_labels=None, fmri_pa_data=None,
 
                  do_dtifit=True, do_pa_eddy=False, do_eddy_gpu=False, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
                  do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",
@@ -741,16 +742,17 @@ class Subject:
         # ==============================================================================================================================================================
         # FMRI DATA
         # ==============================================================================================================================================================
-        while self.hasFMRI(fmri_images) and do_fmri:
+        while self.hasFMRI(fmri_labels) and do_fmri:
 
             # sanity checks
             if fmri_params is None:
                 raise Exception("Error in Subject.wellcome of subj " + self.label)
 
-            if fmri_images is None:
+            if fmri_labels is None:
                 fmri_images = Images([self.fmri_data])
             else:
-                fmri_images = Images(fmri_images)
+                imgs = [os.path.join(self.fmri_dir, self.label + ilab) for ilab in fmri_labels]
+                fmri_images = Images(imgs)
 
             if not fmri_images.exist:
                 print("Error in welcome...user want to perform fmri analysis but fmri image(s) does not exist...skip fmri processing...continue other")
@@ -1136,6 +1138,10 @@ class Subject:
             if analysis_params is None:
                 fmri_images = [self.fmri_data]
             else:
+                if not isinstance(list, analysis_params):
+                    raise Exception("ERROR IN can_run_analysis: in case of fmri, analysis_params must be a strings list")
+
+                imgs = [os.path.join(self.fmri_dir, self.label + ilab) for ilab in analysis_params]
                 fmri_images = Images(analysis_params)
 
             return Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("a").exist or Images(fmri_images).add_prefix2name("wa").exist

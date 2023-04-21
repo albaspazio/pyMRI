@@ -26,7 +26,7 @@ class SubjectEpi:
         self.subject = subject
         self._global = _global
 
-    def get_example_function(self, seq="rs", vol_num=None, fmri_images=None, overwrite=False, logFile=None):
+    def get_example_function(self, seq="rs", vol_num=None, fmri_labels=None, overwrite=False, logFile=None):
 
         if seq == "rs":
             data    = self.subject.rs_data
@@ -34,10 +34,10 @@ class SubjectEpi:
             m_exfun = self.subject.rs_examplefunc_mask
         elif seq == "fmri":
 
-            if fmri_images is None:
+            if fmri_labels is None:
                 data    = self.subject.fmri_data
             else:
-                data = fmri_images[0]   # I assume other sessions are co-registered to first one
+                data = os.path.join(self.subject.fmri_dir, self.subject.label + fmri_labels[0])   # I assume other sessions are co-registered to first one
             exfun   = self.subject.fmri_examplefunc
             m_exfun = self.subject.fmri_examplefunc_mask
         else:

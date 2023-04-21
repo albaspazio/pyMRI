@@ -362,7 +362,7 @@ class SubjectsDataDict(dict):
         res_str = self.__to_str(res, ndecimals)
         return res_str, lab
 
-    def add_column(self, col_label, labels, values, saveit=False):
+    def add_column(self, col_label, labels, values, saveit=False, data_file=None):
 
         nv = len(values)
         nl = len(labels)
@@ -375,7 +375,7 @@ class SubjectsDataDict(dict):
             cnt = cnt + 1
 
         if saveit:
-            self.save_data()
+            self.save_data(data_file)
 
     def get_header(self):
 
