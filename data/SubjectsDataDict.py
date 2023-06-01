@@ -214,8 +214,8 @@ class SubjectsDataDict(dict):
         res_str = self.__to_str(res, ndecimals)
         return res_str, lab
 
-    # returns a filtered matrix [subj x colnames]
-    def get_filtered_columns(self, colnames, subj_labels=None, sort=False, demean_flags=None, ndecim=4):
+    # returns a tuple:  subj labels, filtered matrix [subj x colnames]
+    def get_filtered_columns(self, colnames, subj_labels=None, sort=False, demean_flags=None, ndecim=4) -> tuple:
 
         if subj_labels is None:
             subj_labels = self.labels
@@ -250,7 +250,6 @@ class SubjectsDataDict(dict):
                             # substitute demenead serie
                             for idsubj, subjvalues in enumerate(subj_values):
                                 subj_values[idsubj][idcol] = vals[idsubj]
-
 
         except KeyError:
             raise DataFileException("SubjectsDataDict.get_filtered_columns", "data of given subject (" + subj + ") is not present in the loaded data")

@@ -38,6 +38,7 @@ class Global:
         self.spm_dir                = local_settings_data["spm_dir"]
         self.cat_version            = local_settings_data["cat_version"]
         self.marsbar                = local_settings_data["marsbar"]
+        self.melodic_data_templates = local_settings_data["melodic_data_templates"]
         self.global_data_templates  = local_settings_data["global_data_templates"]
         self.ica_aroma_script       = local_settings_data["ica_aroma_script"]
         self.trackvis_bin           = local_settings_data["trackvis_bin"]

@@ -10,7 +10,7 @@ from utility.images.Image import Image
 from utility.matlab import call_matlab_spmbatch
 from utility.myfsl.utils.run import rrun
 from utility.fileutilities import sed_inplace
-
+from utility.utilities import get_col_from_listmatrix
 
 class GroupAnalysis:
 
@@ -194,8 +194,6 @@ class GroupAnalysis:
             shutil.rmtree(os.path.join(input_folder, "L23"))
             shutil.rmtree(os.path.join(input_folder, "MD"))
 
-
-
     # read a matrix file (not a classical subjects_data file) and add total ICV as last column
     # here it assumes [integer, integer, integer, integer, integer, float4]
     def add_icv_2_data_matrix(self, grouplabel_or_subjlist, input_data_file=None, sess_id=1):
@@ -377,19 +375,35 @@ class GroupAnalysis:
             print(e)
 
     # clust_res_dir: output folder of tbss's results clustering
-    # datas is a tuple of two elements containing the list of values and subj_labels
+    # datas is a tuple of two elements containing a matrix of values and subj_labels
     # returns tracts_data
-    @staticmethod
-    def tbss_summarize_clusterized_folder(in_clust_res_dir, datas, data_label, tbss_folder, modality="FA",
-                                          subj_img_postfix="_FA_FA_to_target", ofn="scatter_tracts_", doplot=False):
+    def tbss_summarize_clusterized_folder(self, tbss_folder_name, in_clustered_dirname, measure, datas, data_labels, modality="FA", ofn="scatter_tracts_", doplot=False):
 
-        subjects_images = os.path.join(tbss_folder, modality)  # folder containing tbss subjects' folder of that modality
-        results_folder  = os.path.join(tbss_folder, "results")
+        # sanity checks
+        ndata = len(data_labels)
+        if ndata != len(datas[0][0]):
+            raise Exception("Error in tbss_summarize_clusterized_folder, number of tracts from given labels (" + str(ndata) + ") does not coincide with that got by datas (" + str(datas[0][0]) + ")")
+
+        nsubj = len(datas[1])
+
+        tbss_folder         = os.path.join(self.project.tbss_dir, tbss_folder_name)
+        subjects_images     = os.path.join(tbss_folder, modality)  # folder containing tbss subjects' folder of that modality
+        in_clust_res_dir    = os.path.join(tbss_folder, "xtract", in_clustered_dirname, measure)
+        results_folder      = os.path.join(tbss_folder, "results", in_clustered_dirname, measure)   # contains scatter plots
         os.makedirs(results_folder, exist_ok=True)
 
-        tracts_labels   = []
+        if modality == "FA":
+            subj_img_postfix = "_FA_FA_to_target"
+        else:
+            subj_img_postfix = "_FA_to_target_" + modality
+
+        tracts_labels = []
+
         # compose header
-        str_data = "subj\t" + data_label
+        str_data = "subj"
+        for lab in data_labels:
+            str_data = str_data + "\t" + lab
+
         for entry in os.scandir(in_clust_res_dir):
             if not entry.name.startswith('.') and not entry.is_dir():
                 if entry.name.startswith("sk_"):
@@ -398,15 +412,18 @@ class GroupAnalysis:
                     str_data    = str_data + "\t" + lab
         str_data = str_data + "\n"
 
+        # compose subjects' rows
+        ntracts = len(tracts_labels)
         tracts_data = []
-        [tracts_data.append([]) for _ in range(len(tracts_labels))]
-        nsubj = len(datas[0])
+        [tracts_data.append([]) for _ in range(ntracts)]
         for i in range(nsubj):
             subj_label      = datas[1][i]
             subj_img        = Image(os.path.join(subjects_images, subj_label + "-dti_fit" + subj_img_postfix))
             subj_img_masked = Image(subj_img + "_masked")
             n_tracts        = 0
-            str_data        = str_data + subj_label + "\t" + str(datas[0][i])
+            str_data        = str_data + subj_label + "\t"
+            for dl in datas[0][i]:
+                str_data = str_data + str(dl) + "\t"
 
             for entry in os.scandir(in_clust_res_dir):
                 if not entry.name.startswith('.') and not entry.is_dir():
@@ -420,15 +437,17 @@ class GroupAnalysis:
                         n_tracts = n_tracts + 1
             str_data = str_data + "\n"
 
-        if doplot:
-            for t in range(len(tracts_labels)):
-                fig_file = os.path.join(results_folder, tracts_labels[t] + "_" + data_label + ".png")
-                plot_data.scatter_plot_dataserie(datas[0], tracts_data[t], fig_file)
-
-        res_file = os.path.join(results_folder, ofn + modality + "_" + data_label + ".dat")
-
+        # write data
+        res_file = os.path.join(results_folder, ofn + modality + "_" + "_".join(data_labels) + ".dat")
         with open(res_file, "w") as f:
             f.write(str_data)
+
+        # plot data
+        if doplot:
+            for t in range(ntracts):
+                for d in range(ndata):
+                    fig_file = os.path.join(results_folder, tracts_labels[t] + "_" + data_labels[d] + ".png")
+                    plot_data.scatter_plot_dataserie(get_col_from_listmatrix(datas[0], d), tracts_data[t], fig_file)
 
         return tracts_data
 
