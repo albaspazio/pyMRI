@@ -3,9 +3,9 @@ import os
 import shutil
 from shutil import copyfile
 
+from utility.fileutilities import write_text_file
 from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
-from utility.fileutilities import write_text_file
 
 
 class SubjectDti:
@@ -189,10 +189,8 @@ class SubjectDti:
         else:
             rrun("bedpostx " + bp_dir + " -n 3 -w 1 -b 1000", logFile=logFile)
 
-        if not Image(os.path.join(bp_out_dir, self.subject.dti_bedpostx_mean_S0_label)).exist:
-            shutil.move(bp_out_dir, os.path.join(self.subject.dti_dir, out_dir_name))
-            os.removedirs(bp_dir)
-
+        if Image(os.path.join(bp_out_dir, self.subject.dti_bedpostx_mean_S0_label)).exist:
+            shutil.move(bp_out_dir, bp_dir)
         else:
             print("ERROR in bedpostx_gpu....something went wrong in bedpostx")
             return

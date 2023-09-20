@@ -50,7 +50,7 @@ def convert_melodic_rois_to_individual(project, templ_name, popul_name, rois_lis
 #           templates(1)=struct('name', 'controls59', 'imagepath' , '/data/MRI/pymri/templates/images/MNI152_T1_4mm_brain', 'rsn_labels', [], 'good_nodes', []);
 #           templates(1).rsn_labels={'aDMN','LAT_OCCIP','pDMN','RATN','FP','PRIM_VIS','LATN','FP2','pTemp','pSM','EXEC','SM','BG','BFP','CEREB','SM2','aTemp','LAT_OCCIP2','SAL','LAT_OCCIP3','X','SAL2'};
 #           templates(1).good_nodes=[1 2 3 5 6 7 8 9 11 12 13 14 15 16 17 20 23 24 27 29 34 47];
-def parse_melodic_labels(ilabels, ibashtempl="", fslnetstemplname="", ifslnetstempl="", t1_4mm_brain="", templnum=1):
+def parse_melodic_labels(ilabels, ibashtempl="", ifslnetstempl="", fslnetstemplname="", t1_4mm_brain="", templnum=1):
 
     with open(ilabels, "r") as f:
         _str = f.readlines()
@@ -116,12 +116,12 @@ def parse_melodic_labels(ilabels, ibashtempl="", fslnetstemplname="", ifslnetste
             txt = txt + "templates(" + str(templnum) + ").rsn_labels = {"
             for rsn in rsns:
                 txt = txt + "'" + str(rsn + 1) + "',"
-            txt = txt[:-1] + "})\n"
+            txt = txt[:-1] + "};\n"
 
             txt = txt + "templates(" + str(templnum) + ").good_nodes = ["
             for rsn in rsns:
                 txt = txt + str(rsn + 1) + " "
-            txt = txt[:-1] + "])\n"
+            txt = txt[:-1] + "];\n"
 
             f.write(txt)
 

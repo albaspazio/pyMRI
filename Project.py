@@ -349,9 +349,9 @@ class Project:
     # ==================================================================================================================
     # returns a matrix (values x subjects) containing values of the requested columns of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_columns(self, columns_list, grouplabel_or_subjlist, data=None, sort=False, demean_flags=None, sess_id=1):
+    def get_filtered_columns(self, columns_list, grouplabel_or_subjlist, data=None, sort=False, demean_flags=None, sess_id=1, must_exist=False):
 
-        subj_list  = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
+        subj_list  = self.get_subjects_labels(grouplabel_or_subjlist, sess_id, must_exist=must_exist)
         valid_data = self.validate_data(data)
         if valid_data is not None:
             return valid_data.get_filtered_columns(columns_list, subj_list, sort=sort, demean_flags=demean_flags)

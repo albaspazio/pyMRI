@@ -5,6 +5,7 @@ import traceback
 from copy import deepcopy
 from shutil import move, rmtree
 
+from Global import Global
 from utility.images.Image import Image
 from utility.images.Images import Images
 from utility.myfsl.utils.run import rrun
@@ -127,6 +128,7 @@ class Subject:
         self.t1_segment_wm_ero_path     = Image(os.path.join(self.roi_t1_dir, "mask_t1_wmseg4Nuisance"))
         self.t1_segment_csf_ero_path    = Image(os.path.join(self.roi_t1_dir, "mask_t1_csfseg4Nuisance"))
 
+        self.t1_cat_mri_dir             = os.path.join(self.t1_cat_dir, "mri")
         self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
         self.t1_cat_surface_resamplefilt= self._global.cat_smooth_surf
         self.t1_cat_lh_surface          = Image(os.path.join(self.t1_cat_surface_dir, "lh.thickness.T1_" + self.label))
@@ -472,7 +474,7 @@ class Subject:
                  do_spm_seg=False, spm_seg_templ="", spm_seg_over_bet=False,
                  do_cat_seg=False, cat_use_dartel=False, do_cat_surf=True, cat_smooth_surf=None,
                  do_cat_seg_long=False, cat_long_sessions=None,
-                 do_cleanup=True, do_strongcleanup=False,
+                 do_cleanup=Global.CLEANUP_LVL_MIN,
                  use_lesionmask=False, lesionmask="lesionmask",
                  do_freesurfer=False, do_complete_fs=False, fs_seg_over_bet=False,
                  do_first=False, first_struct="", first_odn="",
@@ -572,10 +574,10 @@ class Subject:
                     betfparam=betfparam,
                     do_reg=do_reg, do_nonlinreg=do_nonlinreg,
                     do_seg=do_seg,
-                    do_cleanup=do_cleanup, do_strongcleanup=do_strongcleanup, do_overwrite=do_overwrite,
+                    do_overwrite=do_overwrite,
                     use_lesionmask=use_lesionmask, lesionmask=lesionmask)
 
-                self.mpr.finalize(odn=odn)
+                self.mpr.finalize(odn=odn, do_cleanup=do_cleanup)
                 self.transform.transform_mpr()
 
             if do_sienax:
@@ -805,7 +807,7 @@ class Subject:
             # else:
             self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_full_preprocessing", do_overwrite=do_overwrite)
 
-            self.transform.transform_fmri(fmri_images, logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
+            self.transform.transform_fmri(fmri_labels, logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
             break
 
         # ==============================================================================================================================================================
@@ -850,7 +852,7 @@ class Subject:
 
             os.makedirs(self.roi_dti_dir, exist_ok=True)
 
-            self.transform.transform_dti_t2()
+            self.transform.transform_dti_t2(ignore_t2=True)
 
             if os.path.isfile(os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz")):
                 runsystem("gunzip " + os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz"), logFile=log)
@@ -1075,9 +1077,27 @@ class Subject:
 
         os.system("cp -r " + self.roi_dir + " " + subj_in_dest_project.roi_dir)
 
+    def clean(self, t1=False, dti=False, rs=False, fmri=False):
 
+        if t1:
+            T1 = os.path.join(self.t1_anat_dir, "T1")  # T1 is now an absolute path
+            Images([T1, T1 + "_orig", T1 + "_fullfov"]).rm()
 
+        if dti:
+            pass
 
+        if rs:
+            os.system("rm -rf " + self.rs_dir + "/postmel.ica")
+            os.system("rm -rf " + self.rs_dir + "/ica_aroma")
+            os.system("rm -rf " + self.rs_dir + "/resting.feat")
+
+            os.system("rm " + self.rs_dir + "/*fullvol*")
+            os.system("rm " + self.rs_dir + "/*preproc.nii.gz")
+            os.system("rm " + self.rs_dir + "/*preproc_aroma.nii.gz")
+            os.system("rm " + self.rs_dir + "/*preproc_aroma_nuisance.nii.gz")
+
+        if fmri:
+            pass
 
     # ==================================================================================================================================================
     def can_run_analysis(self, analysis_type, analysis_params=None):

@@ -12,8 +12,6 @@ from group.SPMConstants     import SPMConstants
 # create factorial designs, multiple regressions, t-test
 class SPMModels:
 
-
-
     def __init__(self, proj):
 
         self.project        = proj

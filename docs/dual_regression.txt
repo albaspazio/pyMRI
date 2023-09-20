@@ -1,0 +1,77 @@
+Part of FSL (ID: 6.0.4:ddd0a010)
+fsl_glm
+Author: Christian F. Beckmann 
+Copyright(C) 2006-2013 University of Oxford 
+ 
+ Simple GLM allowing temporal or spatial regression on either text data or images
+
+
+Usage: 
+fsl_glm -i <input> -d <design> -o <output> [options]
+
+Compulsory arguments (You MUST set one or more of):
+	-i,--in	        input file name (text matrix or 3D/4D image file)
+
+Optional arguments (You may optionally specify one or more of):
+	-o,--out	output file name for GLM parameter estimates (GLM betas)
+	-d,--design	file name of the GLM design matrix (text time courses for temporal regression or an image file for spatial regression )
+	-c,--contrasts	matrix of t-statistics contrasts
+	-m,--mask	mask image file name if input is image
+	--dof	        set degrees-of-freedom explicitly
+	--des_norm	switch on normalisation of the design matrix columns to unit std. deviation
+	--dat_norm	switch on normalisation of the data time series to unit std. deviation
+	--vn	        perform MELODIC variance-normalisation on data
+	--demean	switch on de-meaning of design and data
+	-h,--help	display this help text
+	--out_cope	output file name for COPEs (either as text file or image)
+	--out_z	        output file name for Z-stats (either as text file or image)
+	--out_t	        output file name for t-stats (either as text file or image)
+	--out_p	        output file name for p-values of Z-stats (either as text file or image)
+	--out_f	        output file name for F-value of full model fit
+	--out_pf	output file name for p-value for full model fit
+	--out_res	output file name for residuals
+	--out_varcb	output file name for variance of COPEs
+	--out_sigsq	output file name for residual noise variance sigma-square
+	--out_data	output file name for pre-processed data
+	--out_vnscales	output file name for scaling factors for variance normalisation
+	--vxt		list of text files containing text matrix confounds. caution BETA option.
+	--vxf		list of 4D images containing voxelwise confounds. caution BETA option.
+
+
+
+
+# STAGE1: TEMPORAL REGRESSION
+# takes filtered_func_data and the image of all the ics of the template
+# creates dr_stage1_subject00000.txt [nvol, nics]: containing the individual time series of each ic in the melodic template 
+
+/usr/local/fsl-6.0.4/bin/fsl_glm 
+	-i /data/MRI/projects/past_bipolar/subjects/DEP_Bilanzuoli_Elisa/s1/resting/reg_std/filtered_func_data 
+	-d /data/MRI/projects/past_bipolar/group_analysis/melodic/group_templates/ctrl_bd_all266/melodic_IC 
+	-o /data/MRI/projects/past_bipolar/group_analysis/melodic/dr/templ_ctrl_bd_all266/bd_ctrl_all266/dr_stage1_subject00000.txt 
+	--demean 
+	-m /data/MRI/projects/past_bipolar/group_analysis/melodic/dr/templ_ctrl_bd_all266/bd_ctrl_all266/mask;
+
+# STAGE2: SPATIAL REGRESSION
+# takes filtered_func_data and the individual time series of each ic in the melodic template
+# creates dr_stage2_subject00000(_Z) [...3D..., nics]: image containing, for each ic, the voxel having their timeseries
+# 							 gives the individual version of each ic reconstructed in the group
+
+/usr/local/fsl-6.0.4/bin/fsl_glm 
+	-i /data/MRI/projects/past_bipolar/subjects/DEP_Bilanzuoli_Elisa/s1/resting/reg_std/filtered_func_data 
+	-d /data/MRI/projects/past_bipolar/group_analysis/melodic/dr/templ_ctrl_bd_all266/bd_ctrl_all266/dr_stage1_subject00000.txt 
+	-o /data/MRI/projects/past_bipolar/group_analysis/melodic/dr/templ_ctrl_bd_all266/bd_ctrl_all266/dr_stage2_subject00000 
+	--out_z=/data/MRI/projects/past_bipolar/group_analysis/melodic/dr/templ_ctrl_bd_all266/bd_ctrl_all266/dr_stage2_subject00000_Z 
+	--demean 
+	-m /data/MRI/projects/past_bipolar/group_analysis/melodic/dr/templ_ctrl_bd_all266/bd_ctrl_all266/mask --des_norm;
+
+# split the nics image into subjectXXX_icYYY
+/usr/local/fsl-6.0.4/bin/fslsplit /data/MRI/projects/past_bipolar/group_analysis/melodic/dr/templ_ctrl_bd_all266/bd_ctrl_all266/dr_stage2_subject00000 /data/MRI/projects/past_bipolar/group_analysis/melodic/dr/templ_ctrl_bd_all266/bd_ctrl_all266/dr_stage2_subject00000_ic
+
+
+
+
+# STAGE3: for each ic, merge all individual images creating a 4D file containing all subjects' versions of that ic
+
+/usr/local/fsl-6.0.4/bin/fslmerge -t /data/MRI/projects/past_bipolar/group_analysis/melodic/dr/templ_ctrl_bd_all266/bd_ctrl_all266/dr_stage2_ic0000 `$FSLDIR/bin/imglob /data/MRI/projects/past_bipolar/group_analysis/melodic/dr/templ_ctrl_bd_all266/bd_ctrl_all266/dr_stage2_subject*_ic0000.*` ;         /usr/local/fsl-6.0.4/bin/imrm `$FSLDIR/bin/imglob /data/MRI/projects/past_bipolar/group_analysis/melodic/dr/templ_ctrl_bd_all266/bd_ctrl_all266/dr_stage2_subject*_ic0000.*` 
+
+
