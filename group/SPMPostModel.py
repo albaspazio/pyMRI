@@ -29,7 +29,8 @@ class SPMPostModel:
             SPMContrasts.replace_1group_multregr_contrasts(out_batch_job, spmmat, post_model)
 
         elif postmodel_type == SPMConstants.OWA:
-            SPMContrasts.replace_1WAnova_contrasts(out_batch_job, spmmat, post_model)
+            # SPMContrasts.replace_1WAnova_contrasts(out_batch_job, spmmat, post_model)
+            SPMContrasts.replace_contrasts(out_batch_job, spmmat, post_model)
 
         elif postmodel_type == SPMConstants.TSTT:
             SPMContrasts.replace_contrasts(out_batch_job, spmmat, post_model)
@@ -69,7 +70,6 @@ class SPMPostModel:
 
 
 class PostModel:
-
 
     def __init__(self, _type, regressors, templ_name=None, contrasts=None, res_params=None, res_conv_params=None, isSpm=True):
 

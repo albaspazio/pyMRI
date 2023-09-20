@@ -63,7 +63,7 @@ class FSLModels:
     #                   - group comparisons
 
     def create_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf, odp, regressors, grouplabel_or_subjlist, ofn="mult_cov", data_file=None,
-                                               create_model=True, group_mean_contrasts=1, cov_mean_contrasts=2, compare_covs=False, ofn_postfix=""):
+                                               create_model=True, group_mean_contrasts=1, cov_mean_contrasts=2, compare_covs=False, ofn_postfix="", subj_must_exist=False):
 
         self.string = ""
         # ------------------------------------------------------------------------------------
@@ -103,9 +103,9 @@ class FSLModels:
         all_subj                = []
         nsubjs      = 0
         for grp in grouplabel_or_subjlist:
-            labels = self.project.get_subjects_labels(grp)
+            labels = self.project.get_subjects_labels(grp, must_exist=subj_must_exist)
             subj_labels_by_groups.append(labels)
-            all_subj += grp
+            all_subj += labels
             nsubjs += len(labels)
 
         covs_values = self.project.get_filtered_columns(covs_label, all_subj, data=data)[0]
@@ -501,7 +501,7 @@ class FSLModels:
         #     print("===> KO: Error in feat_model")
         #     return
 
-        print("#===> OK: multiple covariate GLM model ($OUT_FSF_NAME.fsf) correctly created")
+        print("#===> OK: multiple covariate GLM model (" + model_noext + ".fsf) correctly created")
 
 
     def addline2string(self, line):

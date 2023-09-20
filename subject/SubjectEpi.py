@@ -26,7 +26,7 @@ class SubjectEpi:
         self.subject = subject
         self._global = _global
 
-    def get_example_function(self, seq="rs", vol_num=None, fmri_images=None, overwrite=False, logFile=None):
+    def get_example_function(self, seq="rs", vol_num=None, fmri_labels=None, overwrite=False, logFile=None):
 
         if seq == "rs":
             data    = self.subject.rs_data
@@ -34,10 +34,10 @@ class SubjectEpi:
             m_exfun = self.subject.rs_examplefunc_mask
         elif seq == "fmri":
 
-            if fmri_images is None:
+            if fmri_labels is None:
                 data    = self.subject.fmri_data
             else:
-                data = fmri_images[0]   # I assume other sessions are co-registered to first one
+                data = os.path.join(self.subject.fmri_dir, self.subject.label + fmri_labels[0])   # I assume other sessions are co-registered to first one
             exfun   = self.subject.fmri_examplefunc
             m_exfun = self.subject.fmri_examplefunc_mask
         else:
@@ -114,7 +114,7 @@ class SubjectEpi:
     # PERFORM motion correction toward the AP volume (of the first image) closest to PA sequence and then perform TOPUP CORRECTION
     # - epi_ref_vol/pe_ref_vol =-1 means use the middle volume
     # 1: get number of volumes of epi_PA image in opposite phase-encoding direction and extract middle volume (add "_ref")
-    # 2: look for the epi volume closest to epi_pa_ref volume
+    # 2: look for the AP epi volume closest to epi_pa_ref volume
     # 3: merge the 2 ref volumes into one (add "_ref")
     # 4: run topup using ref, acq params; used_templates: "_topup"
     # 5 motion correction using closest_vol to PA (or given one) [fmri do it, rs default not]
@@ -122,6 +122,7 @@ class SubjectEpi:
     # returns 0-based volume
     def topup_corrections(self, in_ap_images, in_pa_img, acq_params, ap_ref_vol=-1, pa_ref_vol=-1, config="b02b0.cnf", motion_corr=True, cleanup=True, logFile=None):
 
+        closest_vols = []
         #  /a/b/c/name.nii.gz
         in_ap_images    = Images(in_ap_images)
 
@@ -132,10 +133,10 @@ class SubjectEpi:
         for img in in_ap_images:
             ap_distorted.append(Image(img).add_postfix2name("_distorted"))
 
-        in_ap_img       = in_ap_images[0]
-        in_pa_img       = Image(in_pa_img)
+        # in_ap_img       = in_ap_images[0]
+        # in_pa_img       = Image(in_pa_img)
 
-        input_dir       = in_ap_img.dir    # /a/b/c
+        input_dir       = in_ap_images[0].dir    # /a/b/c
         ap_ref          = Image(os.path.join(input_dir, "ap_ref"))
         pa_ref          = Image(os.path.join(input_dir, "pa_ref"))
         ap_pa_ref       = Image(os.path.join(input_dir, "ap_pa_ref"))
@@ -149,35 +150,34 @@ class SubjectEpi:
             central_vol_pa = pa_ref_vol
         rrun("fslselectvols -i " + in_pa_img + " -o " + pa_ref + " --vols=" + str(central_vol_pa), logFile=logFile)
 
-        # 2: look for the epi volume closest to epi_pa_ref volume
-        if ap_ref_vol == -1:
-            closest_vol = self.get_closest_volume(in_ap_img, in_pa_img, pa_ref_vol) # returns a 0-based volume
-        else:
-            closest_vol = ap_ref_vol
+        for in_ap_img in in_ap_images:
 
-        rrun("fslselectvols -i " + in_ap_img + " -o " + ap_ref + " --vols=" + str(closest_vol), logFile=logFile)
+            # 2: look for the AP volume closest to epi_pa_ref volume
+            if ap_ref_vol == -1:
+                closest_vol = self.get_closest_volume(in_ap_img, in_pa_img, pa_ref_vol) # returns a 0-based volume
+            else:
+                closest_vol = ap_ref_vol
+            closest_vols.append(closest_vol)
+            rrun("fslselectvols -i " + in_ap_img + " -o " + ap_ref + " --vols=" + str(closest_vol), logFile=logFile)
 
-        # merge the 2 ref volumes into one (add "_ref")
-        rrun("fslmerge -t " + ap_pa_ref + " " + ap_ref + " " + pa_ref, stop_on_error=False)
+            # merge the 2 ref volumes into one (add "_ref")
+            rrun("fslmerge -t " + ap_pa_ref + " " + ap_ref + " " + pa_ref, stop_on_error=False)
 
-        # 4 run topup using ref, acq params; used_templates: "_topup"
-        # —assumes merged epi volumes appear in the same order as acqparams.txt (--datain)
-        rrun("topup --imain=" + ap_pa_ref + " --datain=" + acq_params + " --config=" + config + " --out=" + ap_pa_ref_topup, logFile=logFile) # + " --iout=" + self.subject.fmri_data + "_PE_ref_topup_corrected")
+            # 4 run topup using ref, acq params; used_templates: "_topup"
+            # —assumes merged epi volumes appear in the same order as acqparams.txt (--datain)
+            rrun("topup --imain=" + ap_pa_ref + " --datain=" + acq_params + " --config=" + config + " --out=" + ap_pa_ref_topup, logFile=logFile) # + " --iout=" + self.subject.fmri_data + "_PE_ref_topup_corrected")
 
-        # 5 realign all volumes of all images to the closest_vol to PA (or given one)
-        if motion_corr:
-            self.spm_motion_correction(in_ap_images, ref_vol=closest_vol, reslice=True)   # add r in front of images' names, closest_vol is 0-based
+            # 5 realign all volumes of all images to the closest_vol to PA (or given one)
+            if motion_corr:
+                self.spm_motion_correction([in_ap_img], ref_vol=closest_vol, reslice=True)   # add r in front of images' names, closest_vol is 0-based
 
-            for img in in_ap_images:
-                img = Image(img)
-                img.upath.rm()    # remove old with-motion SUBJ-fmri.nii
-                img.cpath.rm()    # remove old with-motion SUBJ-fmri.nii.gz
-                Image(os.path.join(input_dir, "r" + img.name)).compress(img, replace=True)  # zip rSUBJ-fmri.nii => rSUBJ-fmri.nii.gz
+                in_ap_img.upath.rm()    # remove old with-motion SUBJ-fmri.nii
+                in_ap_img.cpath.rm()    # remove old with-motion SUBJ-fmri.nii.gz
+                Image(os.path.join(input_dir, "r" + in_ap_img.name)).compress(in_ap_img, replace=True)  # zip rSUBJ-fmri.nii => SUBJ-fmri.nii.gz
 
-        # 6 applytopup to input images
-        # again, these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
-        for img in in_ap_images:
-            rrun("applytopup --imain=" + img + " --topup=" + ap_pa_ref_topup + " --datain=" + acq_params + " --inindex=1 --method=jac --interp=spline --out=" + img, logFile=logFile)
+            # 6 applytopup to input images
+            # again, these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
+            rrun("applytopup --imain=" + in_ap_img + " --topup=" + ap_pa_ref_topup + " --datain=" + acq_params + " --inindex=1 --method=jac --interp=spline --out=" + in_ap_img, logFile=logFile)
 
         # clean up?
         if cleanup:
@@ -186,7 +186,7 @@ class SubjectEpi:
             os.system("rm " + input_dir + "/" + "*mat")
 
         print("topup correction of subj: " + self.subject.label + " finished. closest volume is: " + str(closest_vol))
-        return closest_vol
+        return closest_vols
 
     # coregister given images to given volume of given image (usually the epi itself or pepolar in case of distortion correction process)
     # automatically put an out_prefix="r" in front of the given file name if reslice=True

@@ -5,6 +5,7 @@ import traceback
 from copy import deepcopy
 from shutil import move, rmtree
 
+from Global import Global
 from utility.images.Image import Image
 from utility.images.Images import Images
 from utility.myfsl.utils.run import rrun
@@ -64,11 +65,12 @@ class Subject:
     def hasT2(self):
         return self.t2_data.exist
 
-    def hasFMRI(self, images=None):
-        if images is None:
+    def hasFMRI(self, images_labels=None):
+        if images_labels is None:
             return self.fmri_data.exist
         else:
-            return Images(images).exist
+            imgs = [os.path.join(self.fmri_dir, self.label + ilab) for ilab in images_labels]
+            return Images(imgs).exist
 
     @property
     def hasWB(self):
@@ -126,6 +128,7 @@ class Subject:
         self.t1_segment_wm_ero_path     = Image(os.path.join(self.roi_t1_dir, "mask_t1_wmseg4Nuisance"))
         self.t1_segment_csf_ero_path    = Image(os.path.join(self.roi_t1_dir, "mask_t1_csfseg4Nuisance"))
 
+        self.t1_cat_mri_dir             = os.path.join(self.t1_cat_dir, "mri")
         self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
         self.t1_cat_surface_resamplefilt= self._global.cat_smooth_surf
         self.t1_cat_lh_surface          = Image(os.path.join(self.t1_cat_surface_dir, "lh.thickness.T1_" + self.label))
@@ -471,7 +474,7 @@ class Subject:
                  do_spm_seg=False, spm_seg_templ="", spm_seg_over_bet=False,
                  do_cat_seg=False, cat_use_dartel=False, do_cat_surf=True, cat_smooth_surf=None,
                  do_cat_seg_long=False, cat_long_sessions=None,
-                 do_cleanup=True, do_strongcleanup=False,
+                 do_cleanup=Global.CLEANUP_LVL_MIN,
                  use_lesionmask=False, lesionmask="lesionmask",
                  do_freesurfer=False, do_complete_fs=False, fs_seg_over_bet=False,
                  do_first=False, first_struct="", first_odn="",
@@ -482,7 +485,7 @@ class Subject:
                  do_aroma=True, do_nuisance=True, hpfsec=100, feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
                  do_featinitreg=False, do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=True,
 
-                 do_fmri=True, fmri_params=None, fmri_images=None, fmri_pa_data=None,
+                 do_fmri=True, fmri_params=None, fmri_labels=None, fmri_pa_data=None,
 
                  do_dtifit=True, do_pa_eddy=False, do_eddy_gpu=False, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
                  do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",
@@ -571,10 +574,10 @@ class Subject:
                     betfparam=betfparam,
                     do_reg=do_reg, do_nonlinreg=do_nonlinreg,
                     do_seg=do_seg,
-                    do_cleanup=do_cleanup, do_strongcleanup=do_strongcleanup, do_overwrite=do_overwrite,
+                    do_overwrite=do_overwrite,
                     use_lesionmask=use_lesionmask, lesionmask=lesionmask)
 
-                self.mpr.finalize(odn=odn)
+                self.mpr.finalize(odn=odn, do_cleanup=do_cleanup)
                 self.transform.transform_mpr()
 
             if do_sienax:
@@ -741,16 +744,17 @@ class Subject:
         # ==============================================================================================================================================================
         # FMRI DATA
         # ==============================================================================================================================================================
-        while self.hasFMRI(fmri_images) and do_fmri:
+        while self.hasFMRI(fmri_labels) and do_fmri:
 
             # sanity checks
             if fmri_params is None:
                 raise Exception("Error in Subject.wellcome of subj " + self.label)
 
-            if fmri_images is None:
+            if fmri_labels is None:
                 fmri_images = Images([self.fmri_data])
             else:
-                fmri_images = Images(fmri_images)
+                imgs = [os.path.join(self.fmri_dir, self.label + ilab) for ilab in fmri_labels]
+                fmri_images = Images(imgs)
 
             if not fmri_images.exist:
                 print("Error in welcome...user want to perform fmri analysis but fmri image(s) does not exist...skip fmri processing...continue other")
@@ -799,12 +803,11 @@ class Subject:
                         ap_distorted.mv(fmri_images, logFile=log)
                         break
 
-                self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_preprocessing_norealign", do_overwrite=do_overwrite)
+                # self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_preprocessing_norealign", do_overwrite=do_overwrite)
+            # else:
+            self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_full_preprocessing", do_overwrite=do_overwrite)
 
-            else:
-                self.epi.spm_fmri_preprocessing(fmri_params, fmri_images, "subj_spm_fmri_full_preprocessing", do_overwrite=do_overwrite)
-
-            self.transform.transform_fmri(fmri_images, logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
+            self.transform.transform_fmri(fmri_labels, logFile=log)  # create self.subject.fmri_examplefunc, epi2std/str2epi.nii.gz,  epi2std/std2epi_warp
             break
 
         # ==============================================================================================================================================================
@@ -849,7 +852,7 @@ class Subject:
 
             os.makedirs(self.roi_dti_dir, exist_ok=True)
 
-            self.transform.transform_dti_t2()
+            self.transform.transform_dti_t2(ignore_t2=True)
 
             if os.path.isfile(os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz")):
                 runsystem("gunzip " + os.path.join(self.dti_dir, self.dti_rotated_bvec + ".gz"), logFile=log)
@@ -1074,9 +1077,27 @@ class Subject:
 
         os.system("cp -r " + self.roi_dir + " " + subj_in_dest_project.roi_dir)
 
+    def clean(self, t1=False, dti=False, rs=False, fmri=False):
 
+        if t1:
+            T1 = os.path.join(self.t1_anat_dir, "T1")  # T1 is now an absolute path
+            Images([T1, T1 + "_orig", T1 + "_fullfov"]).rm()
 
+        if dti:
+            pass
 
+        if rs:
+            os.system("rm -rf " + self.rs_dir + "/postmel.ica")
+            os.system("rm -rf " + self.rs_dir + "/ica_aroma")
+            os.system("rm -rf " + self.rs_dir + "/resting.feat")
+
+            os.system("rm " + self.rs_dir + "/*fullvol*")
+            os.system("rm " + self.rs_dir + "/*preproc.nii.gz")
+            os.system("rm " + self.rs_dir + "/*preproc_aroma.nii.gz")
+            os.system("rm " + self.rs_dir + "/*preproc_aroma_nuisance.nii.gz")
+
+        if fmri:
+            pass
 
     # ==================================================================================================================================================
     def can_run_analysis(self, analysis_type, analysis_params=None):
@@ -1137,6 +1158,10 @@ class Subject:
             if analysis_params is None:
                 fmri_images = [self.fmri_data]
             else:
+                if not isinstance(list, analysis_params):
+                    raise Exception("ERROR IN can_run_analysis: in case of fmri, analysis_params must be a strings list")
+
+                imgs = [os.path.join(self.fmri_dir, self.label + ilab) for ilab in analysis_params]
                 fmri_images = Images(analysis_params)
 
             return Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("a").exist or Images(fmri_images).add_prefix2name("wa").exist

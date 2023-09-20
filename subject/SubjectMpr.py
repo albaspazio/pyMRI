@@ -542,10 +542,11 @@ class SubjectMpr:
                     use_dartel=True,
                     smooth_surf=None,
                     atlases=None,
+                    do_cleanup=Global.CLEANUP_LVL_MED,
                     spm_template_name="cat27_segment_customizedtemplate_tiv_smooth"):
 
-        y_T1 = Image(os.path.join(self.subject.t1_cat_dir, "mri", "y_T1_" + self.subject.label))
-        if y_T1.exist and not do_overwrite:
+        #y_T1 = Image(os.path.join(self.subject.t1_cat_dir, "mri", "y_T1_" + self.subject.label))
+        if Image(self.subject.t1_cat_resampled_surface).cexist and not do_overwrite:
             print(self.subject.label + ": skipping cat_segment, already done")
             return
 
@@ -654,6 +655,9 @@ class SubjectMpr:
             if not use_existing_nii:
                 inputimage.upath.rm()
 
+            if do_cleanup == Global.CLEANUP_LVL_MED:
+                os.system("rm -rf " + os.path.join(self.subject.t1_cat_dir, "mri"))
+
             log.close()
 
         except Exception as e:
@@ -672,8 +676,7 @@ class SubjectMpr:
             print("Error in cat_segment_check of subj " + self.subject.label + ", ICV_FILE is empty")
             return False
 
-        if os.path.exists(
-                not os.path.join(self.subject.t1_cat_dir, "report", "cat_T1_" + self.subject.label + ".xml")):
+        if not os.path.exists(os.path.join(self.subject.t1_cat_dir, "report", "cat_T1_" + self.subject.label + ".xml")):
             print("Error in cat_segment_check of subj " + self.subject.label + ", CAT REPORT is missing")
             return False
 
@@ -705,8 +708,8 @@ class SubjectMpr:
                                  use_dartel=False,
                                  smooth_surf=None,
                                  use_existing_nii=True,
-                                 spm_template_name="cat_segment_longitudinal_customizedtemplate_tiv_smooth"
-                                 ):
+                                 do_cleanup=Global.CLEANUP_LVL_MED,
+                                 spm_template_name="cat_segment_longitudinal_customizedtemplate_tiv_smooth"):
 
         current_session = self.subject.sessid
         # define placeholder variables for input dir and image name
@@ -844,26 +847,21 @@ class SubjectMpr:
             report_file = os.path.join(subj.t1_cat_dir, "report", "cat_rT1_" + subj.label + ".xml")
 
             if not os.path.exists(report_file):
-                err = err + "Error in cat_segment_check of subj " + subj.label + ", session: " + str(
-                    sess) + ", CAT REPORT is missing" + "\n"
+                err = err + "Error in cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", CAT REPORT is missing" + "\n"
 
             if not os.path.exists(icv_file):
-                err = err + "Error in cat_segment_check of subj " + subj.label + ", session: " + str(
-                    sess) + ", ICV_FILE is missing" + "\n"
+                err = err + "Error in cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", ICV_FILE is missing" + "\n"
             else:
                 if os.path.getsize(icv_file) == 0:
-                    err = err + "Error in cat_segment_check of subj " + subj.label + ", session: " + str(
-                        sess) + ", ICV_FILE is empty" + "\n"
+                    err = err + "Error in cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", ICV_FILE is empty" + "\n"
 
             if calc_surfaces:
 
                 if not os.path.exists(os.path.join(subj.t1_cat_surface_dir, "lh.thickness.rT1_" + subj.label)):
-                    err = err + "Error in cat_segment_check of subj " + subj.label + ", session: " + str(
-                        sess) + ", lh thickness is missing" + "\n"
+                    err = err + "Error in cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", lh thickness is missing" + "\n"
 
                 if not os.path.exists(subj.t1_cat_resampled_surface_longitudinal):
-                    err = err + "Error in cat_segment_check of subj " + subj.label + ", session: " + str(
-                        sess) + ", RESAMPLED SURFACE is missing" + "\n"
+                    err = err + "Error in cat_segment_check of subj " + subj.label + ", session: " + str(sess) + ", RESAMPLED SURFACE is missing" + "\n"
 
         if err != "":
             print(err)
@@ -983,7 +981,7 @@ class SubjectMpr:
                 betfparam=0.5,
                 do_reg=True, do_nonlinreg=True,
                 do_seg=True,
-                do_cleanup=True, do_strongcleanup=False, do_overwrite=False,
+                do_overwrite=False,
                 use_lesionmask=False, lesionmask="lesionmask"):
         niter = 5
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
@@ -1110,21 +1108,11 @@ class SubjectMpr:
                         print("Brain volume in mm^3 (native/original space) = " + str(ubrain), file=file_vol)
                         print("Brain volume in mm^3 (normalised to MNI) = " + str(nbrain), file=file_vol)
 
-            #### CLEANUP
-            if do_cleanup:
-                #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning up intermediate files"
-                rrun("imrm " + T1 + "_biascorr_bet_mask " + T1 + "_biascorr_bet " + T1 + "_biascorr_brain_mask2 " + T1 + "_biascorr_init " + T1 + "_biascorr_maskedbrain " + T1 + "_biascorr_to_std_sub " + T1 + "_fast_bias_idxmask " + T1 + "_fast_bias_init " + T1 + "_fast_bias_vol2 " + T1 + "_fast_bias_vol32 " + T1 + "_fast_totbias " + T1 + "_hpf* " + T1 + "_initfast* " + T1 + "_s20 " + T1 + "_initmask_s20", logFile=log)
-
-            #### STRONG CLEANUP
-            if do_strongcleanup:
-                #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning all unnecessary files "
-                Images([T1, T1 + "_orig", T1 + "_fullfov"]).rm(log)
-
         except Exception as e:
             traceback.print_exc()
             print(e)
 
-    def finalize(self, odn="anat", imgtype=1):
+    def finalize(self, odn="anat", imgtype=1, do_cleanup=Global.CLEANUP_LVL_MED):
 
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
 
@@ -1180,6 +1168,19 @@ class SubjectMpr:
             # mkdir -p $FIRST_DIR
             # run mv first_results $FIRST_DIR
             # run $FSLDIR/bin/immv ${T1}_subcort_seg $FIRST_DIR
+
+            if do_cleanup == Global.CLEANUP_LVL_MIN:         #### CLEANUP
+                #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning up intermediate files"
+                rrun("imrm " + T1 + "_biascorr_bet_mask " + T1 + "_biascorr_bet " + T1 + "_biascorr_brain_mask2 " + T1 + "_biascorr_init " + T1 + "_biascorr_maskedbrain " + T1 + "_biascorr_to_std_sub " + T1 + "_fast_bias_idxmask " + T1 + "_fast_bias_init " + T1 + "_fast_bias_vol2 " + T1 + "_fast_bias_vol32 " + T1 + "_fast_totbias " + T1 + "_hpf* " + T1 + "_initfast* " + T1 + "_s20 " + T1 + "_initmask_s20", logFile=log)
+
+            if do_cleanup == Global.CLEANUP_LVL_MED:    #### STRONG CLEANUP
+                #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning all unnecessary files "
+                Images([T1, T1 + "_orig", T1 + "_fullfov"]).rm(log)
+                if os.path.exists(self.subject.t1_cat_mri_dir):
+                    os.system("rm -rf " + self.subject.t1_cat_mri_dir)
+
+            if do_cleanup == Global.CLEANUP_LVL_HI:       #### TOTAL CLEANUP
+                os.system("rm -rf " + self.subject.t1_anat_dir)
 
         except Exception as e:
             traceback.print_exc()
@@ -1425,9 +1426,7 @@ class SubjectMpr:
 
         os.removedirs(self.subject.t1_anat_dir)
 
-        if lvl == Global.CLEANUP_LVL_MED:
-            pass
-        elif lvl == Global.CLEANUP_LVL_HI:
+        if lvl == Global.CLEANUP_LVL_HI:
 
             os.removedirs(self.subject.first_dir)
             os.removedirs(self.subject.fast_dir)

@@ -25,7 +25,7 @@ class SubjectsDataDict(dict):
     def __init__(self, filepath="", validcols=None, tonum=True, delimiter='\t'):
 
         super().__init__()
-        self.filepath   = filepath
+        self.filepath = filepath
 
         if filepath != "":
             self.load(filepath, tonum, delimiter)
@@ -35,6 +35,7 @@ class SubjectsDataDict(dict):
     @property
     def header(self) -> list:
         return self.get_header()
+
     @property
     def labels(self) -> list:
         return list(self.keys())
@@ -73,10 +74,10 @@ class SubjectsDataDict(dict):
                             subj_lab = elem
                         else:
                             if tonum:
-                                casted_elem     = string2num(elem)
+                                casted_elem = string2num(elem)
                             else:
-                                casted_elem     = elem
-                            data_row[header[cnt]]   = casted_elem
+                                casted_elem = elem
+                            data_row[header[cnt]] = casted_elem
                         cnt = cnt + 1
 
                     self[subj_lab] = data_row
@@ -89,8 +90,8 @@ class SubjectsDataDict(dict):
         if not isinstance(newsubjs, dict):
             raise Exception("Error in SubjectsDataDict.add, given newsubjs is not a dictionary")
 
-        names   = list(newsubjs.keys())
-        nsubjs  = len(names)
+        names = list(newsubjs.keys())
+        nsubjs = len(names)
         if nsubjs == 0:
             raise Exception("Error in SubjectsDataDict.add, given newsubjs is an empty dictionary")
 
@@ -149,7 +150,7 @@ class SubjectsDataDict(dict):
         if subj_names is None:
             return self
         sdict = {}
-        for k,v in self.items():
+        for k, v in self.items():
             if k in subj_names:
                 sdict[k] = v
         return sdict
@@ -163,8 +164,8 @@ class SubjectsDataDict(dict):
         try:
             res = {}
             for subj_lab in subj_names:
-                data_row    = {}
-                subj        = self[subj_lab]
+                data_row = {}
+                subj = self[subj_lab]
                 for col in colnames:
                     data_row[col] = subj[col]
                 res[subj_lab] = data_row
@@ -213,8 +214,8 @@ class SubjectsDataDict(dict):
         res_str = self.__to_str(res, ndecimals)
         return res_str, lab
 
-    # returns a filtered matrix [subj x colnames]
-    def get_filtered_columns(self, colnames, subj_labels=None, sort=False, demean_flags=None, ndecim=4):
+    # returns a tuple:  subj labels, filtered matrix [subj x colnames]
+    def get_filtered_columns(self, colnames, subj_labels=None, sort=False, demean_flags=None, ndecim=4) -> tuple:
 
         if subj_labels is None:
             subj_labels = self.labels
@@ -249,7 +250,6 @@ class SubjectsDataDict(dict):
                             # substitute demenead serie
                             for idsubj, subjvalues in enumerate(subj_values):
                                 subj_values[idsubj][idcol] = vals[idsubj]
-
 
         except KeyError:
             raise DataFileException("SubjectsDataDict.get_filtered_columns", "data of given subject (" + subj + ") is not present in the loaded data")
@@ -361,7 +361,7 @@ class SubjectsDataDict(dict):
         res_str = self.__to_str(res, ndecimals)
         return res_str, lab
 
-    def add_column(self, col_label, labels, values, saveit=False):
+    def add_column(self, col_label, labels, values, saveit=False, data_file=None):
 
         nv = len(values)
         nl = len(labels)
@@ -374,7 +374,7 @@ class SubjectsDataDict(dict):
             cnt = cnt + 1
 
         if saveit:
-            self.save_data()
+            self.save_data(data_file)
 
     def get_header(self):
 
@@ -452,7 +452,11 @@ class SubjectsDataDict(dict):
         for subj in data:
             r += (subj + separator)
             for col in incolnames:
-                r += str(data[subj][col]) + separator
+                try:
+                    value = str(data[subj][col])
+                except:
+                    value = ""
+                r += value + separator
             r = r.rstrip(separator) + "\n"
         txt += r
         write_text_file(data_file, txt)
@@ -464,7 +468,7 @@ class SubjectsDataDict(dict):
         datastr = ""
 
         for r in datalist:
-            rr = str(round(r*ndecimals*10)/(ndecimals*10))
+            rr = str(round(r * ndecimals * 10) / (ndecimals * 10))
             datastr = datastr + rr + "\n"
         return datastr
     # =====================================================================================

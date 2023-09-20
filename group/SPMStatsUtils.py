@@ -297,7 +297,7 @@ class SPMStatsUtils:
     def get_spm_model_estimate(isSurf=False, idstep=3):
 
         if isSurf:
-            return "matlabbatch{" + str(idstep) + "}.spm.tools.cat.stools.SPM.spmmat = cfg_dep('Factorial design specification: SPM.mat File', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'spmmat'));"
+            return "matlabbatch{" + str(idstep) + "}.spm.tools.cat.stools.SPM.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));"
         else:
             return "matlabbatch{" + str(idstep) + "}.spm.stats.fmri_est.spmmat(1) = cfg_dep('Factorial design specification: SPM.mat File', substruct('.', 'val', '{}', {1}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'spmmat'));\n \
                     matlabbatch{" + str(idstep) + "}.spm.stats.fmri_est.write_residuals = 0;\n \

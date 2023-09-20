@@ -234,7 +234,7 @@ class Project:
 
         return invalid_subjs
 
-    def check_all_coregistration(self, outdir, subjs_labels=None, _from=None, _to=None, num_cpu=1, overwrite=False):
+    def check_all_coregistration(self, outdir, subjs_labels=None, _from=None, _to=None, fmri_labels=None, num_cpu=1, overwrite=False):
 
         if subjs_labels is None:
             subjs_labels = self.get_subjects_labels()
@@ -245,7 +245,7 @@ class Project:
         if _to is None:
             _to = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]
 
-        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir, "_from":_from, "_to":_to, "overwrite":overwrite}], ncore=num_cpu, group_or_subjlabels=subjs_labels)
+        self.run_subjects_methods("transform", "test_all_coregistration", [{"test_dir":outdir, "_from":_from, "_to":_to, "fmri_labels":fmri_labels, "overwrite":overwrite}], ncore=num_cpu, group_or_subjlabels=subjs_labels)
 
         if "hr" in _to:
             l_t1 = os.path.join(outdir, "lin", "hr");            nl_t1 = os.path.join(outdir, "nlin", "hr")
@@ -349,12 +349,12 @@ class Project:
     # ==================================================================================================================
     # returns a matrix (values x subjects) containing values of the requested columns of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_columns(self, columns_list, grouplabel_or_subjlist, data=None, sort=False, sess_id=1):
+    def get_filtered_columns(self, columns_list, grouplabel_or_subjlist, data=None, sort=False, demean_flags=None, sess_id=1, must_exist=False):
 
-        subj_list  = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
+        subj_list  = self.get_subjects_labels(grouplabel_or_subjlist, sess_id, must_exist=must_exist)
         valid_data = self.validate_data(data)
         if valid_data is not None:
-            return valid_data.get_filtered_columns(columns_list, subj_list, sort=sort)
+            return valid_data.get_filtered_columns(columns_list, subj_list, sort=sort, demean_flags=demean_flags)
         else:
             return None
 
@@ -415,7 +415,8 @@ class Project:
             else:
                 raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is neither a SubjectsDataDict nor a string")
 
-    def add_icv_to_data(self, grouplabel_or_subjlist=None, updatefile=False, sess_id=1):
+    # added data_file in order to add v
+    def add_icv_to_data(self, grouplabel_or_subjlist=None, updatefile=False, data_file=None, sess_id=1):
 
         if grouplabel_or_subjlist is None:
             grouplabel_or_subjlist = self.get_subjects_labels()
@@ -424,7 +425,7 @@ class Project:
 
         icvs = self.get_subjects_icv(grouplabel_or_subjlist, sess_id)
 
-        self.data.add_column("icv", grouplabel_or_subjlist, icvs, updatefile)
+        self.data.add_column("icv", grouplabel_or_subjlist, icvs, updatefile, data_file)
 
     def get_subjects_icv(self, grouplabel_or_subjlist, sess_id=1):
 

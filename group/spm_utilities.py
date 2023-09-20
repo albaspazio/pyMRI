@@ -140,8 +140,9 @@ class GrpInImages:
     def __init__(self, _type, _folder=None, _name=None):
         self.type       = _type
         self.folder     = _folder
+
         # folder is:
-        # fmri:     name of subject's fmri subfolder
+        # fmri:     name of subject's fmri subfolder of (SUBJ_LABEL/sX/fmri/stats/)
         # ct:       [None] always located in mpr/cat/surf
         # dartel:   fullpath of a group-analysis folder
         # vbm:      fullpath of a group-analysis folder

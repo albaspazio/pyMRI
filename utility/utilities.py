@@ -77,3 +77,16 @@ def listToString(_list, separator='\t'):
         _str += (str(element) + separator)
 
     return _str
+
+
+# extract i-th column from a list of list
+def get_col_from_listmatrix(matrix, zerocolid):
+
+    ncols = len(matrix[0])
+
+    if zerocolid >= ncols:
+        print("Error in get_col_from_listmatrix, given colid (" + str(zerocolid) + ") is higher than available columns")
+        return
+
+    return [ r[zerocolid] for r in matrix ]
+
