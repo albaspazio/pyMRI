@@ -203,7 +203,7 @@ class DataProject:
 
     # validate data dictionary. if param is none -> takes it from self.data
     #                           otherwise try to load it
-    def validate_data(self, data=None):
+    def validate_data(self, data=None) -> SubjectsDataDict:
 
         if data is None:
             if bool(self.data):

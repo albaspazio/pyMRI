@@ -86,6 +86,14 @@ def get_filename(fullpath):
     return os.path.splitext(os.path.basename(fullpath))[0]
 
 
+# return   /a/b/c/d/e.f  -> d
+def get_dirname(fullpath):
+    if os.path.isdir(fullpath):
+        return os.path.basename(fullpath)
+    else:
+        return os.path.basename(os.path.dirname(fullpath))
+
+
 def remove_ext(filepath):
     return os.path.splitext(filepath)[0]
 

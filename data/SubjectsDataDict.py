@@ -150,7 +150,7 @@ class SubjectsDataDict(dict):
         if subj_names is None:
             return self
         sdict = {}
-        for k, v in self.items():
+        for k,v in self.items():
             if k in subj_names:
                 sdict[k] = v
         return sdict
@@ -164,8 +164,8 @@ class SubjectsDataDict(dict):
         try:
             res = {}
             for subj_lab in subj_names:
-                data_row = {}
-                subj = self[subj_lab]
+                data_row    = {}
+                subj        = self[subj_lab]
                 for col in colnames:
                     data_row[col] = subj[col]
                 res[subj_lab] = data_row
@@ -194,7 +194,7 @@ class SubjectsDataDict(dict):
         for subj in subj_labels:
             try:
                 colvalue = string2num(self[subj][colname])
-                res.append(colvalue)
+                res.append([colvalue])
                 lab.append(subj)
             except KeyError:
                 raise DataFileException("SubjectsDataDict.get_filtered_column", "data of given subject (" + subj + ") is not present in the loaded data")

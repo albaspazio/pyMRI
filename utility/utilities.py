@@ -71,10 +71,10 @@ def string2num(string, ndecim=-1):
 
 def listToString(_list, separator='\t'):
 
-    _str = ""
+    _str = _list[0]
     # traverse the list and concatenate to String variable
-    for element in _list:
-        _str += (str(element) + separator)
+    for i in range(1, len(_list)):
+        _str += separator + str(_list[i])
 
     return _str
 

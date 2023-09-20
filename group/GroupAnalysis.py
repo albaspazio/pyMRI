@@ -9,6 +9,8 @@ from group.SPMModels import SPMModels
 from utility.images.Image import Image
 from utility.matlab import call_matlab_spmbatch
 from utility.myfsl.utils.run import rrun
+from utility.fileutilities import sed_inplace, get_dirname
+from utility.utilities import listToString
 from utility.fileutilities import sed_inplace
 from utility.utilities import get_col_from_listmatrix
 
@@ -317,21 +319,21 @@ class GroupAnalysis:
     # ====================================================================================================================================================
     # run tbss for FA
     # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
-    def tbss_clusterize_results_by_atlas(self, tbss_result_image, out_folder, log_file="log.txt", tracts_labels=None, tracts_dir=None, thr=0.95):
+    def tbss_clusterize_results_by_atlas(self, tbss_result_image, out_folder, log_file="overlap.txt", tracts_labels=None, tracts_dir=None, thr=0.95):
 
         try:
             if tracts_labels is None:
-                tracts_labels = self._global.dti_xtract_labels
+                tracts_labels   = self._global.dti_xtract_labels
 
             if tracts_dir is None:
-                tracts_dir = self._global.dti_xtract_dir
+                tracts_dir      = self._global.dti_xtract_dir
 
-            log = os.path.join(out_folder, log_file)
-            tot_voxels = 0
-            classified_tracts = []
+            log                 = os.path.join(out_folder, log_file)
+            tot_voxels          = 0
+            classified_tracts   = []
             os.makedirs(out_folder, exist_ok=True)
 
-            # ------------------------------------------------
+            # ----------------------------------------------------------------------------------------------------------
             # threshold tbss input, copy to out_folder, get number of voxels
             name            = os.path.basename(tbss_result_image)
             thr_input       = Image(os.path.join(out_folder, name))
@@ -364,7 +366,7 @@ class GroupAnalysis:
             rrun(cmd_str)
             unclass_vox = unclass_img.get_nvoxels()
 
-            # ------------------------------------------------
+            # ----------------------------------------------------------------------------------------------------------
             # write log file
             out_str = out_str + "\n" + "\n" + "tot voxels = " + str(tot_voxels) + " out of " + str(original_voxels) + "\n"
             out_str = out_str + "unclassified image has " + str(unclass_vox)
@@ -377,20 +379,24 @@ class GroupAnalysis:
     # clust_res_dir: output folder of tbss's results clustering
     # datas is a tuple of two elements containing a matrix of values and subj_labels
     # returns tracts_data
-    def tbss_summarize_clusterized_folder(self, tbss_folder_name, in_clustered_dirname, measure, datas, data_labels, modality="FA", ofn="scatter_tracts_", doplot=False):
+    @staticmethod
+    def tbss_summarize_clusterized_folder(in_clust_res_dir, datas, data_labels, tbss_folder, modality="FA",
+                                          subj_img_postfix="_FA_FA_to_target", ofn="scatter_tracts_") -> list:
 
-        # sanity checks
-        ndata = len(data_labels)
-        if ndata != len(datas[0][0]):
-            raise Exception("Error in tbss_summarize_clusterized_folder, number of tracts from given labels (" + str(ndata) + ") does not coincide with that got by datas (" + str(datas[0][0]) + ")")
+        ndata       = len(data_labels)
+        whatdata    = datas[0][0]
+        if isinstance(whatdata, list):
+            if len(whatdata) != ndata:
+                print("ERROR in tbss_summarize_clusterized_folder: number of data columns differ from labels....exiting")
+                return
+        else:
+            if ndata != 1:
+                print("ERROR in tbss_summarize_clusterized_folder: more than one labels for one column data....exiting")
+                return
 
-        nsubj = len(datas[1])
-
-        tbss_folder         = os.path.join(self.project.tbss_dir, tbss_folder_name)
-        subjects_images     = os.path.join(tbss_folder, modality)  # folder containing tbss subjects' folder of that modality
-        in_clust_res_dir    = os.path.join(tbss_folder, "xtract", in_clustered_dirname, measure)
-        results_folder      = os.path.join(tbss_folder, "results", in_clustered_dirname, measure)   # contains scatter plots
-        os.makedirs(results_folder, exist_ok=True)
+        out_folder      = os.path.join(tbss_folder, "results")
+        ifn             = get_dirname(in_clust_res_dir)
+        subjects_images = os.path.join(tbss_folder, modality)  # folder containing tbss subjects' folder of that modality
 
         if modality == "FA":
             subj_img_postfix = "_FA_FA_to_target"
@@ -412,18 +418,18 @@ class GroupAnalysis:
                     str_data    = str_data + "\t" + lab
         str_data = str_data + "\n"
 
-        # compose subjects' rows
-        ntracts = len(tracts_labels)
         tracts_data = []
-        [tracts_data.append([]) for _ in range(ntracts)]
+        [tracts_data.append([]) for _ in range(len(tracts_labels))]
+        nsubj = len(datas[0])
         for i in range(nsubj):
             subj_label      = datas[1][i]
-            subj_img        = Image(os.path.join(subjects_images, subj_label + "-dti_fit" + subj_img_postfix))
+            in_img          = os.path.join(subjects_images, subj_label + "-dti_fit" + subj_img_postfix)
+            subj_img        = Image(in_img, must_exist=True, msg="Error in tbss_summarize_clusterized_folder, subj image (" + in_img + "_masked" + ") is missing...exiting")
             subj_img_masked = Image(subj_img + "_masked")
             n_tracts        = 0
-            str_data        = str_data + subj_label + "\t"
-            for dl in datas[0][i]:
-                str_data = str_data + str(dl) + "\t"
+            str_data        = str_data + subj_label
+            for id,lab in enumerate(data_labels):
+                str_data = str_data + "\t" + str(datas[0][i][id])
 
             for entry in os.scandir(in_clust_res_dir):
                 if not entry.name.startswith('.') and not entry.is_dir():
@@ -437,19 +443,12 @@ class GroupAnalysis:
                         n_tracts = n_tracts + 1
             str_data = str_data + "\n"
 
-        # write data
-        res_file = os.path.join(results_folder, ofn + modality + "_" + "_".join(data_labels) + ".dat")
+        res_file = os.path.join(out_folder, ofn + ifn + "_" + listToString(data_labels, separator='_') + ".dat")
+
         with open(res_file, "w") as f:
             f.write(str_data)
 
-        # plot data
-        if doplot:
-            for t in range(ntracts):
-                for d in range(ndata):
-                    fig_file = os.path.join(results_folder, tracts_labels[t] + "_" + data_labels[d] + ".png")
-                    plot_data.scatter_plot_dataserie(get_col_from_listmatrix(datas[0], d), tracts_data[t], fig_file)
-
-        return tracts_data
+        return [tracts_labels, tracts_data]
 
     # create a new tbss analysis folder (only stats one), filtering an existing analysis folder
     # vols2keep: 0-based list of indices to keep

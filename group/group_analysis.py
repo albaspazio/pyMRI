@@ -1,5 +1,6 @@
 import os
 from utility.images.Image import Image
+from utility.images.Images import Images
 
 
 # this function assumes that user put the melodic rois of interest in the roi4_folder of a specific subfolder of the given project (where between-groups analyses are done, usually the patient folder)
@@ -41,6 +42,51 @@ def convert_melodic_rois_to_individual(project, templ_name, popul_name, rois_lis
             # "$subjects_list" $PROJ_DIR -nlin -ipathtype abs -refabs $ref_img -transfrel $transformation -refrel $refrel -maskrel $maskrel -opath $output_rel_path -orf $report_file -fullrep "${arr_rois_paths[@]}"
             # regtype, pathtype="standard", outdir="", outname="", mask="", orf="", thresh=0, islin=True, rois=None):
             proj.run_subjects_methods("transform", "transform_roi", [{"regtype": "std4TOrs", "pathtype": "abs", "islin": False, "orf": report_file, "thresh": thr, "rois": [roi]}], ncore=num_cpu, group_or_subjlabels=subjs_insts)
+
+
+# this function deal with tbss results.
+# project:  project where group analysis are done
+# rois:     list of normalized Image to investigate (extract mean individual metrics)
+# subjects: list of subjects instances
+# metric:   measures to analyze. values are: FA,MD,AD,RD
+
+def extract_meanvalue_from_tbssresults(project, rois, subjects, metric="FA"):
+
+    # sanity checks
+    if metric not in ["FA", "MD", "AD", "RD"]:
+        print("Error in extract_meanvalue_from_tbssresults, given metric (" + str(metric) + ") is not valid")
+        return
+
+    if not Images(rois).exist:
+        print("Error in extract_meanvalue_from_tbssresults, one or more roi image is not valid (" + str(rois) + ")")
+        return
+
+    # ----------------------------------------------------------------------
+    if metric == "FA":
+        subj_img_postfix = "_FA_FA_to_target"
+    else:
+        subj_img_postfix = "_FA_to_target_" + metric
+
+    for roi in rois:
+        roi_img = os.path.join(roi_root_dir, roi)
+        rrun("fslmaths " + roi_img + " -thr 0.95 -bin " + roi_img + "_mask")
+    out_folder = os.path.join(project.tbss_dir, "results_sp_sts_htc_fmrib58")
+
+    results = []
+    for roi in tbssmap:
+        roi_mask_img = os.path.join(roi_root_dir, roi + "_mask")
+        roi_row = []
+
+        for subj in subjects:
+            subj_img = os.path.join(subjects_images, subj.dti_fit_label + subj_img_postfix)
+            subj_img_masked = os.path.join(subjects_images, subj.dti_fit_label + subj_img_postfix + "_masked")
+
+            rrun("fslmaths " + subj_img + " -mas " + roi_mask_img + " " + subj_img_masked)
+            val = float(rrun("fslstats " + subj_img_masked + " -M").strip())
+            imrm([subj_img_masked])
+            roi_row.append(val)
+
+        results.append(roi_row)
 
 
 # takes melodic RSN's labels created with fsleyes, parse it and
