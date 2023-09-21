@@ -29,9 +29,10 @@ class SPMModels:
 
         # ---------------------------------------------------------------------------------------------------------------------------------
         # sanity check
+        subj_data_dict = None
         if bool(covs):
-            data_file = self.project.validate_data(data_file)
-            data_file.validate_covs(covs)
+            subj_data_dict = self.project.validate_data(data_file)
+            subj_data_dict.validate_covs(covs)
         else:
             if stat_type == SPMConstants.MULTREGR:
                 raise Exception("Error in batchrun_group_stats: covs cannot be empty or none when one group mult regr is asked")
@@ -80,6 +81,7 @@ class SPMModels:
             expl_mask       = None
             statsdir        = os.path.join(root_outdir, anal_name)
 
+        # ---------------------------------------------------------------------------------------------------------------------------------
         # create template files
         if spm_template_name is None:
             if stat_type == SPMConstants.MULTREGR:
@@ -107,10 +109,10 @@ class SPMModels:
             SPMStatsUtils.compose_images_string_2W(groups_instances, out_batch_job, input_images)
 
         # global calculation
-        SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, data_file)
+        SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, subj_data_dict)
 
         # check whether adding a covariate
-        SPMCovariates.spm_replace_stats_add_simplecovariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interactions, data_file, cov_centering)
+        SPMCovariates.spm_replace_stats_add_covariates(self.project, out_batch_job, groups_instances, covs, 1, cov_interactions, subj_data_dict, cov_centering)
 
         # explicit mask
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)

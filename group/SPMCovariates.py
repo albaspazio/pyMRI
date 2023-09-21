@@ -1,4 +1,5 @@
 from data.utilities import list2spm_text_column
+from group.spm_utilities import Covariate
 from utility.fileutilities import sed_inplace
 
 # class used to replace covariates strings in SPM batch
@@ -7,8 +8,9 @@ class SPMCovariates:
     # SIMPLE covariation. does not manage group x covariate. For each covariate, it concatenates the values from many groups (if present) into a single vector.
     # interaction=1 : no interaction, otherwise specify factors (1-based + 1, e.g. first factor = 2)
     @staticmethod
-    def spm_replace_stats_add_simplecovariates(project, out_batch_job, groups_instances, covs=None, batch_id=1, cov_interaction=None, datafile=None, centering=False):
+    def spm_replace_stats_add_covariates(project, out_batch_job, groups_instances, covs=None, batch_id=1, cov_interaction=None, datafile=None, centering=False):
 
+        # -------------------------------------------------------------------------------------------------------------
         if covs is None:
             sed_inplace(out_batch_job, "<COV_STRING>", "matlabbatch{1}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});")
             return
@@ -16,23 +18,36 @@ class SPMCovariates:
             if not isinstance(covs, list):
                 raise Exception("ERROR in spm_replace_stats_add_simplecovariates, regressors (" + str(covs) + ") is not a list....returning")
 
-        if centering:
-            icc = 1
-        else:
-            icc = 5
-
         ncov = len(covs)
-        if cov_interaction is None:     # assumes no interaction for all covs
-            cov_interaction = [1 for _ in range(ncov)]
+        if cov_interaction is None:
+            # general case when no interaction is specified
+            if len(groups_instances) == 1:
+                # one group, no interaction
+                cov_interaction = [1 for _ in covs]
+            else:
+                # if covariates : they interact with first factor (group)
+                # if nuisance   : no interaction
+                cov_interaction = []
+                for c in covs:
+                    if isinstance(c, Covariate):
+                        cov_interaction.append(2)
+                    else:
+                        cov_interaction.append(1)
 
         cint = len(cov_interaction)
         if ncov != cint:
             print("ERROR: spm_replace_stats_add_simplecovariates. number of covariates and their interaction differs")
             return
 
+        # -------------------------------------------------------------------------------------------------------------
         if ncov == 1:
             SPMCovariates.spm_replace_stats_add_1cov_manygroups(out_batch_job, groups_instances, project, covs[0], batch_id, cov_interaction, datafile)
         else:
+            if centering:
+                icc = 1
+            else:
+                icc = 5
+
             cov_string  = ""
             for cov_id in range(ncov):
                 cov = []
