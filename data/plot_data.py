@@ -33,6 +33,7 @@ def histogram_plot_2groups(string_list, fnameout, grp1_label, col_id=3, measure_
     plt.show()
 
     plt.savefig(fnameout, dpi=1200)
+    plt.close()
 
 
 # on the X-axis goes a the order with the list (like an histogram, to separate two groups
@@ -66,6 +67,7 @@ def scatter_plot_2groups(string_list, xdata, fnameout, grp1_label, col_id=3, col
     plt.show()
 
     plt.savefig(fnameout, dpi=1200)
+    plt.close()
 
 
 # on the X-axis goes a the order with the list (like an histogram, to separate two groups
@@ -82,10 +84,11 @@ def scatter_plot_2dataseries(ydata1, xdata1, ydata2, xdata2, fnameout, colors=("
     plt.show()
 
     plt.savefig(fnameout, dpi=1200)
+    plt.close()
 
 
 # on the X-axis goes a the order with the list (like an histogram, to separate two groups
-def scatter_plot_dataserie(ydata, xdata, fnameout, color="red", label="control", show=True):
+def scatter_plot_dataserie(ydata, xdata, fnameout, color="red", label="control", show=False):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)  # , axisbg="1.0")
 
@@ -99,3 +102,5 @@ def scatter_plot_dataserie(ydata, xdata, fnameout, color="red", label="control",
 
     if len(fnameout) > 0:
         plt.savefig(fnameout, dpi=1200)
+
+    plt.close()

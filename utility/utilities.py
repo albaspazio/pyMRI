@@ -90,3 +90,10 @@ def get_col_from_listmatrix(matrix, zerocolid):
 
     return [ r[zerocolid] for r in matrix ]
 
+
+def remove_items_from_list(origlist, list2remove):
+    res = []
+    for orig_list in origlist:
+        if orig_list not in list2remove:
+            res.append(orig_list)
+    return res

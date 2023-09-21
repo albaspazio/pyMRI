@@ -381,7 +381,7 @@ class GroupAnalysis:
     # returns tracts_data
     @staticmethod
     def tbss_summarize_clusterized_folder(in_clust_res_dir, datas, data_labels, tbss_folder, modality="FA",
-                                          subj_img_postfix="_FA_FA_to_target", ofn="scatter_tracts_") -> list:
+                                          subj_img_postfix="_FA_FA_to_target", ofn="scatter_tracts_") -> tuple:
 
         ndata       = len(data_labels)
         whatdata    = datas[0][0]
@@ -448,7 +448,7 @@ class GroupAnalysis:
         with open(res_file, "w") as f:
             f.write(str_data)
 
-        return [tracts_labels, tracts_data]
+        return res_file
 
     # create a new tbss analysis folder (only stats one), filtering an existing analysis folder
     # vols2keep: 0-based list of indices to keep
