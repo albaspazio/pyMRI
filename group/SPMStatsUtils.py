@@ -54,7 +54,7 @@ class SPMStatsUtils:
     # group_instances is a list of subjects' instances
     # image_description: {"type": ct | dartel | vbm, "folder": root path for dartel}
     @staticmethod
-    def compose_images_string_1GROUP_MULTREGR(group_instances, out_batch_job, grp_input_imgs):
+    def compose_images_string_1GROUP_MULTREGR(group_instances, out_batch_job, grp_input_imgs, mustExist=True):
 
         img_type    = grp_input_imgs.type
         img_folder  = grp_input_imgs.folder
@@ -68,13 +68,13 @@ class SPMStatsUtils:
             elif img_type == "dartel":
                 img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
 
-            img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_1GROUP_MULTREGR")
+            img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_1GROUP_MULTREGR")
             cells_images = cells_images + "\'" + img + "\'\r"
 
         sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
 
     @staticmethod
-    def compose_images_string_1W(groups_instances, out_batch_job, grp_input_imgs):
+    def compose_images_string_1W(groups_instances, out_batch_job, grp_input_imgs, mustExist=True):
 
         img_type    = grp_input_imgs.type
         img_folder  = grp_input_imgs.folder
@@ -94,7 +94,7 @@ class SPMStatsUtils:
                 elif img_type == "dartel":
                     img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
 
-                img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_1W")
+                img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_1W")
 
                 grp1_images = grp1_images + "\'" + img + "\'\n"
             grp1_images = grp1_images + "\n};"
@@ -104,7 +104,7 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
 
     @staticmethod
-    def compose_images_string_2W(factors, out_batch_job, grp_input_imgs):
+    def compose_images_string_2W(factors, out_batch_job, grp_input_imgs, mustExist=True):
 
         img_type    = grp_input_imgs.type
         img_folder  = grp_input_imgs.folder
@@ -137,7 +137,7 @@ class SPMStatsUtils:
                     elif img_type == "dartel":
                         img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
 
-                    img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_2W")
+                    img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_2W")
 
                     cells_images = cells_images + "'" + img + "'\n"
                 cells_images = cells_images + "};"
@@ -149,7 +149,7 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<FACTORS_CELLS>",   cells_images)
 
     @staticmethod
-    def compose_images_string_2sTT(groups_instances, out_batch_job, grp_input_imgs):
+    def compose_images_string_2sTT(groups_instances, out_batch_job, grp_input_imgs, mustExist=True):
 
         img_type    = grp_input_imgs.type
         img_folder  = grp_input_imgs.folder
@@ -168,7 +168,7 @@ class SPMStatsUtils:
             elif img_type == "fmri":
                 img = os.path.join(subj.fmri_dir, "stats", img_folder, grp_input_imgs.name + ".nii")
 
-            img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_2sTT")
+            img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_2sTT")
 
             grp1_images = grp1_images + "\'" + img + "\'\n"
         grp1_images = grp1_images + "\n}"
@@ -183,7 +183,7 @@ class SPMStatsUtils:
             elif img_type == "fmri":
                 img = os.path.join(subj.fmri_dir, "stats", img_folder, grp_input_imgs.name + ".nii")
 
-            img = Image(img, must_exist=True, msg="SPMStatsUtils.compose_images_string_2sTT")
+            img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_2sTT")
 
             grp2_images = grp2_images + "\'" + img + "\'\n"
         grp2_images = grp2_images + "\n}"
@@ -241,7 +241,7 @@ class SPMStatsUtils:
         if method == "subj_icv":  # read icv file from each subject/mpr/spm folder
 
             if project.data.exist_filled_column("icv", slabels):
-                str_icvs = list2spm_text_column(project.get_filtered_column("icv", subjs_instances)[0])
+                str_icvs = list2spm_text_column(project.get_filtered_column_by_subjects("icv", subjs_instances)[0])
                 # raise DataFileException("spm_replace_global_calculation", "given data_file does not contain the column icv")
             else:
                 icvs = []

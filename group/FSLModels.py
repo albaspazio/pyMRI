@@ -108,8 +108,8 @@ class FSLModels:
             all_subj += labels
             nsubjs += len(labels)
 
-        covs_values = self.project.get_filtered_columns(covs_label, all_subj, data=data)[0]
-        nuis_values = self.project.get_filtered_columns(nuis_label, all_subj, data=data)[0]
+        covs_values = self.project.get_filtered_columns_by_subjects(covs_label, all_subj, data=data)[0]
+        nuis_values = self.project.get_filtered_columns_by_subjects(nuis_label, all_subj, data=data)[0]
 
         # ------------------------------------------------------------------------------------
         # define output filename...add regressors/nuis to given ofn containing groups info

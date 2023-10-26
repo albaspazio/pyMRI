@@ -25,7 +25,7 @@ class SPMModels:
                                     input_images=None,  # instance of class GrpInImages, containing info to retrieve input images
                                     covs=None, cov_interactions=None, cov_centering=False, data_file=None,
                                     glob_calc=None, expl_mask="icv", spm_template_name=None,
-                                    post_model=None, runit=True):
+                                    post_model=None, runit=True, mustExist=True):
 
         # ---------------------------------------------------------------------------------------------------------------------------------
         # sanity check
@@ -100,13 +100,13 @@ class SPMModels:
 
         # compose images string
         if stat_type == SPMConstants.MULTREGR:
-            SPMStatsUtils.compose_images_string_1GROUP_MULTREGR(groups_instances[0], out_batch_job, input_images)
+            SPMStatsUtils.compose_images_string_1GROUP_MULTREGR(groups_instances[0], out_batch_job, input_images, mustExist)
         elif stat_type == SPMConstants.TSTT:
-            SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, input_images)
+            SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, input_images, mustExist)
         elif stat_type == SPMConstants.OWA:
-            SPMStatsUtils.compose_images_string_1W(groups_instances, out_batch_job, input_images)
+            SPMStatsUtils.compose_images_string_1W(groups_instances, out_batch_job, input_images, mustExist)
         elif stat_type == SPMConstants.TWA:
-            SPMStatsUtils.compose_images_string_2W(groups_instances, out_batch_job, input_images)
+            SPMStatsUtils.compose_images_string_2W(groups_instances, out_batch_job, input_images, mustExist)
 
         # global calculation
         SPMStatsUtils.spm_replace_global_calculation(self.project, out_batch_job, glob_calc, groups_instances, subj_data_dict)

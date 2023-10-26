@@ -301,10 +301,10 @@ if __name__ == "__main__":
         # out_valid_columns.append("hamd")
 
         col     = subjects_data.get_filtered_column("VIIIA mean cortical thickness norm.")
-        cols     = subjects_data.get_filtered_columns(["VIIIA mean cortical thickness norm.", "VIIIA mean cortical thickness norm."])
+        cols     = subjects_data.get_filtered_columns_by_subjects(["VIIIA mean cortical thickness norm.", "VIIIA mean cortical thickness norm."])
 
         dem_col = subjects_data.get_filtered_column("VIIIA mean cortical thickness norm.", demean=True)
-        dem_cols = subjects_data.get_filtered_columns(["VIIIA mean cortical thickness norm.", "VIIIA mean cortical thickness norm."], demean_flags=[True,True])
+        dem_cols = subjects_data.get_filtered_columns_by_subjects(["VIIIA mean cortical thickness norm.", "VIIIA mean cortical thickness norm."], demean_flags=[True, True])
 
 
         subjects_data.save_data(output_file, outcolnames=out_valid_columns_shorts2[1:len(out_valid_columns_shorts2)])

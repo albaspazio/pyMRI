@@ -155,12 +155,23 @@ class DataProject:
     # ==================================================================================================================
     # returns a matrix (values x subjects) containing values of the requested columns of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_columns(self, columns_list, grouplabel_or_subjlist, data=None, sort=False, sess_id=1):
+    def get_filtered_columns_by_subjects(self, columns_list, grouplabel_or_subjlist, data=None, sort=False, sess_id=1):
 
         subj_list  = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
         valid_data = self.validate_data(data)
         if valid_data is not None:
-            return valid_data.get_filtered_columns(columns_list, subj_list, sort=sort)
+            return valid_data.get_filtered_columns_by_subjects(columns_list, subj_list, sort=sort)
+        else:
+            return None
+
+    # returns a matrix (values x subjects) containing values of the requested columns of given subjects
+    # user can also pass a datafile path or a custom subj_dictionary
+    def get_filtered_columns_by_values(self, columns_list, grouplabel_or_subjlist, data=None, sort=False, sess_id=1):
+
+        subj_list  = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
+        valid_data = self.validate_data(data)
+        if valid_data is not None:
+            return valid_data.get_filtered_columns_by_values(columns_list, subj_list, sort=sort)
         else:
             return None
 
@@ -168,7 +179,7 @@ class DataProject:
     # - [values]
     # - [labels]
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_column(self, column, grouplabel_or_subjlist, data=None, sort=False, sess_id=1):
+    def get_filtered_column_by_subjects(self, column, grouplabel_or_subjlist, data=None, sort=False, sess_id=1):
 
         subj_list   = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
         valid_data  = self.validate_data(data)

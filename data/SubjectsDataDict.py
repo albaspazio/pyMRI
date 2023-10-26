@@ -214,8 +214,49 @@ class SubjectsDataDict(dict):
         res_str = self.__to_str(res, ndecimals)
         return res_str, lab
 
-    # returns a tuple:  subj labels, filtered matrix [subj x colnames]
-    def get_filtered_columns(self, colnames, subj_labels=None, sort=False, demean_flags=None, ndecim=4) -> tuple:
+    # returns a tuple:  subj labels, filtered matrix [colnames x subjs]
+    def get_filtered_columns_by_values(self, colnames, subj_labels=None, sort=False, demean_flags=None, ndecim=4) -> tuple:
+
+        if subj_labels is None:
+            subj_labels = self.labels
+
+        cols_values = []
+
+        # check whether necessary in sort step...
+        subj_lab = []
+        for subj in subj_labels:
+            subj_lab.append(subj)
+
+        try:
+            # create ncols x nsubj array
+            for colname in colnames:
+                col_row = []
+                for subj in subj_labels:
+                    col_row.append(self[subj][colname])
+                cols_values.append(col_row)
+
+            if demean_flags is not None:
+                if len(colnames) != len(demean_flags):
+                    msg = "Error in get_filtered_columns...lenght of colnames is different from demean_flags"
+                    raise Exception(msg)
+                else:
+                    # demean requested columns
+                    for idcol, dem_col in enumerate(demean_flags):
+                        if dem_col:
+                            cols_values[idcol] = demean_serie(cols_values[idcol], ndecim)
+
+        except KeyError:
+            raise DataFileException("SubjectsDataDict.get_filtered_columns", "data of given subject (" + subj + ") is not present in the loaded data")
+
+        if sort:
+            sort_schema = argsort(cols_values)
+            cols_values.sort()
+            subj_lab = reorder_list(subj_lab, sort_schema)
+
+        return cols_values, subj_lab
+
+    # returns a tuple:  subj labels, filtered matrix [subjs x colnames]
+    def get_filtered_columns_by_subjects(self, colnames, subj_labels=None, sort=False, demean_flags=None, ndecim=4) -> tuple:
 
         if subj_labels is None:
             subj_labels = self.labels

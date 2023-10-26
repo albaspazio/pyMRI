@@ -49,7 +49,7 @@ if __name__ == "__main__":
         # sp_sts              = data.get_filtered_column("sp_sts")                                # tuple[2] of  [values], subj_label
         # age_spsts           = data.get_filtered_columns(["age", "sp_sts"])                      # tuple[2] of  [values], subj_label
         # age_spsts_bist      = data.get_filtered_columns(["age", "sp_sts", "bis_t"])             # tuple[2] of  [values], subj_label
-        age_spsts_splr_bist = data.get_filtered_columns(data_labels)                              # tuple[2] of  [values], subj_label
+        age_spsts_splr_bist = data.get_filtered_columns_by_subjects(data_labels)                              # tuple[2] of  [values], subj_label
 
 
         # ==================================================================================================================

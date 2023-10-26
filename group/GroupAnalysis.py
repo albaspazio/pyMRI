@@ -14,6 +14,7 @@ from utility.utilities import listToString
 from utility.fileutilities import sed_inplace
 from utility.utilities import get_col_from_listmatrix
 
+
 class GroupAnalysis:
 
     def __init__(self, proj):
