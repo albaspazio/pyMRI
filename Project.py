@@ -8,6 +8,8 @@ from inspect import signature
 from shutil import copyfile
 from threading import Thread
 
+from typing import List
+
 from data.SubjectsDataDict import SubjectsDataDict
 from subject.Subject import Subject
 from utility.exceptions import SubjectListException
@@ -98,7 +100,7 @@ class Project:
     # if must_exist=true:   loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
     # if must_exist=false:  only create
     # returns this list
-    def load_subjects(self, group_label, sess_id=1, must_exist=True):
+    def load_subjects(self, group_label, sess_id=1, must_exist=True) -> List[Subject]:
 
         try:
             subjects           = self.get_subjects(group_label, sess_id, must_exist)
@@ -132,7 +134,7 @@ class Project:
     # ==================================================================================================================
     # IN:   GROUP_LABEL | SUBLABELS LIST
     # OUT:  [VALID SUBJECT INSTANCES LIST]
-    def get_subjects(self, group_or_subjlabels, sess_id=1, must_exist=True):
+    def get_subjects(self, group_or_subjlabels, sess_id=1, must_exist=True) -> List[Subject]:
         valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, sess_id, must_exist)
         return self.__get_subjects_from_labels(valid_subj_labels, sess_id, must_exist)
 
@@ -196,7 +198,7 @@ class Project:
     # create and returns a list of valid subjects instances given a subjlabels list
     # IN:   SUBJLABELS LIST
     # OUT:  VALID SUBJS INSTANCES
-    def __get_subjects_from_labels(self, subj_labels, sess_id=1, must_exist=True):
+    def __get_subjects_from_labels(self, subj_labels, sess_id=1, must_exist=True) -> List[Subject]:
         if must_exist:
             subj_labels = self.__get_valid_subjlabels(subj_labels)
         return [Subject(subj_lab, self, sess_id) for subj_lab in subj_labels]
