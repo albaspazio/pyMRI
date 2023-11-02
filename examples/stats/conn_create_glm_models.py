@@ -29,35 +29,35 @@ if __name__ == "__main__":
         # PROCESSING 1: test create_regressors_file
         # ======================================================================================================================
 
-        # # ONE GROUP
-        # regressors = [Nuisance("age"), Nuisance("gender")]
-        # connmodels.create_regressors_file(outfolder, regressors, ["td_nk"], "td_nk_x_age_gender")
+        # ONE GROUP
+        regressors = [Nuisance("age"), Nuisance("gender")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk"], "td_nk_x_age_gender")
+
+        regressors = [Covariate("FS0"), Covariate("dis_dur")]
+        connmodels.create_regressors_file(outfolder, regressors, ["psi_nk"], "td_nk_FS0_disdur")
+
+        regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("dis_dur")]
+        connmodels.create_regressors_file(outfolder, regressors, ["psi_nk"], "td_nk_FS0_disdur_x_age_gender")
+
+        # TWO GROUPS
+        regressors = [Nuisance("age"), Nuisance("gender")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "psi_nk"], "td_vs_psi_x_age_gender")
         #
-        # regressors = [Covariate("FS0"), Covariate("dis_dur")]
-        # connmodels.create_regressors_file(outfolder, regressors, ["psi_nk"], "td_nk_FS0_disdur")
-        #
-        # regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("dis_dur")]
-        # connmodels.create_regressors_file(outfolder, regressors, ["psi_nk"], "td_nk_FS0_disdur_x_age_gender")
-        #
-        # # TWO GROUPS
-        # regressors = [Nuisance("age"), Nuisance("gender")]
-        # connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "psi_nk"], "td_vs_psi_x_age_gender")
-        # #
-        # regressors = [Covariate("FS0"), Covariate("FS1")]
-        # connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "psi_nk"], "td_vs_psi_fs0_fs1")
-        #
-        # regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
-        # connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "psi_nk"], "td_vs_psi_fs0_fs1_x_age_gender")
-        #
-        # # THREE GROUPS
-        # regressors = [Nuisance("age"), Nuisance("gender")]
-        # connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_x_age_gender")
-        #
-        # regressors = [Covariate("FS0"), Covariate("FS1")]
-        # connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_fs0_fs1")
-        #
-        # regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
-        # connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_fs0_fs1_x_age_gender")
+        regressors = [Covariate("FS0"), Covariate("FS1")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "psi_nk"], "td_vs_psi_fs0_fs1")
+
+        regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "psi_nk"], "td_vs_psi_fs0_fs1_x_age_gender")
+
+        # THREE GROUPS
+        regressors = [Nuisance("age"), Nuisance("gender")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_x_age_gender")
+
+        regressors = [Covariate("FS0"), Covariate("FS1")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_fs0_fs1")
+
+        regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_fs0_fs1_x_age_gender")
 
         # ======================================================================================================================
         # PROCESSING 2: test create_regressors_file_ofsubset
@@ -92,6 +92,44 @@ if __name__ == "__main__":
 
         regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
         connmodels.create_regressors_file_ofsubset(outfolder, regressors, "all_nk", ["td_nk", "sk_nk", "bd_nk"], "subset_td_sk_bd_fs0_fs1_x_age_gender")
+
+        # ======================================================================================================================
+        # PROCESSING
+        # ======================================================================================================================
+
+        # ONE GROUP
+
+        regressors = [Nuisance("age"), Nuisance("gender")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk"], "td_nk_x_age_gender")
+
+        regressors = [Covariate("FS0"), Covariate("dis_dur")]
+        connmodels.create_regressors_file(outfolder, regressors, ["psi_nk"], "td_nk_FS0_disdur")
+
+        regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("dis_dur")]
+        connmodels.create_regressors_file(outfolder, regressors, ["psi_nk"], "td_nk_FS0_disdur_x_age_gender")
+
+
+        # TWO GROUPS
+
+        regressors = [Nuisance("age"), Nuisance("gender")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "psi_nk"], "td_vs_psi_x_age_gender")
+        #
+        regressors = [Covariate("FS0"), Covariate("FS1")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "psi_nk"], "td_vs_psi_fs0_fs1")
+
+        regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "psi_nk"], "td_vs_psi_fs0_fs1_x_age_gender")
+
+        # THREE GROUPS
+
+        regressors = [Nuisance("age"), Nuisance("gender")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_x_age_gender")
+
+        regressors = [Covariate("FS0"), Covariate("FS1")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_fs0_fs1")
+
+        regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_fs0_fs1_x_age_gender")
 
     except Exception as e:
         traceback.print_exc()

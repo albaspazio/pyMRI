@@ -214,8 +214,6 @@ class ConnModels:
             if group_id == -1:
                 self.addline2string(empty_row)
             else:
-        # for gr_id, gr in enumerate(subj_labels_by_groups):
-        #         for _ in subj_labels_by_groups[gr_id]:
                 string = groups_strings[group_id]
 
                 for nuis_id, _ in enumerate(nuis_values):
