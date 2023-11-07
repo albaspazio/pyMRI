@@ -166,8 +166,8 @@ class ConnModels:
             all_subj += labels
             nsubjs += len(labels)
 
-        covs_values = self.project.get_filtered_columns_by_values(covs_label, all_subj, data=data)[0]
-        nuis_values = self.project.get_filtered_columns_by_values(nuis_label, all_subj, data=data)[0]
+        # covs_values = self.project.get_filtered_columns_by_values(covs_label, all_subj, data=data)[0]
+        # nuis_values = self.project.get_filtered_columns_by_values(nuis_label, all_subj, data=data)[0]
 
         # ------------------------------------------------------------------------------------
         # define output filename...add regressors/nuis to given ofn containing groups info
@@ -200,7 +200,7 @@ class ConnModels:
             print("cannot manage more than 4 groups")
             return
 
-        curr_subjid = 0
+        # curr_subjid = 0
 
         # cycle through the subjects of the entire dataset
         for slab in whole_subjest_labels:
@@ -216,8 +216,21 @@ class ConnModels:
             else:
                 string = groups_strings[group_id]
 
-                for nuis_id, _ in enumerate(nuis_values):
-                    string = string + " " + str(nuis_values[nuis_id][curr_subjid])
+                for nuis in nuis_label:
+                    string = string + " " + str(self.project.data.get_subject_col_value(slab, nuis))
+
+                for cov in covs_label:
+                    cov_value           = str(covs_values[cov_id][curr_subjid])
+                    covsvalue           = ["0" for _ in range(ngroups)]
+                    covsvalue[group_id] = cov_value
+                    value_string        = " ".join(covsvalue)
+                    string              = string + " " + value_string
+
+                    string = string + " " + str(self.project.data.get_subject_col_value(slab, nuis))
+
+
+                # for nuis_id, _ in enumerate(nuis_values):
+                #     string = string + " " + str(nuis_values[nuis_id][curr_subjid])
 
                 for cov_id, voc in enumerate(covs_values):
                     cov_value           = str(covs_values[cov_id][curr_subjid])
@@ -227,7 +240,7 @@ class ConnModels:
                     string              = string + " " + value_string
 
                 self.addline2string(string)
-                curr_subjid = curr_subjid + 1
+                # curr_subjid = curr_subjid + 1
 
         write_text_file(output_covsfile, self.string)
 

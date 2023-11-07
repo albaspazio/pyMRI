@@ -135,7 +135,7 @@ class SubjectsDataDict(dict):
             except:
                 return ()
 
-    def get_subjects_list(self, subj_names=None) -> list:
+    def get_subjects_list(self, subj_names=None) -> List[dict]:
 
         if subj_names is None:
             subj_names = self.labels
@@ -154,6 +154,12 @@ class SubjectsDataDict(dict):
             if k in subj_names:
                 sdict[k] = v
         return sdict
+
+    def get_subject_col_value(self, slabel, colname):
+        try:
+            return self[slabel][colname]
+        except Exception as e:
+            raise Exception("get_subject_col_value error: slabel=" + slabel + ", colname:" + colname)
 
     # return a list of subjects values
     def get_subjects_filtered_columns(self, colnames, subj_names=None):
