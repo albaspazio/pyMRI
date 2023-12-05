@@ -49,6 +49,18 @@ class Subject:
         self.dti        = SubjectDti(self, self._global)
         self.epi        = SubjectEpi(self, self._global)
 
+    def hasSeq(self, type, images_labels=None):
+        if type == "T1":
+            return self.hasT1
+        elif type == "RS":
+            return self.hasRS
+        elif type == "DTI":
+            return self.hasDTI
+        elif type == "T2":
+            return self.hasT2
+        elif type == "fMRI":
+            return self.hasFMRI(images_labels)
+
     @property
     def hasT1(self):
         return self.t1_data.exist

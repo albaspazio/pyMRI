@@ -200,8 +200,6 @@ class ConnModels:
             print("cannot manage more than 4 groups")
             return
 
-        # curr_subjid = 0
-
         # cycle through the subjects of the entire dataset
         for slab in whole_subjest_labels:
 
@@ -217,34 +215,19 @@ class ConnModels:
                 string = groups_strings[group_id]
 
                 for nuis in nuis_label:
-                    string = string + " " + str(self.project.data.get_subject_col_value(slab, nuis))
+                    string = string + " " + str(data.get_subject_col_value(slab, nuis))
 
                 for cov in covs_label:
-                    cov_value           = str(covs_values[cov_id][curr_subjid])
-                    covsvalue           = ["0" for _ in range(ngroups)]
-                    covsvalue[group_id] = cov_value
-                    value_string        = " ".join(covsvalue)
-                    string              = string + " " + value_string
-
-                    string = string + " " + str(self.project.data.get_subject_col_value(slab, nuis))
-
-
-                # for nuis_id, _ in enumerate(nuis_values):
-                #     string = string + " " + str(nuis_values[nuis_id][curr_subjid])
-
-                for cov_id, voc in enumerate(covs_values):
-                    cov_value           = str(covs_values[cov_id][curr_subjid])
+                    cov_value           = str(data.get_subject_col_value(slab, cov))
                     covsvalue           = ["0" for _ in range(ngroups)]
                     covsvalue[group_id] = cov_value
                     value_string        = " ".join(covsvalue)
                     string              = string + " " + value_string
 
                 self.addline2string(string)
-                # curr_subjid = curr_subjid + 1
 
         write_text_file(output_covsfile, self.string)
 
     def addline2string(self, line=""):
         self.string += line
         self.string += "\n"
-        

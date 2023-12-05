@@ -218,6 +218,21 @@ class Project:
 
         return incomplete_subjects
 
+    def hasSeq(self, seq_type, group_or_subjlabels=None, sess_id=1, images_labels=None):
+
+        invalid_subjs = ""
+        valid_subjs = self.get_subjects(group_or_subjlabels, sess_id)
+        for subj in valid_subjs:
+            if not subj.hasSeq(seq_type, images_labels):
+                invalid_subjs = invalid_subjs + subj.label + "\n"
+
+        if len(invalid_subjs) > 0:
+            print("ERROR.... the following subjects prevent the completion of the " + seq_type + " analysis:\n" + invalid_subjs)
+        else:
+            print("OK....... " + seq_type + " analysis can be run")
+
+        return invalid_subjs
+
     # check whether all subjects defined by given group_or_subjlabels have the necessary files to perform given analysis
     # allowed analysis are: vbm_fsl, vbm_spm, ct, tbss, bedpost, xtract_single, xtract_group, melodic, sbfc, fmri
     # returns a string with the subjects not ready
@@ -227,10 +242,10 @@ class Project:
         valid_subjs = self.get_subjects(group_or_subjlabels, sess_id)
         for subj in valid_subjs:
             if not subj.can_run_analysis(analysis_type, analysis_params):
-                invalid_subjs = invalid_subjs + subj.label + ", "
+                invalid_subjs = invalid_subjs + subj.label + "\n"
 
         if len(invalid_subjs) > 0:
-            print("ERROR.... the following subjects prevent the completion of the " + analysis_type + " analysis: " + invalid_subjs)
+            print("ERROR.... the following subjects prevent the completion of the " + analysis_type + " analysis:\n" + invalid_subjs)
         else:
             print("OK....... " + analysis_type + " analysis can be run")
 
