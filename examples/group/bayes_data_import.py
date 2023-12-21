@@ -17,6 +17,7 @@ if __name__ == "__main__":
     # check global data and external toolboxes
     # ======================================================================================================================
     fsl_code = "604"
+
     try:
         globaldata = Global(fsl_code)
 
@@ -26,8 +27,7 @@ if __name__ == "__main__":
         proj_name           = "test"
         project             = DataProject(proj_name, globaldata)
 
-        bayes_db_file       = os.path.join(project.input_data_dir, "BAYES-PSIC.xlsx")        # input
-
+        bayes_db_file       = os.path.join(project.input_data_dir, "BAYES-PSIC_299.xlsx")        # input
 
         # ======================================================================================================================
         # START !!!
@@ -38,7 +38,6 @@ if __name__ == "__main__":
         # check is_equal works
         # bayes_db2           = BayesDB(bayes_db_file)
         # bayes_db.is_equal(bayes_db2)
-
 
         # ===========================================================================================================
         #region create a new excel after removing some subjects
@@ -107,7 +106,7 @@ if __name__ == "__main__":
         newbayes_db     = newbayes_db.add_new_subjects(newsubj_db, True)
         newbayes_db     = newbayes_db.add_new_subjects(newsubj_db2, True)
 
-        newbayes_db_file327  = os.path.join(project.input_data_dir, "BAYES-PSIC_327.xlsx")
+        newbayes_db_file327  = os.path.join(project.input_data_dir, "BAYES-PSIC.xlsx")
 
         newbayes_db.save_excel(newbayes_db_file327)
         #endregion

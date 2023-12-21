@@ -4,6 +4,7 @@ import pandas
 
 from data.MSHDB     import MSHDB
 from data.Sheets    import Sheets
+from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
 
 
@@ -77,7 +78,7 @@ class BayesDB(MSHDB):
         total   = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("OA", "==", 1)])
 
         return [total]
-    #endregion
+    # endregion
 
     def __format_dates(self):
         for sh in self.dates:
