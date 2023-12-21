@@ -98,7 +98,7 @@ if __name__ == "__main__":
                 for id,data_label in enumerate(data_labels):
                     for idt,trlab in enumerate(valid_tract_labels):
                         fig_file = os.path.join(plot_folder, trlab + "_" + data_label + ".png")
-                        scatter_plot_dataserie(data.get_column(data_label), data.get_column(trlab), fig_file)
+                        scatter_plot_dataserie(data.get_subjects_column(colname=data_label), data.get_subjects_column(colname=trlab), fig_file)
 
     except Exception as e:
         print(e)

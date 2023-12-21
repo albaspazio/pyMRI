@@ -2,19 +2,17 @@ import csv
 import os
 from statistics import mean
 
+from utility.fileutilities import write_text_file
+# read file as:   lab1=val1\nlab2=val2\n....etc
+from utility.utilities import listToString
+
+
 # =====================================================================================
 # ACCESSORY
 # =====================================================================================
-
 # read files like:
 # var1=value1
 # varN=valueN
-# from data.SubjectsDataDict import SubjectsDataDict
-from utility.exceptions import DataFileException
-
-# read file as:   lab1=val1\nlab2=val2\n....etc
-from utility.utilities import listToString
-from utility.fileutilities import write_text_file
 
 
 def read_varlist_file(filepath, comment_char="#"):
@@ -148,3 +146,100 @@ def demean_serie(serie, ndecim=4) -> list:
 
     m = mean(serie)
     return [round(v - m, ndecim) for v in serie]
+
+
+class FilterValues:
+
+    def __init__(self, colname:str, operation:str, par1, par2=None):
+
+        self.colname= colname
+        self.op     = operation
+        self.par1   = par1
+        self.par2   = par2
+
+    def isValid(self, value):
+
+        if self.op == "=" or self.op == "==":
+            if value == self.par1:
+                return True
+            else:
+                return False
+        elif self.op == "!=":
+            if value != self.par1:
+                return True
+            else:
+                return False
+        elif self.op == ">":
+            if value > self.par1:
+                return True
+            else:
+                return False
+        elif self.op == ">=":
+            if value >= self.par1:
+                return True
+            else:
+                return False
+        elif self.op == "<":
+            if value < self.par1:
+                return True
+            else:
+                return False
+        elif self.op == "<=":
+            if value <= self.par1:
+                return True
+            else:
+                return False
+        elif self.op == "<>":
+            if self.par2 > value > self.par1:
+                return True
+            else:
+                return False
+        elif self.op == "<=>":
+            if self.par2 >= value >= self.par1:
+                return True
+            else:
+                return False
+
+    def areValid(self, values):
+
+        res = []
+        valid = []
+        if self.op == "=" or self.op == "==":
+            if values == self.par1:
+                res.append(values)
+                valid.append(True)
+            else:
+                valid.append(False)
+        elif self.op == ">":
+            if values > self.par1:
+                res.append(values)
+        elif self.op == ">=":
+            if values >= self.par1:
+                res.append(values)
+                valid.append(True)
+            else:
+                valid.append(False)
+        elif self.op == "<":
+            if values < self.par1:
+                res.append(values)
+                valid.append(True)
+            else:
+                valid.append(False)
+        elif self.op == "<=":
+            if values <= self.par1:
+                res.append(values)
+                valid.append(True)
+            else:
+                valid.append(False)
+        elif self.op == "<>":
+            if self.par2 > values > self.par1:
+                res.append(values)
+                valid.append(True)
+            else:
+                valid.append(False)
+        elif self.op == "<=>":
+            if self.par2 >= values >= self.par1:
+                res.append(values)
+                valid.append(True)
+            else:
+                valid.append(False)

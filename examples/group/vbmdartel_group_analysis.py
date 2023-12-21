@@ -57,8 +57,8 @@ if __name__ == "__main__":
         #                                                         expl_mask="icv", spm_template_name="spm_stats_2samples_ttest_check_estimate",
         #                                                         spm_contrasts_template_name="spm_stats_2samplesttest_contrasts_results",
         #                                                         stats_params=None, runit=True, c1_name = "A > B", c2_name = "B > A"):
-        groups_instances    = [ project.get_subjects("grp1"),
-                                project.get_subjects("grp2")]
+        groups_instances    = [project.get_subjects("grp1"),
+                               project.get_subjects("grp2")]
         covs                = [Nuisance("gender"), Nuisance("age")]
         anal_name           = "2stt_age_gender"
         postmodel           = PostModel("group_postmodel_spm_stats_2samples_ttest_contrasts_results",
@@ -71,9 +71,9 @@ if __name__ == "__main__":
         #                                                   data_file=None, glob_calc="subj_icv", cov_interaction=None,
         #                                                   expl_mask="icv", spm_template_name="spm_stats_1Wanova_check_estimate",
         #                                                   spm_contrasts_template_name="", runit=True):
-        groups_instances    = [ project.get_subjects("grp1"),
-                                project.get_subjects("grp2"),
-                                project.get_subjects("grp3")]
+        groups_instances    = [project.get_subjects("grp1"),
+                               project.get_subjects("grp2"),
+                               project.get_subjects("grp3")]
         covs                = [Nuisance("gender"), Nuisance("age")]
         anal_name           = "1Wanova_3_groups_age_gender"
         postmodel           = PostModel("fullpath2template", regressors=covs)

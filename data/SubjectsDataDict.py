@@ -84,30 +84,6 @@ class SubjectsDataDict(dict):
 
             return self
 
-    # add new subjects
-    def add(self, newsubjs, can_overwrite=False, can_add_incomplete=False):
-
-        if not isinstance(newsubjs, dict):
-            raise Exception("Error in SubjectsDataDict.add, given newsubjs is not a dictionary")
-
-        names = list(newsubjs.keys())
-        nsubjs = len(names)
-        if nsubjs == 0:
-            raise Exception("Error in SubjectsDataDict.add, given newsubjs is an empty dictionary")
-
-        elems = list(list(newsubjs.values())[0].keys())
-        elems.insert(0, "subj")
-
-        for name in names:
-            if self.exist_subject(name) and not can_overwrite:
-                raise Exception("Error in SubjectsDataDict.add, you are trying to overwrite existing subject " + name)
-
-        if len(self.header) > 0:
-            if Counter(elems) != Counter(self.header) and not can_add_incomplete:
-                raise Exception("Error in SubjectsDataDict.add, given newsubj does not contain the same elements")
-
-        self.update(newsubjs)
-
     def filter_columns(self, validcols):
         for subj in self:
             sub_values = {}
@@ -135,7 +111,7 @@ class SubjectsDataDict(dict):
             except:
                 return ()
 
-    def get_subjects_list(self, subj_names=None) -> List[dict]:
+    def get_subjects(self, subj_names=None) -> List[dict]:
 
         if subj_names is None:
             subj_names = self.labels
@@ -145,7 +121,7 @@ class SubjectsDataDict(dict):
         except Exception as e:
             return []
 
-    def get_subset(self, subj_names=None) -> dict:
+    def select_rows(self, subj_names=None) -> dict:
 
         if subj_names is None:
             return self
@@ -162,7 +138,7 @@ class SubjectsDataDict(dict):
             raise Exception("get_subject_col_value error: slabel=" + slabel + ", colname:" + colname)
 
     # return a list of subjects values
-    def get_subjects_filtered_columns(self, colnames, subj_names=None):
+    def get_subjects_filtered_columns(self, colnames, subj_names=None) -> dict:
 
         if subj_names is None:
             subj_names = self.labels
@@ -181,11 +157,11 @@ class SubjectsDataDict(dict):
             return []
 
     # return a list of values from a given column
-    def get_column(self, colname):
+    def get_subjects_column(self, colname):
         return [self[d][colname] for d in self]
 
     def get_column_str(self, colname, ndecimals=3):
-        return self.__to_str(self.get_column(colname), ndecimals)
+        return self.__to_str(self.get_subjects_column(colname=colname), ndecimals)
 
     # returns two vectors filtered by [subj labels]
     # - [values]
@@ -408,6 +384,30 @@ class SubjectsDataDict(dict):
         res_str = self.__to_str(res, ndecimals)
         return res_str, lab
 
+    # add new subjects
+    def add(self, newsubjs, can_overwrite=False, can_add_incomplete=False):
+
+        if not isinstance(newsubjs, dict):
+            raise Exception("Error in SubjectsDataDict.add, given newsubjs is not a dictionary")
+
+        names = list(newsubjs.keys())
+        nsubjs = len(names)
+        if nsubjs == 0:
+            raise Exception("Error in SubjectsDataDict.add, given newsubjs is an empty dictionary")
+
+        elems = list(list(newsubjs.values())[0].keys())
+        elems.insert(0, "subj")
+
+        for name in names:
+            if self.exist_subject(name) and not can_overwrite:
+                raise Exception("Error in SubjectsDataDict.add, you are trying to overwrite existing subject " + name)
+
+        if len(self.header) > 0:
+            if Counter(elems) != Counter(self.header) and not can_add_incomplete:
+                raise Exception("Error in SubjectsDataDict.add, given newsubj does not contain the same elements")
+
+        self.update(newsubjs)
+
     def add_column(self, col_label, labels, values, saveit=False, data_file=None):
 
         nv = len(values)
@@ -492,7 +492,7 @@ class SubjectsDataDict(dict):
         if subj_labels is None:
             data = self
         else:
-            data = self.get_subset(subj_labels)
+            data = self.select_rows(subj_labels)
 
         txt = "subj" + separator + listToString(outcolnames, separator) + "\n"
         r = ""

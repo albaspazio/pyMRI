@@ -27,7 +27,7 @@ class ConnModels:
         # ------------------------------------------------------------------------------------
         # sanity checks
         if bool(regressors):
-            data = self.project.validate_data(data_file)
+            data = self.project.validate_data(data_file)    # SubjectsData
             data.validate_covs(regressors)
         else:
             data = None
@@ -61,8 +61,8 @@ class ConnModels:
             all_subj += labels
             nsubjs += len(labels)
 
-        covs_values = self.project.get_filtered_columns_by_values(covs_label, all_subj, data=data)[0]
-        nuis_values = self.project.get_filtered_columns_by_values(nuis_label, all_subj, data=data)[0]
+        covs_values = self.project.get_subjects_values_by_cols(all_subj, covs_label)
+        nuis_values = self.project.get_subjects_values_by_cols(all_subj, nuis_label)
 
         # ------------------------------------------------------------------------------------
         # define output filename...add regressors/nuis to given ofn containing groups info
@@ -165,9 +165,6 @@ class ConnModels:
             subj_labels_by_groups.append(labels)
             all_subj += labels
             nsubjs += len(labels)
-
-        # covs_values = self.project.get_filtered_columns_by_values(covs_label, all_subj, data=data)[0]
-        # nuis_values = self.project.get_filtered_columns_by_values(nuis_label, all_subj, data=data)[0]
 
         # ------------------------------------------------------------------------------------
         # define output filename...add regressors/nuis to given ofn containing groups info
