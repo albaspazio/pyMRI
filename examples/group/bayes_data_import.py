@@ -17,6 +17,7 @@ if __name__ == "__main__":
     # check global data and external toolboxes
     # ======================================================================================================================
     fsl_code = "604"
+
     try:
         globaldata = Global(fsl_code)
 
@@ -38,7 +39,6 @@ if __name__ == "__main__":
         # check is_equal works
         # bayes_db2           = BayesDB(bayes_db_file)
         # bayes_db.is_equal(bayes_db2)
-
 
         # ===========================================================================================================
         #region create a new excel after removing some subjects

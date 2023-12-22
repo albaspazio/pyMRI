@@ -1,17 +1,14 @@
-import csv
 import os
-
-import pandas
-import pandas as pd
-from collections import Counter
-
 from typing import List
 
+import numpy as np
+import pandas
+import pandas as pd
+
 from data.utilities import demean_serie, FilterValues
-from utility.list import same_elements
 from utility.exceptions import DataFileException
-from utility.utilities import argsort, reorder_list, string2num, listToString
-from utility.fileutilities import write_text_file
+from utility.list import same_elements
+from utility.utilities import argsort, reorder_list
 
 
 # =====================================================================================
@@ -312,7 +309,7 @@ class SubjectsData():
                             values[idcol] = demean_serie(values[idcol], ndecim)
 
         except KeyError:
-            raise DataFileException("SubjectsData.get_subjects_values_by_cols", "data of given subject (" + subj + ") is not present in the loaded data")
+            raise DataFileException("SubjectsData.get_subjects_values_by_cols", "")
 
         return values
     #endregion
@@ -354,7 +351,7 @@ class SubjectsData():
         values  = self.get_subjects_values_by_cols(subj_labels, colnames)
         res_str = []
         for colvalues in values:
-            res_str.append(self.__to_str(colvalues, ndecimals))
+            res_str.append(self.__to_str(colvalues, ndecim))
         return res_str
     #endregion
 
