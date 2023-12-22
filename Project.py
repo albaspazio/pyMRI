@@ -228,7 +228,7 @@ class Project:
                 invalid_subjs = invalid_subjs + subj.label + "\n"
 
         if len(invalid_subjs) > 0:
-            print("ERROR.... the following subjects prevent the completion of the " + seq_type + " analysis:\n" + invalid_subjs)
+            print("ERROR.... the following subjects does not have the given sequence " + seq_type + " :\n" + invalid_subjs)
         else:
             print("OK....... " + seq_type + " analysis can be run")
 

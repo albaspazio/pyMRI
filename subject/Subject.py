@@ -1176,4 +1176,6 @@ class Subject:
                 imgs = [os.path.join(self.fmri_dir, self.label + ilab) for ilab in analysis_params]
                 fmri_images = Images(analysis_params)
 
-            return Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("a").exist or Images(fmri_images).add_prefix2name("wa").exist
+            return Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("swar").exist or \
+                   Images(fmri_images).add_prefix2name("a").exist or Images(fmri_images).add_prefix2name("ar").exist or\
+                   Images(fmri_images).add_prefix2name("wa").exist or Images(fmri_images).add_prefix2name("war").exist

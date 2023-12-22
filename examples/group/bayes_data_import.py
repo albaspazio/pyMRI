@@ -27,7 +27,9 @@ if __name__ == "__main__":
         proj_name           = "test"
         project             = DataProject(proj_name, globaldata)
 
-        bayes_db_file       = os.path.join(project.input_data_dir, "BAYES-PSIC_299.xlsx")        # input
+        bayes_db_file       = "/data/MRI/pymri_projects_scripts/BAYES-PSIC.xlsx"        # input
+
+
 
 
         # ======================================================================================================================

@@ -71,7 +71,7 @@ class BayesDB(MSHDB):
 
     def bloodlabels(self, subj_labels:List[str]=None) -> list:
 
-        total   = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("blood_code"    , "exist" , 0)])
+        total   = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("immfen_code"    , "exist" , 0)])
         th      = self.sheets["sangue"].select_subjlist(subj_labels, colconditions=[FilterValues("T_HELP"   , "==", 1)])
         tr      = self.sheets["sangue"].select_subjlist(subj_labels, colconditions=[FilterValues("T_REG"    , "==", 1)])
         nk      = self.sheets["sangue"].select_subjlist(subj_labels, colconditions=[FilterValues("NK"       , "==", 1)])
@@ -81,7 +81,7 @@ class BayesDB(MSHDB):
         return [total, th, tr, nk, mono, bi]
 
     def bisection_labels(self, subj_labels:List[str]=None):
-        total   = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("OA", "==", 1)])
+        total   = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("oa", "==", 1)])
 
         return [total]
     # endregion
