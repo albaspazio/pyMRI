@@ -199,6 +199,14 @@ class FilterValues:
                 return True
             else:
                 return False
+        elif self.op == "exist":
+            if str(value) == "" or str(value).lower() == "na" or str(value).lower() == "nan":
+                return False
+            else:
+                return True
+
+
+
 
     def areValid(self, values):
 

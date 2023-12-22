@@ -35,6 +35,7 @@ from utility.fileutilities import write_text_file
 class SubjectsData():
 
     first_col_name = "subj"
+
     def __init__(self, data=None, validcols=None, cols2num=None, delimiter='\t', suppress_nosubj=True):
 
         super().__init__()
@@ -410,7 +411,7 @@ class SubjectsData():
             for col in subjsdf.columns.values:
                 if col in self.header:
                     if can_overwrite:
-                        self.update_column(col, subjs_labels, subjsdf[col])
+                        self.update_column(subjs_labels, col, subjsdf[col])
                     else:
                         print("Warning in SubjectsData.add_df...col (" + col + ") already exist and can_overwrite is False...skipping add this column")
                         return
@@ -437,7 +438,7 @@ class SubjectsData():
         if data_file is not None:
             self.save_data(data_file)
 
-    def update_column(self, col_label, labels, values, data_file=None):
+    def update_column(self, labels, col_label, values, data_file=None):
 
         if col_label not in self.header:
             raise Exception(

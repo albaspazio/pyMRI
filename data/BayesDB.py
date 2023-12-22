@@ -5,7 +5,7 @@ import pandas
 from data.MSHDB     import MSHDB
 from data.Sheets    import Sheets
 from data.utilities import FilterValues
-
+from data.SubjectsData import SubjectsData
 
 class BayesDB(MSHDB):
 
@@ -13,12 +13,18 @@ class BayesDB(MSHDB):
                             "AASP", "ASI", "CCAS", "HAM A-D", "MATRICS", "MEQ", "MW S-D", "OA", "PANS",
                             "PAS", "PSQI", "SANS", "SAPS", "SPQ", "STQ", "TATE", "TEMPS", "TLC", "YMRS", "ZTPI"]
 
-    date_format = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
-    dates       = {"main":["birth_date", "recruitment_date"], "MATRICS":["matrics_date"]}
+    date_format         = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
+    dates               = {"main":["birth_date", "recruitment_date"], "MATRICS":["matrics_date"]}
+
+    round_decimals      = 2
+    to_be_rounded       = {"main":["age"]}
+
+
 
     def __init__(self, data=None, can_different_subjs=False, password:str=""):
         super().__init__(data, self.schema_sheets_names, 0, True, "subj", can_different_subjs=can_different_subjs, password=password)
         self.__format_dates()
+        self.__round_columns()
         self.calc_stats()
 
     @property
@@ -55,16 +61,16 @@ class BayesDB(MSHDB):
     #region GET LISTS OF INTERESTS
     def mrilabels(self, subj_labels:List[str]=None) -> list:
 
-        total = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("MR"   , "==", 1)])
-        td    = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("group", "==", "TD"), FilterValues("MR", "==", 1)])
-        bd    = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("group", "==", "BD"), FilterValues("MR", "==", 1)])
-        sk    = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("group", "==", "SZ"), FilterValues("MR", "==", 1)])
+        total = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("mri"   , "==", 1)])
+        td    = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("group", "==", "TD"), FilterValues("mri", "==", 1)])
+        bd    = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("group", "==", "BD"), FilterValues("mri", "==", 1)])
+        sk    = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("group", "==", "SZ"), FilterValues("mri", "==", 1)])
 
         return [total, td, bd, sk]
 
     def bloodlabels(self, subj_labels:List[str]=None) -> list:
 
-        total   = self.sheets["sangue"].select_subjlist(subj_labels, colconditions=[FilterValues("blood"    , ">" , 0)])
+        total   = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("blood_code"    , "exist" , 0)])
         th      = self.sheets["sangue"].select_subjlist(subj_labels, colconditions=[FilterValues("T_HELP"   , "==", 1)])
         tr      = self.sheets["sangue"].select_subjlist(subj_labels, colconditions=[FilterValues("T_REG"    , "==", 1)])
         nk      = self.sheets["sangue"].select_subjlist(subj_labels, colconditions=[FilterValues("NK"       , "==", 1)])
@@ -81,12 +87,33 @@ class BayesDB(MSHDB):
 
     def __format_dates(self):
         for sh in self.dates:
-            df = self.sheets[sh].df
-            for col in self.dates[sh]:
-                df[col] = pandas.to_datetime(df[col])
+            ds:SubjectsData = self.sheets[sh]
+            if ds.num == 0:
+                continue
 
-                # change the datetime format
-                df[col] = df[col].dt.strftime(self.date_format)
+            for col in self.dates[sh]:
+                date_values = []
+                for subj in ds.subj_labels:
+                    value = ds.get_subject_col_value(subj, col)
+                    try:
+                        date_values.append(pandas.to_datetime(value))
+                    except:
+                        raise Exception("Error in BayesDB.__format_dates: value (" + value + ") in column " + col + " of sheet " + sh + " is not a valid date")
+
+                try:
+                    # change the datetime format
+                    ds.df[col] = pandas.Series(date_values).dt.strftime(self.date_format)
+                except:
+                    raise Exception("Error in BayesDB.__format_dates: value (" + value + ") in column " + col + " of sheet " + sh + " cannot be formatted as desired")
+
+    def __round_columns(self):
+        for sh in self.to_be_rounded:
+            ds:SubjectsData = self.sheets[sh]
+            if ds.num == 0:
+                continue
+            for col in self.to_be_rounded[sh]:
+                ds.df[col] = ds.df[col].round(self.round_decimals)
+
 
     def calc_stats(self):
 

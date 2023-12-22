@@ -237,12 +237,27 @@ class MSHDB:
         else:
             return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.first_col_name)
 
-    def save_excel(self, outfile):
+    def save_excel(self, outfile, sort=None):
 
-        with pd.ExcelWriter(outfile) as writer:
+        with pd.ExcelWriter(outfile, engine="xlsxwriter") as writer:
             for sh in self.schema_sheets_names:
-                self.sheets[sh].df.to_excel(writer, sheet_name=sh, index=False)
+
+                if sort is not None:
+                    if isinstance(sort, list):
+                        self.sheets[sh].df.sort_values(by=sort, inplace=True)
+                    else:
+                        raise Exception("Error in MSHDB.save_excel: sort parameter is not a list")
+
+                self.sheets[sh].df.to_excel(writer, sheet_name=sh, startrow=1, header=False, index=False)
+                workbook            = writer.book
+                worksheet           = writer.sheets[sh]
+                (max_row, max_col)  = self.sheets[sh].df.shape
+                column_settings     = [{"header": column} for column in self.sheets[sh].df.columns]
+                worksheet.add_table(0, 0, max_row, max_col - 1, {"columns": column_settings})   # Add the Excel table structure. Pandas will add the data.
+                worksheet.set_column(0, max_col - 1, 12)            # Make the columns wider for clarity.
+
         print("Saved file: " + outfile)
+
 
     def is_equal(self, db:'MSHDB'):
         return self.sheets.is_equal(db.sheets)
