@@ -95,8 +95,10 @@ class SubjectDti:
             str_slice2vol = " --mporder=" + str(slice2vol) + " "
 
         # -----------------------------------------------------------------
-        # check whether requested eddy version exist
-        exe_ver = os.path.join(self.subject._global.fsl_dir, "bin", exe_ver)
+        # check whether requested eddy version exist (to use cuda versions of other FSL releases, I can pass also a full file path)
+        if not os.path.isfile(exe_ver):
+            exe_ver = os.path.join(self.subject._global.fsl_dir, "bin", exe_ver)
+
         if not os.path.exists(exe_ver):
             print("ERROR in eddy of subject: " + self.subject.label + ", eddy exe version (" + exe_ver + ") does not exist, exiting.....")
             return
@@ -119,7 +121,8 @@ class SubjectDti:
         rrun("fslroi " + self.subject.dti_pa_data + " " + p2a_bo + " 0 1", logFile=logFile)
         rrun("fslmerge -t " + a2p_p2a_bo + " " + a2p_bo + " " + p2a_bo, stop_on_error=False)
 
-        rrun("topup --imain=" + a2p_p2a_bo + " --datain=" + acq_params + " --config=" + config + " --out=" +  topup_results  + " --iout=" +  hifi_b0, logFile=logFile)
+        if not Image(os.path.join(self.subject.dti_dir, "topup_results_fieldcoef.nii.gz")).exist:
+            rrun("topup --imain=" + a2p_p2a_bo + " --datain=" + acq_params + " --config=" + config + " --out=" +  topup_results  + " --iout=" +  hifi_b0, logFile=logFile)
 
         rrun("fslmaths " + hifi_b0 + " -Tmean " + hifi_b0, logFile=logFile)
         rrun("bet " + hifi_b0 + " " + hifi_b0 + "_brain -m", logFile=logFile)
@@ -130,13 +133,17 @@ class SubjectDti:
             indx=indx + "1 "
         write_text_file(index_file, indx)
 
+        # TEMPORARY OVERRIDE ------ TODO: fix it one day !!
+        # if "cuda" in exe_ver:
+        #     exe_ver = "/usr/local/fsl-6.0.5/bin/eddy_cuda10.2"
+
         rrun(exe_ver + " --imain=" +  self.subject.dti_data + " --mask=" + hifi_b0 + "_brain_mask --acqp=" + acq_params + " --index=" + index_file + " --bvecs=" + self.subject.dti_bvec + " --bvals=" + self.subject.dti_bval +
                        " --topup=" + topup_results + " --out=" + eddy_corrected_data + str_estmove + str_slice2vol + str_json + str_rep_out, logFile=logFile)
 
         os.rename(self.subject.dti_eddyrotated_bvec, self.subject.dti_rotated_bvec)
 
-        os.system("rm " + self.subject.dti_dir + "/" + "ap_*")
-        os.system("rm " + self.subject.dti_dir + "/" + "pa_*")
+        os.system("rm " + self.subject.dti_dir + "/" + "a2p_*")
+        os.system("rm " + self.subject.dti_dir + "/" + "p2a_*")
         os.system("rm " + self.subject.dti_dir + "/" + "hifi_*")
 
     # use_ec = True: eddycorrect, False: eddy
@@ -185,7 +192,7 @@ class SubjectDti:
         #     return
 
         if use_gpu:
-            rrun("bedpostx_gpu " + bp_dir + " -n 3 -w 1 -b 1000", logFile=logFile)
+            rrun(os.path.join(self._global.fsl_dir, "bin", "bedpostx_gpu") + " " + bp_dir + " -n 3 -w 1 -b 1000", logFile=logFile)
         else:
             rrun("bedpostx " + bp_dir + " -n 3 -w 1 -b 1000", logFile=logFile)
 

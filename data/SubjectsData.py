@@ -279,6 +279,11 @@ class SubjectsData():
 
     # return a list of values from a given column
     def get_subjects_column(self, subj_labels:List[str]=None, colname:str = None, df: pandas.DataFrame = None) -> list:
+
+        if colname is None:
+            return []
+
+
         if df is None:
             if not self.exist_column(colname):
                 raise Exception("get_column error: colname (" + colname + ") is not present in df")
@@ -293,7 +298,12 @@ class SubjectsData():
     # returns a filtered matrix [colnames x subjs] of values
     def get_subjects_values_by_cols(self, subj_labels:List[str]=None, colnames:List[str]=None, demean_flags:List[bool]=None, ndecim:int=4) -> list:
 
-        df = self.select_df(subj_labels, colnames)
+        if "subj" not in colnames and len(colnames) > 0:
+            newcols = ["subj"] + colnames
+        else:
+            newcols = colnames
+
+        df = self.select_df(subj_labels, newcols)
         try:
             # create ncols x nsubj array
             values = [self.get_subjects_column(subj_labels, colname, df=df) for colname in colnames]
@@ -308,7 +318,7 @@ class SubjectsData():
                         if dem_col:
                             values[idcol] = demean_serie(values[idcol], ndecim)
 
-        except KeyError:
+        except KeyError as k:
             raise DataFileException("SubjectsData.get_subjects_values_by_cols", "")
 
         return values
