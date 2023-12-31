@@ -3,6 +3,10 @@
 import collections
 
 
+# get unique elements of a list
+def unique(lst1):
+    return (list(set(lst1)))
+
 # union: maintained repetition
 # => [23, 15, 2, 14, 14, 16, 20, 52, 2, 48, 15, 12, 26, 32, 47, 54]
 def UnionMR(lst1:list, lst2:list):

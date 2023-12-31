@@ -16,16 +16,12 @@ class BayesDB(MSHDB):
 
     date_format         = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
     dates               = {"main":["birth_date", "recruitment_date"], "MATRICS":["matrics_date"]}
-
-    round_decimals      = 2
     to_be_rounded       = {"main":["age"]}
 
 
 
     def __init__(self, data=None, can_different_subjs=False, password:str=""):
         super().__init__(data, self.schema_sheets_names, 0, True, "subj", can_different_subjs=can_different_subjs, password=password)
-        self.__format_dates()
-        self.__round_columns()
         self.calc_stats()
 
     @property
@@ -85,36 +81,6 @@ class BayesDB(MSHDB):
 
         return [total]
     # endregion
-
-    def __format_dates(self):
-        for sh in self.dates:
-            ds:SubjectsData = self.sheets[sh]
-            if ds.num == 0:
-                continue
-
-            for col in self.dates[sh]:
-                date_values = []
-                for subj in ds.subj_labels:
-                    value = ds.get_subject_col_value(subj, col)
-                    try:
-                        date_values.append(pandas.to_datetime(value))
-                    except:
-                        raise Exception("Error in BayesDB.__format_dates: value (" + value + ") in column " + col + " of sheet " + sh + " is not a valid date")
-
-                try:
-                    # change the datetime format
-                    ds.df[col] = pandas.Series(date_values).dt.strftime(self.date_format)
-                except:
-                    raise Exception("Error in BayesDB.__format_dates: value (" + value + ") in column " + col + " of sheet " + sh + " cannot be formatted as desired")
-
-    def __round_columns(self):
-        for sh in self.to_be_rounded:
-            ds:SubjectsData = self.sheets[sh]
-            if ds.num == 0:
-                continue
-            for col in self.to_be_rounded[sh]:
-                ds.df[col] = ds.df[col].round(self.round_decimals)
-
 
     def calc_stats(self):
 

@@ -14,7 +14,11 @@ from data.Sheets import Sheets
 
 class MSHDB:
 
-    valid_dtypes = ['Int8', 'Int16', 'Int32', 'Int64', 'UInt8', 'UInt16', 'UInt32', 'UInt64', 'float64', 'float32']
+    valid_dtypes    = ['Int8', 'Int16', 'Int32', 'Int64', 'UInt8', 'UInt16', 'UInt32', 'UInt64', 'float64', 'float32']
+    dates           = {}
+    to_be_rounded   = {}
+    round_decimals  = 2
+    date_format     = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
 
     def __init__(self, data=None, sheetnames:List[str]=None, main_id:int=0, suppress_nosubj=True, first_col_name="subj", can_different_subjs=False, password:str=""):
 
@@ -32,6 +36,9 @@ class MSHDB:
 
         if data is not None:
             self.load(data, suppress_nosubj)
+
+        self.__format_dates()
+        self.__round_columns()
 
     # self.main sheet contains the list of DB subjects
     @property
@@ -258,6 +265,46 @@ class MSHDB:
 
         print("Saved file: " + outfile)
 
+    def __format_dates(self):
+        for sh in self.dates:
+            ds:SubjectsData = self.sheets[sh]
+            if ds.num == 0:
+                continue
+
+            for col in self.dates[sh]:
+                date_values = []
+                for subj in ds.subj_labels:
+                    value = ds.get_subject_col_value(subj, col)
+                    try:
+                        date_values.append(pandas.to_datetime(value))
+                    except:
+                        raise Exception("Error in MSHDB.__format_dates: value (" + value + ") in column " + col + " of sheet " + sh + " is not a valid date")
+
+                try:
+                    # change the datetime format
+                    ds.df[col] = pandas.Series(date_values).dt.strftime(self.date_format)
+                except:
+                    raise Exception("Error in MSHDB.__format_dates: value (" + value + ") in column " + col + " of sheet " + sh + " cannot be formatted as desired")
+
+    def __round_columns(self):
+        for sh in self.to_be_rounded:
+            ds:SubjectsData = self.sheets[sh]
+            if ds.num == 0:
+                continue
+            for col in self.to_be_rounded[sh]:
+                ds.df[col] = ds.df[col].round(self.round_decimals)
 
     def is_equal(self, db:'MSHDB'):
         return self.sheets.is_equal(db.sheets)
+
+    def add_column(self, col_label, values, position=None, labels=None, data_file=None, update=False) -> 'MSHDB':
+
+        sheets = self.sheets.copy()
+
+        for sh in self.sheets:
+            sheets[sh].add_column(col_label,values,position,labels,data_file)
+
+        if update:
+            self.sheets = sheets
+
+        return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.first_col_name)
