@@ -425,7 +425,7 @@ class Project:
 
         icvs = self.get_subjects_icv(grouplabel_or_subjlist, sess_id)
 
-        self.data.add_column("icv", grouplabel_or_subjlist, icvs, data_file)
+        self.data.add_column("icv", icvs, grouplabel_or_subjlist, data_file)
 
     def get_subjects_icv(self, grouplabel_or_subjlist, sess_id=1):
 
@@ -445,7 +445,7 @@ class Project:
         return icv_scores
 
     def add_data_column(self, colname, labels, values, updatefile=False):
-        self.data.add_column(colname, labels, values)
+        self.data.add_column(colname, values, labels)
 
     #endregion ==================================================================================================================
 

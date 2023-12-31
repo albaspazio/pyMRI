@@ -423,20 +423,32 @@ class SubjectsData():
                         print("Warning in SubjectsData.add_df...col (" + col + ") already exist and can_overwrite is False...skipping add this column")
                         return
                 else:
-                    self.add_column(col, subjs_labels, subjsdf[col])
+                    self.add_column(col, subjsdf[col], subjs_labels)
 
-    def add_column(self, col_label, labels, values, data_file=None):
+    def add_column(self, col_label, values, position=None, labels=None, data_file=None):
 
         if col_label in self.header:
             raise Exception("Error in SubjectsData add_column: col_label (" + col_label + ") already exist...exiting")
+
+        if labels is None:
+            labels = self.subj_labels
+
+        if position is None:
+            position = len(self.header)     # add as last column
 
         nv = len(values)
         nl = len(labels)
 
         if nv != nl:
-            raise Exception("Error in SubjectsData.add_column, n value (" + str(nv) + ") != n subjs (" + str(nl) + ")")
+            if nv == 1:
+                values      = [ values[0] for i in labels]   # if a give one value, duplicate it for each subject
+            else:
+                raise Exception("Error in SubjectsData.add_column, n value (" + str(nv) + ") != n subjs (" + str(nl) + ")")
 
-        self.df[col_label] = np.nan
+        nanvalues   = [ np.nan for i in labels]
+        self.df.insert(position, column=col_label, value=nanvalues)
+
+        # self.df[col_label] = np.nan
 
         for i, val in enumerate(labels):
             ids = self.subj_id(val)

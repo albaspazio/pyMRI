@@ -199,6 +199,6 @@ class DataProject:
                 raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is neither a SubjectsData nor a string")
 
     def add_data_column(self, colname, labels, values, updatefile=False):
-        self.data.add_column(colname, labels, values)
+        self.data.add_column(colname, values, labels)
 
     #endregion ==================================================================================================================
