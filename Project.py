@@ -187,7 +187,7 @@ class Project:
                     return grp["list"]
         raise SubjectListException("__get_valid_subjlabels_from_group", "given group_label (" + group_label + ") does not exist in subjects_lists")
 
-    # check whether all subjects listed in subj_labels are valid
+    # check whether all subjects listed in subjects are valid
     # returns given list if all valid
     # IN:   SUBJLABELS LIST
     # OUT:  [VALID SUBJLABELS LIST] or SubjectListException
@@ -416,7 +416,7 @@ class Project:
                 raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is neither a SubjectsData nor a string")
 
     # added data_file in order to add v
-    def add_icv_to_data(self, grouplabel_or_subjlist=None, updatefile=False, data_file=None, sess_id=1):
+    def add_icv_to_data(self, grouplabel_or_subjlist=None, updatefile=False, df=None, sess_id=1):
 
         if grouplabel_or_subjlist is None:
             grouplabel_or_subjlist = self.get_subjects_labels()
@@ -425,7 +425,7 @@ class Project:
 
         icvs = self.get_subjects_icv(grouplabel_or_subjlist, sess_id)
 
-        self.data.add_column("icv", icvs, grouplabel_or_subjlist, data_file)
+        self.data.add_column("icv", icvs, grouplabel_or_subjlist, df)
 
     def get_subjects_icv(self, grouplabel_or_subjlist, sess_id=1):
 
@@ -512,8 +512,8 @@ class Project:
     # ==================================================================================================================
     # MULTICORE PROCESSING
     # ==================================================================================================================
-    # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subj_labels) > 1 ...pass that same kwparams[0] to all subjects
-    # if subj_labels is not given...use the loaded subjects
+    # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subjects) > 1 ...pass that same kwparams[0] to all subjects
+    # if subjects is not given...use the loaded subjects
     def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, group_or_subjlabels=None, sess_id=1, must_exist=True):
 
         if method_type != "" and method_type != "mpr" and method_type != "dti" and method_type != "epi" and method_type != "transform":

@@ -1,6 +1,7 @@
 from typing import List
 
 from data.SubjectsData import SubjectsData
+from data.SubjectSDList import SubjectSDList
 from utility.list import UnionNoRepO, same_elements
 
 
@@ -23,11 +24,15 @@ class Sheets(dict):
             return None
 
     @property
-    def all_subjects(self):
-        all_subjs = []
+    def all_subjects(self) -> SubjectSDList:
+        all_subjs = SubjectSDList(self.main.subjects.copy())
+
         for sh in self:
-            labs = self[sh].subj_labels
-            all_subjs = UnionNoRepO(all_subjs, labs)
+            if sh == self.schema_sheets_names[self.main_id]:      # skip main
+                continue
+            subjs = self[sh].subjects
+            all_subjs.union_norep(subjs)
+
         return all_subjs
 
     # check whether all sheets contain the same list of subjects
@@ -36,7 +41,7 @@ class Sheets(dict):
 
         all_subjs = self.all_subjects
         for sh in self:
-            if not same_elements(self[sh].subj_labels, all_subjs):
+            if not all_subjs.are_equal(self[sh].subjects):
                 return False
 
         return True

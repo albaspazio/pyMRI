@@ -137,11 +137,11 @@ class DataProject:
         raise SubjectListException("__get_valid_subjlabels_from_group", "given group_label does not exist in subjects_lists")
 
     # SUBJLABELS LIST => VALID SUBJLABELS LIST or []
-    # check whether all subjects listed in subj_labels are valid
+    # check whether all subjects listed in subjects are valid
     # returns given list if all valid
     def __get_valid_subjlabels(self, subj_labels):
         for lab in subj_labels:
-            if not self.data.exist_subject(lab):
+            if not self.data.exist_subj_session(lab):
                 raise SubjectListException("__get_valid_subjlabels", "given subject (" + lab + ") does not exist in data file")
         return subj_labels
     #endregion
@@ -198,7 +198,7 @@ class DataProject:
             else:
                 raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is neither a SubjectsData nor a string")
 
-    def add_data_column(self, colname, labels, values, updatefile=False):
+    def add_data_column(self, colname, labels, values):
         self.data.add_column(colname, values, labels)
 
     #endregion ==================================================================================================================

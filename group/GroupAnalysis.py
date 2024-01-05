@@ -378,7 +378,7 @@ class GroupAnalysis:
             print(e)
 
     # clust_res_dir: output folder of tbss's results clustering
-    # datas is a tuple of two elements containing a matrix of values and subj_labels
+    # datas is a tuple of two elements containing a matrix of values and subjects
     # returns tracts_data
     @staticmethod
     def tbss_summarize_clusterized_folder(in_clust_res_dir, datas, data_labels, tbss_folder, modality="FA",

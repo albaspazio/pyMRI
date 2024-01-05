@@ -1,7 +1,11 @@
 # lst1 = [23, 15, 2, 14, 14, 16, 20 ,52]
 # lst2 = [2, 48, 15, 12, 26, 32, 47, 54]
 import collections
+from typing import List
 
+
+def indices(lst1, value) -> List[int]:
+    return [i for i, j in enumerate(lst1) if j == value]
 
 # get unique elements of a list
 def unique(lst1):
@@ -53,7 +57,7 @@ def get_intersecting(lst1, lst2) -> list:
     for check in lst2:
         if check in lst1:
             res.append(check)
-    return check
+    return res
 
 
 

@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
         male_ages       = data.get_filtered_column(colname="age", select_conds=[FilterValues("gender", "==", 1)])
         ages_betweenages= data.get_filtered_column(colname="age", select_conds=[FilterValues("age", "<>", 30, 60)])
-        age_str         = data.get_column_str(colname="age")
+        age_str         = data.get_subjects_column_str(colname="age")
         a=1
         # cat_dist        = data.get_filtered_column_by_value("age", 26)
         # age_withinvalues= data.get_filtered_column_within_values("age", 30, 60)

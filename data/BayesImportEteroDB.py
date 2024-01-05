@@ -1,3 +1,4 @@
+import io
 from typing import List
 
 import msoffcrypto
@@ -5,9 +6,9 @@ import pandas
 import pandas as pd
 import os
 
-from data.Sheets import Sheets
 from data.BayesDB import BayesDB
 from utility.exceptions import DataFileException
+from data.SubjectsData import SubjectsData
 
 
 class BayesImportEteroDB:
@@ -55,9 +56,9 @@ class BayesImportEteroDB:
 
             xls = pd.ExcelFile(data)
 
-            for sheet in xls.sheet_names:
-                df = pd.read_excel(xls, sheet)
-                self.sheets[sheet] = df
+            for sheet_name in xls.sheet_names:
+                df = pd.read_excel(xls, sheet_name)
+                self.sheets[sheet_name] = df
 
         elif isinstance(data, dict):
             # TODO check is a dict of sheetname:subjectsdata
@@ -67,6 +68,11 @@ class BayesImportEteroDB:
             raise Exception("Error in MXLSDB.load: unknown data format, not a str, not a dict")
 
         return self.sheets
+
+    def sheet(self, name:str) -> SubjectsData:
+        if name not in self.schema_sheets_names:
+            raise Exception("Error in MSHDB.sheet: ")
+        return self.sheets[name]
 
     def decrypt_excel(self, fpath, pwd):
         unlocked_file = io.BytesIO()
