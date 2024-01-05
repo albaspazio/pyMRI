@@ -314,7 +314,7 @@ class SubjectsData():
         df = self.select_df(subjs, newcols)
         try:
             # create ncols x nsubj array
-            values = [self.get_subjects_column(subj_s, colname, df) for colname in colnames]
+            values = [self.get_subjects_column(subjs, colname, df) for colname in colnames]
 
             if demean_flags is not None:
                 if len(colnames) != len(demean_flags):
@@ -483,7 +483,7 @@ class SubjectsData():
     def add_row(self, subj:SubjectSD, row=None):
 
         if self.exist_subjects(SubjectSDList([subj])):
-            raise Exception("Error in SubjectsData.add_row. subject (" + subj_label + ") already exist")
+            raise Exception("Error in SubjectsData.add_row. subject (" + subj.label + ") already exist")
 
         if row is None:
             row = {self.first_col_name: subj.label, self.second_col_name: subj.session}

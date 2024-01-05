@@ -76,11 +76,15 @@ class BayesDB(MSHDB):
         return BayesDB(mshdb.sheets)
 
     def add_new_subjects(self, newdb:'MSHDB', can_diff_subjs=None, update=False) -> 'BayesDB':
-        mshdb = super().add_new_subjects(newdb, can_diff_subjs, update)
+
+        mshdb   = super().add_new_subjects(newdb, can_diff_subjs, update)
         bayesdb = BayesDB(mshdb.sheets)
 
-        for sh in bayesdb.sheets:
-            bayesdb.sheet(sh).df = bayesdb.sheet(sh).df.sort_values(by=[bayesdb.first_col_name, bayesdb.second_col_name], ascending=[True, True], ignore_index=True)
+        bayesdb = bayesdb.sort()
+        bayesdb.calc_stats()
+        if update:
+            self = bayesdb
+
         return bayesdb
 
     #endregion
@@ -105,11 +109,11 @@ class BayesDB(MSHDB):
     def bloodlabels(self, subj_labels:List[str]=None) -> list:
 
         total   = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("immfen_code"    , "exist" , 0)])
-        th      = self.sheet("sangue").select_subjlist(subj_labels, colconditions=[FilterValues("T_HELP"   , "==", 1)])
-        tr      = self.sheet("sangue").select_subjlist(subj_labels, colconditions=[FilterValues("T_REG"    , "==", 1)])
-        nk      = self.sheet("sangue").select_subjlist(subj_labels, colconditions=[FilterValues("NK"       , "==", 1)])
-        mono    = self.sheet("sangue").select_subjlist(subj_labels, colconditions=[FilterValues("MONO"     , "==", 1)])
-        bi      = self.sheet("sangue").select_subjlist(subj_labels, colconditions=[FilterValues("B"        , "==", 1)])
+        th      = self.sheet_sd("sangue").select_subjlist(subj_labels, colconditions=[FilterValues("T_HELP", "==", 1)])
+        tr      = self.sheet_sd("sangue").select_subjlist(subj_labels, colconditions=[FilterValues("T_REG", "==", 1)])
+        nk      = self.sheet_sd("sangue").select_subjlist(subj_labels, colconditions=[FilterValues("NK", "==", 1)])
+        mono    = self.sheet_sd("sangue").select_subjlist(subj_labels, colconditions=[FilterValues("MONO", "==", 1)])
+        bi      = self.sheet_sd("sangue").select_subjlist(subj_labels, colconditions=[FilterValues("B", "==", 1)])
 
         return [total, th, tr, nk, mono, bi]
 
@@ -137,20 +141,17 @@ class BayesDB(MSHDB):
                            {"main":["mri_code"], "sangue":["NK"]}, {"main":["mri_code"], "sangue":["T_HELP", "T_REG"]}, {"main":["mri_code"], "sangue":["MONO"]}, {"main":["mri_code"], "sangue":["B"]}, {"main":["mri_code"], "sangue":["PROT"]}
                            ]
 
-
         for id,val in enumerate(out_main_cols):
             dest_col_lab = val
 
             for id_1, src_sheet_lab in enumerate(list(in_sheets_cells[id].keys())):   # e.g. main & sangue
                 if src_sheet_lab in self.sheets:
-                    src_sd:SubjectsData = self.sheet(src_sheet_lab)
+                    src_sd:SubjectsData = self.sheet_sd(src_sheet_lab)
                     for subj in src_sd.subjects:
                         for in_col in list(in_sheets_cells[id].values())[id_1]:
                             if in_col not in src_sd.header:
                                 value = 0
                                 break
-                            # subj_ids = src_sd.subj_ids(s, [])
-                            # for subj_id in subj_ids:
                             value   = 1
                             if src_sd.is_cell_empty(subj.id, in_col):
                                 value = 0
@@ -160,4 +161,10 @@ class BayesDB(MSHDB):
                                     value = 0
                                     break
 
-                            self.main.set_subj_session_value(subj, dest_col_lab, value)
+                        self.main.set_subj_session_value(subj, dest_col_lab, value)
+
+    def sort(self, by_items:List[str]=["subj", "session"], ascending=[True, True]):
+        for sh in self.sheets:
+            self.sheet_sd(sh).df = self.sheet_sd(sh).df.sort_values(by=by_items, ascending=ascending, ignore_index=True)
+
+        return self

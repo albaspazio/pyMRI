@@ -2,7 +2,6 @@ from typing import List
 
 from data.SubjectsData import SubjectsData
 from data.SubjectSDList import SubjectSDList
-from utility.list import UnionNoRepO, same_elements
 
 
 class Sheets(dict):

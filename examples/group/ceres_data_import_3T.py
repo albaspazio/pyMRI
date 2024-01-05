@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
         # .... edit df .....
 
-        subs_data.save_data(outfile)
+        subjs_data.save_data(output_file)
 
     except SubjectListException as e:
         print(e)

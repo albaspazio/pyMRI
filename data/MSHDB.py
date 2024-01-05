@@ -99,11 +99,11 @@ class MSHDB:
             self.sheets = data
 
         else:
-            raise Exception("Error in MXLSDB.load: unknown data format, not a str, not a dict")
+            raise Exception("Error in MXLSDB.load: unknown data format, not a str, not a Sheet")
 
         return self.sheets
 
-    def sheet(self, name:str) -> SubjectsData:
+    def sheet_sd(self, name:str) -> SubjectsData:
         if name not in self.schema_sheets_names:
             raise Exception("Error in MSHDB.sheet: ")
         return self.sheets[name]
@@ -139,7 +139,7 @@ class MSHDB:
     # subjdf must contain a subj column (all its subjects must be already present)
     def add_new_columns(self, shname: str, subjdf: pandas.DataFrame):
 
-        sheet_sd = self.sheet(shname)
+        sheet_sd = self.sheet_sd(shname)
 
         if self.first_col_name not in subjdf.columns.values:
             raise Exception("Error in addColumns: given subjdf does not contain a subj column")
@@ -202,14 +202,14 @@ class MSHDB:
                     if not ds.subjects.contains(subj):
                         # this subj exist in some other new sheets, but not here -> add it
                         # P.S. could have passed row=None and let SubjectsData manage it, but calling a MSHDB subclass method I'm sure it is more complete
-                        ds.add_row(subjlab, newdb.add_default_row(subjlab))
+                        ds.add_row(subj, newdb.add_default_row(subj))
 
 
         # has all sheets and all subjects are brand new
         if update is True:
             for sh in newdb.sheets:
-                self.sheet(sh).add_sd([newdb.sheet(sh)])
-                self.sheet(sh).df = self.sheet(sh).df.sort_values(by=[self.first_col_name], ignore_index=True)
+                self.sheet_sd(sh).add_sd([newdb.sheet_sd(sh)])
+                self.sheet_sd(sh).df = self.sheet_sd(sh).df.sort_values(by=[self.first_col_name], ignore_index=True)
 
             return True
 
@@ -237,7 +237,7 @@ class MSHDB:
         df = self.add_default_columns(subjs, df)
 
         for sheetname in sheets_cols:
-            sd:SubjectsData = self.sheet(sheetname)
+            sd:SubjectsData = self.sheet_sd(sheetname)
             cols:List[str]  = sheets_cols[sheetname]
             if cols[0] == "*":
                 hdr = sd.header.copy()
@@ -258,15 +258,15 @@ class MSHDB:
 
                 if sort is not None:
                     if isinstance(sort, list):
-                        self.sheet(sh).df.sort_values(by=sort, inplace=True)
+                        self.sheet_sd(sh).df.sort_values(by=sort, inplace=True)
                     else:
                         raise Exception("Error in MSHDB.save_excel: sort parameter is not a list")
 
-                self.sheet(sh).df.to_excel(writer, sheet_name=sh, startrow=1, header=False, index=False)
+                self.sheet_sd(sh).df.to_excel(writer, sheet_name=sh, startrow=1, header=False, index=False)
                 workbook            = writer.book
                 worksheet           = writer.sheets[sh]
-                (max_row, max_col)  = self.sheet(sh).df.shape
-                column_settings     = [{"header": column} for column in self.sheet(sh).df.columns]
+                (max_row, max_col)  = self.sheet_sd(sh).df.shape
+                column_settings     = [{"header": column} for column in self.sheet_sd(sh).df.columns]
                 worksheet.add_table(0, 0, max_row, max_col - 1, {"columns": column_settings})   # Add the Excel table structure. Pandas will add the data.
                 worksheet.set_column(0, max_col - 1, 12)            # Make the columns wider for clarity.
 
@@ -285,7 +285,7 @@ class MSHDB:
     def __format_dates(self):
         for sh in self.dates:
             if sh in self.sheets.keys():
-                sd:SubjectsData = self.sheet(sh)
+                sd:SubjectsData = self.sheet_sd(sh)
                 if sd.num == 0:
                     continue
 
@@ -308,7 +308,7 @@ class MSHDB:
     def __round_columns(self):
         for sh in self.to_be_rounded:
             if sh in self.sheets.keys():
-                ds:SubjectsData = self.sheet(sh)
+                ds:SubjectsData = self.sheet_sd(sh)
                 if ds.num == 0:
                     continue
                 for col in self.to_be_rounded[sh]:
