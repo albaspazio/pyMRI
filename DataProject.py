@@ -16,12 +16,14 @@ class DataProject:
         self.script_dir         = os.path.join(globaldata.project_scripts_dir, self.name)
         self.r_dir              = os.path.join(self.script_dir, "r")
         self.input_data_dir     = os.path.join(self.script_dir, "input_data")
+        self.output_data_dir    = os.path.join(self.script_dir, "output_data")
         self.stats_input        = os.path.join(self.r_dir, "indata")
         self.stats_output       = os.path.join(self.r_dir, "results")
 
         os.makedirs(self.script_dir,    exist_ok=True)
         os.makedirs(self.r_dir,         exist_ok=True)
         os.makedirs(self.input_data_dir,exist_ok=True)
+        os.makedirs(self.output_data_dir,exist_ok=True)
         os.makedirs(self.stats_input,   exist_ok=True)
         os.makedirs(self.stats_output,  exist_ok=True)
 

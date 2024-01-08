@@ -91,7 +91,7 @@ if __name__ == "__main__":
         # ============================================================================================================
         # region add second session partial data
         new_bayes_db_file   = os.path.join(project.input_data_dir, "new_subjects_2nd_session.xlsx")
-        new_bayes_db        = BayesDB(new_bayes_db_file, calc_stats=False)
+        new_bayes_db        = BayesDB(new_bayes_db_file, calc_flags=False)
         final_db            = bayes_db.add_new_subjects(new_bayes_db)
         final_db.save_excel(final_bayes_db_file)
         #endregion

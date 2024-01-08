@@ -23,10 +23,10 @@ class BayesDB(MSHDB):
     to_be_rounded       = {"main":["age"]}
 
 
-    def __init__(self, data=None, can_different_subjs=False, password:str="", calc_stats:bool=True):
+    def __init__(self, data=None, can_different_subjs=False, password:str="", calc_flags:bool=True):
         super().__init__(data, self.schema_sheets_names, 0, True, "subj", can_different_subjs=can_different_subjs, password=password)
-        if calc_stats:
-            self.calc_stats()
+        if calc_flags:
+            self.calc_flags()
 
     # ======================================================================================
     # region OVERRIDE
@@ -81,7 +81,7 @@ class BayesDB(MSHDB):
         bayesdb = BayesDB(mshdb.sheets)
 
         bayesdb = bayesdb.sort()
-        bayesdb.calc_stats()
+        bayesdb.calc_flags()
         if update:
             self = bayesdb
 
@@ -123,7 +123,7 @@ class BayesDB(MSHDB):
         return [total]
     # endregion
 
-    def calc_stats(self):
+    def calc_flags(self, outfile:str=None):
 
         out_main_cols = [   "mri",
                             "oa",
@@ -162,6 +162,9 @@ class BayesDB(MSHDB):
                                     break
 
                         self.main.set_subj_session_value(subj, dest_col_lab, value)
+
+        if outfile is not None:
+            self.save_excel(outfile)
 
     def sort(self, by_items:List[str]=["subj", "session"], ascending=[True, True]):
         for sh in self.sheets:
