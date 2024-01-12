@@ -142,13 +142,16 @@ class SubjectsData():
     # only methods the select a SubjectSDList managing a list of subjects' label, sessios and filtering conditions on other columns
     def filter_subjects(self, subj_labels:List[str]=None, sessions:List[int]=None, conditions:List[FilterValues]=None) -> SubjectSDList:
 
+        if sessions is None:
+            sessions = [1 for s in subj_labels]     # 1-fill
+
         subjs:SubjectSDList = SubjectSDList(self.subjects.copy())
 
         if subj_labels is not None:
-            subjs = [s      for s in self.subjects  if s.label in subj_labels]
+            subjs = SubjectSDList([s for s in self.subjects  if s.label in subj_labels])
 
         if sessions is not None:
-            subjs = [s      for s in subjs          if s.session in sessions]
+            subjs = SubjectSDList([s for s in subjs if s.session in sessions])
 
         if conditions is not None:
             res = []
@@ -310,6 +313,8 @@ class SubjectsData():
                 newcols = ["session"] + colnames
             else:
                 newcols = colnames
+        else:
+            newcols = colnames
 
         df = self.select_df(subjs, newcols)
         try:
@@ -541,8 +546,12 @@ class SubjectsData():
 
     # ==================================================================================================
     # region EXIST
-    def exist_subj_session(self, subj_lab:str, session:int=1) -> bool:
-        return ((self.df[self.first_col_name] == subj_lab) & (self.df[self.second_col_name] == session)).any()
+    def get_subj_session(self, subj_lab:str, session:int=1) -> SubjectSD:
+        if ((self.df[self.first_col_name] == subj_lab) & (self.df[self.second_col_name] == session)).any():
+            id = self.get_subjid_by_session(subj_lab, session)
+            return SubjectSD(id, subj_lab, session)
+        else:
+            return None
 
     def exist_subjects(self, subjs:SubjectSDList) -> bool:
         return subjs.is_in(self.subjects)
@@ -576,7 +585,7 @@ class SubjectsData():
 
         return df.index[(df["session"] == session) & (df["subj"] == subj_lab)]
 
-    def get_subject_sessions(self, subj_lab:str, df=None) -> List[int]:
+    def get_subject_available_sessions(self, subj_lab:str, df=None) -> List[int]:
 
         if df is None:
             df = self.df.copy()

@@ -45,7 +45,10 @@ class DataProject:
         self.load_data(data)
 
     # load a data_file if exist
-    def load_data(self, data_file):
+    def load_data(self, data_file=None):
+
+        if data_file is None:
+            return None
 
         df = ""
         if os.path.exists(data_file):
@@ -141,10 +144,14 @@ class DataProject:
     # SUBJLABELS LIST => VALID SUBJLABELS LIST or []
     # check whether all subjects listed in subjects are valid
     # returns given list if all valid
-    def __get_valid_subjlabels(self, subj_labels):
-        for lab in subj_labels:
-            if not self.data.exist_subj_session(lab):
-                raise SubjectListException("__get_valid_subjlabels", "given subject (" + lab + ") does not exist in data file")
+    def __get_valid_subjlabels(self, subj_labels:List[str], sessions:List[int]=None):
+
+        if sessions is None:
+            sessions = [1 for s in subj_labels]
+
+        for id,lab in enumerate(subj_labels):
+            if self.data.get_subj_session(lab, sessions[id]) is None:
+                raise SubjectListException("__get_valid_subjlabels", "given subject (" + lab + " | " + str(sessions[id]) + ") does not exist in data file")
         return subj_labels
     #endregion
 
@@ -155,10 +162,15 @@ class DataProject:
     def get_subjects_values_by_cols(self, grouplabel_or_subjlist, columns_list, data=None, sort=False,
                                     demean_flags=None, sess_id=1, must_exist=False) -> list:
 
-        subj_list  = self.get_subjects_labels(grouplabel_or_subjlist, must_exist=must_exist)
+        subj_labels = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
         valid_data = self.validate_data(data)
+
+        sessions = [sess_id for s in subj_labels]  # 1-fill
+
+        subjsSD_list = valid_data.filter_subjects(subj_labels, sessions)
+
         if valid_data is not None:
-            return valid_data.get_subjects_values_by_cols(subj_list, columns_list, demean_flags=demean_flags)
+            return valid_data.get_subjects_values_by_cols(subjsSD_list, columns_list, demean_flags=demean_flags)
         else:
             return []
     # endregion ==================================================================================================================

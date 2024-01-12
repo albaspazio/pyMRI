@@ -3,16 +3,17 @@ import io
 import os
 from typing import List
 
+import gspread
 import msoffcrypto
 import pandas
 import pandas as pd
 
+from data.GDriveSheet import GDriveSheet
 from data.Sheets import Sheets
 from data.SubjectSD import SubjectSD
 from data.SubjectSDList import SubjectSDList
 from data.SubjectsData import SubjectsData
 from utility.exceptions import DataFileException
-from utility.list import intersection, get_intersecting
 
 
 class MSHDB:
@@ -54,16 +55,16 @@ class MSHDB:
     @property
     def subjects(self) -> SubjectSDList:
         if self.main_name not in self.sheets:
-            return []
+            return SubjectSDList([])
         else:
             return self.main.subjects
 
     @property
     def sheet_labels(self) -> list:
         if bool(self.sheets):
-            return len(self.sheets.keys())
+            return list(self.sheets.keys())
         else:
-            return 0
+            return []
 
     def load(self, data=None, validcols:list=None, cols2num:list=None, delimiter='\t') -> Sheets:
 
@@ -97,6 +98,23 @@ class MSHDB:
         elif isinstance(data, Sheets):
             # TODO check is a dict of sheetname:subjectsdata
             self.sheets = data
+
+        elif isinstance(data, GDriveSheet):
+            gc = gspread.service_account(data.account)
+            spreadsheet = gc.open(data.shname)
+
+            for wsh in spreadsheet.worksheets():
+                rows    = wsh.get_all_records()
+                df      = pd.DataFrame(rows)
+                df      = self.is_valid(df)  # verify first column is called like self.first_col_name
+                df      = df.sort_values(by=[self.first_col_name], ignore_index=True)
+
+                sd      = SubjectsData(df)
+                # TODO
+                # if not self.can_diff_subjs:
+                #     self.check_labels(sd.subjects, sheet)  # raise an exception
+
+                self.sheets[wsh.title] = sd
 
         else:
             raise Exception("Error in MXLSDB.load: unknown data format, not a str, not a Sheet")
@@ -170,10 +188,12 @@ class MSHDB:
     # ->    it must consider all four subjects and thus add a row with only the subj name where it's absent
     #       in the first sheet add s3 and in the second s2.
     # Moreover must create also all those sheets not present in new data with a row for each subject with just a subj column
+    # if "copy_previous_sess" is not None and subjects have a previous session: it tries to copy previous data of the sheet contained in the given list
+    #
     #
     # parse all sheets and determine the list of all subjects contained across all given sheets
     # if it finds a new subj that already existed -> raise exception
-    def add_new_subjects(self, newdb:'MSHDB', can_diff_subjs=None, update=False) -> 'MSHDB':
+    def add_new_subjects(self, newdb:'MSHDB', can_diff_subjs=None, copy_previous_sess=None, update=False) -> 'MSHDB':
 
         if can_diff_subjs is None:
             can_diff_subjs = self.can_diff_subjs
@@ -192,8 +212,30 @@ class MSHDB:
         for sh in self.schema_sheets_names:
 
             if sh not in list(newdb.sheets.keys()):
-                # new data does NOT contain this sheet -> I must create a new sheet sd with new subjects default info (subj, and e.g. group / session)
-                df                  = newdb.add_default_rows(all_subjs)
+                # new data does NOT contain this sheet.
+                # in case new subjects has a previous session, decide whether copying data from session 1 or create a default (subj/session/group) df
+                if copy_previous_sess is None:
+                    # create a new sheet sd with new subjects default info (subj, and e.g. group / session)
+                    df = newdb.add_default_rows(all_subjs)
+                else:
+                    if sh in copy_previous_sess:
+                        df      = pandas.DataFrame()
+                        new_sh  = newdb.sheet_sd(sh)
+                        for s in all_subjs:
+                            if s.session > 1:
+                                session1 = self.sheet_sd(sh).get_subj_session(s.label, 1)
+                                if session1 is None:
+                                    raise Exception("Error in MSHDB.add_new_subjects: new subject is a follow-up, but session 1 is missing...aborting")
+                                else:
+                                    session1["session"] = s.session
+                                    df.loc[len(df)]     = session1
+                            else:
+                                df.loc[len(df)] = {self.first_col_name: s.label, self.second_col_name: s.session}
+
+                    else:
+                        df = newdb.add_default_rows(all_subjs)
+
+                    # check if a previous session is pre
                 newdb.sheets[sh]    = SubjectsData(df)
             else:
                 # new data contain this sheet -> I must add to the new data, a row for all other subjects not present in this new sheet
@@ -203,7 +245,6 @@ class MSHDB:
                         # this subj exist in some other new sheets, but not here -> add it
                         # P.S. could have passed row=None and let SubjectsData manage it, but calling a MSHDB subclass method I'm sure it is more complete
                         ds.add_row(subj, newdb.add_default_row(subj))
-
 
         # has all sheets and all subjects are brand new
         if update is True:
@@ -312,7 +353,9 @@ class MSHDB:
                 if ds.num == 0:
                     continue
                 for col in self.to_be_rounded[sh]:
-                    ds.df[col] = ds.df[col].round(self.round_decimals)
+                    ds.df[col] = ds.df[col].apply(lambda x: round(x, self.round_decimals) if str(x) != "" else x)
+
+                    # ds.df[col] = ds.df[col].round(self.round_decimals)
 
     def is_equal(self, db:'MSHDB'):
         return self.sheets.is_equal(db.sheets)

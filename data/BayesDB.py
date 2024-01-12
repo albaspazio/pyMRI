@@ -22,7 +22,6 @@ class BayesDB(MSHDB):
     dates               = {"main":["birth_date", "recruitment_date"], "MATRICS":["matrics_date"]}
     to_be_rounded       = {"main":["age"]}
 
-
     def __init__(self, data=None, can_different_subjs=False, password:str="", calc_flags:bool=True):
         super().__init__(data, self.schema_sheets_names, 0, True, "subj", can_different_subjs=can_different_subjs, password=password)
         if calc_flags:
@@ -96,7 +95,7 @@ class BayesDB(MSHDB):
 
         return self.main.get_subjects_column(subjs, "group")
 
-    #region GET LISTS OF INTERESTS
+    # region GET LISTS OF INTERESTS
     def mrilabels(self, subj_labels:List[str]=None) -> list:
 
         total = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("mri"   , "==", 1)])

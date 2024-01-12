@@ -370,10 +370,15 @@ class Project:
     def get_subjects_values_by_cols(self, grouplabel_or_subjlist, columns_list, data=None, sort=False,
                                     demean_flags=None, sess_id=1, must_exist=False) -> list:
 
-        subj_list  = self.get_subjects_labels(grouplabel_or_subjlist, sess_id, must_exist=must_exist)
-        valid_data = self.validate_data(data)
+        subj_labels = self.get_subjects_labels(grouplabel_or_subjlist, sess_id, must_exist=must_exist)
+        valid_data  = self.validate_data(data)
+
+        sessions = [sess_id for s in subj_labels]     # 1-fill
+
+        subjsSD_list = valid_data.filter_subjects(subj_labels, sessions)
+
         if valid_data is not None:
-            return valid_data.get_subjects_values_by_cols(subj_list, columns_list, demean_flags=demean_flags)
+            return valid_data.get_subjects_values_by_cols(subjsSD_list, columns_list, demean_flags=demean_flags)
         else:
             return []
     #endregion
