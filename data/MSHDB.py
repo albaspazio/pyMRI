@@ -211,24 +211,29 @@ class MSHDB:
         # start cycling through all existing sheets, adding missing sheets with all new subj rows or integrating the given sheets with missing subjects
         for sh in self.schema_sheets_names:
 
-            if sh not in list(newdb.sheets.keys()):
-                # new data does NOT contain this sheet.
+            if sh not in list(newdb.sheets.keys()):         # new data does NOT contain this sheet.
+
                 # in case new subjects has a previous session, decide whether copying data from session 1 or create a default (subj/session/group) df
                 if copy_previous_sess is None:
                     # create a new sheet sd with new subjects default info (subj, and e.g. group / session)
                     df = newdb.add_default_rows(all_subjs)
                 else:
                     if sh in copy_previous_sess:
-                        df      = pandas.DataFrame()
-                        new_sh  = newdb.sheet_sd(sh)
+                        df  = pandas.DataFrame()
+                        sd  = self.sheet_sd(sh)
                         for s in all_subjs:
                             if s.session > 1:
-                                session1 = self.sheet_sd(sh).get_subj_session(s.label, 1)
-                                if session1 is None:
+                                subj_session1 = sd.get_subj_session(s.label, 1)
+                                if subj_session1 is None:
                                     raise Exception("Error in MSHDB.add_new_subjects: new subject is a follow-up, but session 1 is missing...aborting")
                                 else:
-                                    session1["session"] = s.session
-                                    df.loc[len(df)]     = session1
+                                    subj_row            = sd.get_subject(subj_session1)
+                                    subj_row["session"] = s.session
+                                    if len(df) == 0:
+                                        df = pd.DataFrame(columns=list(subj_row.keys()))
+                                        df.loc[len(df)] = subj_row
+                                    else:
+                                        df.loc[len(df)]     = subj_row
                             else:
                                 df.loc[len(df)] = {self.first_col_name: s.label, self.second_col_name: s.session}
 
@@ -237,8 +242,10 @@ class MSHDB:
 
                     # check if a previous session is pre
                 newdb.sheets[sh]    = SubjectsData(df)
-            else:
-                # new data contain this sheet -> I must add to the new data, a row for all other subjects not present in this new sheet
+
+            else:                                       # new data contain this sheet
+
+                # I must add to the new data, a row for all other subjects not present in this new sheet
                 ds:SubjectsData = newdb.sheets[sh]
                 for subj in all_subjs:
                     if not ds.subjects.contains(subj):

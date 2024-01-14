@@ -74,9 +74,9 @@ class BayesDB(MSHDB):
         mshdb = super().remove_subjects(subjects2remove, update)
         return BayesDB(mshdb.sheets)
 
-    def add_new_subjects(self, newdb:'MSHDB', can_diff_subjs=None, update=False) -> 'BayesDB':
+    def add_new_subjects(self, newdb:'MSHDB', can_diff_subjs=None, copy_previous_sess=None, update=False) -> 'BayesDB':
 
-        mshdb   = super().add_new_subjects(newdb, can_diff_subjs, update)
+        mshdb   = super().add_new_subjects(newdb, can_diff_subjs, copy_previous_sess, update)
         bayesdb = BayesDB(mshdb.sheets)
 
         bayesdb = bayesdb.sort()

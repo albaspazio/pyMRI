@@ -10,9 +10,11 @@ from threading import Thread
 
 from typing import List
 
+import Global
 from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
 from subject.Subject import Subject
+from data.SubjectSDList import SubjectSDList
 from utility.exceptions import SubjectListException
 from utility.images.Image import Image
 from utility.fileutilities import sed_inplace, remove_ext
@@ -20,7 +22,7 @@ from utility.fileutilities import sed_inplace, remove_ext
 
 class Project:
 
-    def __init__(self, folder, globaldata, data="data.dat"):
+    def __init__(self, folder:str, globaldata:Global, data:str="data.dat"):
 
         if not os.path.exists(folder):
             raise Exception("PROJECT_DIR not defined.....exiting")
@@ -81,30 +83,13 @@ class Project:
 
         self.load_data(data)
 
-    # load a data_file if exist
-    def load_data(self, data_file) -> SubjectsData:
-
-        df = ""
-        if os.path.exists(data_file):
-            df = data_file
-        elif os.path.exists(os.path.join(self.script_dir, data_file)) and os.path.isfile(os.path.join(self.script_dir, data_file)):
-            df = os.path.join(self.script_dir, data_file)
-
-        if df != "":
-            d = SubjectsData(df)
-            if d.num > 0:
-                self.data       = d
-                self.data_file  = df
-
-        return self.data
-
     # if must_exist=true:   loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
     # if must_exist=false:  only create
     # returns this list
-    def load_subjects(self, group_label, sess_id=1, must_exist=True) -> List[Subject]:
+    def load_subjects(self, group_or_subjlabels, sess_id:int=1, must_exist=True) -> List[Subject]:
 
         try:
-            subjects           = self.get_subjects(group_label, sess_id, must_exist)
+            subjects           = self.get_subjects(group_or_subjlabels, sess_id, must_exist)
 
         except SubjectListException as e:
             raise SubjectListException("load_subjects", e.param)    # send whether the group label was not present
@@ -117,7 +102,7 @@ class Project:
         return subjects
 
     # get a deepcopy of subject with given label
-    def get_subject_by_label(self, subj_label, sess=1, must_exist=True):
+    def get_subject(self, subj_label:str, sess:int=1, must_exist=True) -> Subject:
 
         if must_exist:
             for subj in self.subjects:
@@ -135,11 +120,13 @@ class Project:
     # ==================================================================================================================
     # IN:   GROUP_LABEL | SUBLABELS LIST
     # OUT:  [VALID SUBJECT INSTANCES LIST]
-    def get_subjects(self, group_or_subjlabels, sess_id=1, must_exist=True, select_conds:List[FilterValues]=None) -> List[Subject]:
+    def get_subjects(self, group_or_subjlabels=None, sess_id:int=1, must_exist=True, select_conds:List[FilterValues]=None) -> List[Subject]:
         valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, sess_id, must_exist)
+
         if select_conds is not None:
-            valid_subj_labels = self.data.select_subjlist(valid_subj_labels, select_conds)
-        return self.__get_subjects_from_labels(valid_subj_labels, sess_id, must_exist)
+            valid_subj_labels = self.data.select_subjlist(valid_subj_labels, [sess_id], select_conds)
+
+        return [Subject(subj_lab, self, sess_id) for subj_lab in valid_subj_labels]
 
     # IN:   GROUP_LABEL | SUBLABELS LIST | SUBJINSTANCES LIST
     # OUT:  [VALID SUBLABELS LIST]
@@ -158,9 +145,8 @@ class Project:
             if isinstance(grouplabel_or_subjlist[0], str) is True:
                 # list of subjects' names
                 if must_exist:
-                    return self.__get_valid_subjlabels(grouplabel_or_subjlist, sess_id)
-                else:
-                    return grouplabel_or_subjlist   # [string]
+                    self.__assert_valid_subjlabels(grouplabel_or_subjlist, sess_id)
+                return grouplabel_or_subjlist   # [string]
 
             elif isinstance(grouplabel_or_subjlist[0], Subject):
                 return [subj.label for subj in grouplabel_or_subjlist]
@@ -178,37 +164,29 @@ class Project:
     # must_exist=False  -> if list if present, returns its associated subjects' labels without verifying their validity
     # IN:   GROUP_LAB
     # OUT:  [VALID SUBJLABELS LIST] or SubjectListException
-    def __get_valid_subjlabels_from_group(self, group_label, sess_id=1, must_exist=True) -> List[str]:
+    def __get_valid_subjlabels_from_group(self, group_label:str, sess_id=1, must_exist=True) -> List[str]:
         for grp in self.subjects_lists:
             if grp["label"] == group_label:
                 if must_exist:
-                    return self.__get_valid_subjlabels(grp["list"], sess_id)
-                else:
-                    return grp["list"]
+                    self.__assert_valid_subjlabels(grp["list"], sess_id)
+                return grp["list"]
         raise SubjectListException("__get_valid_subjlabels_from_group", "given group_label (" + group_label + ") does not exist in subjects_lists")
 
     # check whether all subjects listed in subjects are valid
     # returns given list if all valid
     # IN:   SUBJLABELS LIST
     # OUT:  [VALID SUBJLABELS LIST] or SubjectListException
-    def __get_valid_subjlabels(self, subj_labels, sess_id=1) -> List[str]:
+    def __assert_valid_subjlabels(self, subj_labels:List[str], sess_id=1):
         for lab in subj_labels:
             if not Subject(lab, self, sess_id).exist():
                 raise SubjectListException("__get_valid_subjlabels", "given subject (" + lab + ") does not exist in file system")
-        return subj_labels
-
-    # create and returns a list of valid subjects instances given a subjlabels list
-    # IN:   SUBJLABELS LIST
-    # OUT:  VALID SUBJS INSTANCES
-    def __get_subjects_from_labels(self, subj_labels, sess_id=1, must_exist=True) -> List[Subject]:
-        if must_exist:
-            subj_labels = self.__get_valid_subjlabels(subj_labels)
-        return [Subject(subj_lab, self, sess_id) for subj_lab in subj_labels]
 
     #endregion
 
     # ==================================================================================================================
-    #region CHECK/PREPARE IMAGES
+    #region M R I
+
+    # CHECK/PREPARE IMAGES
     def check_subjects_original_images(self):
 
         incomplete_subjects = []
@@ -363,43 +341,25 @@ class Project:
     #endregion
 
     # ==================================================================================================================
-    #region GET SUBJECTS DATA
+    #region D A T A
 
-    # returns a matrix (values x subjects) containing values of the requested columns of given subjects
-    # user can also pass a datafile path or a custom subj_dictionary
-    def get_subjects_values_by_cols(self, grouplabel_or_subjlist, columns_list, data=None, sort=False,
-                                    demean_flags=None, sess_id=1, must_exist=False) -> list:
+    # load a data_file if exist
+    def load_data(self, data_file) -> SubjectsData:
 
-        subj_labels = self.get_subjects_labels(grouplabel_or_subjlist, sess_id, must_exist=must_exist)
-        valid_data  = self.validate_data(data)
+        df = ""
+        if os.path.exists(data_file):
+            df = data_file
+        elif os.path.exists(os.path.join(self.script_dir, data_file)) and os.path.isfile(os.path.join(self.script_dir, data_file)):
+            df = os.path.join(self.script_dir, data_file)
 
-        sessions = [sess_id for s in subj_labels]     # 1-fill
+        if df != "":
+            d = SubjectsData(df)
+            if d.num > 0:
+                self.data       = d
+                self.data_file  = df
 
-        subjsSD_list = valid_data.filter_subjects(subj_labels, sessions)
+        return self.data
 
-        if valid_data is not None:
-            return valid_data.get_subjects_values_by_cols(subjsSD_list, columns_list, demean_flags=demean_flags)
-        else:
-            return []
-    #endregion
-
-    # ==================================================================================================================
-    #region returns a tuple with two vectors[nsubj] (filtered by subj labels) of the requested column
-    # - [values]
-    # - [labels]
-    # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_column(self, grouplabel_or_subjlist, column, data=None, sort=False, sess_id=1, select_conds:List[FilterValues]=None):
-
-        subj_list   = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
-        valid_data  = self.validate_data(data)
-        if valid_data is not None:
-            return valid_data.get_filtered_column(subj_list, column, sort=sort, select_conds=select_conds)
-        else:
-            return None
-    #endregion
-
-    # ==================================================================================================================
-    # region ACCESSORY
     # validate data dictionary. if param is none -> takes it from self.data
     #                           otherwise try to load it
     def validate_data(self, data=None) -> SubjectsData:
@@ -420,6 +380,41 @@ class Project:
             else:
                 raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is neither a SubjectsData nor a string")
 
+    # returns a matrix (values x subjects) containing values of the requested columns of given subjects
+    # user can also pass a datafile path or a custom subj_dictionary
+    def get_subjects_values_by_cols(self, grouplabel_or_subjlist, columns_list, data=None, sort=False,
+                                    demean_flags=None, sess_id=1, must_exist=False) -> list:
+
+        subj_labels = self.get_subjects_labels(grouplabel_or_subjlist, sess_id, must_exist=must_exist)
+        valid_data  = self.validate_data(data)
+
+        sessions = [sess_id for s in subj_labels]     # 1-fill
+        subjsSD_list:SubjectSDList = valid_data.filter_subjects(subj_labels, sessions)
+
+        if valid_data is not None:
+            return valid_data.get_subjects_values_by_cols(subjsSD_list, columns_list, demean_flags=demean_flags)
+        else:
+            return []
+
+    # - [values]
+    # - [labels]
+    # user can also pass a datafile path or a custom subj_dictionary
+    def get_filtered_column(self, grouplabel_or_subjlist, column, data=None, sort=False, sess_id=1, select_conds:List[FilterValues]=None) -> Tuple[list, List[str]]:
+
+        subj_labels = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
+        valid_data  = self.validate_data(data)
+
+        sessions = [sess_id for s in subj_labels]     # sess_id-fill
+        subjsSD_list:SubjectSDList = valid_data.filter_subjects(subj_labels, sessions)
+
+        if valid_data is not None:
+            return valid_data.get_filtered_column(subjsSD_list, column, sort=sort, select_conds=select_conds)
+        else:
+            return None
+
+    def add_data_column(self, colname: str, subjects: SubjectSDList, values, updatefile=False):
+        self.data.add_column(colname, values, subjects)
+
     # added data_file in order to add v
     def add_icv_to_data(self, grouplabel_or_subjlist=None, updatefile=False, df=None, sess_id=1):
 
@@ -431,6 +426,11 @@ class Project:
         icvs = self.get_subjects_icv(grouplabel_or_subjlist, sess_id)
 
         self.data.add_column("icv", icvs, grouplabel_or_subjlist, df)
+
+    #endregion
+
+    # ==================================================================================================================
+    # region ACCESSORY
 
     def get_subjects_icv(self, grouplabel_or_subjlist, sess_id=1):
 
@@ -449,14 +449,10 @@ class Project:
             icv_scores.append(round(float(values[1]) + float(values[2]) + float(values[3]), 4))
         return icv_scores
 
-    def add_data_column(self, colname, labels, values, updatefile=False):
-        self.data.add_column(colname, values, labels)
-
     #endregion ==================================================================================================================
 
     # ==================================================================================================================
-    # GROUP ANALYSIS ACCESSORY
-    # ==================================================================================================================
+    #region BATCHING
     # returns out_batch_job, created from zero
     def create_batch_files(self, out_batch_name, seq):
 
@@ -513,10 +509,10 @@ class Project:
         sed_inplace(out_batch_start, "JOB_LIST", "\'" + out_batch_job + "\'")
 
         return out_batch_job, out_batch_start
+    #endregion
 
     # ==================================================================================================================
-    # MULTICORE PROCESSING
-    # ==================================================================================================================
+    # region MULTICORE PROCESSING
     # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subjects) > 1 ...pass that same kwparams[0] to all subjects
     # if subjects is not given...use the loaded subjects
     def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, group_or_subjlabels=None, sess_id=1, must_exist=True):
@@ -533,7 +529,7 @@ class Project:
             return
 
         # check number of NECESSARY (without a default value) method params
-        subj = self.get_subject_by_label(valid_subjlabels[0], sess_id, must_exist)    # subj appear unused, but is instead used in the eval()
+        subj = self.get_subject(valid_subjlabels[0], sess_id, must_exist)    # subj appear unused, but is instead used in the eval()
         if method_type == "":
             method = eval("subj." + method_name)
         else:
@@ -590,7 +586,7 @@ class Project:
 
             for s in range(len(subjects[bl])):
 
-                subj = self.get_subject_by_label(subjects[bl][s], sess_id, must_exist)
+                subj = self.get_subject(subjects[bl][s], sess_id, must_exist)
 
                 if subj is not None:
 
@@ -611,4 +607,5 @@ class Project:
 
             print("completed block " + str(bl) + " with processes: " + str(subjects[bl]))
 
+    #endregion
     # ==================================================================================================================

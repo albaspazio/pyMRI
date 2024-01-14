@@ -339,7 +339,7 @@ class SubjectsData():
 
     # ======================================================================================
     #region GET two vectors (values, valid subjlabels) within the given [subj labels]
-    def get_filtered_column(self, subjs:SubjectSDList=None, colname=None, sort=False, demean=False, ndecim=4):
+    def get_filtered_column(self, subjs:SubjectSDList=None, colname=None, sort=False, demean=False, ndecim=4) -> tuple:
 
         if colname is None:
             raise Exception("Error in SubjectsData.get_filtered_column: colname is None")
@@ -548,7 +548,7 @@ class SubjectsData():
     # region EXIST
     def get_subj_session(self, subj_lab:str, session:int=1) -> SubjectSD:
         if ((self.df[self.first_col_name] == subj_lab) & (self.df[self.second_col_name] == session)).any():
-            id = self.get_subjid_by_session(subj_lab, session)
+            id = self.get_subjid_by_session(subj_lab, session)[0]
             return SubjectSD(id, subj_lab, session)
         else:
             return None
