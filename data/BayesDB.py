@@ -161,16 +161,20 @@ class BayesDB(MSHDB):
                         for in_col in list(in_sheets_cells[id].values())[id_1]:      # e.g. ["mri_code"]
                             # e.g. "mri_code"
                             if in_col not in src_sd.header:
-                                values.append(False)
+                                values.append(0)
                             elif src_sd.is_cell_empty(subj.id, in_col):
-                                values.append(False)
+                                values.append(0)
                             else:
                                 if src_sd.get_subject_col_value(subj, in_col) == 0:
-                                    values.append(False)
+                                    values.append(0)
                                 else:
-                                    values.append(True)
+                                    values.append(1)
 
-                self.main.set_subj_session_value(subj, dest_col_lab, all(values))
+                if all(values) is True:
+                    val = 1
+                else:
+                    val = 0
+                self.main.set_subj_session_value(subj, dest_col_lab, val)
 
         if outfile is not None:
             self.save(outfile)

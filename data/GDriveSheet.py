@@ -6,7 +6,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 
 class GDriveSheet:
-    def __init__(self, ss_id:str, ifolder_id:str, service_account:str, backupfolder_id:str):
+
+    def __init__(self, ss_id:str, ifolder_id:str, service_account:str, backupfolder_id:str=None):
 
         self.ss_id              = ss_id
         self.ifolder_id         = ifolder_id
@@ -26,12 +27,15 @@ class GDriveSheet:
     def get_spreadsheet_id(self, ssname:str, folder_id:str):
         source_id = self.client.list_spreadsheet_files(ssname, folder_id)[0]
 
-    def create_ss(self, name, folder_id, sheets:dict):
-        workbook = self.client.create(name, folder_id=folder_id)
-        for sh in sheets:
-            d2g.upload(sheets[sh].df, workbook.id, sh, credentials=self.creds, df_size = True,
-                       col_names=True, row_names=True, start_cell="A1", clean=False)
+    def create_ss(self, name, folder_id, sheets:dict) -> gspread.Spreadsheet:
 
+        spreadsheet = self.client.create(name, folder_id=folder_id)
+        for sh in sheets:
+            d2g.upload(sheets[sh].df, spreadsheet.id, sh, credentials=self.creds, df_size = True,
+                       col_names=True, row_names=False, start_cell="A1", clean=False)
+        spreadsheet.del_worksheet(spreadsheet.worksheet("Sheet1"))
+
+        return spreadsheet
 
     def update_file(self, sheets:dict, source:str=None, backuptitle:str=None, backupfolder_id:str=None):
 
@@ -46,8 +50,8 @@ class GDriveSheet:
 
         # source_id = self.client.list_spreadsheet_files(self.ss_id, self.ifolder_id)[0]
 
-
-        ss_copy = self.client.copy(file_id=source, title=backuptitle, copy_permissions=True, folder_id=backupfolder_id)
+        if backupfolder_id is not None:
+            ss_copy = self.client.copy(file_id=source, title=backuptitle, copy_permissions=True, folder_id=backupfolder_id)
 
         self.client.del_spreadsheet(source)
 
