@@ -124,7 +124,7 @@ class BayesDB(MSHDB):
 
     def calc_flags(self, outfile:str=None):
 
-        out_main_cols = [   "mri",
+        cols2write = [      "mri",
                             "oa",
                             "nk", "t", "m", "b", "prot",
                             "mat",
@@ -140,30 +140,40 @@ class BayesDB(MSHDB):
                            {"main":["mri_code"], "sangue":["NK"]}, {"main":["mri_code"], "sangue":["T_HELP", "T_REG"]}, {"main":["mri_code"], "sangue":["MONO"]}, {"main":["mri_code"], "sangue":["B"]}, {"main":["mri_code"], "sangue":["PROT"]}
                            ]
 
-        for id,val in enumerate(out_main_cols):
+        for id,val in enumerate(cols2write):
+            # e.g. "mri_oa"
             dest_col_lab = val
 
-            for id_1, src_sheet_lab in enumerate(list(in_sheets_cells[id].keys())):   # e.g. main & sangue
-                if src_sheet_lab in self.sheets:
-                    src_sd:SubjectsData = self.sheet_sd(src_sheet_lab)
-                    for subj in src_sd.subjects:
-                        for in_col in list(in_sheets_cells[id].values())[id_1]:
+            if val == "mri_oa":
+                a=1
+
+            if val == "oa":
+                a=1
+
+            for subj in self.subjects:
+                values = []
+
+                for id_1, src_sheet_lab in enumerate(list(in_sheets_cells[id].keys())):   # e.g. ["main", "OA"]
+                    # e.g. "main"
+                    if src_sheet_lab in self.sheets:
+                        src_sd:SubjectsData = self.sheet_sd(src_sheet_lab)
+                        # SubjectSD(i,lab,sess)
+                        for in_col in list(in_sheets_cells[id].values())[id_1]:      # e.g. ["mri_code"]
+                            # e.g. "mri_code"
                             if in_col not in src_sd.header:
-                                value = 0
-                                break
-                            value   = 1
-                            if src_sd.is_cell_empty(subj.id, in_col):
-                                value = 0
-                                break
+                                values.append(False)
+                            elif src_sd.is_cell_empty(subj.id, in_col):
+                                values.append(False)
                             else:
                                 if src_sd.get_subject_col_value(subj, in_col) == 0:
-                                    value = 0
-                                    break
+                                    values.append(False)
+                                else:
+                                    values.append(True)
 
-                        self.main.set_subj_session_value(subj, dest_col_lab, value)
+                self.main.set_subj_session_value(subj, dest_col_lab, all(values))
 
         if outfile is not None:
-            self.save_excel(outfile)
+            self.save(outfile)
 
     def sort(self, by_items:List[str]=["subj", "session"], ascending=[True, True]):
         for sh in self.sheets:

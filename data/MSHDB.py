@@ -2,6 +2,7 @@ import collections
 import io
 import os
 from typing import List
+from datetime import date, datetime
 
 import gspread
 import msoffcrypto
@@ -36,7 +37,8 @@ class MSHDB:
 
         self.main_name          = sheetnames[main_id]      # e.g. "main"
 
-        self.filepath           = ""
+        self.data_source        = None
+
         self.sheets             = Sheets(self.schema_sheets_names, main_id)
 
         if data is not None:
@@ -68,6 +70,7 @@ class MSHDB:
 
     def load(self, data=None, validcols:list=None, cols2num:list=None, delimiter='\t') -> Sheets:
 
+        self.data_source = data
         if isinstance(data, str):
 
             if not os.path.exists(data):
@@ -75,8 +78,6 @@ class MSHDB:
 
             if not data.endswith(".xls") and not data.endswith(".xlsx"):
                 raise Exception("Error in MXLSDB.load: unknown data file format")
-
-            self.filepath   = data
 
             if self.password != "":
                 data = self.decrypt_excel(data, self.password)
@@ -100,21 +101,25 @@ class MSHDB:
             self.sheets = data
 
         elif isinstance(data, GDriveSheet):
-            gc = gspread.service_account(data.account)
-            spreadsheet = gc.open(data.shname)
 
-            for wsh in spreadsheet.worksheets():
-                rows    = wsh.get_all_records()
-                df      = pd.DataFrame(rows)
-                df      = self.is_valid(df)  # verify first column is called like self.first_col_name
-                df      = df.sort_values(by=[self.first_col_name], ignore_index=True)
+            try:
+                spreadsheet     = data.open_ss()
 
-                sd      = SubjectsData(df)
-                # TODO
-                # if not self.can_diff_subjs:
-                #     self.check_labels(sd.subjects, sheet)  # raise an exception
+                for wsh in spreadsheet.worksheets():
+                    rows    = wsh.get_all_records()
+                    df      = pd.DataFrame(rows)
+                    df      = self.is_valid(df)  # verify first column is called like self.first_col_name
+                    df      = df.sort_values(by=[self.first_col_name], ignore_index=True)
 
-                self.sheets[wsh.title] = sd
+                    sd      = SubjectsData(df)
+                    # TODO
+                    # if not self.can_diff_subjs:
+                    #     self.check_labels(sd.subjects, sheet)  # raise an exception
+
+                    self.sheets[wsh.title] = sd
+            except gspread.exceptions.APIError as ex:
+                print("GOOGLE API ERROR: " + ex.args[0]["message"])
+
 
         else:
             raise Exception("Error in MXLSDB.load: unknown data format, not a str, not a Sheet")
@@ -299,26 +304,34 @@ class MSHDB:
 
         return df
 
-    def save_excel(self, outfile, sort=None):
+    def save(self, outdata, sort=None):
 
-        with pd.ExcelWriter(outfile, engine="xlsxwriter") as writer:
-            for sh in self.schema_sheets_names:
+        for sh in self.schema_sheets_names:
+            if sort is not None:
+                if isinstance(sort, list):
+                    self.sheet_sd(sh).df.sort_values(by=sort, inplace=True)
+                else:
+                    raise Exception("Error in MSHDB.save_excel: sort parameter is not a list")
 
-                if sort is not None:
-                    if isinstance(sort, list):
-                        self.sheet_sd(sh).df.sort_values(by=sort, inplace=True)
-                    else:
-                        raise Exception("Error in MSHDB.save_excel: sort parameter is not a list")
+        if isinstance(self.data_source, str):
+            with pd.ExcelWriter(outdata, engine="xlsxwriter") as writer:
 
-                self.sheet_sd(sh).df.to_excel(writer, sheet_name=sh, startrow=1, header=False, index=False)
-                workbook            = writer.book
-                worksheet           = writer.sheets[sh]
-                (max_row, max_col)  = self.sheet_sd(sh).df.shape
-                column_settings     = [{"header": column} for column in self.sheet_sd(sh).df.columns]
-                worksheet.add_table(0, 0, max_row, max_col - 1, {"columns": column_settings})   # Add the Excel table structure. Pandas will add the data.
-                worksheet.set_column(0, max_col - 1, 12)            # Make the columns wider for clarity.
+                for sh in self.schema_sheets_names:
+                    self.sheet_sd(sh).df.to_excel(writer, sheet_name=sh, startrow=1, header=False, index=False)
 
-        print("Saved file: " + outfile)
+                    # create a table
+                    workbook            = writer.book
+                    worksheet           = writer.sheets[sh]
+                    (max_row, max_col)  = self.sheet_sd(sh).df.shape
+                    column_settings     = [{"header": column} for column in self.sheet_sd(sh).df.columns]
+                    worksheet.add_table(0, 0, max_row, max_col - 1, {"columns": column_settings})  # Add the Excel table structure. Pandas will add the data.
+                    worksheet.set_column(0, max_col - 1, 12)  # Make the columns wider for clarity.
+
+                print("Saved file: " + outdata)
+
+        elif isinstance(self.data_source, GDriveSheet):
+            self.data_source.update_file(self.sheets, backuptitle="bayesdb_" + datetime.now().strftime("%d%m%Y_%H%M%S"))
+            print("Saved Google Sheet: ")
 
     def decrypt_excel(self, fpath, pwd):
         unlocked_file = io.BytesIO()
