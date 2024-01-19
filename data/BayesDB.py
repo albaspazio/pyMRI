@@ -15,7 +15,7 @@ class BayesDB(MSHDB):
     third_col_name  = "group"
 
     schema_sheets_names = [ "main", "socio-ana", "clinica", "sangue", "ceres", "carico_farm",
-                            "AASP", "ASI", "CCAS", "HAM A-D", "MATRICS", "MEQ", "MW S-D", "OA", "PANS",
+                            "AASP", "ASI", "CCAS", "HAM A-D", "MATRICS", "MEQ", "MW S-D", "OA", "PANSS",
                             "PAS", "PSQI", "SANS", "SAPS", "SPQ", "STQ", "TATE", "TEMPS", "TLC", "YMRS", "ZTPI"]
 
     date_format         = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY

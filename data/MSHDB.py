@@ -304,7 +304,10 @@ class MSHDB:
 
         return df
 
-    def save(self, outdata, sort=None):
+    def save(self, outdata=None, sort=None):
+
+        if outdata is None:
+            outdata = self.data_source
 
         for sh in self.schema_sheets_names:
             if sort is not None:
@@ -313,7 +316,7 @@ class MSHDB:
                 else:
                     raise Exception("Error in MSHDB.save_excel: sort parameter is not a list")
 
-        if isinstance(self.data_source, str):
+        if isinstance(outdata, str):
             with pd.ExcelWriter(outdata, engine="xlsxwriter") as writer:
 
                 for sh in self.schema_sheets_names:
@@ -329,8 +332,8 @@ class MSHDB:
 
                 print("Saved file: " + outdata)
 
-        elif isinstance(self.data_source, GDriveSheet):
-            self.data_source.update_file(self.sheets, backuptitle="bayesdb_" + datetime.now().strftime("%d%m%Y_%H%M%S"))
+        elif isinstance(outdata, GDriveSheet):
+            outdata.update_file(self.sheets, backuptitle="bayesdb_" + datetime.now().strftime("%d%m%Y_%H%M%S"))
             print("Saved Google Sheet: ")
 
     def decrypt_excel(self, fpath, pwd):
