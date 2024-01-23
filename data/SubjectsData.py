@@ -142,16 +142,15 @@ class SubjectsData():
     # only methods the select a SubjectSDList managing a list of subjects' label, sessios and filtering conditions on other columns
     def filter_subjects(self, subj_labels:List[str]=None, sessions:List[int]=None, conditions:List[FilterValues]=None) -> SubjectSDList:
 
+        if subj_labels is None:
+            subj_labels = self.subjects.labels
+
+        subjs = SubjectSDList([s for s in self.subjects if s.label in subj_labels])
+
         if sessions is None:
-            sessions = [1 for s in subj_labels]     # 1-fill
+            sessions = [1 for s in subjs.labels]     # 1-fill
 
-        subjs:SubjectSDList = SubjectSDList(self.subjects.copy())
-
-        if subj_labels is not None:
-            subjs = SubjectSDList([s for s in self.subjects  if s.label in subj_labels])
-
-        if sessions is not None:
-            subjs = SubjectSDList([s for s in subjs if s.session in sessions])
+        subjs = SubjectSDList([s for s in subjs if s.session in sessions])
 
         if conditions is not None:
             res = []
