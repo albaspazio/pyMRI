@@ -8,7 +8,7 @@ from inspect import signature
 from shutil import copyfile
 from threading import Thread
 
-from typing import List
+from typing import List, Tuple
 
 import Global
 from data.SubjectsData import SubjectsData
