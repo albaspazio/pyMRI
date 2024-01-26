@@ -86,8 +86,8 @@ class MSHDB:
 
             for sheet_name in xls.sheet_names:
                 df = pd.read_excel(xls, sheet_name)
-                df = self.is_valid(df)  # verify first column is called like self.first_col_name
-                df = df.sort_values(by=[self.first_col_name], ignore_index=True)
+                df = self.is_valid(df)      # verify first column is called like self.first_col_name
+                df = self.sort_values(df)
 
                 sd = SubjectsData(df)
                 # TODO
@@ -109,7 +109,7 @@ class MSHDB:
                     rows    = wsh.get_all_records()
                     df      = pd.DataFrame(rows)
                     df      = self.is_valid(df)  # verify first column is called like self.first_col_name
-                    df      = df.sort_values(by=[self.first_col_name], ignore_index=True)
+                    df      = self.sort_values(df)
 
                     sd      = SubjectsData(df)
                     # TODO
@@ -133,6 +133,9 @@ class MSHDB:
 
     # ======================================================================================
     # region WILL BE OVERRIDDEN
+    def sort_values(self, df:pandas.DataFrame) -> pandas.DataFrame:
+        return df.sort_values(by=[self.first_col_name], ignore_index=True)
+
     def is_valid(self, df:pandas.DataFrame) -> pandas.DataFrame:
         if df.columns[0] != self.first_col_name:
             if self.suppress_nosubj:

@@ -6,7 +6,7 @@ from group.spm_utilities import Covariate, Nuisance
 
 # create factorial designs, multiple regressions, t-test
 from utility.myfsl.utils.run import rrun
-from utility.fileutilities import remove_ext, append_text_file
+from utility.fileutilities import remove_ext, append_text_file, write_text_file
 
 
 class FSLModels:
@@ -113,6 +113,13 @@ class FSLModels:
             covs_values = self.project.get_subjects_values_by_cols(all_subj, covs_label)
             nuis_values = self.project.get_subjects_values_by_cols(all_subj, nuis_label)
 
+            for id, val in enumerate(covs_values):
+                if len(val) != nsubjs:
+                    raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file: number of cov values of cov " + covs_label[id] + " differs from subjects number")
+
+            for id, val in enumerate(nuis_values):
+                if len(val) != nsubjs:
+                    raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file: number of cov values of cov " + covs_label[id] + " differs from subjects number")
             # ------------------------------------------------------------------------------------
             # define output filename...add regressors/nuis to given ofn containing groups info
             for rname in covs_label:
@@ -167,7 +174,6 @@ class FSLModels:
             print("ARR_NUIS= " + str(nuis_label))
             print("NUM_GROUPS=" + str(ngroups))
             print("NUM_CONTRASTS=" + str(tot_cont))
-
             # ---------------------------------------------------
             # overridding GLM file
             # ---------------------------------------------------
@@ -181,6 +187,11 @@ class FSLModels:
             self.addline2string("# ==================================================================")
             self.addline2string("# ====== START OVERRIDE ============================================")
             self.addline2string("# ==================================================================")
+
+            self.addline2string("subjects included")
+            for slab in all_subj:
+                self.addline2string(slab)
+            self.addline2string("-------------------------------------------------------------------")
 
             # Number of subjects
             self.addline2string("set fmri(npts) "     + str(nsubjs))
@@ -507,6 +518,7 @@ class FSLModels:
 
         except Exception as e:
             traceback.print_exc()
+            raise e
 
 
 

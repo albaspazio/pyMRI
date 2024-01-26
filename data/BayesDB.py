@@ -29,6 +29,9 @@ class BayesDB(MSHDB):
 
     # ======================================================================================
     # region OVERRIDE
+    def sort_values(self, df:pandas.DataFrame) -> pandas.DataFrame:
+        return df.sort_values(by=[self.first_col_name, self.second_col_name], ignore_index=True)
+
     def is_valid(self, df:pandas.DataFrame) -> pandas.DataFrame:
         if df.columns[0] != self.first_col_name or df.columns[1] != self.second_col_name:
             if self.suppress_nosubj:
@@ -36,7 +39,7 @@ class BayesDB(MSHDB):
                 df.columns.values[1] = self.second_col_name
                 print("Warning in BayesDB.load: either first or second column was not called subj or session, I renamed them....check if it's ok")
             else:
-                raise Exception("Error in MXLSDB.load: first column is not called " + self.first_col_name)
+                raise Exception("Error in BayesDB.load: either first (" + df.columns.values[0] + ") or second (" + df.columns.values[1] + ") column was not called subj or session ")
         return df
 
     def add_default_columns(self, subjs:SubjectSDList, df:pandas.DataFrame):
