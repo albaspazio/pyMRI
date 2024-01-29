@@ -19,7 +19,7 @@ class Image(str):
     def __new__(cls, value, must_exist=False, msg=""):
         return super(Image, cls).__new__(cls, value)
 
-    def __init__(self, value, must_exist=False, msg=""):
+    def __init__(self, value, must_exist=False, msg="Given Image path is empty"):
 
         if value != "":
             parts = self.imgparts()
@@ -33,9 +33,6 @@ class Image(str):
             if must_exist and not self.exist:
                 raise NotExistingImageException(msg, self)
             return
-
-        if msg == "":
-            msg = "Given Image path is empty"
 
         raise NotExistingImageException(msg, self)
 

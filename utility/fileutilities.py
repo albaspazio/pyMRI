@@ -109,7 +109,7 @@ def copytree(src, dst, symlinks=False, ignore=None):
 
 
 # read a file where each line is a string and returns them as list (pruning the '\n')
-def read_list_from_file(srcfile):
+def read_list_from_file(srcfile) -> list:
     with open(srcfile, 'r') as f:
         _str = f.readlines()
 

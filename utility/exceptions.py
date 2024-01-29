@@ -1,20 +1,20 @@
 
 class SubjectListException(Exception):
-    def __init__(self, method, param):
+    def __init__(self, msg, param):
 
-        self.method = method
-        self.param = param
+        self.msg    = msg
+        self.param  = param
 
 
 class DataFileException(Exception):
-    def __init__(self, method, param):
+    def __init__(self, msg, param):
 
-        self.method = method
-        self.param = param
+        self.msg    = msg
+        self.param  = param
 
 
 class NotExistingImageException(Exception):
-    def __init__(self, method, path):
+    def __init__(self, msg, image):
 
-        self.method = method
-        self.path = path
+        self.msg    = msg
+        self.image  = image

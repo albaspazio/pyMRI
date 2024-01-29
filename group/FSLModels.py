@@ -2,11 +2,11 @@ import os
 import traceback
 from distutils.file_util import copy_file
 
+from group.FSLConFile import FSLConFile
 from group.spm_utilities import Covariate, Nuisance
-
+from utility.fileutilities import remove_ext, append_text_file, read_list_from_file
 # create factorial designs, multiple regressions, t-test
 from utility.myfsl.utils.run import rrun
-from utility.fileutilities import remove_ext, append_text_file, write_text_file
 
 
 class FSLModels:
@@ -163,7 +163,7 @@ class FSLModels:
                     print("cannot compare more than three covariates, between-covariates comparisons is omitted")
 
             tot_cont += between_cov_contrasts
-                    # ------------------------------------------------------------------------------------
+            # ------------------------------------------------------------------------------------
             # SUMMARY
             # ------------------------------------------------------------------------------------
             print("---------------- S U M M A R Y -------------------------------------------------------------------------------")
@@ -187,7 +187,7 @@ class FSLModels:
             self.addline2string("# ==================================================================")
             self.addline2string("# ====== START OVERRIDE ============================================")
             self.addline2string("# ==================================================================")
-
+            self.addline2string("")
             self.addline2string("subjects included")
             for slab in all_subj:
                 self.addline2string(slab)
@@ -520,9 +520,40 @@ class FSLModels:
             traceback.print_exc()
             raise e
 
-
-
     def addline2string(self, line):
         self.string += line
         self.string += "\n"
-        
+
+    @staticmethod
+    def get_numpoints_from_fsl_model(mat_file):
+        lines = read_list_from_file(mat_file)
+        for l in lines:
+            if "/NumPoints" in l:
+                return int(list(l.split("\t"))[1])
+        raise Exception("")
+
+    @staticmethod
+    def read_fsl_contrasts_file(con_file) -> FSLConFile:
+        confile = FSLConFile()
+
+        lines   = read_list_from_file(con_file)
+        nlines  = len(lines)
+
+        for id,l in enumerate(lines):
+            if "/ContrastName" in l:
+                confile.names.append(list(l.split("\t"))[1])
+            elif "/NumWaves" in l:
+                confile.nwaves = int(list(l.split("\t"))[1])
+            elif "/NumContrasts" in l:
+                confile.ncontrasts =  int(list(l.split("\t"))[1])
+            elif "/PPheights" in l:
+                confile.pp_heights = l
+            elif "/RequiredEffect" in l:
+                confile.req_effect = l
+            elif "/Matrix" in l:
+                # should be the (nlines - ncontrasts - 1) [0-based] line
+                for i in range(confile.ncontrasts):
+                    confile.matrix.append(lines[id + 1 + i])
+
+        return confile
+
