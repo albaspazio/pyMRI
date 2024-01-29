@@ -35,7 +35,8 @@ class Project:
         self.group_analysis_dir = os.path.join(self.dir, "group_analysis")
         self.script_dir         = os.path.join(globaldata.project_scripts_dir, self.name)
 
-        self.glm_template_dir = os.path.join(self.script_dir, "glm", "templates")
+        self.glm_template_dir   = os.path.join(self.script_dir, "glm", "templates")
+        self.group_glm_dir     = os.path.join(self.group_analysis_dir, "glm_models")
 
         self.resting_dir            = os.path.join(self.group_analysis_dir, "rs")
         self.mpr_dir                = os.path.join(self.group_analysis_dir, "mpr")

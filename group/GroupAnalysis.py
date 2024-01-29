@@ -1,15 +1,19 @@
 import os
 import shutil
+from math import ceil
 from shutil import move
+from random import randrange
 
 import numpy
 
-from data import plot_data
+from Project import Project
+from group.FSLModels import FSLModels
 from group.SPMModels import SPMModels
+from utility.exceptions import NotExistingImageException
 from utility.images.Image import Image
 from utility.matlab import call_matlab_spmbatch
 from utility.myfsl.utils.run import rrun
-from utility.fileutilities import sed_inplace, get_dirname
+from utility.fileutilities import sed_inplace, get_dirname, read_list_from_file, write_text_file
 from utility.utilities import listToString
 from utility.fileutilities import sed_inplace
 from utility.utilities import get_col_from_listmatrix
@@ -17,7 +21,7 @@ from utility.utilities import get_col_from_listmatrix
 
 class GroupAnalysis:
 
-    def __init__(self, proj):
+    def __init__(self, proj:Project):
 
         self.subjects_list  = None
         self.working_dir    = ""
@@ -316,8 +320,100 @@ class GroupAnalysis:
     #endregion
 
     # ====================================================================================================================================================
-    #region TBSS
+    # region TBSS
     # ====================================================================================================================================================
+    # does the following checks:
+    # - input 4D image and mask, input fsf file exists.
+    # - number of volumes (subjects) of input image coincides with number of points into the model
+    # can split contrasts in different processes
+    def start_randomize(self, pop_dir_name, dti_image_type, analysis_name, corr_string, models_dir_name="", delay=20, numcpu=1, ignore_errors=False, runit=True):
+
+        try:
+            main_analysis_folder    = os.path.join(self.project.tbss_dir, pop_dir_name)     # /data/MRI/projects/past_controls/group_analysis/tbss/controls57
+            out_stats_folder        = os.path.join(main_analysis_folder, "stats")           # /data/MRI/projects/past_controls/group_analysis/tbss/controls57/stats
+
+            # /data/MRI/projects/past_controls/group_analysis/tbss/controls57/stats/all_FA_skeletonised --- mean_FA_skeleton_mask
+            input_image     = Image(os.path.join(out_stats_folder, "all_" + dti_image_type + "_skeletonised"), must_exist=True, msg="skeletonised image not present")
+            input_mask      = Image(os.path.join(out_stats_folder, "mean_" + dti_image_type + "_skeleton_mask"), must_exist=True, msg="skeleton mask image not present")
+            out_image_name  = "tbss_" + dti_image_type + "_" + analysis_name + "_x_" + corr_string  # tbss_FA_groups&factors_x_age
+            final_dir       = os.path.join(out_stats_folder, dti_image_type, corr_string)   # /data/MRI/projects/past_controls/group_analysis/tbss/population/stats/FA/age_gender
+
+            os.makedirs(final_dir, exist_ok=True)
+
+            model_noext = os.path.join(self.project.group_glm_dir, models_dir_name, analysis_name + "_x_" + corr_string) # /data/MRI/projects/past_controls/group_analysis/glm_models/XXX/groups&factors_x_nuisances
+            model_con   = model_noext + ".con"
+            model_mat   = model_noext + ".mat"
+
+            if not os.path.exists(model_con) or not os.path.exists(model_con):
+                raise Exception("model files are missing: "+ model_con + " | " + model_mat + "...analysis aborted")
+
+            nvols   = input_image.nvols
+            npoints = FSLModels.get_numpoints_from_fsl_model(model_mat)
+
+            if nvols != npoints:
+                raise Exception("number of data points in input image (" + input_image + ") and given model (" + model_noext + ") does not coincide...analysis aborted")
+
+            if numcpu == 1:
+                if runit:
+                    print("RANDOMIZE STARTED: model: " + model_noext + " on " + input_image)
+                    rrun("randomise -i " + input_image + " -m " + input_mask + " -o " + os.path.join(final_dir, out_image_name) + " -d " + model_noext + ".mat -t " + model_noext + ".con -n 5000 --T2 -V &")
+                    rrun("sleep " + str(delay))
+            else:
+                contrast_file   = FSLModels.read_fsl_contrasts_file(model_con)
+                numcpu          = min(contrast_file.ncontrasts, numcpu)
+
+                # create a temp directory for each splitted analysis
+
+                random_folders = [ "temp_" + randrange(10000, 100000) for i in range(numcpu)]
+
+                for rf in random_folders:
+                    os.makedirs(os.path.join(final_dir, rf), exist_ok=True)
+
+                # assign contrasts id to each available cpu
+                conids_x_cpu    = []
+                contrasts       = contrast_file.matrix.copy()
+
+                ncpu = numcpu               # 3cpu, 4 contr
+                con_id = 0
+                for c in range(numcpu):
+                    ratio = ceil(len(contrasts) * 1.0 / ncpu)
+                    cpu_conids = []
+                    for cc in range(ratio):
+                        cpu_conids.append(con_id)
+                        contrasts.pop(0)
+                        con_id += 1
+                    ncpu -= 1
+                    conids_x_cpu.append(cpu_conids)
+
+                # create the numcpu mat / con files & start randomize
+                for idcpu in range(numcpu):
+                    con_txt = contrast_file.get_subset_text(conids_x_cpu[idcpu])
+                    con_file = os.path.join(final_dir, random_folders[idcpu], analysis_name + "_x_" + corr_string + ".con")
+                    write_text_file(con_file, con_txt)
+
+                    mat_file = os.path.join(final_dir, random_folders[idcpu], analysis_name + "_x_" + corr_string + ".mat")
+                    shutil.copyfile(model_mat, mat_file)
+
+                    if runit:
+                        print("RANDOMIZE STARTED: model: " + model_noext + " on " + input_image)
+                        rrun("randomise -i " + input_image + " -m " + input_mask + " -o " + os.path.join(final_dir, random_folders[idcpu], out_image_name) + " -d " + mat_file + " -t " + con_file + " -n 5000 --T2 -V &")
+                        rrun("sleep " + str(delay))
+
+        except NotExistingImageException as e:
+            msg = e.msg + " (" + e.image.fpathnoext + ")"
+            if ignore_errors:
+                print(msg)
+                return
+            else:
+                raise Exception(msg)
+        except Exception as e:
+            msg = "Error in start_randomize: " + str(e)
+            if ignore_errors:
+                print(msg)
+                return
+            else:
+                raise Exception(msg)
+
     # run tbss for FA
     # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
     def tbss_clusterize_results_by_atlas(self, tbss_result_image, out_folder, log_file="overlap.txt", tracts_labels=None, tracts_dir=None, thr=0.95):
