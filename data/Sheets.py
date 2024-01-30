@@ -45,7 +45,7 @@ class Sheets(dict):
 
         return True
 
-    def copy(self):
+    def copy(self) -> 'Sheets':
         sheets = Sheets(self.schema_sheets_names, self.main_id)
         for sh in self:
             sheets[sh] = self[sh]

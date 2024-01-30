@@ -77,6 +77,11 @@ class BayesDB(MSHDB):
         mshdb = super().remove_subjects(subjects2remove, update)
         return BayesDB(mshdb.sheets)
 
+    def rename_subjects(self, assoc_dict, update=False) -> 'BayesDB':
+
+        mshdb = super().rename_subjects(assoc_dict, update)
+        return BayesDB(mshdb.sheets)
+
     def add_new_subjects(self, newdb:'MSHDB', can_diff_subjs=None, copy_previous_sess=None, update=False) -> 'BayesDB':
 
         mshdb   = super().add_new_subjects(newdb, can_diff_subjs, copy_previous_sess, update)

@@ -42,7 +42,7 @@ from utility.utilities import argsort, reorder_list
 
 # CAN ALSO return a list of subjlabels that fullfil all the given conditions (==, >, <, <==>,..) on specific columns
 
-class SubjectsData():
+class SubjectsData:
 
     first_col_name  = "subj"
     second_col_name = "session"
@@ -499,7 +499,7 @@ class SubjectsData():
 
         for i, (k_oldlab, v_newlab) in enumerate(assoc_dict.items()):
             subj_id = self.get_subjid_by_session(k_oldlab)
-            self.df.iloc[subj_id][self.first_col_name] = v_newlab
+            self.df.loc[subj_id, self.first_col_name] = v_newlab
 
     # endregion
 

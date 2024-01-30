@@ -178,6 +178,17 @@ class MSHDB:
         else:
             raise Exception("Error in MSSD")
 
+    def rename_subjects(self, assoc_dict, update=False) -> 'MSHDB':
+        sheets = self.sheets.copy()
+        for sh in self.sheets:
+            sheets[sh].rename_subjects(assoc_dict)
+
+        if update:
+            self.sheets = sheets
+            return self
+        else:
+            return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.first_col_name)
+
     def remove_subjects(self, subjects2remove:SubjectSDList, update=False) -> 'MSHDB':
 
         sheets = self.sheets.copy()
