@@ -5,4 +5,4 @@ class SubjectSD:
         self.session    = session
 
     def is_equal(self, subj:'SubjectSD'):
-        return subj.label == self.label and subj.id == self.id and subj.session == self.session
+        return subj.label == self.label and subj.session == self.session

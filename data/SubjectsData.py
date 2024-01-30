@@ -381,7 +381,7 @@ class SubjectsData():
 
     def set_subj_session_value(self, subj:SubjectSD, col_label: str, value):
         if col_label not in self.header:
-            raise Exception("Error in SubjectsData.set_subj_value: given col_label does not belong to header")
+            raise Exception("Error in SubjectsData.set_subj_value: given col_label (" + col_label + ") does not belong to header")
         else:
             col_id = self.col_id(col_label)
 
@@ -514,7 +514,8 @@ class SubjectsData():
 
         for subj in subjects2remove:
             # ids = labels.index(subjlab)
-            df.drop([subj.id], inplace=True)
+            id = df.index[(df['subj'] == subj.label) & (df['session'] == subj.session)].tolist()[0]
+            df.drop(id, inplace=True)
             df.reset_index(drop=True, inplace=True)
 
         sd = SubjectsData(df)

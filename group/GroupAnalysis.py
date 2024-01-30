@@ -1,5 +1,7 @@
 import os
 import shutil
+from math import ceil
+from random import randrange
 from shutil import move
 
 import numpy
@@ -8,13 +10,12 @@ from Project import Project
 from group.FSLModels import FSLModels
 from group.SPMModels import SPMModels
 from utility.exceptions import NotExistingImageException
+from utility.fileutilities import get_dirname, write_text_file
+from utility.fileutilities import sed_inplace
 from utility.images.Image import Image
 from utility.matlab import call_matlab_spmbatch
 from utility.myfsl.utils.run import rrun
-from utility.fileutilities import sed_inplace, get_dirname, read_list_from_file, write_text_file
 from utility.utilities import listToString
-from utility.fileutilities import sed_inplace
-from utility.utilities import get_col_from_listmatrix
 
 
 class GroupAnalysis:

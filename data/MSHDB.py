@@ -200,7 +200,7 @@ class MSHDB:
     #
     #
     # parse all sheets and determine the list of all subjects contained across all given sheets
-    # if it finds a new subj that already existed -> raise exception
+    # if it finds a new subj that already existed -> ignore that subject and add remaining
     def add_new_subjects(self, newdb:'MSHDB', can_diff_subjs=None, copy_previous_sess=None, update=False) -> 'MSHDB':
 
         if can_diff_subjs is None:
@@ -212,9 +212,12 @@ class MSHDB:
 
         # this method cannot overwrite existing subjects: thus verify that added subjects are really new
         all_subjs           = newdb.sheets.all_subjects    # all union (no rep) of all subjects-sessions included in all new sheets
-        intersecting_subjs = all_subjs.is_in(self.subjects)
+        intersecting_subjs  = all_subjs.is_in(self.subjects)
         if len(intersecting_subjs) > 0:
-            raise Exception("Error in MSHDB.add_new_subjects: at least one new subject (" + str(intersecting_subjs.labels) + ") already exist in the db with a same session. this is not allowed. check new data")
+            # remove already existing subjects and update all_subjs
+            newdb       = newdb.remove_subjects(intersecting_subjs)
+            all_subjs   = newdb.sheets.all_subjects
+            print("Warning in MSHDB.add_new_subjects: The following subjects/sessions (" + str(intersecting_subjs.labels) + ") were already present and will be ignored")
 
         # start cycling through all existing sheets, adding missing sheets with all new subj rows or integrating the given sheets with missing subjects
         for sh in self.schema_sheets_names:
@@ -260,6 +263,7 @@ class MSHDB:
                         # this subj exist in some other new sheets, but not here -> add it
                         # P.S. could have passed row=None and let SubjectsData manage it, but calling a MSHDB subclass method I'm sure it is more complete
                         ds.add_row(subj, newdb.add_default_row(subj))
+
 
         # has all sheets and all subjects are brand new
         if update is True:

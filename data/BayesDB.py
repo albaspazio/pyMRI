@@ -64,7 +64,7 @@ class BayesDB(MSHDB):
         return df
 
     def add_default_row(self, subj:SubjectSD):
-        return {self.first_col_name: subj.label, self.second_col_name:subj.session, "group":self.get_groups([subj])[0]}
+        return {self.first_col_name: subj.label, self.second_col_name:subj.session, "group":self.get_groups(SubjectSDList([subj]))[0]}
 
     def add_new_columns(self, shname: str, subjdf: pandas.DataFrame):
 

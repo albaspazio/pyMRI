@@ -33,7 +33,7 @@ class SubjectSDList(list):
                         add = False
                 if add:
                     res.append(s)
-            return res
+            return SubjectSDList(res)
 
     def is_in(self, subj_list:'SubjectSDList') -> 'SubjectSDList':
         res = []
@@ -46,7 +46,7 @@ class SubjectSDList(list):
             if doexist:
                 res.append(s)
 
-        return res
+        return SubjectSDList(res)
 
     def union_norep(self, subj_list:'SubjectSDList'):
         for s in subj_list:
