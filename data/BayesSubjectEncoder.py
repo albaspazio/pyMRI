@@ -47,7 +47,7 @@ class BayesSubjectsEncoder:
         month   = code[6:8]
         year    = code[8:10]
 
-        return self.value2key(surname[0]) + self.value2key(surname[1]) + self.value2key(surname[12]) + self.value2key(name[0]) + self.value2key(name[1]) + self.value2key(name[2]) + month + year
+        return self.value2key(surname[0]) + self.value2key(surname[1]) + self.value2key(surname[2]) + "|" + self.value2key(name[0]) + self.value2key(name[1]) + self.value2key(name[2]) + "|" + month + year
 
     def value2key(self, value) -> str:
 
@@ -55,3 +55,5 @@ class BayesSubjectsEncoder:
             if v == value:
                 return list(self.encoder.keys())[i]
 
+    def decode_list(self, encoded_list):
+        return [self.code2name(code) for code in encoded_list]

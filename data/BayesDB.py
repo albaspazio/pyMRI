@@ -22,8 +22,8 @@ class BayesDB(MSHDB):
     dates               = {"main":["birth_date", "recruitment_date"], "MATRICS":["matrics_date"]}
     to_be_rounded       = {"main":["age"]}
 
-    def __init__(self, data=None, can_different_subjs=False, password:str="", calc_flags:bool=True):
-        super().__init__(data, self.schema_sheets_names, 0, True, "subj", can_different_subjs=can_different_subjs, password=password)
+    def __init__(self, data=None, can_different_subjs=False, password:str="", calc_flags:bool=True, sortonload=True):
+        super().__init__(data, self.schema_sheets_names, 0, True, "subj", can_different_subjs=can_different_subjs, password=password, sortonload=sortonload)
         if calc_flags:
             self.calc_flags()
 
