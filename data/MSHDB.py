@@ -25,7 +25,7 @@ class MSHDB:
     round_decimals  = 2
     date_format     = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
 
-    def __init__(self, data=None, sheetnames:List[str]=None, main_id:int=0, suppress_nosubj=True, first_col_name="subj", can_different_subjs=False, password:str=""):
+    def __init__(self, data=None, sheetnames:List[str]=None, main_id:int=0, suppress_nosubj=True, first_col_name="subj", can_different_subjs=False, password:str="", sortonload=True):
 
         super().__init__()
         self.schema_sheets_names= sheetnames
@@ -42,7 +42,7 @@ class MSHDB:
         self.sheets             = Sheets(self.schema_sheets_names, main_id)
 
         if data is not None:
-            self.load(data)
+            self.load(data, sort=sortonload)
 
         self.__format_dates()
         self.__round_columns()
@@ -68,7 +68,7 @@ class MSHDB:
         else:
             return []
 
-    def load(self, data=None, validcols:list=None, cols2num:list=None, delimiter='\t') -> Sheets:
+    def load(self, data=None, validcols:list=None, cols2num:list=None, delimiter='\t', sort=True) -> Sheets:
 
         self.data_source = data
         if isinstance(data, str):
@@ -87,7 +87,8 @@ class MSHDB:
             for sheet_name in xls.sheet_names:
                 df = pd.read_excel(xls, sheet_name)
                 df = self.is_valid(df)      # verify first column is called like self.first_col_name
-                df = self.sort_values(df)
+                if sort:
+                    df = self.sort_values(df)
 
                 sd = SubjectsData(df)
                 # TODO
@@ -109,7 +110,8 @@ class MSHDB:
                     rows    = wsh.get_all_records()
                     df      = pd.DataFrame(rows)
                     df      = self.is_valid(df)  # verify first column is called like self.first_col_name
-                    df      = self.sort_values(df)
+                    if sort:
+                        df = self.sort_values(df)
 
                     sd      = SubjectsData(df)
                     # TODO

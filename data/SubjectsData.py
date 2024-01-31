@@ -498,8 +498,10 @@ class SubjectsData:
     def rename_subjects(self, assoc_dict):
 
         for i, (k_oldlab, v_newlab) in enumerate(assoc_dict.items()):
-            subj_id = self.get_subjid_by_session(k_oldlab)
-            self.df.loc[subj_id, self.first_col_name] = v_newlab
+            sessions = self.get_subject_available_sessions(k_oldlab)
+            for sess in sessions:
+                subj_id = self.get_subjid_by_session(k_oldlab, sess)
+                self.df.loc[subj_id, self.first_col_name] = v_newlab
 
     # endregion
 
@@ -590,7 +592,7 @@ class SubjectsData:
         if df is None:
             df = self.df.copy()
 
-        mask    = df["subj"].isin(subj_lab)
+        mask    = df["subj"].isin([subj_lab])
         df      = df[mask]
 
         return list(df["session"])
