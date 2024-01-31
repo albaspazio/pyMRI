@@ -20,6 +20,8 @@ class DataProject:
         self.stats_input        = os.path.join(self.r_dir, "indata")
         self.stats_output       = os.path.join(self.r_dir, "results")
 
+        self.subjects_lists_file    = os.path.join(self.script_dir, "subjects_lists.json")
+
         os.makedirs(self.script_dir,    exist_ok=True)
         os.makedirs(self.r_dir,         exist_ok=True)
         os.makedirs(self.input_data_dir,exist_ok=True)
@@ -34,7 +36,7 @@ class DataProject:
         self.nsubj              = 0
 
         # load all available subjects list into self.subjects_lists
-        with open(os.path.join(self.script_dir, "subjects_lists.json")) as json_file:
+        with open(self.subjects_lists_file) as json_file:
             subjects            = json.load(json_file)
             self.subjects_lists = subjects["subjects"]
 

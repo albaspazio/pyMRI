@@ -447,7 +447,7 @@ class GroupAnalysis:
             if numcpu == 1:
                 if runit:
                     print("RANDOMIZE STARTED: model: " + model_noext + " on " + input_image)
-                    rrun("randomise -i " + input_image + " -m " + input_mask + " -o " + os.path.join(final_dir, out_image_name) + " -d " + model_noext + ".mat -t " + model_noext + ".con -n 5000 --T2 -V &")
+                    rrun("randomise -i " + input_image + " -m " + input_mask + " -o " + os.path.join(final_dir, out_image_name) + " -d " + model_noext + ".mat -t " + model_noext + ".con -n 5000 --T2 -V")
                     rrun("sleep " + str(delay))
             else:
                 contrast_file   = FSLModels.read_fsl_contrasts_file(model_con)
@@ -487,7 +487,7 @@ class GroupAnalysis:
 
                     if runit:
                         print("RANDOMIZE STARTED: model: " + model_noext + " on " + input_image)
-                        rrun("randomise -i " + input_image + " -m " + input_mask + " -o " + os.path.join(final_dir, random_folders[idcpu], out_image_name) + " -d " + mat_file + " -t " + con_file + " -n 5000 --T2 -V &")
+                        rrun("randomise -i " + input_image + " -m " + input_mask + " -o " + os.path.join(final_dir, random_folders[idcpu], out_image_name) + " -d " + mat_file + " -t " + con_file + " -n 5000 --T2 -V")
                         rrun("sleep " + str(delay))
 
         except NotExistingImageException as e:

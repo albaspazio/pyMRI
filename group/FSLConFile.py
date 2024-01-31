@@ -1,12 +1,16 @@
 class FSLConFile:
 
-    ncontrasts  = 0
-    nwaves      = 0
 
-    names       = []
-    pp_heights  = []
-    req_effect  = []
-    matrix      = []
+    def __init__(self):
+
+        self.ncontrasts = 0
+        self.nwaves = 0
+
+        self.matrix = []
+        self.names = []
+        self.pp_heights = []
+        self.req_effect = []
+
 
     # define the text of a con file containing only the given ids
     def get_subset_text(self, ids) -> str:
