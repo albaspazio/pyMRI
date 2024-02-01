@@ -197,7 +197,8 @@ class SubjectDti:
             rrun("bedpostx " + bp_dir + " -n 3 -w 1 -b 1000", logFile=logFile)
 
         if Image(os.path.join(bp_out_dir, self.subject.dti_bedpostx_mean_S0_label)).exist:
-            shutil.move(bp_out_dir, bp_dir)
+            os.rename(bp_dir, os.path.join(self.subject.dti_dir, "bedpostx_"))
+            os.rename(bp_out_dir, bp_dir)
         else:
             print("ERROR in bedpostx_gpu....something went wrong in bedpostx")
             return
