@@ -1,6 +1,7 @@
 import os
 from distutils.file_util import copy_file
 
+from data.SubjectsData import SubjectsData
 from group.spm_utilities import Covariate, Nuisance
 
 # create factorial designs, multiple regressions, t-test
@@ -127,7 +128,7 @@ class ConnModels:
         # ------------------------------------------------------------------------------------
         # sanity checks
         if bool(regressors):
-            data = self.project.validate_data(data_file)
+            data:SubjectsData = self.project.validate_data(data_file)
             data.validate_covs(regressors)
         else:
             data = None
@@ -197,9 +198,13 @@ class ConnModels:
             print("cannot manage more than 4 groups")
             return
 
-        # cycle through the subjects of the entire dataset
-        for slab in whole_subjest_labels:
 
+        subjs_data = data.filter_subjects(whole_subjest_labels)
+
+        # cycle through the subjects of the entire dataset
+        for subj in subjs_data:
+
+            slab = subj.label
             # determine to which group belong
             group_id = -1       # does not belong
             for gr_id, gr in enumerate(subj_labels_by_groups):
@@ -212,10 +217,10 @@ class ConnModels:
                 string = groups_strings[group_id]
 
                 for nuis in nuis_label:
-                    string = string + " " + str(data.get_subject_col_value(slab, nuis))
+                    string = string + " " + str(data.get_subject_col_value(subj, nuis))
 
                 for cov in covs_label:
-                    cov_value           = str(data.get_subject_col_value(slab, cov))
+                    cov_value           = str(data.get_subject_col_value(subj, cov))
                     covsvalue           = ["0" for _ in range(ngroups)]
                     covsvalue[group_id] = cov_value
                     value_string        = " ".join(covsvalue)
