@@ -98,7 +98,7 @@ class SubjectsData:
             if data.endswith(".csv") or data.endswith(".dat") or data.endswith(".txt"):
                 self.df     = pd.read_csv(data, delimiter=delimiter)
             elif data.endswith(".xls") or data.endswith(".xlsx"):
-                self.df     = pd.read_excel(data)
+                self.df     = pd.read_excel(data, dtype={"subj": str})
             else:
                 raise Exception("Error in SubjectData.load: unknown data file format")
 

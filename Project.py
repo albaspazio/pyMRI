@@ -386,12 +386,16 @@ class Project:
     # returns a matrix (values x subjects) containing values of the requested columns of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
     def get_subjects_values_by_cols(self, grouplabel_or_subjlist, columns_list, data=None, sort=False,
-                                    demean_flags=None, sess_id=1, must_exist=False) -> list:
+                                    demean_flags=None, sess_id=None, must_exist=False) -> list:
 
         subj_labels = self.get_subjects_labels(grouplabel_or_subjlist, sess_id, must_exist=must_exist)
         valid_data  = self.validate_data(data)
 
-        sessions = [sess_id for s in subj_labels]     # 1-fill
+        if sess_id is not None:
+            sessions = [sess_id for s in subj_labels]     # 1-fill
+        else:
+            sessions = None
+
         subjsSD_list:SubjectSDList = valid_data.filter_subjects(subj_labels, sessions)
 
         if valid_data is not None:
