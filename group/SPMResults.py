@@ -1,17 +1,32 @@
 import csv
 import os
 
-from group.spm_utilities import CatConvResultsParams, Peak, Cluster
+from Global import Global
+from Project import Project
+from group.spm_utilities import CatConvResultsParams, Peak, Cluster, ResultsParams
 from utility.matlab import call_matlab_spmbatch
 from utility.utilities import fillnumber2fourdigits
 from utility.fileutilities import write_text_file
 
 
 class SPMResults:
+    """
+    This class provides static methods for managing SPM results.
+    """
 
     @staticmethod
-    def get_1stlevel_results_report(result_report, idstep=5):
+    def get_1stlevel_results_report(result_report:ResultsParams, idstep:int=5):
 
+        """
+        This function generates a MATLAB code snippet for reporting 1st-level results.
+
+        Args:
+            result_report (ResultsParams): The SPM results object.
+            idstep (int, optional): The ID of the MATLAB batch step. Defaults to 5.
+
+        Returns:
+            str: The MATLAB code snippet.
+        """
         multcorr= result_report.mult_corr
         pvalue  = result_report.pvalue
         extent  = result_report.cluster_extend
@@ -29,13 +44,31 @@ class SPMResults:
 
         return res_rep_str
 
-
     # ======================================================================================================================================================
     # replace CAT results trasformation string
     # mult_corr = "FWE" | "FDR" | "none"
     # cluster_extend = "none" | "en_corr" | "en_nocorr"
     @staticmethod
-    def runbatch_cat_results_trasformation(project, _global, statsdir, ncontrasts, analysis_name, cmd_id=1, cat_conv_stats_params=None, eng=None, runit=True):
+    def runbatch_cat_results_trasformation(project:Project, _global:Global, statsdir:str, ncontrasts:int, analysis_name:str,
+                                           cmd_id:int=1, cat_conv_stats_params:CatConvResultsParams=None, eng=None, runit:bool=True):
+
+        """
+        This function generates a MATLAB code snippet for performing CAT results transformation.
+
+        Args:
+            project (spm.Project): The SPM project object.
+            _global (spm.Global): The SPM global object.
+            statsdir (str): The directory containing SPM results.
+            ncontrasts (int): The number of contrasts in the analysis.
+            analysis_name (str): The name of the analysis.
+            cmd_id (int, optional): The ID of the MATLAB batch step. Defaults to 1.
+            cat_conv_stats_params (CatConvResultsParams, optional): The CAT conversion parameters. Defaults to None.
+            eng (spm.MatlabEngine, optional): The MATLAB engine object. Defaults to None.
+            runit (bool, optional): A flag indicating whether to run the code. Defaults to True.
+
+        Returns:
+            None: If runit is False, returns None. Otherwise, returns the output of the MATLAB engine.
+        """
 
         if cat_conv_stats_params is None:
             cat_conv_stats_params = CatConvResultsParams()
@@ -65,7 +98,21 @@ class SPMResults:
         os.remove(out_batch_start)
 
     @staticmethod
-    def get_threshold_string_cat_results_trasformation(mult_corr, pvalue, cmd_id=1):
+    def get_threshold_string_cat_results_trasformation(mult_corr:str, pvalue:float, cmd_id:int=1):
+
+        """
+        This function generates a MATLAB code snippet for performing CAT results transformation.
+
+        Args:
+            mult_corr (str): The type of multiple comparison correction to be applied.
+                Can be "FWE", "FDR", or "none".
+            pvalue (float): The p-value threshold for multiple comparison correction.
+            cmd_id (int, optional): The ID of the MATLAB batch step. Defaults to 1.
+
+        Returns:
+            str: The MATLAB code snippet.
+        """
+
         res = ""
         if mult_corr == "FWE":
             res += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.threshdesc.fwe.thresh05 = " + str(pvalue) + ";"
@@ -79,7 +126,20 @@ class SPMResults:
         return res
 
     @staticmethod
-    def get_clustext_string_cat_results_trasformation(cl_ext, cmd_id=1):
+    def get_clustext_string_cat_results_trasformation(cl_ext:str, cmd_id:int=1):
+
+        """
+        This function generates a MATLAB code snippet for performing CAT results transformation.
+
+        Args:
+            cl_ext (str): The type of cluster extension to be applied.
+                Can be "none", "en_corr", or "en_nocorr".
+            cmd_id (int, optional): The ID of the MATLAB batch step. Defaults to 1.
+
+        Returns:
+            str: The MATLAB code snippet.
+        """
+
         res = ""
         if cl_ext == "none":
             res += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;"
@@ -92,12 +152,23 @@ class SPMResults:
             res += "matlabbatch{" + str(cmd_id) + "}.spm.tools.cat.tools.T2x_surf.conversion.cluster.none = 1;"
 
         return res
+
     # parse a series of spm-output csv files and report info of those voxels/cluster associated to the given cluster
     # set    set cluster         cluster         cluster cluster peak            peak            peak    peak    peak
     # p      c   p(FWE - corr)   p(FDR - corr)   equivk  p(unc)  p(FWE - corr)   p(FDR - corr)   T       equivZ  p(unc) x  y  z {mm}
     @staticmethod
-    def extract_clusters_info(res_csv_file): #, ref_clusters, distance=8):
+    def extract_clusters_info(res_csv_file:str): #, ref_clusters, distance=8):
 
+        """
+        This function extracts information from a SPM results CSV file about the clusters and peaks.
+
+        Args:
+            res_csv_file (str): The path to the SPM results CSV file.
+
+        Returns:
+            list: A list of Cluster objects, where each Cluster object represents a cluster of voxels and contains information about the peaks within the cluster.
+        """
+        
         curr_cluster = -1
         clusters = []
         with open(res_csv_file, "r") as f:

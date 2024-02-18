@@ -1,20 +1,41 @@
 
 class SubjectListException(Exception):
-    def __init__(self, msg, param):
+    """
+    Exception class for SubjectList operations.
 
-        self.msg    = msg
-        self.param  = param
+    Attributes:
+        msg (str): Error message.
+        param (str): Parameter associated with the error.
+    """
+
+    def __init__(self, msg, param):
+        self.msg = msg
+        self.param = param
 
 
 class DataFileException(Exception):
-    def __init__(self, msg, param):
+    """
+    Exception class for data file operations.
 
-        self.msg    = msg
-        self.param  = param
+    Attributes:
+        msg (str): Error message.
+        param (str): Parameter associated with the error.
+    """
+
+    def __init__(self, msg, param):
+        self.msg = msg
+        self.param = param
 
 
 class NotExistingImageException(Exception):
-    def __init__(self, msg, image):
+    """
+    Exception class for when an image does not exist.
 
-        self.msg    = msg
-        self.image  = image
+    Attributes:
+        msg (str): Error message.
+        image (str): Image name.
+    """
+
+    def __init__(self, msg, image):
+        self.msg = msg
+        self.image = image

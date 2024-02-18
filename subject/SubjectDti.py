@@ -3,22 +3,39 @@ import os
 import shutil
 from shutil import copyfile
 
+from Global import Global
+from subject.Subject import Subject
 from utility.fileutilities import write_text_file
 from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
 
 
 class SubjectDti:
+    """
+    This class contains methods for diffusion tensor imaging (DTI) processing.
 
-    def __init__(self, subject, _global):
-        self.subject = subject
-        self._global = _global
+    Args:
+        subject (Subject): The subject object.
+        _global (Global): The global object.
+
+    """
+    def __init__(self, subject:Subject, _global:Global):
+        self.subject:Subject    = subject
+        self._global:Global     = _global
 
     # ==================================================================================================================================================
     # DIFFUSION
     # ==================================================================================================================================================
     def get_nodiff(self, logFile=None):
+        """
+        This function extracts the non-diffusion-weighted (b0) image from the DTI data.
 
+        Args:
+            logFile (str, optional): The log file path. Defaults to None.
+
+        Returns:
+            None.
+        """
         if not self.subject.dti_nodiff_data.exist:
             rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1", logFile=logFile)
 
@@ -26,8 +43,17 @@ class SubjectDti:
             rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
 
     # eddy correction when PA sequence is not available
-    def eddy_correct(self, overwrite=False, logFile=None):
+    def eddy_correct(self, overwrite:bool=False, logFile=None):
+        """
+        This function performs eddy correction on the DTI data.
 
+        Args:
+            overwrite (bool, optional): Whether to overwrite existing files. Defaults to False.
+            logFile (str, optional): The log file path. Defaults to None.
+
+        Returns:
+            None.
+        """
         if self.subject.dti_data.exist:
             print("WARNING in dti eddy_correct of subject: " + self.subject.label + ",dti image is missing...skipping subject")
             return
@@ -42,8 +68,23 @@ class SubjectDti:
             os.system("bash fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_ec_data + ".ecclog")
 
     # perform eddy correction, finally writes  .._ec.nii.gz &  .._-dti_rotated.bvec
-    def eddy(self, exe_ver="eddy_openmp", acq_params=None, config="b02b0_1.cnf", estmove=True, slice2vol=6, rep_out="both", json=None, logFile=None):
+    def eddy(self, exe_ver:str="eddy_openmp", acq_params=None, config:str="b02b0_1.cnf", estmove=True, slice2vol=6, rep_out:str="both", json=None, logFile=None):
+        """
+        This function performs eddy correction on the DTI data.
 
+        Args:
+            exe_ver (str, optional): The eddy executable version. Defaults to "eddy_openmp".
+            acq_params (str, optional): The topup acqparams file path. Defaults to None.
+            config (str, optional): The eddy config file path. Defaults to "b02b0_1.cnf".
+            estmove (bool, optional): Whether to estimate movement by susceptibility. Defaults to True.
+            slice2vol (int, optional): The eddy mporder value. Defaults to 6.
+            rep_out (str, optional): The eddy repol output type. Defaults to "both".
+            json (str, optional): The eddy json file path. Defaults to None.
+            logFile (str, optional): The log file path. Defaults to None.
+
+        Returns:
+            None.
+        """
         if not self.subject.dti_data.exist:
             print("WARNING in dti eddy of subject: " + self.subject.label + ",dti image is missing...skipping subject")
             return      # in normal usage, welcome script, self.hasDTI has been checked, this is used for single call
@@ -148,7 +189,20 @@ class SubjectDti:
 
     # use_ec = True: eddycorrect, False: eddy
     def fit(self, logFile=None):
+        """
+        This function performs DTI fitting.
 
+        Args:
+            logFile (str, optional): The log file path. Defaults to None.
+
+        Returns:
+            None.
+
+        Raises:
+            IOError: If the diffusion tensor image is missing.
+            IOError: If the rotated b-vector file is missing.
+
+        """
         if not self.subject.dti_data.exist:
             print("WARNING in dti fit of subject: " + self.subject.label + ",dti image is missing...skipping subject")
             return
@@ -167,8 +221,22 @@ class SubjectDti:
         if not Image(self.subject.dti_ec_data + "_L23").exist:
             rrun("fslmaths " + self.subject.dti_fit_data + "_L2" + " -add " + self.subject.dti_fit_data + "_L3" + " -div 2 " + self.subject.dti_fit_data + "_L23", logFile=logFile)
 
-    def bedpostx(self, out_dir_name="bedpostx", use_gpu=False, logFile=None):
+    def bedpostx(self, out_dir_name="bedpostx", use_gpu:bool=False, logFile=None):
+        """
+        This function performs bedpostx.
 
+        Args:
+            out_dir_name (str, optional): The output directory name. Defaults to "bedpostx".
+            use_gpu (bool, optional): Whether to use GPU. Defaults to False.
+            logFile (str, optional): The log file path. Defaults to None.
+
+        Returns:
+            None.
+
+        Raises:
+            IOError: If the eddy-corrected diffusion tensor image is missing.
+
+        """
         bp_dir      = os.path.join(self.subject.dti_dir, out_dir_name)
         bp_out_dir  = os.path.join(self.subject.dti_dir, out_dir_name + ".bedpostX")
 
@@ -206,8 +274,22 @@ class SubjectDti:
     def probtrackx(self):
         pass
 
-    def xtract(self, outdir_name="xtract", bedpostx_dirname="bedpostx", refspace="native", use_gpu=False, species="HUMAN", logFile=None):
+    def xtract(self, outdir_name="xtract", bedpostx_dirname="bedpostx", refspace="native", use_gpu:bool=False, species="HUMAN", logFile=None):
+        """
+        This function performs xtract.
 
+        Args:
+            outdir_name (str, optional): The output directory name. Defaults to "xtract".
+            bedpostx_dirname (str, optional): The bedpostx directory name. Defaults to "bedpostx".
+            refspace (str, optional): The reference space. Defaults to "native".
+            use_gpu (bool, optional): Whether to use GPU. Defaults to False.
+            species (str, optional): The species. Defaults to "HUMAN".
+            logFile (str, optional): The log file path. Defaults to None.
+
+        Returns:
+            str: The output directory path.
+
+        """
         bp_dir  = os.path.join(self.subject.dti_dir, bedpostx_dirname)
         out_dir = os.path.join(self.subject.dti_dir, outdir_name)
 
@@ -228,7 +310,16 @@ class SubjectDti:
         return out_dir
 
     def xtract_check(self, in_dir="xtract"):
+        """
+        This function checks the xtract output.
 
+        Args:
+            in_dir (str, optional): The input directory path. Defaults to "xtract".
+
+        Returns:
+            None.
+
+        """
         if in_dir == "xtract":
             in_dir = os.path.join(self.subject.dti_dir, in_dir)
         else:
@@ -245,8 +336,19 @@ class SubjectDti:
         if all_ok:
             print("  ============>  check_xtracts of SUBJ " + self.subject.label + ", is ok!")
 
-    def xtract_viewer(self, xtract_dir="xtract", structures="", species="HUMAN"):
+    def xtract_viewer(self, xtract_dir="xtract", structures:str="", species="HUMAN"):
+        """
+        This function launches the xtract viewer.
 
+        Args:
+            xtract_dir (str, optional): The xtract directory path. Defaults to "xtract".
+            structures (str, optional): The structures. Defaults to "".
+            species (str, optional): The species. Defaults to "HUMAN".
+
+        Returns:
+            None.
+
+        """
         xdir = os.path.join(self.subject.dti_dir, xtract_dir)
 
         if structures != "":
@@ -254,15 +356,32 @@ class SubjectDti:
 
         rrun("xtract_viewer -dir " + xdir + " -species " + species + "" + structures)
 
-    def xtract_stats(self, xtract_dir="xtract", refspace="native", meas="vol,prob,length,FA,MD,L1", structures="", logFile=None):
+    def xtract_stats(self, xtract_dir="xtract", refspace="native", meas="vol,prob,length,FA,MD,L1", structures:str="", logFile=None):
+        """
+        This function performs xtract_stats.
 
+        Args:
+            xtract_dir (str, optional): The xtract directory path. Defaults to "xtract".
+            refspace (str, optional): The reference space. Defaults to "native".
+            meas (str, optional): The measurements. Defaults to "vol,prob,length,FA,MD,L1".
+            structures (str, optional): The structures. Defaults to "".
+            logFile (str, optional): The log file path. Defaults to None.
+
+        Returns:
+            None.
+
+        Raises:
+            IOError: If refspace is empty.
+            IOError: If refspace is not a valid transform image.
+
+        """
         xdir = os.path.join(self.subject.dti_dir, xtract_dir)
 
         if refspace == "native":
             rspace = " -w native "
         elif refspace == "":
-            print("ERROR in xtract_stats: refspace param is empty.....exiting")
-            return
+            raise IOError("SubjectDti.xtract_stats given refspace param is empty")
+
         else:
             refspace = Image(refspace, must_exist=True, msg="SubjectDti.xtract_stats given refspace param is not a transform image")
             rspace = " -w " + refspace + " "
@@ -276,7 +395,18 @@ class SubjectDti:
 
     # read its own xtract_stats output file and return a dictionary = { "tractX":{"val1":XX,"val2":YY, ...}, .. }
     def xtract_read_file(self, tracts=None, values=None, ifn="stats.csv"):
+        """
+        This function reads the xtract_stats output file and returns a dictionary of tract values.
 
+        Args:
+            tracts (list, optional): The tracts to extract. If None, all tracts are extracted. Defaults to None.
+            values (list, optional): The values to extract. If None, only mean FA and MD are extracted. Defaults to None.
+            ifn (str, optional): The input file name. Defaults to "stats.csv".
+
+        Returns:
+            dict: A dictionary of tract values.
+
+        """
         if len(tracts) is None:
             tracts = self._global.dti_xtract_labels
 

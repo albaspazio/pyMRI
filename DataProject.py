@@ -1,15 +1,42 @@
+from __future__ import annotations
+
 import json
 import os
-from typing import List
+from typing import List, Any
 
+from Global import Global
 from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
 from utility.exceptions import SubjectListException
 
 
 class DataProject:
+    """
+    A class for managing data and analysis scripts for a single project.
 
-    def __init__(self, name, globaldata, data="data.dat"):
+    Args:
+        name (str): The name of the project.
+        globaldata (GlobalData): A GlobalData instance containing global project settings and data.
+        data : str | SubjectsData, optional. The path to the data file, by default "data.dat" or a SubjectsData instance.
+                                             If not specified, the data file will be loaded from the default location.
+
+    Attributes:
+        name (str): The name of the project.
+        globaldata (GlobalData): A GlobalData instance containing global project settings and data.
+        script_dir (str): The directory containing the project's scripts.
+        r_dir (str): The directory containing the project's R scripts.
+        input_data_dir (str): The directory containing the project's input data.
+        output_data_dir (str): The directory containing the project's output data.
+        stats_input (str): The directory containing the project's input data for R scripts.
+        stats_output (str): The directory containing the project's output data for R scripts.
+        subjects_lists_file (str): The path to the file containing the project's subject lists.
+        subjects (list): A list of Subject instances associated with the project.
+        subjects_labels (list): A list of subject labels associated with the project.
+        nsubj (int): The number of subjects associated with the project.
+        data_file (str): The path to the data file for the project.
+        data (SubjectsData): A SubjectsData instance containing the project's data.
+    """
+    def __init__(self, name:str, globaldata:Global, data:str|SubjectsData="data.xlsx"):
 
         self.name               = name
 
@@ -42,35 +69,62 @@ class DataProject:
 
         # load subjects data if possible
         self.data_file = ""
-        self.data = SubjectsData()
+        self.data = SubjectsData(data)
 
         self.load_data(data)
 
     # load a data_file if exist
-    def load_data(self, data_file=None):
+    def load_data(self, data:str|SubjectsData) -> SubjectsData:
+        """
+        Load a data file for the project.
 
-        if data_file is None:
-            return None
+        Args:
+            data (str, optional): The path to the data file. If not specified, the default data file for the project will be loaded.
 
-        df = ""
-        if os.path.exists(data_file):
-            df = data_file
-        elif os.path.exists(os.path.join(self.script_dir, data_file)):
-            df = os.path.join(self.script_dir, data_file)
+        Returns:
+            SubjectsData: The loaded data file.
 
-        if df != "":
-            d = SubjectsData(df)
-            if d.num > 0:
-                self.data       = d
-                self.data_file  = df
+        Raises:
+            TypeError: if given data is neither a string nor a SubjectsData instance.
+        """
+        if isinstance(data, str):
+            data_file = ""
+            if os.path.exists(data):
+                data_file = data
+            elif os.path.isfile(os.path.join(self.script_dir, data)):
+                data_file = os.path.join(self.script_dir, data)
+
+            if data_file != "":
+                d = SubjectsData(data_file)
+                if d.num > 0:
+                    self.data       = d
+                    self.data_file  = data_file
+        elif isinstance(data, SubjectsData):
+            self.data       = data
+        else:
+            raise TypeError("ERROR in Project.load_data: given data param (" + str(data) + ") is neither a SubjectsData nor a string")
 
         return self.data
 
     # if must_exist=true:   loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
     # if must_exist=false:  only create
     # returns this list
-    def load_subjects(self, group_label, sess_id=1, must_exist=True):
+    def load_subjects(self, group_label:str, sess_id:int=1, must_exist:bool=True):
+        """
+        Load subjects for the project.
 
+        Args:
+            group_label (str): The label of the subject group.
+            sess_id (int, optional): The session ID of the subjects to load. Defaults to 1.
+            must_exist (bool, optional): Whether to raise an exception if a subject does not exist. Defaults to True.
+
+        Returns:
+            list: The loaded subjects.
+
+        Raises:
+            SubjectListException: If the group label is not valid or a subject does not exist and must_exist is True.
+
+        """
         try:
             subjects           = self.get_subjects(group_label, must_exist)
 
@@ -89,42 +143,90 @@ class DataProject:
     # region GET SUBJECTS' LABELS or INSTANCES
     # ==================================================================================================================
     # get a deepcopy of subject with given label
-    def get_subject_by_label(self, subj_label) -> dict:
+    def get_subject_by_label(self, subj_label:str) -> dict:
+        """
+        Get a subject by its label.
+
+        Args:
+            subj_label (str): The label of the subject.
+
+        Returns:
+            dict: The subject data.
+
+        """
         return self.data.get_subject(subj_label)
 
     # SUBJLABELS LIST => VALID SUBJS data or []
     # create and returns a list of valid subjects data columns given a subjlabels list
-    def get_subjects_by_labels(self, subj_labels) -> List[dict]:
+    def get_subjects_by_labels(self, subj_labels:List[str]) -> List[dict]:
+        """
+        Get subjects by their labels.
+
+        Args:
+            subj_labels (list): The labels of the subjects.
+
+        Returns:
+            List[dict]: The subject data.
+
+        """
         return self.data.get_subjects(subj_labels)
 
     # GROUP_LABEL or SUBLABELS LIST => VALID SUBJECT INSTANCES LIST
     # create and returns a list of valid subjects instances given a grouplabel or a subjlabels list
-    def get_subjects(self, group_or_subjlabels, must_exist=True):
+    def get_subjects(self, group_or_subjlabels:str | List[str], must_exist:bool=True):
+        """
+        Get subjects.
+
+        Args:
+            group_or_subjlabels (str or list): The group label or subject labels.
+            must_exist (bool, optional): Whether to raise an exception if a subject does not exist. Defaults to True.
+
+        Returns:
+            list: The subjects.
+
+        Raises:
+            SubjectListException: If a subject does not exist and must_exist is True.
+
+        """
         valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, must_exist)
         return self.get_subjects_by_labels(valid_subj_labels)
 
     # GROUP_LABEL or SUBLABELS LIST or SUBJINSTANCES LIST => VALID SUBLABELS LIST
     # returns [labels]
-    def get_subjects_labels(self, grouplabel_or_subjlist=None, must_exist=True):
-        if grouplabel_or_subjlist is None:
+    def get_subjects_labels(self, grlab_subjlabs_subjs:str|List[str]=None, must_exist:bool=True):
+        """
+        Get subject labels.
+
+        Args:
+            grlab_subjlabs_subjs (str or list, optional): The group label or subject labels. If not specified, the loaded subject labels will be returned.
+            must_exist (bool, optional): Whether to raise an exception if a subject does not exist. Defaults to True.
+
+        Returns:
+            list: The subject labels.
+
+        Raises:
+            SubjectListException: If the group label is not valid and must_exist is True.
+
+        """
+        if grlab_subjlabs_subjs is None:
             if len(self.subjects_labels) == 0:
-                raise SubjectListException("get_subjects_labels", "given grouplabel_or_subjlist is None and no group is loaded")
+                raise SubjectListException("get_subjects_labels", "given grlab_subjlabs_subjs is None and no group is loaded")
             else:
                 return self.subjects_labels         # if != form 0, they have been already validated
-        elif isinstance(grouplabel_or_subjlist, str):  # must be a group_label and have its associated subjects list
-            return self.__get_valid_subjlabels_from_group(grouplabel_or_subjlist, must_exist)
+        elif isinstance(grlab_subjlabs_subjs, str):  # must be a group_label and have its associated subjects list
+            return self.__get_valid_subjlabels_from_group(grlab_subjlabs_subjs, must_exist)
 
-        elif isinstance(grouplabel_or_subjlist, list):
-            if isinstance(grouplabel_or_subjlist[0], str) is True:
+        elif isinstance(grlab_subjlabs_subjs, list):
+            if isinstance(grlab_subjlabs_subjs[0], str) is True:
                 # list of subjects' names
                 if must_exist:
-                    return self.__get_valid_subjlabels(grouplabel_or_subjlist)
+                    return self.__get_valid_subjlabels(grlab_subjlabs_subjs)
                 else:
-                    return grouplabel_or_subjlist   # [string]
+                    return grlab_subjlabs_subjs   # [string]
             else:
-                raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a string list, first value is: " + str(grouplabel_or_subjlist[0]))
+                raise SubjectListException("get_subjects_labels", "the given grlab_subjlabs_subjs param is not a string list, first value is: " + str(grlab_subjlabs_subjs[0]))
         else:
-            raise SubjectListException("get_subjects_labels", "the given grouplabel_or_subjlist param is not a valid param (None, string  or string list), is: " + str(grouplabel_or_subjlist))
+            raise SubjectListException("get_subjects_labels", "the given grlab_subjlabs_subjs param is not a valid param (None, string  or string list), is: " + str(grlab_subjlabs_subjs))
     #endregion
 
     # =========================================================================
@@ -134,7 +236,21 @@ class DataProject:
     # GROUP_LAB => VALID SUBJLABELS LIST or []
     # check whether all subjects belonging to the given group_label are valid
     # returns such subject list if all valid
-    def __get_valid_subjlabels_from_group(self, group_label, must_exist=True):
+    def __get_valid_subjlabels_from_group(self, group_label:str, must_exist:bool=True):
+        """
+        Get valid subject labels from a group label.
+
+        Args:
+            group_label (str): The group label.
+            must_exist (bool, optional): Whether to raise an exception if a subject does not exist. Defaults to True.
+
+        Returns:
+            List[str]: The valid subject labels.
+
+        Raises:
+            SubjectListException: If the group label is not valid and must_exist is True.
+
+        """
         for grp in self.subjects_lists:
             if grp["label"] == group_label:
                 if must_exist:
@@ -147,7 +263,20 @@ class DataProject:
     # check whether all subjects listed in subjects are valid
     # returns given list if all valid
     def __get_valid_subjlabels(self, subj_labels:List[str], sessions:List[int]=None):
+        """
+        Check whether all subjects listed in subjects are valid.
 
+        Args:
+            subj_labels (List[str]): A list of subject labels.
+            sessions (List[int], optional): A list of session IDs. If not specified, all sessions will be considered.
+
+        Returns:
+            List[str]: The valid subject labels.
+
+        Raises:
+            SubjectListException: If a subject does not exist in the data file.
+
+        """
         if sessions is None:
             sessions = [1 for s in subj_labels]
 
@@ -161,10 +290,27 @@ class DataProject:
     #region GET SUBJECTS DATA
     # returns a matrix (values x subjects) containing values of the requested columns of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_subjects_values_by_cols(self, grouplabel_or_subjlist, columns_list, data=None, sort=False,
-                                    demean_flags=None, sess_id=1, must_exist=False) -> list:
+    def get_subjects_values_by_cols(self, grlab_subjlabs_subjs:str|List[str], columns_list:List[str], data:SubjectsData=None, sort:bool=False,
+                                    demean_flags:List[bool]=None, sess_id:int=1, must_exist:bool=False) -> List[List[Any]]:
+        """
+        Get the values of the requested columns for the given subjects.
 
-        subj_labels = self.get_subjects_labels(grouplabel_or_subjlist, sess_id)
+        Args:
+            grlab_subjlabs_subjs (str or list): The group label or subject labels.
+            columns_list (list): A list of column names.
+            data (SubjectsData, optional): A SubjectsData instance containing the data. If not specified, the project's data will be used.
+            sort (bool, optional): Whether to sort the output by subject. Defaults to False.
+            demean_flags (list, optional): A list of booleans indicating whether to demean the values for each column. If not specified, all columns will be demeaned.
+            sess_id (int, optional): The session ID of the subjects to load. Defaults to 1.
+            must_exist (bool, optional): Whether to raise an exception if a subject does not exist. Defaults to False.
+
+        Returns:
+            list: A list of subject values. Each element in the list is a list of values for a single subject.
+
+        Raises:
+            SubjectListException: If a subject does not exist and must_exist is True.
+        """
+        subj_labels = self.get_subjects_labels(grlab_subjlabs_subjs, sess_id, must_exist)
         valid_data = self.validate_data(data)
 
         sessions = [sess_id for s in subj_labels]  # 1-fill
@@ -181,9 +327,9 @@ class DataProject:
     #region returns a tuple with two vectors[nsubj] (filtered by subj labels) of the requested column
 
     # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_column(self, grouplabel_or_subjlist, column, data=None, sort=False, select_conds:List[FilterValues]=None):
+    def get_filtered_column(self, grlab_subjlabs_subjs:str|List[str], column:str, data:SubjectsData=None, sort:bool=False, select_conds:List[FilterValues]=None):
 
-        subj_list   = self.get_subjects_labels(grouplabel_or_subjlist)
+        subj_list   = self.get_subjects_labels(grlab_subjlabs_subjs)
         valid_data  = self.validate_data(data)
         if valid_data is not None:
             return valid_data.get_filtered_column(subj_list, column, sort=sort, select_conds=select_conds)

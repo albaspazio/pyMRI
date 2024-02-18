@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import os
 from distutils.file_util import copy_file
 
 from data.SubjectsData import SubjectsData
-from group.spm_utilities import Covariate, Nuisance
+from group.spm_utilities import Regressor, Covariate, Nuisance
 
 # create factorial designs, multiple regressions, t-test
 from utility.myfsl.utils.run import rrun
@@ -10,25 +12,53 @@ from utility.fileutilities import remove_ext, append_text_file, write_text_file
 
 
 class ConnModels:
+    """
+    This class provides methods for creating and managing the connection models used in the CONN tool.
 
-    def __init__(self, proj):
+    Args:
+        proj (ConnProject): The ConnProject object that this class is associated with.
 
-        self.subjects_list  = None
-        self.working_dir    = ""
+    Attributes:
+        subjects_list (list): A list of Subject objects that are part of the current project.
+        working_dir (str): The directory where temporary files are stored.
+        project (ConnProject): The ConnProject object that this class is associated with.
+        globaldata (GlobalData): The GlobalData object that is associated with the current project.
+        string (str): A string that is used to compose the connection model files.
+    """
 
-        self.project        = proj
-        self.globaldata     = self.project.globaldata
+    def __init__(self, proj:Project):
+        self.subjects_list      = None
+        self.working_dir        = ""
+        self.project:Project    = proj
+        self.globaldata:Global  = self.project.globaldata
+        self.string             = ""  # used to compose models override
 
-        self.string         = ""    # used to compose models override
+    def create_regressors_file(self, odp:str, regressors:List[Regressor], grouplabels:List[str], ofn:str="conn_covs",
+        data:str|SubjectsData=None, ofn_postfix:str="", subj_must_exist:bool=False):
+        """
+        This method creates a regressors file that can be used with the FSL FEAT tool. The regressors file contains
+        the regressors and covariates that will be used in the analysis.
 
-    # grouplabels     : must be a list of string, also used as name of the group covariate
-    def create_regressors_file(self, odp, regressors, grouplabels, ofn="conn_covs", data_file=None, ofn_postfix="", subj_must_exist=False):
-
+        Args:
+            odp (str): The output directory path where the regressors file will be created.
+            regressors (list): A list of regressors that will be included in the analysis. The regressors can be
+                covariates or nuisances.
+            grouplabels (list): A list of group labels that will be used to create the factorial design. Each group
+                label will be used as an explanatory variable (EV).
+            ofn (str, optional): The name of the regressors file. The default value is "conn_covs".
+            data (str|SubjectsData, optional): The path to the data file that contains the subject data or
+                a SubjectsData. If not specified, the data (file) associated with the current project will be used.
+            ofn_postfix (str, optional): A postfix that will be added to the name of the regressors file. The default
+                value is an empty string.
+            subj_must_exist (bool, optional): A boolean value that indicates whether the subjects in the group labels
+                must exist in the data file. If set to False, subjects that do not exist in the data file will be
+                ignored. The default value is True.
+        """
         self.string = ""
         # ------------------------------------------------------------------------------------
         # sanity checks
         if bool(regressors):
-            data = self.project.validate_data(data_file)    # SubjectsData
+            data = self.project.validate_data(data)  # SubjectsData
             data.validate_covs(regressors)
         else:
             data = None
@@ -53,9 +83,9 @@ class ConnModels:
 
         # ----------------------------------------------------------------------------------
         # get subjects values
-        subj_labels_by_groups   = []
-        all_subj                = []
-        nsubjs      = 0
+        subj_labels_by_groups = []
+        all_subj = []
+        nsubjs = 0
         for grp in grouplabels:
             labels = self.project.get_subjects_labels(grp, must_exist=subj_must_exist)
             subj_labels_by_groups.append(labels)
@@ -78,7 +108,7 @@ class ConnModels:
         for covs in covs_label:
             str_covs = ""
             for i in range(ngroups):
-                str_covs = str_covs + covs + "_" + str(i+1) + " "
+                str_covs = str_covs + covs + "_" + str(i + 1) + " "
             self.string = self.string + str_covs
         self.string = self.string[:-1]
 
@@ -106,29 +136,47 @@ class ConnModels:
                     string = string + " " + str(nuis_values[nuis_id][curr_subjid])
 
                 for cov_id, voc in enumerate(covs_values):
-                    cov_value           = str(covs_values[cov_id][curr_subjid])
-                    covsvalue           = ["0" for _ in range(ngroups)]
-                    covsvalue[gr_id]    = cov_value
-                    value_string        = " ".join(covsvalue)
-                    string              = string + " " + value_string
+                    cov_value = str(covs_values[cov_id][curr_subjid])
+                    covsvalue = ["0" for _ in range(ngroups)]
+                    covsvalue[gr_id] = cov_value
+                    value_string = " ".join(covsvalue)
+                    string = string + " " + value_string
 
                 self.addline2string(string)
                 curr_subjid = curr_subjid + 1
 
         write_text_file(output_covsfile, self.string)
 
-    # to be used when user want to insert groups description/covariates of a subset of the subjects included in the whole conn project.
-    # In this case, the script must insert zeros outside the rows described in grouplabels.
-    # the script assumes that all subjects specified in grouplabels, belong to Conn projects
-    # wholesubjects_groups_or_labels :  represents the subjects order in the conn project.
-    # grouplabels     : must be a list of string, also used as name of the group covariate
-    def create_regressors_file_ofsubset(self, odp, regressors, wholesubjects_groups_or_labels, grouplabels, ofn="conn_covs", data_file=None, ofn_postfix="", subj_must_exist=False):
+    def create_regressors_file_ofsubset(self, odp:str, regressors:List[Regressor], wholesubjects_groups_or_labels:List[Any], grouplabels, ofn:str="conn_covs", data_file=None, ofn_postfix:str="", subj_must_exist:bool=False):
+        """
+        This function creates a regressors file for the FSL FEAT tool, for a subset of the subjects in the current project.
+        to be used when user want to insert groups description/covariates of a subset of the subjects included in the whole conn project.
+        In this case, the script must insert zeros outside the rows described in grouplabels.
+        the script assumes that all subjects specified in grouplabels, belong to Conn projects
+        Args:
+            odp (str): The output directory path where the regressors file will be created.
+            regressors (list): A list of regressors that will be included in the analysis. The regressors can be
+                covariates or nuisances.
+            wholesubjects_groups_or_labels (list): The list of all subjects that will be included in the regressors file.
+            represents the subjects order in the conn project. The subjects can be specified by their group labels or by their subject labels.
+            grouplabels (list): The list of group labels that will be used to create the factorial design. Each group
+                label will be used as an explanatory variable (EV).
+            ofn (str, optional): The name of the regressors file. The default value is "conn_covs".
+            data_file (str, optional): The path to the data file that contains the subject data. If not specified,
+                the data file associated with the current project will be used.
+            ofn_postfix (str, optional): A postfix that will be added to the name of the regressors file. The default
+                value is an empty string.
+            subj_must_exist (bool, optional): A boolean value that indicates whether the subjects in the group labels
+                must exist in the data file. If set to False, subjects that do not exist in the data file will be
+                ignored. The default value is True.
 
-        self.string = ""
+        Returns:
+            None
+        """
         # ------------------------------------------------------------------------------------
         # sanity checks
         if bool(regressors):
-            data:SubjectsData = self.project.validate_data(data_file)
+            data: SubjectsData = self.project.validate_data(data_file)
             data.validate_covs(regressors)
         else:
             data = None
@@ -158,9 +206,9 @@ class ConnModels:
 
         # ----------------------------------------------------------------------------------
         # get values of the subjects specified
-        subj_labels_by_groups   = []
-        all_subj                = []
-        nsubjs      = 0
+        subj_labels_by_groups = []
+        all_subj = []
+        nsubjs = 0
         for grp in grouplabels:
             labels = self.project.get_subjects_labels(grp, must_exist=subj_must_exist)
             subj_labels_by_groups.append(labels)
@@ -220,16 +268,26 @@ class ConnModels:
                     string = string + " " + str(data.get_subject_col_value(subj, nuis))
 
                 for cov in covs_label:
-                    cov_value           = str(data.get_subject_col_value(subj, cov))
-                    covsvalue           = ["0" for _ in range(ngroups)]
+                    cov_value = str(data.get_subject_col_value(subj, cov))
+                    covsvalue = ["0" for _ in range(ngroups)]
                     covsvalue[group_id] = cov_value
-                    value_string        = " ".join(covsvalue)
-                    string              = string + " " + value_string
+                    value_string = " ".join(covsvalue)
+                    string = string + " " + value_string
 
                 self.addline2string(string)
 
         write_text_file(output_covsfile, self.string)
 
-    def addline2string(self, line=""):
+    def addline2string(self, line:str=""):
+        """
+        This function appends a line to the self.string attribute.
+
+        Args:
+            line (str, optional): The line to be appended to the self.string attribute. If not specified, an empty
+                string will be used.
+
+        Returns:
+            None
+        """
         self.string += line
         self.string += "\n"

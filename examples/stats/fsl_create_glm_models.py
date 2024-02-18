@@ -54,30 +54,50 @@ if __name__ == "__main__":
         # TWO GROUPS
 
         regressors = [Nuisance("age"), Nuisance("gender")]
-        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2], "grp1_vs_grp2", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
+        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2],
+                                                         "grp1_vs_grp2", create_model=False, group_mean_contrasts=2,
+                                                         cov_mean_contrasts=2)
         #
         regressors = [Covariate("FS0"), Covariate("FS1")]
-        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2], "grp1_vs_grp2", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
+        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2],
+                                                         "grp1_vs_grp2", create_model=False, group_mean_contrasts=2,
+                                                         cov_mean_contrasts=2)
 
         regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
-        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2], "grp1_vs_grp2", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
+        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2],
+                                                         "grp1_vs_grp2", create_model=False, group_mean_contrasts=2,
+                                                         cov_mean_contrasts=2)
 
         regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
-        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2], "grp1_vs_grp2_simple", create_model=False, group_mean_contrasts=0, cov_mean_contrasts=0)
+        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2],
+                                                         "grp1_vs_grp2_simple", create_model=False,
+                                                         group_mean_contrasts=0, cov_mean_contrasts=0)
 
         # THREE GROUPS
 
         regressors = [Nuisance("age"), Nuisance("gender")]
-        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2, group3], "grp1_vs_grp2_vs_grp3", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
+        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors,
+                                                         [group1, group2, group3], "grp1_vs_grp2_vs_grp3",
+                                                         create_model=False, group_mean_contrasts=2,
+                                                         cov_mean_contrasts=2)
 
         regressors = [Covariate("FS0"), Covariate("FS1")]
-        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2, group3], "grp1_vs_grp2_vs_grp3", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
+        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors,
+                                                         [group1, group2, group3], "grp1_vs_grp2_vs_grp3",
+                                                         create_model=False, group_mean_contrasts=2,
+                                                         cov_mean_contrasts=2)
 
         regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
-        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2, group3], "grp1_vs_grp2_vs_grp3", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
+        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors,
+                                                         [group1, group2, group3], "grp1_vs_grp2_vs_grp3",
+                                                         create_model=False, group_mean_contrasts=2,
+                                                         cov_mean_contrasts=2)
 
         regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
-        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [group1, group2, group3], "grp1_vs_grp2_vs_grp3_simple", create_model=False, group_mean_contrasts=0, cov_mean_contrasts=0)
+        fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors,
+                                                         [group1, group2, group3], "grp1_vs_grp2_vs_grp3_simple",
+                                                         create_model=False, group_mean_contrasts=0,
+                                                         cov_mean_contrasts=0)
 
 
     except Exception as e:

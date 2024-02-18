@@ -4,6 +4,34 @@ from data.SubjectsData import SubjectsData
 
 
 class CeresImporter:
+    """
+    This class imports the Ceres dataset.
+
+    Parameters
+    ----------
+    inputfolder : str
+        The path to the folder containing the Ceres CSV files.
+    outfile : str or None, optional
+        The path to the output CSV file. If None, the data will not be saved.
+    outcolnames : list of str, optional
+        The list of output column names. If None, the default column names will be used.
+
+    Attributes
+    ----------
+    inputfolder : str
+        The path to the folder containing the Ceres CSV files.
+    outfile : str or None
+        The path to the output CSV file. If None, the data will not be saved.
+    outcolnames : list of str
+        The list of output column names.
+    subs_data : SubjectsData
+        The SubjectsData object containing the imported data.
+
+    Methods
+    -------
+    parseFolder(self, valid_columns=None)
+        Parse the input folder and return a SubjectsData object containing the data.
+    """
 
     valid_columns = ["subj", "Sex", "Age", "ICV cm3",
                      "Cerebellum mean cortical thickness", "Cerebellum right cortical thickness",
@@ -53,6 +81,7 @@ class CeresImporter:
                      "VIIIB grey matter asymmetry",
                      "IX grey matter %", "IX right grey matter %", "IX left grey matter %", "IX grey matter asymmetry",
                      "X grey matter %", "X right grey matter %", "X left grey matter %", "X grey matter asymmetry"]
+
     valid_columns_short = ["subj", "Sex", "Age", "ICV cm3",
                            "Cerebellum mean cortical thickness",
                            "I-II mean cortical thickness",
@@ -109,6 +138,7 @@ class CeresImporter:
                          "VIIIB_gm_perc", "VIIIB_r_gm_perc", "VIIIB_l_gm_perc", "VIIIB_gm_as",
                          "IX_gm_perc", "IX_r_gm_perc", "IX_l_gm_perc", "IX_gm_as",
                          "X_gm_perc", "X_r_gm_perc", "X_l_gm_perc", "X_l_as"]
+
     out_valid_columns_shorts = ["subj", "gender", "age", "icv",
                                 "cer_ct",
                                 "I_II_ct",
@@ -138,16 +168,24 @@ class CeresImporter:
                                 "X_gm_perc"]
 
     def __init__(self, inputfolder, outfile=None, outcolnames=None):
+        """
+        Initialize the CeresImporter class.
 
-        super().__init__()
-        self.inputfolder    = inputfolder
-        self.outfile        = outfile
-
+        Parameters
+        ----------
+        inputfolder : str
+            The path to the folder containing the Ceres CSV files.
+        outfile : str or None, optional
+            The path to the output CSV file. If None, the data will not be saved.
+        outcolnames : list of str, optional
+            The list of output column names. If None, the default column names will be used.
+        """
+        self.inputfolder = inputfolder
+        self.outfile = outfile
         if outcolnames is None:
-           self.outcolnames     = self.out_valid_columns_shorts
+            self.outcolnames = self.out_valid_columns_shorts
         else:
-            self.outcolnames    = outcolnames
-
+            self.outcolnames = outcolnames
         self.subs_data = self.parseFolder(self.valid_columns_short)
 
         if outfile is not None:
@@ -157,16 +195,27 @@ class CeresImporter:
                 raise Exception("Error in CeresImporter: given outfile is not a string")
 
     def parseFolder(self, valid_columns=None) -> SubjectsData:
+        """
+        Parse the input folder and return a SubjectsData object containing the data.
 
+        Parameters
+        ----------
+        valid_columns : list of str, optional
+            A list of column names that are valid for the Ceres dataset. If None, the default list of valid columns will be used.
+
+        Returns
+        -------
+        SubjectsData
+            A SubjectsData object containing the imported data.
+        """
         subjs_data = SubjectsData()
-        subjs      = []
+        subjs = []
         for f in os.listdir(self.inputfolder):
             if f.endswith(".csv"):
-
                 full_name = os.path.join(self.inputfolder, f)
                 subj_name = f.split("-")[0]
 
-                subj_data = SubjectsData(data=full_name, validcols=valid_columns, delimiter=";")    # automatically rename Patient_ID -> subj
+                subj_data = SubjectsData(data=full_name, validcols=valid_columns, delimiter=";")  # automatically rename Patient_ID -> subj
                 subj_data.df.at[0, "subj"] = subj_name
 
                 subjs.append(subj_data)

@@ -9,6 +9,7 @@ from group.SPMStatsUtils import SPMStatsUtils
 from group.spm_utilities import SubjCondition
 from group.SPMContrasts import SPMContrasts
 from group.SPMResults import SPMResults
+from subject.Subject import Subject
 
 from utility.images.Image import Image
 from utility.images.Images import Images
@@ -21,13 +22,35 @@ from utility.utilities import is_list_of
 
 
 class SubjectEpi:
+    """
+    This class provides methods for resting state and functional MRI preprocessing.
+    """
 
-    def __init__(self, subject, _global):
-        self.subject = subject
-        self._global = _global
+    def __init__(self, subject:Subject, _global:Global):
+        """
+        Initialize the SubjectEpi class.
 
-    def get_example_function(self, seq="rs", vol_num=None, fmri_labels=None, overwrite=False, logFile=None):
+        Args:
+            subject (Subject): The subject object.
+            _global (Global): The global object.
+        """
+        self.subject:Subject = subject
+        self._global:Global  = _global
 
+    def get_example_function(self, seq:str="rs", vol_num=None, fmri_labels=None, overwrite=False, logFile=None):
+        """
+        Get the example function for a given sequence.
+
+        Args:
+            seq (str, optional): The sequence type (rs or fmri). Defaults to "rs".
+            vol_num (int, optional): The volume number. Defaults to None.
+            fmri_labels (list, optional): The list of labels for the functional images. Defaults to None.
+            overwrite (bool, optional): Whether to overwrite the existing example function. Defaults to False.
+            logFile (str, optional): The log file. Defaults to None.
+
+        Returns:
+            Image: The example function.
+        """
         if seq == "rs":
             data    = self.subject.rs_data
             exfun   = self.subject.rs_examplefunc
@@ -56,8 +79,19 @@ class SubjectEpi:
     # ==================================================================================================================================================
     #region PREPROCESSING (slice timing, topup_correction, remove_nuisance, fsl_feat, aroma)
     # ==================================================================================================================================================
-    def slice_timing(self, fmri_params, epi_image=None, output_prefix="a", spm_template_name="subj_spm_fmri_slice_timing_correction"):
+    def slice_timing(self, fmri_params, epi_image=None, output_prefix:str="a", spm_template_name:str="subj_spm_fmri_slice_timing_correction"):
+        """
+        Perform slice timing correction.
 
+        Args:
+            fmri_params (FMRIPARAMS): The FMRIPARAMS object.
+            epi_image (Image, optional): The EPI image. Defaults to None.
+            output_prefix (str, optional): The output prefix. Defaults to "a".
+            spm_template_name (str, optional): The SPM template name. Defaults to "subj_spm_fmri_slice_timing_correction".
+
+        Returns:
+            None: None.
+        """
         num_slices      = fmri_params.num_slices
         TR              = fmri_params.tr
         TA              = fmri_params.ta
@@ -120,8 +154,28 @@ class SubjectEpi:
     # 5 motion correction using closest_vol to PA (or given one) [fmri do it, rs default not]
     # 6: applytopup --> choose images whose distortion we want to correct
     # returns 0-based volume
-    def topup_corrections(self, in_ap_images, in_pa_img, acq_params, ap_ref_vol=-1, pa_ref_vol=-1, config="b02b0.cnf", motion_corr=True, cleanup=True, logFile=None):
+    def topup_corrections(self, in_ap_images:Images, in_pa_img:Image, acq_params, ap_ref_vol=-1, pa_ref_vol=-1, config:str="b02b0.cnf", motion_corr:bool=True, cleanup:bool=True, logFile=None):
+        """
+        Perform topup distortion correction on the given AP and PA images.
 
+        Args:
+            in_ap_images (str or list of str): path to the AP image or list of paths to AP images.
+            in_pa_img (str): path to the PA image.
+            acq_params (str): path to the acquisition parameters file.
+            ap_ref_vol (int, optional): index of the reference AP volume. If -1, the closest volume will be used. Defaults to -1.
+            pa_ref_vol (int, optional): index of the reference PA volume. If -1, the middle volume will be used. Defaults to -1.
+            config (str, optional): path to the topup config file. Defaults to "b02b0.cnf".
+            motion_corr (bool, optional): whether to perform motion correction. Defaults to True.
+            cleanup (bool, optional): whether to cleanup temporary files. Defaults to True.
+            logFile (str, optional): path to the log file. Defaults to None.
+
+        Returns:
+            list: list of indices of the volumes with the least distortion.
+
+        Raises:
+            Exception: if multiple images are given but motion correction is not performed.
+
+        """
         closest_vols = []
         #  /a/b/c/name.nii.gz
         in_ap_images    = Images(in_ap_images)
@@ -194,8 +248,24 @@ class SubjectEpi:
     # the first volume of the first session is the reference volume.
     # if ref_vol belongs to the input image (ref_image=None):   put that volume first and the remaining in the list (skipping the ref_vol)
     # if ref_vol belongs to ref_image:                          put that vol first and all the input images then
-    def spm_motion_correction(self, images2correct, ref_image=None, ref_vol=0, reslice=True, out_prefix="r", whichreslice=None):
+    def spm_motion_correction(self, images2correct, ref_image=None, ref_vol=0, reslice:bool=True, out_prefix="r", whichreslice=None):
+        """
+        Perform motion correction on the given images.
 
+        Args:
+            images2correct (Image or list of Image): the images to correct.
+            ref_image (Image, optional): the reference image. If not given, the first image in the list will be used. Defaults to None.
+            ref_vol (int, optional): the reference volume. If not given, the middle volume will be used. Defaults to 0.
+            reslice (bool, optional): whether to reslice the corrected images. Defaults to True.
+            out_prefix (str, optional): the output prefix. Defaults to "r".
+            whichreslice (str, optional): the whichreslice parameter for SPM. Defaults to None.
+
+        Raises:
+            Exception: if the given whichreslice is not valid.
+
+        Returns:
+            None: None.
+        """
         if whichreslice is None:
             whichreslice = "[2 1]"
         else:
@@ -256,6 +326,19 @@ class SubjectEpi:
 
     # calculate the in_image 0-based volume closest to ref_image (by estimating the realignment without performing it)
     def get_closest_volume(self, in_image, ref_image, ref_volume=-1):
+        """
+        Calculates the index of the volume in the input image that is closest to the reference image,
+        based on the estimated motion correction.
+
+        Args:
+            in_image: The input image.
+            ref_image: The reference image.
+            ref_volume: The index of the reference volume. If not specified, the middle volume will be used.
+
+        Returns:
+            The index of the closest volume.
+
+        """
         # will calculate the closest vol from given epi image to ref_image
         # Steps:
         # 0: get epi_pe central volume + unzip so SPM can use it
@@ -298,8 +381,23 @@ class SubjectEpi:
 
         return int(best_vol) - 1    # 0-based volume
 
-    def remove_nuisance(self, in_img_name, out_img_name, epi_label="rs", ospn="", hpfsec=100):
+    def remove_nuisance(self, in_img_name, out_img_name, epi_label="rs", ospn:str="", hpfsec=100):
+        """
+        Remove nuisance signals from resting state fMRI data.
 
+        Args:
+            in_img_name (str): the name of the input image.
+            out_img_name (str): the name of the output image.
+            epi_label (str, optional): the type of EPI data. Defaults to "rs".
+            ospn (str, optional): the output suffix for the nuisance regressors. Defaults to "".
+            hpfsec (int, optional): the number of seconds of high-pass filtering. Defaults to 100.
+
+        Raises:
+            Exception: if the given epi_label is not "rs".
+
+        Returns:
+            None: None.
+        """
         if epi_label == "rs":
             in_img          = Image(os.path.join(self.subject.rs_dir, in_img_name), must_exist=True, msg="ERROR in remove_nuisance of subject " + self.subject.label + " input image is missing")
             out_img         = Image(os.path.join(self.subject.rs_dir, out_img_name))
@@ -347,7 +445,24 @@ class SubjectEpi:
         tempMean.rm()
 
     def spm_fmri_preprocessing(self, fmri_params, epi_images=None, spm_template_name='subj_spm_fmri_full_preprocessing', smoothprefix="s", clean=False, can_skip_input=False, do_overwrite=False):
+        """
+        Perform SPM fMRI preprocessing on the subject's EPI data.
 
+        Args:
+            fmri_params (FMRIParams): the fMRI parameters.
+            epi_images (list, optional): the list of EPI images. If not specified, the subject's EPI image will be used.
+            spm_template_name (str, optional): the SPM template name. Defaults to "subj_spm_fmri_full_preprocessing".
+            smoothprefix (str, optional): the prefix for the smoothed images. Defaults to "s".
+            clean (bool, optional): whether to clean the temporary files. Defaults to False.
+            can_skip_input (bool, optional): whether to skip input images that are missing. Defaults to False.
+            do_overwrite (bool, optional): whether to overwrite existing files. Defaults to False.
+
+        Raises:
+            Exception: if the given epi_images are not valid.
+
+        Returns:
+            None: None.
+        """
         # add sessions
         valid_images = Images()
         if epi_images is None:
@@ -489,7 +604,22 @@ class SubjectEpi:
                 img.add_prefix2name("wa").rm()
 
     def spm_smooth(self, epi_images=None, smooth=6, smoothprefix="s", spm_template_name='subj_spm_smooth', logFile=None):
+        """
+        Smooths the input EPI images using SPM.
 
+        Args:
+            epi_images (list, optional): The list of EPI images to smooth. If not specified, the subject's EPI image will be used.
+            smooth (int, optional): The smoothing kernel size. Defaults to 6.
+            smoothprefix (str, optional): The prefix for the smoothed images. Defaults to "s".
+            spm_template_name (str, optional): The SPM template name. Defaults to "subj_spm_smooth".
+            logFile (str, optional): The log file. Defaults to None.
+
+        Raises:
+            Exception: If the given epi_images are not valid.
+
+        Returns:
+            None: None.
+        """
         valid_images = Images()
         if epi_images is None:
             valid_images.append(self.subject.fmri_data)
@@ -526,6 +656,25 @@ class SubjectEpi:
     # conditions_lists[{"name", "onsets", "duration"}, ....]
     def spm_fmri_1st_level_analysis(self, analysis_name, input_images, fmri_params, conditions_lists, contrasts=None, res_report=None, rp_filenames=None,
                                                          spm_template_name="subj_spm_fmri_stats_1st_level"):
+        """
+        Perform first-level analysis of fMRI data.
+
+        Args:
+            analysis_name (str): the name of the analysis.
+            input_images (list): the list of input EPI images.
+            fmri_params (FMRIParams): the fMRI parameters.
+            conditions_lists (list): the list of conditions. Each element in the list is a list of conditions for a specific session.
+            contrasts (list, optional): the list of contrasts. Defaults to None.
+            res_report (str, optional): the name of the results report. Defaults to None.
+            rp_filenames (list, optional): the list of regressors filenames. Defaults to None.
+            spm_template_name (str, optional): the SPM template name. Defaults to "subj_spm_fmri_stats_1st_level".
+
+        Raises:
+            Exception: if the given input_images or conditions_lists are not valid.
+
+        Returns:
+            None: None.
+        """
         if input_images is None:
             input_images = Images([self.subject.fmri_data])
         else:
@@ -624,6 +773,25 @@ class SubjectEpi:
     # sessions x conditions_lists[{"name", "onsets", "duration"}, ....]
     def spm_fmri_1st_level_multisessions_custom_analysis(self, analysis_name, input_images, fmri_params, conditions_lists, contrasts=None, res_report=None, rp_filenames=None,
                                                          spm_template_name="subj_spm_fmri_stats_1st_level"):
+        """
+        Perform first-level analysis of fMRI data with multiple sessions.
+
+        Args:
+            analysis_name (str): the name of the analysis.
+            input_images (list): the list of input EPI images.
+            fmri_params (FMRIParams): the fMRI parameters.
+            conditions_lists (list): the list of conditions. Each element in the list is a list of conditions for a specific session.
+            contrasts (list, optional): the list of contrasts. Defaults to None.
+            res_report (str, optional): the name of the results report. Defaults to None.
+            rp_filenames (list, optional): the list of regressors filenames. Defaults to None.
+            spm_template_name (str, optional): the SPM template name. Defaults to "subj_spm_fmri_stats_1st_level".
+
+        Raises:
+            Exception: if the given input_images or conditions_lists are not valid.
+
+        Returns:
+            None: None.
+        """
         if input_images is None:
             input_images = Images([self.subject.fmri_data])
         else:
@@ -698,7 +866,7 @@ class SubjectEpi:
 
     # -i input_ffd_name -f denoised_folder_postfix_name -o output_postfixname_series_and_folder or $0 subj_label proj_dir -p full_input_image_path -o output_postfixname_series_and_folder"
     # rois can be indicated as a list of full paths or names (and rel_in_roi_dir must be not None and equal to a path relative to subj folder)
-    def sbfc_several_1roi_feat(self, rois_list, in_model="sbfc_feat_1roi", rel_in_roi_dir=None, ser_pfname="", epi_label="rs", in_file_name=None, std_image=None, tr=None, te=None):
+    def sbfc_several_1roi_feat(self, rois_list, in_model="sbfc_feat_1roi", rel_in_roi_dir=None, ser_pfname:str="", epi_label="rs", in_file_name=None, std_image=None, tr=None, te=None):
 
         if std_image is None:
             std_image = self._global.fsl_std_mni_2mm_brain
@@ -778,14 +946,32 @@ class SubjectEpi:
             rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + output_dir + ".feat")
 
 
-    #endregion
+    # endregion
 
     # ==================================================================================================================================================
-    #region ACCESSORY
+    # region ACCESSORY
     # ==================================================================================================================================================
     # model can be:  a fullpath, a filename (string) located in project's glm_template_dir
-    def fsl_feat(self, epi_label, in_file_name, out_dir_name, model, do_initreg=False, std_image="", tr="", te=""):
+    def fsl_feat(self, epi_label, in_file_name, out_dir_name, model, do_initreg=False, std_image:str="", tr:str="", te:str=""):
+        """
+        Runs FSL FEAT on the given input file.
 
+        Args:
+            epi_label (str): The label of the EPI image.
+            in_file_name (str): The name of the input EPI image.
+            out_dir_name (str): The name of the output directory.
+            model (str): The name of the FEAT model.
+            do_initreg (bool, optional): Whether to perform initial registration. Defaults to False.
+            std_image (str, optional): The name of the standard image. Defaults to "".
+            tr (str, optional): The repetition time. Defaults to "".
+            te (str, optional): The echo time. Defaults to "".
+
+        Raises:
+            Exception: If the given model is not found.
+
+        Returns:
+            None: None.
+        """
         if epi_label.startswith("fmri"):
             epi_dir = self.subject.fmri_dir
         else:
@@ -856,7 +1042,24 @@ class SubjectEpi:
 
     # perform aroma on feat folder data, create reg folder and copy precalculated coregistrations
     def aroma_feat(self, epi_label, input_dir, mc, aff, warp, upsampling=0, logFile=None):
+        """
+        Runs AROMA on the given input directory.
 
+        Args:
+            epi_label (str): The label of the EPI image.
+            input_dir (str): The name of the input directory.
+            mc (str): The motion correction option.
+            aff (str): The affine transformation file.
+            warp (str): The warp file.
+            upsampling (int, optional): The upsampling factor. Defaults to 0.
+            logFile (str, optional): The name of the log file. Defaults to None.
+
+        Raises:
+            Exception: If the given epi_label is not recognized.
+
+        Returns:
+            None: None.
+        """
         if epi_label == "rs":
             aroma_dir           = self.subject.rs_aroma_dir
             regstd_aroma_dir    = self.subject.rs_regstd_aroma_dir
@@ -904,7 +1107,18 @@ class SubjectEpi:
             rrun(os.path.join(self._global.fsl_bin, "fslmaths") + " " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -Tstd -bin " + os.path.join(regstd_aroma_dir, "mask") + " -odt char", logFile=logFile)
 
     def ica_fix(self, epi_label):
+        """
+        Runs ICA-FIX on the given EPI image.
 
+        Args:
+            epi_label (str): The label of the EPI image.
+
+        Raises:
+            Exception: If the given epi_label is not recognized.
+
+        Returns:
+            None: None.
+        """
         if epi_label == "rs":
             rs_icafix_dir       = self.subject.rs_fix_dir
             regstd_aroma_dir    = self.subject.rs_regstd_aroma_dir
@@ -916,7 +1130,23 @@ class SubjectEpi:
             print("ERROR in epi.ica_fix epi_label was not recognized")
             return
 
-    def create_regstd(self, postnuisance, feat_preproc_odn="resting", overwrite=False, islin=False, logFile=None):
+    def create_regstd(self, postnuisance, feat_preproc_odn="resting", overwrite:bool=False, islin=False, logFile=None):
+        """
+        Creates the standard space template for the resting state data.
+
+        Args:
+            postnuisance (str): The name of the post-nuisance image.
+            feat_preproc_odn (str, optional): The name of the FEAT preprocessing output directory. Defaults to "resting".
+            overwrite (bool, optional): Whether to overwrite existing files. Defaults to False.
+            islin (bool, optional): Whether to use linear or nonlinear registration. Defaults to False.
+            logFile (str, optional): The name of the log file. Defaults to None.
+
+        Raises:
+            Exception: If the given post-nuisance image is not found.
+
+        Returns:
+            None: None.
+        """
         # mask from preproc feat
         mask = os.path.join(self.subject.rs_dir, feat_preproc_odn + ".feat", "mask")
         if not Image(self.subject.rs_final_regstd_mask + "_mask") or overwrite:
@@ -940,7 +1170,17 @@ class SubjectEpi:
 
     @staticmethod
     def get_slicetiming_params(nslices, scheme=1, params=None):
+        """
+        Returns the slice timing parameters for FSL FEAT.
 
+        Args:
+            nslices (int): The number of slices.
+            scheme (int, optional): The slice timing scheme. Defaults to 1.
+            params (array, optional): The slice timing parameters. Defaults to None.
+
+        Returns:
+            array: The slice timing parameters.
+        """
         # =============Sequential ascending: 1=============
         if scheme == 1:
             params = arange(1, nslices + 1)
@@ -968,7 +1208,13 @@ class SubjectEpi:
         return str_params
 
     def prepare_for_spm(self, in_img, subdirmame="temp_split"):
+        """
+        This function presently doesn't do anything
 
+        Raises:
+            Exception if called
+
+        """
         raise Exception("ERROR in prepare for spm")
         folder = os.path.dirname(in_img)
         self.subject.epi_split(in_img, subdirmame)
@@ -983,7 +1229,18 @@ class SubjectEpi:
     # FRAMEWORK (copy data across relevant folders, clean up)
     # ===============================================================================
     def cleanup(self, lvl=Global.CLEANUP_LVL_MIN):
+        """
+        Cleans up the resting state data for the given subject.
 
+        Args:
+            lvl (int, optional): The level of cleanup. Defaults to Global.CLEANUP_LVL_MIN.
+
+        Raises:
+            Exception: If the given subject is not recognized.
+
+        Returns:
+            None: None.
+        """
         os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_preprocess_image_label))
         os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_aroma_image_label))
         os.removedirs(os.path.join(self.subject.rs_dir, "resting.feat"))
@@ -1005,8 +1262,17 @@ class SubjectEpi:
             os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_melodic_image_label))
 
     # take a preproc step in the individual space (epi), convert to std4 and copy to resting/reg_std folder
-    def adopt_rs_preproc_step(self, step_label, outsuffix=""):
+    def adopt_rs_preproc_step(self, step_label, outsuffix:str=""):
+        """
+        Copies the given preprocessed step from the individual space to the standard space and adds the given suffix to the filename.
 
+        Args:
+            step_label (str): The label of the preprocessed step.
+            outsuffix (str, optional): The suffix to add to the filename. Defaults to "".
+
+        Returns:
+            None: None.
+        """
         in_img = os.path.join(self.subject.rs_dir, step_label)
         self.subject.transform.transform_roi("epiTOstd4", "abs", rois=[in_img])  # add _std4 to roi name)
         in_img4 = Image(os.path.join(self.subject.roi_std4_dir, step_label + "_std4"))
@@ -1014,7 +1280,15 @@ class SubjectEpi:
 
     # take the reg_standard output of feat/melodic, convert to std4 and copy to resting/reg_std folder
     def adopt_rs_preproc_folderoutput(self, proc_folder):
+        """
+        Copies the filtered_func_data, mask, and bg_image from the given FEAT reg_standard folder to the standard space and replaces the corresponding files in the resting state folder.
 
+        Args:
+            proc_folder (str): The path to the FEAT reg_standard folder.
+
+        Returns:
+            None: None.
+        """
         in_img      = os.path.join(proc_folder, "reg_standard", "filtered_func_data")
         in_mask     = os.path.join(proc_folder, "reg_standard", "mask")
         in_bgimage  = os.path.join(proc_folder, "reg_standard", "bg_image")
@@ -1029,8 +1303,20 @@ class SubjectEpi:
         in_mask4.cp(self.subject.rs_final_regstd_mask)
         in_bgimage4.cp(self.subject.rs_final_regstd_bgimage)
 
-    def reg_copy_feat(self, epi_label, std_image=""):
+    def reg_copy_feat(self, epi_label, std_image:str=""):
+        """
+        Copies the necessary files from a FEAT preprocessing directory to the standard space.
 
+        Args:
+            epi_label (str): The label of the EPI image.
+            std_image (str, optional): The path to the standard space image. Defaults to "".
+
+        Raises:
+            Exception: If the given epi_label is not recognized.
+
+        Returns:
+            None: None.
+        """
         if epi_label == "rs":
             epi_image       = self.subject.rs_data
             epi_dir         = self.subject.rs_dir
@@ -1065,7 +1351,6 @@ class SubjectEpi:
         else:
             raise Exception("Error in reg_copy_feat...given epi_label (" + epi_label + " is not valid")
 
-
         if std_image == "":
             std_image = Image(os.path.join(self.subject.fsl_data_std_dir, "MNI152_T1_2mm_brain"))
         else:
@@ -1098,7 +1383,19 @@ class SubjectEpi:
 
     @staticmethod
     def coregister_epis(ref, target, trgpostfix="_ref", img2transform=None, ref_vol=3):
+        """
+        Coregisters two EPI images.
 
+        Args:
+            ref (Image): The reference image.
+            target (Image): The target image.
+            trgpostfix (str, optional): The postfix to add to the target image. Defaults to "_ref".
+            img2transform (list, optional): A list of images to transform. Defaults to None.
+            ref_vol (int, optional): The reference volume. Defaults to 3.
+
+        Returns:
+            str: The path to the output warp file.
+        """
         target      = Image(target)
         ref         = Image(ref)
 
@@ -1134,7 +1431,20 @@ class SubjectEpi:
         return owarp
 
     def normalize(self, inimg=None, logFile=None):
+        """
+        Normalizes an EPI image.
 
+        Args:
+            inimg (Image, optional): The EPI image to normalize. If None, the default EPI image for the subject is used. If "rs", the resting state EPI image is used. If "fmri", the functional MRI EPI image is used. Defaults to None.
+            logFile (str, optional): The name of the log file. Defaults to None.
+
+        Returns:
+            Image: The normalized EPI image.
+
+        Raises:
+            Exception: If the given inimg is not recognized.
+
+        """
         if inimg is None:
             inimg = Image(inimg, must_exist=True, msg="Error in epi.normalize of subj: " + self.subject.label )
         elif inimg == "rs":

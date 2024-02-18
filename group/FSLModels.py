@@ -2,70 +2,103 @@ import os
 import traceback
 from distutils.file_util import copy_file
 
+from Global import Global
+from Project import Project
 from group.FSLConFile import FSLConFile
-from group.spm_utilities import Covariate, Nuisance
+from group.spm_utilities import Regressor, Covariate, Nuisance
 from utility.fileutilities import remove_ext, append_text_file, read_list_from_file
 # create factorial designs, multiple regressions, t-test
 from utility.myfsl.utils.run import rrun
 
 
 class FSLModels:
+    """
+    Initialize the FSLModels class.
 
-    def __init__(self, proj):
+    Args:
+        proj (object): A Project instance.
+    """
+
+    def __init__(self, proj:Project):
 
         self.subjects_list  = None
         self.working_dir    = ""
 
-        self.project        = proj
-        self.globaldata     = self.project.globaldata
+        self.project:Project    = proj
+        self.globaldata:Global  = self.project.globaldata
 
-        self.string         = ""    # used to compose models override
+        self.string             = ""    # used to compose models override
 
     # ---------------------------------------------------
-    # create a FSF file starting from a template and filling in:
-    # - N covariates
-    # - X nuisance (without associated contrast)
-    # values contained in $SUBJECTS_FILE
-    # covariates/nuisance regressors will be appended starting from the (NUM_GROUPS+1)th column_id
-    # must write $OUT_FSF_NAME variable
-    # ---------------------------------------------------
-    # input_fsf     : /home/...../proj_label/script/glm/.....fsf
-    # odp           : path where save the file
-    # regressors          : list of Covariate and Nuisance instances, indicating whether adding respectively a contrast or not
-    # grouplabel_or_subjlist : list of grouplabel_or_subjlist or subjects' labels
-    #                 eg: 3 groups  ["grp1","grp2","grp3"] or [["s11", "s12", ..., "s1n"], ["s21", ..."s2m"], ["s31", ..., "s3k"]]
-    # ofn           : string indicating output file prefix
-    # data_file     : String|None   if None, use that loaded in project
-    # create_model  : Bool          if True call feat_model at the end to create .mat/.con file for randomise analysis...if 0 no..to be used for Feat analysis
-    # group_mean_contrasts : Int    0: no mean,1: only positive, 2: positive and negative.
-    # cov_mean_contrasts : Int      0: no mean,1: only positive, 2: positive and negative.
+    def create_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf:str, odp:str, regressors:List[Regressor], grlab_subjlabs_subjs:str|List[str]|List[Subject], ofn:str="mult_cov", data:str|SubjectsData=None,
+                                               create_model:bool=True, group_mean_contrasts:int=1, cov_mean_contrasts:int=2, compare_covs:bool=False, ofn_postfix:str="", subj_must_exist:bool=False):
+        """
+        This function creates a FSL GLM file starting from a template. MAnage multiple groups, with covariates and nuisance regressors.
+        - N covariates
+        - X nuisance (without associated contrast)
+        values contained in $SUBJECTS_FILE
+        covariates/nuisance regressors will be appended starting from the (NUM_GROUPS+1)th column_id
+        must write $OUT_FSF_NAME variable
 
-    # ------------------------------------------------------------------------------------
-    # RULES TO CREATE REGRESSORS AND CONTRASTS
-    # ------------------------------------------------------------------------------------
+        ------------------------------------------------------------------------------------
+        RULES TO CREATE REGRESSORS AND CONTRASTS
+        ------------------------------------------------------------------------------------
+        each group        has one regressor
+        each nuisance     has one regressor
+        each covariate    has one regressor f.e. group
 
-    # each group        has one regressor
-    # each nuisance     has one regressor
-    # each covariate    has one regressor f.e. group
+        1 group:
 
-    # 1 group:
-    # COVARIATES > 0 :  - cov correlation                    : 1|2 f.e. cov
-    #                   - group_mean_contrasts (0|1|2)      : 0|1|2
-    #                   - covs comparisons (between either 2 or 3 covs)
-    # COVARIATES = 0 :  - group_mean_contrasts (1|2)        : 1|2
+        COVARIATES > 0 :  - cov correlation                    : 1|2 f.e. cov
+                          - group_mean_contrasts (0|1|2)      : 0|1|2
+                          - covs comparisons (between either 2 or 3 covs)
+        COVARIATES = 0 :  - group_mean_contrasts (1|2)        : 1|2
 
-    # 2+ groups:
-    # COVARIATES > 0 :  - cov correlation within-group      : 1|2 f.e. cov f.e. group    cov-i: gr-j pos | gr-j neg, ....
-    #                   - slopes comparisons between-group  :   2 f.e. cov               cov-i: gr1>gr2 and gr2>gr1
-    #                   - group mean within-group           : 1|2 f.e. group             gr1: pos | neg
-    #                   group comparisons are not performed
+        2+ groups:
+        COVARIATES > 0 :  - cov correlation within-group      : 1|2 f.e. cov f.e. group    cov-i: gr-j pos | gr-j neg, ....
+                          - slopes comparisons between-group  :   2 f.e. cov               cov-i: gr1>gr2 and gr2>gr1
+                          - group mean within-group           : 1|2 f.e. group             gr1: pos | neg
+                          group comparisons are not performed
 
-    # COVARIATES = 0 :  - group_mean_contrasts x group
-    #                   - group comparisons
+        COVARIATES = 0 :  - group_mean_contrasts x group
+                          - group comparisons
+        Parameters
+        ----------
+        input_fsf : str
+            The path to the input FSL GLM file.  /home/...../proj_label/script/glm/.....fsf
+        odp : str
+            The path to the output directory.
+        regressors : list
+            A list of regressors, including covariates and nuisance regressors. indicating whether adding respectively a contrast or not
+        grlab_subjlabs_subjs : list
+            A list of group labels or subject labels. eg: 3 groups  ["grp1","grp2","grp3"] or [["s11", "s12", ..., "s1n"], ["s21", ..."s2m"], ["s31", ..., "s3k"]]
+        ofn : str, optional
+            The output file name prefix, by default "mult_cov".
+        data : str, optional
+            The path to the data file, by default None.
+        create_model : bool, optional
+            Whether to create the model, by default True. if True call feat_model at the end to create .mat/.con file for randomise analysis...
+            if False no..to be used for Feat analysis
+        group_mean_contrasts : int, optional
+            The number of group mean contrasts, by default 1. 0: no mean,1: only positive, 2: positive and negative.
+        cov_mean_contrasts : int, optional
+            The number of covariate mean contrasts, by default 2. 0: no mean,1: only positive, 2: positive and negative.
+        compare_covs : bool, optional
+            Whether to compare covariates, by default False.
+        ofn_postfix : str, optional
+            A postfix for the output file name, by default "".
+        subj_must_exist : bool, optional
+            Whether to check if subjects exist, by default False.
 
-    def create_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf, odp, regressors, grouplabel_or_subjlist, ofn="mult_cov", data_file=None,
-                                               create_model=True, group_mean_contrasts=1, cov_mean_contrasts=2, compare_covs=False, ofn_postfix="", subj_must_exist=False):
+        Returns
+        -------
+        None
 
+        Raises
+        ------
+        Exception
+            If the input FSL GLM file does not exist.
+        """
         try:
             self.string = ""
             # ------------------------------------------------------------------------------------
@@ -74,12 +107,12 @@ class FSLModels:
                 raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, input fsf file is missing...exiting")
 
             if bool(regressors):
-                data = self.project.validate_data(data_file)
+                data = self.project.validate_data(data)
                 data.validate_covs(regressors)
             else:
                 data = None
 
-            ngroups = len(grouplabel_or_subjlist)  # number of groups in the design. each group will have its regressor (EV).
+            ngroups = len(grlab_subjlabs_subjs)  # number of groups in the design. each group will have its regressor (EV).
             if ngroups > 3:
                 raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, no more than three groups are supported")
 
@@ -104,7 +137,7 @@ class FSLModels:
             subj_labels_by_groups   = []
             all_subj                = []
             nsubjs      = 0
-            for grp in grouplabel_or_subjlist:
+            for grp in grlab_subjlabs_subjs:
                 labels = self.project.get_subjects_labels(grp, must_exist=subj_must_exist)
                 subj_labels_by_groups.append(labels)
                 all_subj += labels
@@ -520,12 +553,45 @@ class FSLModels:
             traceback.print_exc()
             raise e
 
-    def addline2string(self, line):
+    def addline2string(self, line: str) -> None:
+        """
+        Add a line to the internal string buffer.
+
+        Parameters
+        ----------
+        line : str
+            The line to add to the buffer.
+
+        Returns
+        -------
+        None
+
+        """
         self.string += line
         self.string += "\n"
 
     @staticmethod
-    def get_numpoints_from_fsl_model(mat_file):
+    def get_numpoints_from_fsl_model(mat_file:str):
+
+        """
+        Reads a .mat file and returns the number of time points in the model.
+
+        Parameters
+        ----------
+        mat_file : str
+            Path to the .mat file containing the model parameters.
+
+        Returns
+        -------
+        int
+            Number of time points in the model.
+
+        Raises
+        ------
+        Exception
+            If the .mat file does not contain the number of time points.
+        """
+
         lines = read_list_from_file(mat_file)
         for l in lines:
             if "/NumPoints" in l:
@@ -533,7 +599,22 @@ class FSLModels:
         raise Exception("")
 
     @staticmethod
-    def read_fsl_contrasts_file(con_file) -> FSLConFile:
+    def read_fsl_contrasts_file(con_file:str) -> FSLConFile:
+
+        """
+        Reads a .con file and returns an FSLConFile object containing the information.
+
+        Parameters
+        ----------
+        con_file : str
+            Path to the .con file to read.
+
+        Returns
+        -------
+        FSLConFile
+            Object containing information about the contrasts in the model.
+        """
+
         confile = FSLConFile()
 
         lines   = read_list_from_file(con_file)

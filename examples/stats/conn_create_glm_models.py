@@ -57,7 +57,8 @@ if __name__ == "__main__":
         connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_fs0_fs1")
 
         regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
-        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_fs0_fs1_x_age_gender")
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"],
+                                          "td_sk_bd_fs0_fs1_x_age_gender")
 
         # ======================================================================================================================
         # PROCESSING 2: test create_regressors_file_ofsubset
@@ -129,7 +130,8 @@ if __name__ == "__main__":
         connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_fs0_fs1")
 
         regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
-        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"], "td_sk_bd_fs0_fs1_x_age_gender")
+        connmodels.create_regressors_file(outfolder, regressors, ["td_nk", "sk_nk", "bd_nk"],
+                                          "td_sk_bd_fs0_fs1_x_age_gender")
 
     except Exception as e:
         traceback.print_exc()

@@ -7,6 +7,7 @@ import subprocess
 
 import numpy
 
+from Global import Global
 from Project import Project
 from group.FSLModels import FSLModels
 from group.SPMModels import SPMModels
@@ -20,22 +21,46 @@ from utility.utilities import listToString
 
 
 class GroupAnalysis:
-
+    """
+    This class provides methods for group analysis of MRI data.
+    """
     def __init__(self, proj:Project):
+        """
+        Initialize the GroupAnalysis class.
 
-        self.subjects_list  = None
-        self.working_dir    = ""
-        self.project        = proj
-        self._global        = self.project.globaldata
+        Args:
+            proj (Project): The Project object that contains the data and analysis settings.
+        """
+        self.subjects_list      = None
+        self.working_dir        = ""
+        self.project:Project    = proj
+        self._global:Global     = self.project.globaldata
 
-        self.spm            = SPMModels(proj)
+        self.spm:SPMModels      = SPMModels(proj)
 
     # does the following checks:
     # - input 4D image and mask, input fsf file exists.
     # - number of volumes (subjects) of input image coincides with number of points into the model
     # can split contrasts in different processes
-    def start_tbss_randomize(self, pop_dir_name, dti_image_type, analysis_name, corr_string, models_dir_name="", delay=20, numcpu=1, perm=5000, ignore_errors=False, runit=True):
+    def start_tbss_randomize(self, pop_dir_name:str, dti_image_type:str, analysis_name:str, corr_string:str, models_dir_name:str="", delay:int=20, numcpu:int=1, perm:int=5000, ignore_errors:bool=False, runit:bool=True):
+        """
+        Start a TBSS randomization analysis.
 
+        Args:
+            pop_dir_name (str): The name of the population directory.
+            dti_image_type (str): The DTI image type (e.g., FA).
+            analysis_name (str): The name of the analysis.
+            corr_string (str): The correlation string.
+            models_dir_name (str, optional): The name of the directory containing the GLM models.
+            delay (int, optional): The number of seconds to wait between each analysis.
+            numcpu (int, optional): The number of CPUs to use for the analysis.
+            perm (int, optional): The number of permutations to use for the analysis.
+            ignore_errors (bool, optional): Whether to ignore errors or raise exceptions.
+            runit (bool, optional): Whether to actually run the analysis or just return a subprocess.
+
+        Returns:
+            subprocess.Popen: A subprocess object if runit is True, otherwise None.
+        """
         try:
             main_analysis_folder    = os.path.join(self.project.tbss_dir, pop_dir_name)     # /data/MRI/projects/past_controls/group_analysis/tbss/controls57
             out_stats_folder        = os.path.join(main_analysis_folder, "stats")           # /data/MRI/projects/past_controls/group_analysis/tbss/controls57/stats
@@ -144,8 +169,18 @@ class GroupAnalysis:
     # create a folder name and its subfolders : subjects (normalized images), flowfields, stats
     # RC1_IMAGES:    {  '/media/data/MRI/projects/ELA/subjects/0202/s1/mpr/rc20202-t1.nii,1'
     #                   '/media/data/MRI/projects/ELA/subjects/0503/s1/mpr/rc20503-t1.nii,1'}
-    def create_vbm_spm_template_normalize(self, name, subjects_list, spm_template_name="group_spm_dartel_createtemplate_normalize"):
+    def create_vbm_spm_template_normalize(self, name:str, subjects_list:List[Subject], spm_template_name:str="group_spm_dartel_createtemplate_normalize"):
+        """
+        Create a VBM SPM template for normalization.
 
+        Args:
+            name (str): The name of the template.
+            subjects_list (list): A list of Subject objects.
+            spm_template_name (str, optional): The name of the SPM template. Defaults to "group_spm_dartel_createtemplate_normalize".
+
+        Returns:
+            str: The path to the created template.
+        """
         self.subjects_list = subjects_list
         if len(self.subjects_list) == 0:
             print("ERROR in create_vbm_spm_template_normalize, given subjs params is neither a string nor a list")
@@ -187,8 +222,18 @@ class GroupAnalysis:
         return self.working_dir
 
     # create a fslvbm folder using spm's vbm output
-    def create_fslvbm_from_spm(self, subjects_list, smw_folder, vbmfsl_folder):
+    def create_fslvbm_from_spm(self, subjects_list:List[Subject], smw_folder:str, vbmfsl_folder:str):
+        """
+        Create an FSL VBM folder from an SPM VBM folder.
 
+        Args:
+            subjects_list (List[Subject]): A list of Subject objects.
+            smw_folder (str): The path to the SPM VBM folder.
+            vbmfsl_folder (str): The path to the FSL VBM folder.
+
+        Returns:
+            None
+        """
         self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
             print("ERROR in create_fslvbm_from_spm, given subjs params is neither a string nor a list")
@@ -216,11 +261,25 @@ class GroupAnalysis:
 
         shutil.rmtree(struct_dir)
 
-    def tbss_run_fa(self, subjects_list, odn, prepare=True, proc=True, postreg="S", prestat_thr=0.2, cleanup=True):
+    def tbss_run_fa(self, subjects_list:List[Subject], odn:str, prepare:bool=True, proc:bool=True, postreg:str="S", prestat_thr:float=0.2, cleanup:bool=True):
+        """
+        Run a TBSS analysis on the given subjects list for the given output directory name.
 
+        Args:
+            subjects_list (List[Subject]): The list of Subject objects to analyze.
+            odn (str): The name of the output directory.
+            prepare (bool, optional): Whether to prepare the analysis by copying the necessary files. Defaults to True.
+            proc (bool, optional): Whether to process the analysis. Defaults to True.
+            postreg (str, optional): The post-registration method. Defaults to "S".
+            prestat_thr (float, optional): The threshold for pre-statistics. Defaults to 0.2.
+            cleanup (bool, optional): Whether to cleanup the analysis directory after running. Defaults to True.
+
+        Returns:
+            str: The path to the root analysis folder.
+        """
         self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
-            print("ERROR in tbss_run_fa, given grouplabel_or_subjlist params is neither a string nor a list")
+            print("ERROR in tbss_run_fa, given grlab_subjlabs_subjs params is neither a string nor a list")
             return
 
         root_analysis_folder = os.path.join(self.project.tbss_dir, odn)
@@ -260,11 +319,24 @@ class GroupAnalysis:
 
     # run tbss for other modalities = ["MD", "L1", ....]
     # you first must have done run_tbss_fa
-    def tbss_run_alternatives(self, subjects_list, input_folder, modalities, prepare=True, proc=True, cleanup=True):
+    def tbss_run_alternatives(self, subjects_list:List[Subject], input_folder:str, modalities:List[str], prepare:bool=True, proc:bool=True, cleanup:bool=True):
+        """
+        Runs a TBSS analysis on the given subjects list for the given output directory name for the given modalities.
 
+        Args:
+            subjects_list (List[Subject]): The list of Subject objects to analyze.
+            input_folder (str): The path to the root analysis folder.
+            modalities (List[str]): The list of modalities to analyze.
+            prepare (bool, optional): Whether to prepare the analysis by copying the necessary files. Defaults to True.
+            proc (bool, optional): Whether to process the analysis. Defaults to True.
+            cleanup (bool, optional): Whether to cleanup the analysis directory after running. Defaults to True.
+
+        Returns:
+            None
+        """
         self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
-            print("ERROR in tbss_run_alternatives, given grouplabel_or_subjlist params is neither a string nor a list")
+            print("ERROR in tbss_run_alternatives, given grlab_subjlabs_subjs params is neither a string nor a list")
             return
 
         input_stats = os.path.join(input_folder, "stats")
@@ -309,14 +381,24 @@ class GroupAnalysis:
 
     # read a matrix file (not a classical subjects_data file) and add total ICV as last column
     # here it assumes [integer, integer, integer, integer, integer, float4]
-    def add_icv_2_data_matrix(self, grouplabel_or_subjlist, input_data_file=None, sess_id=1):
+    def add_icv_2_data_matrix(self, grlab_subjlabs_subjs:str|List[str], input_data_file:str=None, sess_id:int=1):
+        """
+        Add the intracranial volume (ICV) to a data matrix.
 
+        Args:
+            grlab_subjlabs_subjs (str or List[str] or List[Subject]): The group label or a list of subjects' label/instances.
+            input_data_file (str, optional): The input data file. If not given, the project's default data file will be used.
+            sess_id (int, optional): The session ID. If not given, the project's default session ID will be used.
+
+        Returns:
+            None
+        """
         if not os.path.exists(input_data_file):
             print("ERROR in add_icv_2_data_matrix, given data_file does not exist")
             return
 
-        subjects    = self.project.get_subjects_labels(grouplabel_or_subjlist)
-        icvs        = self.project.get_subjects_icv(grouplabel_or_subjlist, sess_id)
+        subjects    = self.project.get_subjects_labels(grlab_subjlabs_subjs)
+        icvs        = self.project.get_subjects_icv(grlab_subjlabs_subjs, sess_id)
 
         nsubj       = len(subjects)
         ndata       = len(icvs)
@@ -329,8 +411,20 @@ class GroupAnalysis:
 
     # read xtract's stats.csv file of each subject in the given list and create a tabbed file (ofp) with given values/tract
     # calls the subject routine
-    def xtract_export_group_data(self, subjects_list, ofp, tracts=None, values=None, ifn="stats.csv"):
+    def xtract_export_group_data(self, subjects_list:List[Subject], ofp:str, tracts:List[str]=None, values:List[str]=None, ifn:str="stats.csv"):
+        """
+        Export Xtract results for a group of subjects to a tab-separated file.
 
+        Args:
+            subjects_list (list): A list of Subject objects.
+            ofp (str): The path to the output file.
+            tracts (list, optional): A list of tractography labels. Defaults to None, which uses the default tractography labels defined in the project settings.
+            values (list, optional): A list of values to export. Defaults to None, which exports the default values defined in the project settings.
+            ifn (str, optional): The name of the input file. Defaults to "stats.csv".
+
+        Returns:
+            None
+        """
         self.subjects_list  = subjects_list
         if len(self.subjects_list) == 0:
             print("ERROR in xtract_export_group_data, given subjs params is neither a string nor a list")
@@ -359,8 +453,21 @@ class GroupAnalysis:
     # ---------------------------------------------------
     #region MELODIC
     @staticmethod
-    def group_melodic(out_dir_name, subjects_list, tr):
+    def group_melodic(out_dir_name:str, subjects_list:List[Subject], tr):
+        """
+        Runs group melodic on the given subjects list.
 
+        Args:
+            out_dir_name (str): The path to the output directory.
+            subjects_list (List[Subject]): The list of Subject objects to analyze.
+            tr (float): The repetition time.
+
+        Raises:
+            ValueError: If the output directory already exists.
+
+        Returns:
+            None
+        """
         if os.path.exists(out_dir_name):
             os.removedirs(out_dir_name)
 
@@ -419,8 +526,8 @@ class GroupAnalysis:
     # ---------------------------------------------------
     #region SBFC
     @staticmethod
-    def group_sbfc(grouplabel_or_subjlist, firstlvl_fn, regressors, input_fsf, odp, ofn="mult_cov", data_file=None,
-                                               create_model=True, group_mean_contrasts=1, cov_mean_contrasts=2, compare_covs=False, ofn_postfix=""):
+    def group_sbfc(grlab_subjlabs_subjs, firstlvl_fn, regressors, input_fsf, odp, ofn:str="mult_cov", data_file=None,
+                   create_model:bool=True, group_mean_contrasts=1, cov_mean_contrasts=2, compare_covs:bool=False, ofn_postfix:str=""):
         pass
 
     #endregion
@@ -430,8 +537,24 @@ class GroupAnalysis:
     # ====================================================================================================================================================
     # run tbss for FA
     # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
-    def tbss_clusterize_results_by_atlas(self, tbss_result_image, out_folder, log_file="overlap.txt", tracts_labels=None, tracts_dir=None, thr=0.95):
+    def tbss_clusterize_results_by_atlas(self, tbss_result_image:str, out_folder:str, log_file:str="overlap.txt", tracts_labels:List[str]=None, tracts_dir:str=None, thr:float=0.95):
+        """
+        This function clusters the TBSS results by atlases.
 
+        Args:
+            tbss_result_image (str): The path to the TBSS result image.
+            out_folder (str): The path to the output folder.
+            log_file (str, optional): The name of the log file. Defaults to "overlap.txt".
+            tracts_labels (List[str], optional): The list of tractography labels. Defaults to None, which uses the default tractography labels defined in the project settings.
+            tracts_dir (str, optional): The path to the tractography directory. Defaults to None, which uses the default tractography directory defined in the project settings.
+            thr (float, optional): The threshold value. Defaults to 0.95.
+
+        Raises:
+            Exception: If the output folder already exists.
+
+        Returns:
+            None
+        """
         try:
             if tracts_labels is None:
                 tracts_labels   = self._global.dti_xtract_labels
@@ -491,9 +614,27 @@ class GroupAnalysis:
     # datas is a tuple of two elements containing a matrix of values and subjects
     # returns tracts_data
     @staticmethod
-    def tbss_summarize_clusterized_folder(in_clust_res_dir, datas, data_labels, tbss_folder, modality="FA",
+    def tbss_summarize_clusterized_folder(in_clust_res_dir, datas, data_labels, tbss_folder, modality:str="FA",
                                           subj_img_postfix="_FA_FA_to_target", ofn="scatter_tracts_") -> tuple:
+        """
+        This function takes the output of a TBSS clustering and summarizes the results in a tab-separated file.
 
+        Args:
+            in_clust_res_dir (str): The path to the TBSS clustering results folder.
+            datas (tuple): A tuple containing a matrix of values and subjects.
+            data_labels (list): A list of data labels.
+            tbss_folder (str): The path to the TBSS analysis folder.
+            modality (str, optional): The modality of the TBSS analysis. Defaults to "FA".
+            subj_img_postfix (str, optional): The postfix of the subject images. Defaults to "_FA_FA_to_target".
+            ofn (str, optional): The name of the output file. Defaults to "scatter_tracts_".
+
+        Returns:
+            tuple: A tuple containing the path to the output file and the tracts data.
+
+        Raises:
+            Exception: If the input data is not valid.
+
+        """
         ndata       = len(data_labels)
         whatdata    = datas[0][0]
         if isinstance(whatdata, list):
@@ -565,7 +706,18 @@ class GroupAnalysis:
     # vols2keep: 0-based list of indices to keep
     @staticmethod
     def create_analysis_folder_from_existing(src_folder, new_folder, vols2keep, modalities=None):
+        """
+        Creates a new analysis folder from an existing one, by copying the necessary files and filtering the volumes.
 
+        Args:
+            src_folder (str): The path to the existing analysis folder.
+            new_folder (str): The path to the new analysis folder.
+            vols2keep (List[int]): A list of volume indices to keep.
+            modalities (Optional[List[str]]): A list of modalities to copy. If not specified, all modalities will be copied.
+
+        Returns:
+            None
+        """
         if modalities is None:
             modalities = ["FA", "MD", "L1", "L23"]
 

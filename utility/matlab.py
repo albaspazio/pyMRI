@@ -1,3 +1,35 @@
+"""
+This module provides functions for interacting with MATLAB from Python.
+The functions in this module can be divided into two categories:
+those that start a MATLAB session
+    - start_matlab: Starts a new MATLAB session or connects to an existing one.
+and those that do not.
+    - call_matlab_function: Calls a MATLAB function that returns a value.
+    - call_matlab_function_noret: Calls a MATLAB function that does not return a value.
+    - call_matlab_spmbatch: Calls a SPM batch file that does not return a value.
+
+Example usage:
+
+import matlab_interface
+
+# Start a new MATLAB session
+eng = matlab_interface.start_matlab()
+
+# Call a MATLAB function that returns a value
+res = matlab_interface.call_matlab_function('my_matlab_function', eng=eng, params='param1, param2')
+
+# Call a MATLAB function that does not return a value
+matlab_interface.call_matlab_function_noret('my_matlab_function', eng=eng, params='param1, param2')
+
+# Call a SPM batch file that does not return a value
+matlab_interface.call_matlab_spmbatch('my_spm_batch.m', eng=eng)
+
+# End the MATLAB session
+eng.quit()
+
+Note that the actual function names and arguments may vary slightly depending on the specific MATLAB version and environment.
+"""
+
 # from matlab.engine import
 import os
 
@@ -6,8 +38,17 @@ import matlab.engine.engineerror
 
 
 # start a new matlab session (if no session are active) or connect to the first one available or return None.
-def start_matlab(paths2add=None, conn2first=True):
+def start_matlab(paths2add=None, conn2first:bool=True):
+    """
+    Starts a new MATLAB session or connects to an existing one.
 
+    Args:
+        paths2add (list, optional): A list of paths to add to the MATLAB path.
+        conn2first (bool, optional): If True, connects to the first MATLAB session found, otherwise starts a new session.
+
+    Returns:
+        The MATLAB engine object, or None if no session could be started.
+    """
     if paths2add is None:
         paths2add = []
     existing_sessions = matlab.engine.find_matlab()
@@ -29,7 +70,24 @@ def start_matlab(paths2add=None, conn2first=True):
     return eng
 
 
-def call_matlab_function(func, standard_paths=None, params="", logfile=None, endengine=True, eng=None):
+def call_matlab_function(func, standard_paths=None, params:str="", logfile=None, endengine:bool=True, eng=None):
+    """
+    Calls a MATLAB function that returns a value.
+
+    Args:
+        func (str): The name of the MATLAB function to call.
+        standard_paths (list, optional): A list of paths to add to the MATLAB path.
+        params (str, optional): The parameters to pass to the MATLAB function.
+        logfile (file, optional): A file object for logging output.
+        endengine (bool, optional): If True, ends the MATLAB session after the function call.
+        eng (matlab.engine.base.Engine, optional): The MATLAB engine object to use for the function call.
+
+    Returns:
+        A list containing two elements: the first element is the MATLAB engine object (if the function ended the session), and the second element is the return value of the MATLAB function.
+
+    Raises:
+        MatlabExecutionError: If the function call fails.
+    """
     if standard_paths is None:
         standard_paths = []
     if eng is None:
@@ -54,7 +112,24 @@ def call_matlab_function(func, standard_paths=None, params="", logfile=None, end
     return [engine, res]
 
 
-def call_matlab_function_noret(func, standard_paths=None, params="", logfile=None, endengine=True, eng=None):
+def call_matlab_function_noret(func, standard_paths=None, params:str="", logfile=None, endengine:bool=True, eng=None):
+    """
+    Calls a MATLAB function that does not return a value.
+
+    Args:
+        func (str): The name of the MATLAB function to call.
+        standard_paths (list, optional): A list of paths to add to the MATLAB path.
+        params (str, optional): The parameters to pass to the MATLAB function.
+        logfile (file, optional): A file object for logging output.
+        endengine (bool, optional): If True, ends the MATLAB session after the function call.
+        eng (matlab.engine.base.Engine, optional): The MATLAB engine object to use for the function call.
+
+    Returns:
+        The MATLAB engine object (if the function ended the session).
+
+    Raises:
+        MatlabExecutionError: If the function call fails.
+    """
     if standard_paths is None:
         standard_paths = []
     if eng is None:
@@ -85,7 +160,23 @@ def call_matlab_function_noret(func, standard_paths=None, params="", logfile=Non
 
 
 # subcase of call_matlab_function_noret: call a SPM batch file that does not return anything
-def call_matlab_spmbatch(func, standard_paths=None, logfile=None, endengine=True, eng=None):
+def call_matlab_spmbatch(func, standard_paths=None, logfile=None, endengine:bool=True, eng=None):
+    """
+    Calls a SPM batch file that does not return a value.
+
+    Args:
+        func (str): The name of the SPM batch file to call.
+        standard_paths (list, optional): A list of paths to add to the MATLAB path.
+        logfile (file, optional): A file object for logging output.
+        endengine (bool, optional): If True, ends the MATLAB session after the function call.
+        eng (matlab.engine.base.Engine, optional): The MATLAB engine object to use for the function call.
+
+    Returns:
+        The MATLAB engine object (if the function ended the session).
+
+    Raises:
+        MatlabExecutionError: If the function call fails.
+    """
     if standard_paths is None:
         standard_paths = []
     batch_file = os.path.basename(os.path.splitext(func)[0])
@@ -138,7 +229,7 @@ def call_matlab_spmbatch(func, standard_paths=None, logfile=None, endengine=True
     #
 
 # attempt to create a multipurpose method that receive a list of functions/params/return types
-# def call_matlab_function(functions, params, standard_paths, logfile=None, endengine=True):
+# def call_matlab_function(functions, params, standard_paths, logfile=None, endengine:bool=True):
 #
 #     nfunc   = len(functions)
 #     nparams = len(params)

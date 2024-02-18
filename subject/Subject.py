@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 import glob
 import os
 import shutil
 import traceback
 from copy import deepcopy
 from shutil import move, rmtree
+from typing import List, Tuple
 
 from Global import Global
+from Project import Project
+from group.spm_utilities import FmriProcParams
 from utility.images.Image import Image
 from utility.images.Images import Images
 from utility.myfsl.utils.run import rrun
@@ -18,6 +23,12 @@ from utility.fileutilities import extractall_zip, sed_inplace
 
 
 class Subject:
+    """
+    This class contains all the necessary information and methods for a single subject.
+    It includes the paths to all the necessary files and directories, as well as methods for
+    performing various processing steps on the data.
+    """
+
     TYPE_T1 = 1
     TYPE_RS = 2
     TYPE_FMRI = 3
@@ -25,13 +36,21 @@ class Subject:
     TYPE_DTI_B0 = 5     # does not have bval/bvec
     TYPE_T2 = 6
 
-    def __init__(self, label, project, sessid=1, stdimg=""):
+    def __init__(self, label:str, project:Project, sessid:int=1, stdimg:str=""):
+        """
+        Initialize a new Subject object.
 
+        Args:
+            label (str): The subject label.
+            project (Project): The project object that this subject belongs to.
+            sessid (int, optional): The session ID. Defaults to 1.
+            stdimg (str, optional): The path to the standard image. Defaults to "".
+        """
         self.label  = label
         self.sessid = sessid
 
-        self.project = project
-        self._global = project.globaldata
+        self.project:Project = project
+        self._global:Global  = project.globaldata
 
         self.fsl_dir            = self._global.fsl_dir
         self.fsl_bin            = self._global.fsl_bin
@@ -44,40 +63,85 @@ class Subject:
         self.set_templates(stdimg)
         self.set_properties(self.sessid)
 
-        self.transform  = SubjectTransforms(self, self._global)
-        self.mpr        = SubjectMpr(self, self._global)
-        self.dti        = SubjectDti(self, self._global)
-        self.epi        = SubjectEpi(self, self._global)
+        self.transform:SubjectTransforms    = SubjectTransforms(self, self._global)
+        self.mpr:SubjectMpr                 = SubjectMpr(self, self._global)
+        self.dti:SubjectDti                 = SubjectDti(self, self._global)
+        self.epi:SubjectEpi                 = SubjectEpi(self, self._global)
 
-    def hasSeq(self, type, images_labels=None):
-        if type == "T1":
+    def hasSeq(self, _type:str, images_labels:List[str]=None):
+        """
+        Check if a specific sequence type exists for this subject.
+
+        Args:
+            _type (str): The sequence type, can be "T1", "RS", "DTI", "T2", or "fMRI".
+            images_labels (list, optional): A list of image labels to check for. If not provided,
+                the method will check for the existence of the full sequence. Defaults to None.
+
+        Returns:
+            bool: True if the sequence exists, False otherwise.
+        """
+        if _type == "T1":
             return self.hasT1
-        elif type == "RS":
+        elif _type == "RS":
             return self.hasRS
-        elif type == "DTI":
+        elif _type == "DTI":
             return self.hasDTI
-        elif type == "T2":
+        elif _type == "T2":
             return self.hasT2
-        elif type == "fMRI":
+        elif _type == "fMRI":
             return self.hasFMRI(images_labels)
 
     @property
     def hasT1(self):
+        """
+        Check if a T1 image exists for this subject.
+
+        Returns:
+            bool: True if a T1 image exists, False otherwise.
+        """
         return self.t1_data.exist
 
     @property
     def hasRS(self):
+        """
+        Check if a resting state image exists for this subject.
+
+        Returns:
+            bool: True if a resting state image exists, False otherwise.
+        """
         return self.rs_data.exist
 
     @property
     def hasDTI(self):
+        """
+        Check if a DTI image exists for this subject.
+
+        Returns:
+            bool: True if a DTI image exists, False otherwise.
+        """
         return self.dti_data.exist
 
     @property
     def hasT2(self):
+        """
+        Check if a T2 image exists for this subject.
+
+        Returns:
+            bool: True if a T2 image exists, False otherwise.
+        """
         return self.t2_data.exist
 
-    def hasFMRI(self, images_labels=None):
+    def hasFMRI(self, images_labels:List[str]=None):
+        """
+        Check if a specific fMRI image exists for this subject.
+
+        Args:
+            images_labels (list, optional): A list of image labels to check for. If not provided,
+                the method will check for the existence of the full sequence. Defaults to None.
+
+        Returns:
+            bool: True if the image exists, False otherwise.
+        """
         if images_labels is None:
             return self.fmri_data.exist
         else:
@@ -86,16 +150,41 @@ class Subject:
 
     @property
     def hasWB(self):
+        """
+        Check if a white matter image exists for this subject.
+
+        Returns:
+            bool: True if a white matter image exists, False otherwise.
+        """
         return self.wb_data.exist
 
-    def get_properties(self, sess):
+    def get_properties(self, sess:int=1):
+        """
+        Get the properties for a specific session.
+
+        Args:
+            sess (int): The session ID.
+
+        Returns:
+            Subject: A copy of the subject object with the properties set for the specified session.
+        """
         return self.set_properties(sess, True)
 
     # this method has 2 usages:
     # 1) DEFAULT : to create filesystem names at startup    => returns : self  (DOUBT !! alternatively may always return a deepcopy)
     # 2) to get a copy with names of another session        => returns : deepcopy(self)
-    def set_properties(self, sess, rollback=False):
+    def set_properties(self, sess:int=1, rollback:bool=False):
+        """
+        Set the properties for a specific session.
 
+        Args:
+            sess (int): The session ID.
+            rollback (bool, optional): Whether to rollback to the previous session's properties.
+                Defaults to False.
+
+        Returns:
+            Subject: A copy of the subject object with the properties set for the specified session.
+        """
         self.dir            = os.path.join(self.project.subjects_dir, self.label, "s" + str(sess))
 
         self.roi_dir        = os.path.join(self.dir, "roi")
@@ -301,8 +390,21 @@ class Subject:
             self.sessid = sess
             return self
 
-    def set_templates(self, stdimg=""):
+    def set_templates(self, stdimg:str=""):
+        """
+        Set standard templates for this subject.
 
+        Parameters
+        ----------
+        stdimg : str
+            Path to a custom standard image. If not specified, default templates will be used.
+
+        Raises
+        ------
+        Exception
+            If the given custom standard image does not exist.
+
+        """
         if stdimg == "":
 
             self.std_img_label = "std"
@@ -348,7 +450,22 @@ class Subject:
         return os.path.exists(self.dir)
 
     def create_file_system(self):
-
+        """
+        Creates the file system structure for the subject.
+        The following directories are created:
+        - mpr
+        - fmri
+        - dti
+        - t2
+        - resting
+        Inside each directory, the following subdirectories are created:
+        - roi_t1_dir
+        - roi_std_dir
+        - roi_dti_dir
+        - roi_rs_dir
+        - roi_fmri_dir
+        - roi_t2_dir
+        """
         os.makedirs(os.path.join(self.dir, "mpr"),      exist_ok=True)
         os.makedirs(os.path.join(self.dir, "fmri"),     exist_ok=True)
         os.makedirs(os.path.join(self.dir, "dti"),      exist_ok=True)
@@ -362,8 +479,22 @@ class Subject:
         os.makedirs(self.roi_fmri_dir,  exist_ok=True)
         os.makedirs(self.roi_t2_dir,    exist_ok=True)
 
-    def rename(self, new_label, session_id=1):
+    def rename(self, new_label:str, session_id:int=1):
+        """
+        Renames all files and directories in the subject directory that contain the subject's original label with the new label.
 
+        Parameters
+        ----------
+        new_label: str
+            The new label to replace the subject's original label with.
+        session_id: int, optional
+            The session ID of the subject, by default 1.
+
+        Returns
+        -------
+        None
+
+        """
         for path, subdirs, files in os.walk(self.dir):
             for name in files:
                 if self.label in name:
@@ -380,7 +511,7 @@ class Subject:
         os.rename(self.dir, os.path.join(self.project.dir, "subjects", new_label, "s" + str(session_id)))
         rmtree(os.path.join(self.project.dir, "subjects", self.label))
 
-    def check_images(self, t1=False, rs=False, dti=False, t2=False, fmri=None):
+    def check_images(self, t1:bool=False, rs:bool=False, dti:bool=False, t2:bool=False, fmri_labels:List[str]=None) -> List[str]:
 
         missing_images = []
 
@@ -392,9 +523,9 @@ class Subject:
             if not self.rs_data.exist:
                 missing_images.append("rs")
 
-        if fmri is not None:
+        if fmri_labels is not None:
 
-            for s in fmri:
+            for s in fmri_labels:
                 fmri_img = Image(os.path.join(self.fmri_dir, self.label + s))
                 if not fmri_img.exist:
                     missing_images.append(fmri_img)
@@ -414,8 +545,17 @@ class Subject:
 
         return missing_images
 
-    def check_template(self):
+    def check_template(self) -> Tuple[str, bool]:
+        """
+        Check if all necessary template files are present.
 
+        Returns:
+            tuple: A tuple containing two elements:
+
+                1. A string containing a list of all missing template files.
+                2. A boolean indicating whether the subject can process the 4mm standard template.
+
+        """
         can_process_std4 = True
         missing_images = ""
 
@@ -457,8 +597,19 @@ class Subject:
 
         return missing_images, can_process_std4
 
-    def reslice_image(self, direction):
+    def reslice_image(self, direction:str="sag->axial"):
+        """
+        Reslice an image in the subject's directory.
 
+        Parameters
+        ----------
+        direction: str
+            The direction of the reslicing. Can be "sag->axial" or any other combination of FSL's fslswapdim options.
+
+        Returns
+        -------
+        None
+        """
         if direction == "sag->axial":
             bckfilename = self.t1_image_label + "_sag"
             conversion_str = " -z -x y "
@@ -476,32 +627,174 @@ class Subject:
     # ==================================================================================================================================================
     # WELCOME
     # ==================================================================================================================================================
-    def wellcome(self, do_overwrite=False,
-                 do_fslanat=True, odn="anat", imgtype=1, smooth=10,
-                 biascorr_type=SubjectMpr.BIAS_TYPE_STRONG,
-                 do_reorient=True, do_crop=True,
-                 do_bet=True, betfparam=None,
-                 do_sienax=False, bet_sienax_param_string="-SNB -f 0.2",
-                 do_reg=True, do_nonlinreg=True, do_seg=True,
-                 do_spm_seg=False, spm_seg_templ="", spm_seg_over_bet=False,
-                 do_cat_seg=False, cat_use_dartel=False, do_cat_surf=True, cat_smooth_surf=None,
-                 do_cat_seg_long=False, cat_long_sessions=None,
-                 do_cleanup=Global.CLEANUP_LVL_MIN,
-                 use_lesionmask=False, lesionmask="lesionmask",
-                 do_freesurfer=False, do_complete_fs=False, fs_seg_over_bet=False,
-                 do_first=False, first_struct="", first_odn="",
+    def wellcome(self, do_overwrite:bool=False,
+                 # T1
+                 do_fslanat:bool=True, odn:str="anat", imgtype:int=1, smooth:int=10,
+                 biascorr_type:int=SubjectMpr.BIAS_TYPE_STRONG,
+                 do_reorient:bool=True, do_crop:bool=True,
+                 do_bet:bool=True, betfparam:list=None,
+                 do_sienax:bool=False, bet_sienax_param_string:str="-SNB -f 0.2",
+                 do_reg:bool=True, do_nonlinreg:bool=True, do_seg:bool=True,
+                 do_spm_seg:bool=False, spm_seg_templ:str="", spm_seg_over_bet:bool=False,
+                 do_cat_seg:bool=False, cat_use_dartel:bool=False, do_cat_surf:bool=True, cat_smooth_surf:int=None,
+                 do_cat_seg_long:bool=False, cat_long_sessions:List[int]=None,
+                 do_cleanup:int=Global.CLEANUP_LVL_MIN,
+                 use_lesionmask:bool=False, lesionmask:str="lesionmask",
+                 do_freesurfer:bool=False, do_complete_fs:bool=False, fs_seg_over_bet:bool=False,
+                 do_first:bool=False, first_struct:str="", first_odn:str="",
+                 # EPI
+                 do_susc_corr:bool=False,
+                 do_rs:bool=True, do_epirm2vol:int=0, rs_pa_data:str|Image=None,
+                 do_aroma:bool=True, do_nuisance:bool=True, hpfsec:int=100, feat_preproc_odn:str="resting", feat_preproc_model:str="singlesubj_feat_preproc_noreg_melodic",
+                 do_featinitreg:bool=False, do_melodic:bool=True, mel_odn:str="postmel", mel_preproc_model:str="singlesubj_melodic_noreg", do_melinitreg:bool=False, replace_std_filtfun:bool=True,
+                 do_fmri:bool=True, fmri_params:FmriProcParams=None, fmri_labels:List[str]=None, fmri_pa_data:str|Image=None,
+                 # DTI
+                 do_dtifit:bool=True, do_pa_eddy:bool=False, do_eddy_gpu:bool=False, do_bedx:bool=False, do_bedx_gpu:bool=False, bedpost_odn:str="bedpostx",
+                 do_xtract:bool=False, xtract_odn:str="xtract", xtract_refspace:str="native", xtract_gpu:bool=False, xtract_meas:str="vol,prob,length,FA,MD,L1,L23",
+                 do_struct_conn:bool=False, struct_conn_atlas_path:str="freesurfer", struct_conn_atlas_nroi:int=0):
+        """
+        This function is used to preprocess the subject's data. It is divided into several steps, including:
 
-                 do_susc_corr=False,
+        1. T1 data processing: This step includes bias correction, skull stripping, and registration to the MPR template.
+        2. WB data processing: This step includes skull stripping on the white matter image.
+        3. RS data processing: This step includes preprocessing, susceptibility correction, and MELODIC analysis.
+        4. FMRI data processing: This step includes preprocessing and susceptibility correction.
+        5. DTI data processing: This step includes eddy current correction, diffusion tensor fitting, and tractography.
 
-                 do_rs=True, do_epirm2vol=0, rs_pa_data=None,
-                 do_aroma=True, do_nuisance=True, hpfsec=100, feat_preproc_odn="resting", feat_preproc_model="singlesubj_feat_preproc_noreg_melodic",
-                 do_featinitreg=False, do_melodic=True, mel_odn="postmel", mel_preproc_model="singlesubj_melodic_noreg", do_melinitreg=False, replace_std_filtfun=True,
-
-                 do_fmri=True, fmri_params=None, fmri_labels=None, fmri_pa_data=None,
-
-                 do_dtifit=True, do_pa_eddy=False, do_eddy_gpu=False, do_bedx=False, do_bedx_gpu=False, bedpost_odn="bedpostx",
-                 do_xtract=False, xtract_odn="xtract", xtract_refspace="native", xtract_gpu=False, xtract_meas="vol,prob,length,FA,MD,L1,L23",
-                 do_struct_conn=False, struct_conn_atlas_path="freesurfer", struct_conn_atlas_nroi=0):
+        Parameters
+        ----------
+        do_overwrite : bool = False
+                 overwrite existing files.
+        do_fslanat : bool = True
+                    perform FSL ANAT processing.
+        odn : str ="anat"
+                           The name of the image to be processed.
+        imgtype : int = 1
+                           The type of image to be processed.
+        smooth : int = 10
+                           The smoothing kernel size for FSL ANAT processing.
+        biascorr_type : str = 2
+                            The type of bias correction to be performed.
+        do_reorient : bool = True
+                            reorient the image.
+        do_crop : bool = True
+                            crop the image.
+        do_bet : bool = True
+                            perform BET.
+        betfparam : list = None
+                            The BET parameter values.
+        do_sienax : bool = False
+                            perform Sienax processing.
+        bet_sienax_param_string : str = "-SNB -f 0.2"
+                            The Sienax parameter string.
+        do_reg : bool = True
+                            perform registration.
+        do_nonlinreg : bool = True
+                            perform nonlinear registration.
+        do_seg : bool = True
+                            perform segmentation.
+        do_spm_seg : bool = False
+                            perform SPM segmentation.
+        spm_seg_templ : str = ""
+                            The SPM segmentation template.
+        spm_seg_over_bet : bool = False
+                            perform SPM segmentation over BET.
+        do_cat_seg : bool = False
+                            perform CAT toolbox segmentation.
+        cat_use_dartel : bool = False
+                            use dartel (or shooting one, in case False) atlas in segmentation.
+        do_cat_surf : bool = True
+                            run cortical thickness analysis
+        cat_smooth_surf : int = None
+                            The smoothing kernel size for CAT toolbox segmentation.
+        do_cat_seg_long : bool = False
+                            perform CAT toolbox segmentation with long sessions.
+        cat_long_sessions :List[int] = None
+                            The longitudinal sessions to be included in the CAT toolbox segmentation.
+        do_cleanup: int = Global.CLEANUP_LVL_MIN
+        use_lesionmask : bool = False
+                            use lesionmask atlas in segmentation.
+        lesionmask : str = "lesionmask"
+                            name of the lesion mask.
+        do_freesurfer : bool = False
+                            perform freesurfer segmentation.
+        do_complete_fs : bool = False
+                            perform complete freesurfer segmentation.
+        fs_seg_over_bet : bool = False
+                            perform freesurfer segmentation over BET.
+        do_first : bool = False
+                            perform FIRST segmentation.
+        first_struct : str = ""
+                            names of the structured segmented by FIRST.
+        first_odn : str = ""
+                            The name of the output folder of FIRST
+        do_susc_corr : bool = False
+                            perform susceptibility correction.
+        do_rs : bool = True
+                            perform RS processing.
+        do_epirm2vol : int = 0
+                            remove first N volumes from epi images.
+        rs_pa_data : str | Image = None
+                            Path or Image of the PA data to be used for susceptibility correction.
+        do_aroma : bool = True
+                            perform aroma processing.
+        do_nuisance : bool = True
+                            perform nuisance processing.
+        hpfsec : int = 100
+                            The hpfsec parameter for temporal filtering.
+        feat_preproc_odn : str = "resting"
+                            The name of the output folder of feat preprocessing.
+        feat_preproc_model : str = "singlesubj_feat_preproc_noreg_melodic"
+                            Name of the model to be used for feat preprocessing.
+        do_featinitreg : bool = False
+                            perform initial-registration step in feat pre-proceesing.
+        do_melodic : bool = True
+                            perform MELODIC analysis.
+        mel_odn : str = "postmel"
+                            The name of the output folder of MELODIC analysis.
+        mel_preproc_model : str = "singlesubj_melodic_noreg"
+                            Name of the model to be used for MELODIC analysis.
+        do_melinitreg : bool = False
+                            perform initial-registration step in melodic proceesing.
+        replace_std_filtfun : bool = True
+                            create the standard space 4mm template for the resting state data.
+        do_fmri : bool = True
+                            perform FMRI processing.
+        fmri_params : FmriProcParams = None
+                            Parameters for FMRI processing.
+        fmri_labels : List[str] = None
+                            list of labels of fmri sequences.
+        fmri_pa_data : str | Image = None
+                            Path or Image of the PA data to be used for susceptibility correction.
+        do_dtifit : bool = True
+                            perform diffusion tensor fitting.
+        do_pa_eddy : bool = False
+                            perform eddy current correction.
+        do_eddy_gpu : bool = False
+                            perform eddy current correction on GPU.
+        do_bedx : bool = False
+                            perform bedpostx processing.
+        do_bedx_gpu : bool = False
+                            perform bedpostx processing on GPU.
+        bedpost_odn : str ="bedpostx"
+                            The name of the output folder of bedpostx processing.
+        do_xtract : bool = False
+                            perform xtract processing.
+        xtract_odn : str = "xtract"
+                            The name of the output folder of xtract processing.
+        xtract_refspace : str = "native"
+                            The reference space of the xtract.
+        xtract_gpu : bool = False
+                            perform xtract processing on GPU.
+        xtract_meas : str = "vol,prob,length,FA,MD,L1,L23"
+                            list of measurements to be calculted in xtract processing.
+        do_struct_conn : bool = False
+                            perform structural connectivity analysis.
+        struct_conn_atlas_path : str = "freesurfer"
+                            folder to the freesurfer atlas.
+        struct_conn_atlas_nroi : int = 0
+                            number of ROIs to be used for the structural connectivity analysis.
+        """
 
         if cat_long_sessions is None:
             cat_long_sessions = [1]
@@ -651,7 +944,9 @@ class Subject:
 
                     if rs_pa_data is None:
                         rs_pa_data = self.rs_pa_data
-                    rs_pa_data = Image(rs_pa_data)  # don't want an exception, create without must_exist and then simply break if does not exist
+                    elif isinstance(rs_pa_data, str):
+                        rs_pa_data = Image(rs_pa_data)  # don't want an exception, create without must_exist and then simply break if does not exist
+
                     if not rs_pa_data.exist:
                         print("Error in welcome...user want to correct for susceptibility but PA image does not exist...skip rs processing...continue other")
                         break
@@ -666,7 +961,7 @@ class Subject:
                             self.rs_data.cp(ap_distorted, logFile=log)
 
                         try:
-                            self.epi.topup_corrections([self.rs_data], rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
+                            self.epi.topup_corrections(Images([self.rs_data]), rs_pa_data, self.project.topup_rs_params, motion_corr=False, logFile=log)
                         except Exception as e:
                             print("UNRECOVERABLE ERROR: " + str(e))
                             ap_distorted.mv(self.rs_data, logFile=log)
@@ -914,8 +1209,33 @@ class Subject:
     # 8	Converted some but not all of the input DICOMs
     # 9	Unable to rename files (result of dcm2niix -r y ~/in)
 
-    def renameNifti(self, extpath, associations, options="-z o -f %f_%p_%t_%s_%d ", cleanup=0, convert=True, rename=True):
+    def renameNifti(self, extpath:str, associations:dict, options:str="-z o -f %f_%p_%t_%s_%d ", cleanup:int=0, convert:bool=True, rename:bool=True):
+        """
+        Renames all NIfTI files in a directory based on a set of associations.
 
+        Parameters
+        ----------
+        extpath : str
+            The path to the directory containing the NIfTI files.
+        associations : list of dict
+            A list of associations, where each association is a dictionary with the following keys:
+            - contains: A string that must be present in the file name for the association to apply.
+            - type: The type of file (e.g., T1, T2, RS, DTI, etc.).
+            - postfix: The postfix to add to the file name.
+        options : str, optional
+            The options to pass to dcm2niix, by default "-z o -f %f_%p_%t_%s_%d ".
+        cleanup : int, optional
+            Indicates whether to delete the original files after conversion and renaming, or just the converted files, or just the original files, by default 0.
+        convert : bool, optional
+            Indicates whether to convert DICOM files to NIfTI format using dcm2niix, by default True.
+        rename : bool, optional
+            Indicates whether to rename the files, by default True.
+
+        Returns
+        -------
+        None
+
+        """
         try:
             if "." in extpath:
                 print("ERROR : input path " + str(extpath) + " cannot contain dots !!!")
@@ -980,14 +1300,27 @@ class Subject:
             traceback.print_exc()
             print(e)
 
-    def mpr2nifti(self, extpath, cleanup=0):
+    def mpr2nifti(self, extpath: str, cleanup: int = 0) -> None:
+        """
+        Convert a directory of MPRAGE DICOM files to NIfTI format.
 
+        Parameters
+        ----------
+        extpath : str
+            The path to the directory containing the MPRAGE DICOM files.
+        cleanup : int, optional
+            Indicates whether to delete the original files after conversion and renaming, or just the converted files, or just the original files, by default 0.
+
+        Returns
+        -------
+        None
+
+        """
         try:
             if "." in extpath:
-                print("ERROR : input path " + str(extpath) + " cannot contain dots !!!")
-                return
+                raise ValueError(f"input path {extpath} cannot contain dots !")
 
-            rrun("dcm2nii " + extpath)  # it returns :. usefs coXXXXXX, oXXXXXXX and XXXXXXX images
+            rrun(f"dcm2nii {extpath}")  # it returns :. usefs coXXXXXX, oXXXXXXX and XXXXXXX images
 
             files = glob.glob(os.path.join(extpath, "*"))
 
@@ -1025,8 +1358,26 @@ class Subject:
             traceback.print_exc()
             print(e)
 
-    def mri_merger(self, input_files, outputname, dimension="-t", typ='fmri'):
+    def mri_merger(self, input_files:List[str], outputname:str, dimension:str="-t", typ:str='fmri'):
+        """
+        Merge a list of input files into a single Nifti file.
 
+        Parameters
+        ----------
+        input_files: List[str]
+            A list of input files to merge.
+        outputname: str
+            The name of the output Nifti file.
+        dimension: str, optional
+            The dimension to merge along, by default "-t".
+        typ: str, optional
+            The type of data to merge, either "fmri" or "rs", by default "fmri".
+
+        Returns
+        -------
+        None
+
+        """
         if typ == 'fmri':
             folder = self.fmri_dir
         else:
@@ -1038,12 +1389,53 @@ class Subject:
         rrun("fslmerge " + dimension + " " + outputname + " " + " ".join(input_files))
         os.chdir(cur_dir)
 
-    def unzip_data(self, src_zip, dest_dir, replace=True):
+    def unzip_data(self, src_zip:str, dest_dir:str, replace:bool=True):
+        """
+        Extracts the contents of a compressed file (e.g., .zip) to a directory.
+
+        Parameters:
+        -----------
+        src_zip: str
+            The path to the compressed file.
+        dest_dir: str
+            The path to the directory where the contents of the compressed file should be extracted.
+        replace: bool, optional
+            Indicates whether to replace existing files in the destination directory, by default True.
+
+        Returns:
+        --------
+        None
+        """
         extractall_zip(src_zip, dest_dir, replace)
-        pass
 
-    def copy_final_data(self, dest_proj, t1=True, t1_surf=True, vbmspm=True, rs=True, fmri=None, dti=True, sess_id=1):
+    def copy_final_data(self, dest_proj:Project, t1:bool=True, t1_surf:bool=True, vbmspm:bool=True, rs:bool=True, fmri:List[str]=None, dti:bool=True, sess_id:int=1):
+        """
+        Copies the final data of a subject to another project.
 
+        Parameters
+        ----------
+        dest_proj : Project
+            destination project.
+        t1 : bool, optional
+            Indicates whether to copy the T1 image, by default True.
+        t1_surf : bool, optional
+            Indicates whether to copy the T1 surface, by default True.
+        vbmspm : bool, optional
+            Indicates whether to copy the VBM-SPM files, by default True.
+        rs : bool, optional
+            Indicates whether to copy the resting state files, by default True.
+        fmri : list, optional
+            A list of FMR images to copy, by default None.
+        dti : bool, optional
+            Indicates whether to copy the DTI files, by default True.
+        sess_id : int, optional
+            The session ID of the subject, by default 1.
+
+        Returns
+        -------
+        None
+
+        """
         subj_in_dest_project = Subject(self.label, dest_proj, sess_id)
         subj_in_dest_project.create_file_system()
 
@@ -1089,8 +1481,26 @@ class Subject:
 
         os.system("cp -r " + self.roi_dir + " " + subj_in_dest_project.roi_dir)
 
-    def clean(self, t1=False, dti=False, rs=False, fmri=False):
+    def clean(self, t1:bool=False, dti:bool=False, rs:bool=False, fmri:bool=False):
+        """
+        Clean the data of a subject.
 
+        Parameters
+        ----------
+        t1 : bool, optional
+            Indicates whether to clean the T1 data, by default False.
+        dti : bool, optional
+            Indicates whether to clean the DTI data, by default False.
+        rs : bool, optional
+            Indicates whether to clean the resting state data, by default False.
+        fmri : bool, optional
+            Indicates whether to clean the FMR data, by default False.
+
+        Returns
+        -------
+        None
+
+        """
         if t1:
             T1 = os.path.join(self.t1_anat_dir, "T1")  # T1 is now an absolute path
             Images([T1, T1 + "_orig", T1 + "_fullfov"]).rm()
@@ -1112,8 +1522,23 @@ class Subject:
             pass
 
     # ==================================================================================================================================================
-    def can_run_analysis(self, analysis_type, analysis_params=None):
+    def can_run_analysis(self, analysis_type:str, analysis_params:str|List[str]=None):
+        """
+        Check if the data of a subject is ready for a specific analysis.
 
+        Parameters
+        ----------
+        analysis_type : str
+            The type of analysis to run.
+        analysis_params : list, optional
+            A list of parameters specific to the analysis type, by default None.
+
+        Returns
+        -------
+        bool
+            True if the data is ready, False otherwise.
+
+        """
         # T1
         if analysis_type == "vbm_spm":
             return Image(os.path.join(self.t1_spm_dir, "rc1T1_" + self.label + ".nii")).exist and \

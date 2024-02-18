@@ -6,7 +6,7 @@ from Project import Project
 from group.GroupAnalysis import GroupAnalysis
 from group.SPMConstants import SPMConstants
 from group.SPMModels import SPMModels
-from group.SPMPostModel import PostModel
+from group.PostModel import PostModel
 from group.spm_utilities import Covariate, Nuisance, CatConvResultsParams, ResultsParams
 
 if __name__ == "__main__":
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         #                          anal_name,  # output analysis name
         #                          groups_instances,
         #                          input_images=None, # instance of class GrpInImages, containing info to retrieve input images
-        #                          covs=None, cov_interactions=None, cov_centering=False, data_file=None,
+        #                          covs=None, cov_interactions=None, cov_centering:bool=False, data_file=None,
         #                          glob_calc=None, expl_mask="icv", spm_template_name=None,
         #                          post_model=None, runit=True, mustExist=True):
         groups_instances    = [project.get_subjects(group_label, SESS_ID, must_exist=False)]
@@ -56,7 +56,9 @@ if __name__ == "__main__":
         post_model          = PostModel(SPMConstants.MULTREGR, covs,
                                         res_params=ResultsParams("FWE", 0.05, 20),
                                         res_conv_params=CatConvResultsParams("FWE", 0.05, "none"), isSpm=False)
-        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.MULTREGR, SPMConstants.CAT, anal_name, groups_instances, covs=covs, post_model=post_model, mustExist=False, runit=False)
+        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.MULTREGR, SPMConstants.CAT, anal_name,
+                                          groups_instances, covs=covs, post_model=post_model, runit=False,
+                                          mustExist=False)
 
 
 
