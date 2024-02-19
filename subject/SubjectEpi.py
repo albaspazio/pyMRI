@@ -9,7 +9,6 @@ from group.SPMStatsUtils import SPMStatsUtils
 from group.spm_utilities import SubjCondition
 from group.SPMContrasts import SPMContrasts
 from group.SPMResults import SPMResults
-from subject.Subject import Subject
 
 from utility.images.Image import Image
 from utility.images.Images import Images
@@ -26,7 +25,7 @@ class SubjectEpi:
     This class provides methods for resting state and functional MRI preprocessing.
     """
 
-    def __init__(self, subject:Subject, _global:Global):
+    def __init__(self, subject:'Subject', _global:Global):
         """
         Initialize the SubjectEpi class.
 
@@ -34,7 +33,7 @@ class SubjectEpi:
             subject (Subject): The subject object.
             _global (Global): The global object.
         """
-        self.subject:Subject = subject
+        self.subject:'Subject' = subject
         self._global:Global  = _global
 
     def get_example_function(self, seq:str="rs", vol_num=None, fmri_labels=None, overwrite=False, logFile=None):

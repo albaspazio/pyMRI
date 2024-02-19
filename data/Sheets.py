@@ -85,7 +85,7 @@ class Sheets(dict):
         try:
             return self[self.schema_sheets_names[self.main_id]]
         except:
-            return None
+            return SubjectsData()
 
     def all_subjects(self) -> SubjectSDList:
         """
@@ -117,7 +117,7 @@ class Sheets(dict):
             True if all sheets contain the same list of subjects, False otherwise
 
         """
-        all_subjs = self.all_subjects
+        all_subjs:SubjectSDList = self.all_subjects
         for sh in self:
             if not all_subjs.are_equal(self[sh].subjects):
                 return False

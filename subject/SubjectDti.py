@@ -1,10 +1,8 @@
 import csv
 import os
-import shutil
 from shutil import copyfile
 
 from Global import Global
-from subject.Subject import Subject
 from utility.fileutilities import write_text_file
 from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
@@ -19,8 +17,8 @@ class SubjectDti:
         _global (Global): The global object.
 
     """
-    def __init__(self, subject:Subject, _global:Global):
-        self.subject:Subject    = subject
+    def __init__(self, subject:'Subject', _global:Global):
+        self.subject:'Subject'    = subject
         self._global:Global     = _global
 
     # ==================================================================================================================================================

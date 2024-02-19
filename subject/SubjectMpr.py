@@ -3,7 +3,6 @@ import os
 import traceback
 
 from Global import Global
-from subject.Subject import Subject
 from utility.images.Image import Image
 from utility.images.Images import Images
 from utility.images.images import mass_images_move
@@ -26,7 +25,7 @@ class SubjectMpr:
     BIAS_TYPE_WEAK = 1
     BIAS_TYPE_STRONG = 2
 
-    def __init__(self, subject:Subject, _global:Global):
+    def __init__(self, subject:'Subject', _global:Global):
         """
         Initialize the SubjectMpr class.
 
@@ -34,7 +33,7 @@ class SubjectMpr:
             subject (Subject): The subject object.
             _global (Global): The global object.
         """
-        self.subject:Subject = subject
+        self.subject:'Subject' = subject
         self._global:Global  = _global
 
     # pre-processing:

@@ -232,3 +232,33 @@ def remove_items_from_list(origlist, list2remove):
         if orig_list not in list2remove:
             res.append(orig_list)
     return res
+
+
+class Processes(list):
+    """
+    A list-like object that can be used to manage a collection of processes.
+
+    Parameters
+    ----------
+    procs : list, optional
+        A list of processes to be added to the collection.
+
+    Methods
+    -------
+    wait()
+        Waits for all processes in the collection to complete.
+    """
+    def __new__(cls, procs=None):
+        return super(Processes, cls).__new__(cls, procs)
+
+    def __init__(self, procs=None):
+        super().__init__()
+        if procs is None:
+            procs = []
+        for pr in procs:
+            self.append(pr)
+
+    def wait(self):
+        for pr in self:
+            pr.wait()
+

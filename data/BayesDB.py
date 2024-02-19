@@ -2,7 +2,9 @@ from typing import List
 
 import pandas
 
+from data.GDriveSheet import GDriveSheet
 from data.MSHDB import MSHDB
+from data.Sheets import Sheets
 from data.SubjectSD import SubjectSD
 from data.SubjectSDList import SubjectSDList
 from data.SubjectsData import SubjectsData
@@ -367,16 +369,11 @@ class BayesDB(MSHDB):
         """
         total = self.sheets.main.select_subjlist(
             subj_labels, colconditions=[FilterValues("immfen_code", "exist", 0)])
-        th = self.sheet_sd("sangue").select_subjlist(
-            subj_labels, colconditions=[FilterValues("T_HELP", "==", 1)])
-        tr = self.sheet_sd("sangue").select_subjlist(
-            subj_labels, colconditions=[FilterValues("T_REG", "==", 1)])
-        nk = self.sheet_sd("sangue").select_subjlist(
-            subj_labels, colconditions=[FilterValues("NK", "==", 1)])
-        mono = self.sheet_sd("sangue").select_subjlist(
-            subj_labels, colconditions=[FilterValues("MONO", "==", 1)])
-        bi = self.sheet_sd("sangue").select_subjlist(
-            subj_labels, colconditions=[FilterValues("B", "==", 1)])
+        th = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("T_HELP", "==", 1)])
+        tr = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("T_REG", "==", 1)])
+        nk = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("NK", "==", 1)])
+        mono = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("MONO", "==", 1)])
+        bi = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("B", "==", 1)])
 
         return [total, th, tr, nk, mono, bi]
 

@@ -9,7 +9,6 @@ from shutil import move, rmtree
 from typing import List, Tuple
 
 from Global import Global
-from Project import Project
 from group.spm_utilities import FmriProcParams
 from utility.images.Image import Image
 from utility.images.Images import Images
@@ -36,7 +35,7 @@ class Subject:
     TYPE_DTI_B0 = 5     # does not have bval/bvec
     TYPE_T2 = 6
 
-    def __init__(self, label:str, project:Project, sessid:int=1, stdimg:str=""):
+    def __init__(self, label:str, project:'Project', sessid:int=1, stdimg:str=""):
         """
         Initialize a new Subject object.
 
@@ -49,7 +48,7 @@ class Subject:
         self.label  = label
         self.sessid = sessid
 
-        self.project:Project = project
+        self.project:'Project' = project
         self._global:Global  = project.globaldata
 
         self.fsl_dir            = self._global.fsl_dir
@@ -1408,7 +1407,7 @@ class Subject:
         """
         extractall_zip(src_zip, dest_dir, replace)
 
-    def copy_final_data(self, dest_proj:Project, t1:bool=True, t1_surf:bool=True, vbmspm:bool=True, rs:bool=True, fmri:List[str]=None, dti:bool=True, sess_id:int=1):
+    def copy_final_data(self, dest_proj:'Project', t1:bool=True, t1_surf:bool=True, vbmspm:bool=True, rs:bool=True, fmri:List[str]=None, dti:bool=True, sess_id:int=1):
         """
         Copies the final data of a subject to another project.
 
