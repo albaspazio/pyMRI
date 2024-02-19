@@ -2,14 +2,9 @@ import os
 from typing import List
 
 from Global import Global
-from Project import Project
 from data.SubjectsData import SubjectsData
-# import ssl    # it was needed, can't remember when
-
-
 from data.utilities import list2spm_text_column
 from group.spm_utilities import SubjCondition, GrpInImages
-from subject.Subject import Subject
 from utility.exceptions import DataFileException
 from utility.images.Image import Image
 from utility.matlab import call_matlab_function_noret, call_matlab_spmbatch
@@ -79,7 +74,7 @@ class SPMStatsUtils:
     # group_instances is a list of subjects' instances
     # image_description: {"type": ct | dartel | vbm, "folder": root path for dartel}
     @staticmethod
-    def compose_images_string_1GROUP_MULTREGR(group_instances:List[Subject], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
+    def compose_images_string_1GROUP_MULTREGR(group_instances:List['Subject'], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
         """
         This function generates a MATLAB script for setting up the conditions for a single-session analysis.
 
@@ -110,7 +105,7 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
 
     @staticmethod
-    def compose_images_string_1W(group_instances:List[Subject], out_batch_job:str, grp_input_imgs, mustExist:bool=True):
+    def compose_images_string_1W(group_instances:List['Subject'], out_batch_job:str, grp_input_imgs, mustExist:bool=True):
         """
         This function generates a MATLAB script for setting up the conditions for a single-session analysis.
 
@@ -208,7 +203,7 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<FACTORS_CELLS>",   cells_images)
 
     @staticmethod
-    def compose_images_string_2sTT(groups_instances:List[List[Subject]], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
+    def compose_images_string_2sTT(groups_instances:List[List['Subject']], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
         """
         This function generates a MATLAB script for setting up the conditions for a single-session analysis.
 
@@ -307,7 +302,7 @@ class SPMStatsUtils:
     # when analysing subjects from different groups, we must avoid validating data.
     # Thus get_filtered_column must receive a Subject instances list, not a labels list  (16/1/2023)
     @staticmethod
-    def spm_replace_global_calculation(project:Project, out_batch_job, method:str="", groups_instances:List[List[Subject]]=None, data:SubjectsData=None, idstep:int=1):
+    def spm_replace_global_calculation(project:'Project', out_batch_job, method:str="", groups_instances:List[List['Subject']]=None, data:SubjectsData=None, idstep:int=1):
         """
         This function replaces the global calculation settings in the given MATLAB script.
 
@@ -417,7 +412,7 @@ class SPMStatsUtils:
         call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths, "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
 
     @staticmethod
-    def batchrun_cat_surface_smooth(project:Project, _global:Global, subj_instances, sfilt:int=12, spm_template_name:str="subjs_cat_surf_smooth", nproc:int=1, eng=None, runit:bool=True):
+    def batchrun_cat_surface_smooth(project:'Project', _global:Global, subj_instances, sfilt:int=12, spm_template_name:str="subjs_cat_surf_smooth", nproc:int=1, eng=None, runit:bool=True):
 
         # create template files
         out_batch_job, out_batch_start = project.adapt_batch_files(spm_template_name, "mpr")

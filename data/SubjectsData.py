@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 import os
-from typing import List
+from typing import List, Any, Tuple
 
 import numpy as np
 import pandas
 import pandas as pd
 
-from data.utilities import demean_serie, FilterValues
 from data.SubjectSD import SubjectSD
 from data.SubjectSDList import SubjectSDList
+from data.utilities import demean_serie, FilterValues
 from utility.exceptions import DataFileException
-from utility.list import same_elements, unique, indices
+from utility.list import same_elements
 from utility.utilities import argsort, reorder_list
+
 
 # =====================================================================================
 # DATA MANAGEMENT WITH PANDA
@@ -82,7 +83,7 @@ class SubjectsData:
             If the data contains an invalid column name or if the data type conversion is not supported.
         """
         self.filepath = data
-        self.df:pandas.DataFrame = None
+        self.df:pandas.DataFrame
         if data is not None:
             self.load(data, validcols, cols2num, delimiter, check_data)
 
@@ -103,7 +104,7 @@ class SubjectsData:
         if self.df is None:
             return []
         else:
-            return list(self.df.columns.values)
+            return self.df.columns.to_list()
 
     @property
     def num(self) -> int:
@@ -139,8 +140,7 @@ class SubjectsData:
         SubjectSDList
             A list of SubjectSD objects.
         """
-        return SubjectSDList([SubjectSD(index, row[self.first_col_name], row[self.second_col_name]) for index, row in
-                              self.df.iterrows()])
+        return SubjectSDList([SubjectSD(index, row[self.first_col_name], row[self.second_col_name]) for index, row in self.df.iterrows()])
 
     # endregion
 
@@ -226,7 +226,7 @@ class SubjectsData:
 
                     if list(c.values())[0] not in self.valid_dtypes:
                         raise Exception("SubjectsData.load", "asked to convert columns. but one given entry of cols2num (" + list(c.values())[0] + ") does not indicate a valid data type")
-                self.df.astype(c)
+                    self.df.astype(c)
 
         return self.df
 
@@ -446,7 +446,7 @@ class SubjectsData:
 
     # ======================================================================================
     #region GET subjects labels (select some rows within the given list of subjects)
-    def select_subjlist(self, subj_labels:List[str]=None, sessions:List[int]=[1], colconditions:List[FilterValues]=None) -> List[str]:
+    def select_subjlist(self, subj_labels: List[str] = None, sessions: List[int] = None, conditions: List[FilterValues] = None) -> List[str]:
         """
         Filter subjects based on their labels, sessions, and conditions on other columns.
 
@@ -464,7 +464,10 @@ class SubjectsData:
         SubjectSDList
             A list of filtered subjects.
         """
-        return self.filter_subjects(subj_labels, sessions, colconditions).labels
+        if sessions is None:
+            sessions = [1]
+
+        return self.filter_subjects(subj_labels, sessions, conditions).labels
     #endregion
 
     # ======================================================================================
@@ -495,7 +498,7 @@ class SubjectsData:
             If the given subject or column does not exist in the data frame.
         """
         if subj.id >= self.num:
-            raise ValueError("Error in get_subject_col_value: given subject id (" + subj.id + ") exceeds the total number of elements")
+            raise ValueError("Error in get_subject_col_value: given subject id (" + str(subj.id) + ") exceeds the total number of elements")
 
         if colname not in self.header:
             raise ValueError("Error in get_subject_col_value: given column name (" + colname + ") does not exist in the data frame")
@@ -503,7 +506,7 @@ class SubjectsData:
         return self.df.loc[subj.id, colname]
 
     # return a list of values from a given column
-    def get_subjects_column(subjs: SubjectSDList = None, colname: str = None, df: pandas.DataFrame = None) -> list:
+    def get_subjects_column(self, subjs: SubjectSDList = None, colname: str = None, df: pandas.DataFrame = None) -> list:
         """
         Returns a list of values from a given column.
 
@@ -532,14 +535,14 @@ class SubjectsData:
         if colname is None:
             return []
         else:
-            if colname not in list(df.columns.values):
+            if colname not in df.columns.to_list():
                 raise ValueError(f"get_subjects_column error: colname ({colname}) is not present in df")
 
             df = self.select_rows_df(subjs)
             return list(df[colname])
 
     # returns a filtered matrix [colnames x subjs] of values
-    def get_subjects_values_by_cols(subjs: SubjectSDList = None, colnames: List[str] = None, demean_flags: List[bool] = None, ndecim: int = 4) -> List[List[Any]]:
+    def get_subjects_values_by_cols(self, subjs: SubjectSDList = None, colnames: List[str] = None, demean_flags: List[bool] = None, ndecim: int = 4) -> List[List[Any]]:
         """
         Returns a list of values from a subset of columns.
 
@@ -599,7 +602,7 @@ class SubjectsData:
 
     # ======================================================================================
     #region GET two vectors (values, valid subjlabels) within the given [subj labels]
-    def get_filtered_column(self, subjs: SubjectSDList = None, colname:str=None, sort:bool=False, demean:bool=False, ndecim:int=4) -> tuple:
+    def get_filtered_column(self, subjs: SubjectSDList = None, colname:str=None, sort:bool=False, demean:bool=False, ndecim:int=4) -> Tuple[list, List[str]]:
         """
         Returns a filtered column of values and their corresponding subject labels.
 
@@ -1026,7 +1029,7 @@ class SubjectsData:
             df = self.df.copy()
 
         for col in cols2remove:
-            if col in list(df.columns.values):
+            if col in df.columns.to_list():
                 df = df.drop(col, axis=1)
 
         if update:
@@ -1038,7 +1041,7 @@ class SubjectsData:
 
     # ==================================================================================================
     # region EXIST
-    def get_subj_session(self, subj_lab: str, session: int = 1) -> SubjectSD:
+    def get_subj_session(self, subj_lab: str, session: int = 1) -> SubjectSD|None:
         """
         Returns the subject with the given subject label and session, if it exists in the data frame.
 
@@ -1050,8 +1053,8 @@ class SubjectsData:
         SubjectSD: The subject with the given subject label and session, if it exists in the data frame. Otherwise, returns None.
         """
         if ((self.df[self.first_col_name] == subj_lab) & (self.df[self.second_col_name] == session)).any():
-            id = self.get_subjid_by_session(subj_lab, session)[0]
-            return SubjectSD(id, subj_lab, session)
+            id_ = self.get_subjid_by_session(subj_lab, session)
+            return SubjectSD(id_, subj_lab, session)
         else:
             return None
 
@@ -1065,7 +1068,7 @@ class SubjectsData:
         Returns:
         bool: Whether the given list of subjects exists in the data frame.
         """
-        return subjs.is_in(self.subjects)
+        return len(subjs.is_in(self.subjects)) > 0
         # return all(item in self.subj_labels for id, item in enumerate(subjs_labels))
 
     def exist_column(self, colname: str) -> bool:
@@ -1171,7 +1174,7 @@ class SubjectsData:
         except:
             raise Exception("SubjectsData.is_cell_not_empty: given col (" + str(col_str) + ") does not exist in df")
 
-    def is_cell_empty(self, subj_id:int, col_str:Optional[str]=None, df=None) -> bool:
+    def is_cell_empty(self, subj_id:int, col_str:str=None, df=None) -> bool:
         """
         Returns whether the value of a cell is empty.
 

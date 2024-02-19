@@ -10,9 +10,9 @@ from inspect import signature
 from shutil import copyfile
 from threading import Thread
 
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
-import Global
+from Global import Global
 from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
 from subject.Subject import Subject
@@ -95,7 +95,7 @@ class Project:
 
         # load subjects data if possible
         self.data_file = ""
-        self.data:SubjectsData = None
+        self.data:SubjectsData = SubjectsData()
 
         self.load_data(data)
 
@@ -169,7 +169,7 @@ class Project:
                         return deepcopy(subj)
                     else:
                         return subj.set_properties(sess, rollback=True)  # it returns a deepcopy of requested session
-            return None
+            raise Exception("Error in Project.get_subject: given subject (" + subj_label + " does not exist")
         else:
             return Subject(subj_label, self, sess)
 
@@ -518,7 +518,7 @@ class Project:
             if not replaceOrig:
                 subj.t1_data.cp(subj.t1_data + "_old_origin")
 
-            niifile = Image(os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii"))
+            niifile = Image(str(os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")))
 
             if niifile.uexist and not overwrite:
                 print("skipping prepare_mpr_for_setorigin1 for subj " + subj.label)
@@ -540,7 +540,7 @@ class Project:
         """
         subjects = self.load_subjects(group_label, sess_id)
         for subj in subjects:
-            niifile = Image(os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii"))
+            niifile = Image(str(os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")))
             subj.t1_data.cpath.rm()
             niifile.compress(subj.t1_data.cpath)
             niifile.rm()
@@ -617,7 +617,7 @@ class Project:
     # returns a matrix (values x subjects) containing values of the requested columns of given subjects
     # user can also pass a datafile path or a custom subj_dictionary
     def get_subjects_values_by_cols(self, grlab_subjlabs_subjs:str|List[str]|List[Subject], columns_list:List[str], data:str|SubjectsData=None, sort:bool=False,
-                                    demean_flags:bool=None, sess_id:str=None, must_exist:bool=False) -> List[List[Any]]:
+                                    demean_flags:List[bool]=None, sess_id:str=None, must_exist:bool=False) -> List[List[Any]]:
         """
         Returns a matrix (values x subjects) containing values of the requested columns of given subjects.
 
@@ -677,14 +677,14 @@ class Project:
         valid_data  = self.validate_data(data)
 
         sessions = [sess_id for s in subj_labels]     # sess_id-fill
-        subjsSD_list:SubjectSDList = valid_data.filter_subjects(subj_labels, sessions)
+        subjsSD_list:SubjectSDList = valid_data.filter_subjects(subj_labels, sessions, conditions=select_conds)
 
-        if valid_data is not None:
-            return valid_data.get_filtered_column(subjsSD_list, column, sort=sort, select_conds=select_conds)
+        if valid_data is None:
+            raise Exception("Error in Project.get_filtered_column: valid_data is None")
         else:
-            return None
+            return valid_data.get_filtered_column(subjsSD_list, column, sort=sort)
 
-    def add_data_column(self, colname: str, subjects: SubjectSDList, values, updatefile:bool=False):
+    def add_data_column(self, colname: str, subjects: SubjectSDList, values):
         """
         Adds a new column to the data.
 
@@ -692,7 +692,6 @@ class Project:
             colname (str): The name of the column.
             subjects (SubjectSDList): The subjects to add the column to.
             values (list): The values of the column for each subject.
-            updatefile (bool, optional): If True, update the data file, by default False.
 
         Returns:
             None.
@@ -720,7 +719,8 @@ class Project:
 
         icvs = self.get_subjects_icv(grlab_subjlabs_subjs, sess_id)
 
-        self.data.add_column("icv", icvs, grlab_subjlabs_subjs, df)
+        subjsids = self.data.filter_subjects(grlab_subjlabs_subjs, [sess_id])
+        self.data.add_column("icv", icvs, subjsids, df)
 
     #endregion
 
@@ -739,7 +739,7 @@ class Project:
             List[float]: A list of ICV scores.
         """
         if isinstance(grlab_subjlabs_subjs[0], Subject):  # so caller does not have to set also the sess_id, is a xprojects parameter
-            subjects_list = grlab_subjlabs_subjs
+            subjects_list:List[Subject] = grlab_subjlabs_subjs
         else:
             subjects_list = self.get_subjects(grlab_subjlabs_subjs, sess_id)
 
@@ -859,7 +859,7 @@ class Project:
             Exception: If the method type is not one of the allowed values, or if the number of keyword arguments does not match the number of subjects.
         """
         if method_type not in ("", "mpr", "epi", "dti", "transform"):
-            raise Exception(f"Invalid method type: {method_type}. Method type must be an empty string, 'mpr', 'epi', 'dti', or 'transform'.")
+            raise Exception("Invalid method type: " + method_type + " Method type must be an empty string, 'mpr', 'epi', 'dti', or 'transform'.")
 
         print("run_subjects_methods: validating given subjects")
         valid_subjlabels    = self.get_subjects_labels(group_or_subjlabels, sess_id, must_exist)

@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import os
 import shutil
 from math import ceil
 from random import randrange
 from shutil import move
 import subprocess
-
+from typing import List
 import numpy
 
 from Global import Global
 from Project import Project
+from subject.Subject import Subject
 from group.FSLModels import FSLModels
 from group.SPMModels import SPMModels
 from utility.exceptions import NotExistingImageException
@@ -38,14 +41,18 @@ class GroupAnalysis:
 
         self.spm:SPMModels      = SPMModels(proj)
 
-    # does the following checks:
-    # - input 4D image and mask, input fsf file exists.
-    # - number of volumes (subjects) of input image coincides with number of points into the model
-    # can split contrasts in different processes
+
+
     def start_tbss_randomize(self, pop_dir_name:str, dti_image_type:str, analysis_name:str, corr_string:str, models_dir_name:str="", delay:int=20, numcpu:int=1, perm:int=5000, ignore_errors:bool=False, runit:bool=True):
         """
         Start a TBSS randomization analysis.
 
+        can split contrasts in different processes. if one process is used -> is not blocking, if more than one process is used -> waits for all of them.
+
+        does the following checks:
+
+        - input 4D image and mask, input fsf file exists.
+        - number of volumes (subjects) of input image coincides with number of points into the model
         Args:
             pop_dir_name (str): The name of the population directory.
             dti_image_type (str): The DTI image type (e.g., FA).
@@ -90,7 +97,6 @@ class GroupAnalysis:
                 if runit:
                     print("RANDOMIZE STARTED: model: " + model_noext + " on " + input_image)
                     p = subprocess.Popen(["randomise", "-i", input_image, "-m", input_mask, "-o", os.path.join(final_dir, out_image_name), "-d", model_noext + ".mat", "-t", model_noext + ".con", "-n", str(perm), "--T2", "-V"])
-                    # p.wait()
                     rrun("sleep " + str(delay))
                     return p
             else:

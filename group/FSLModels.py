@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 import os
 import traceback
 from distutils.file_util import copy_file
+from typing import List
 
 from Global import Global
 from Project import Project
+from data.SubjectsData import SubjectsData
 from group.FSLConFile import FSLConFile
 from group.spm_utilities import Regressor, Covariate, Nuisance
+from subject.Subject import Subject
 from utility.fileutilities import remove_ext, append_text_file, read_list_from_file
 # create factorial designs, multiple regressions, t-test
 from utility.myfsl.utils.run import rrun
@@ -550,8 +555,15 @@ class FSLModels:
             print("#===> OK: multiple covariate GLM model (" + model_noext + ".fsf) correctly created")
 
         except Exception as e:
-            traceback.print_exc()
-            raise e
+            #traceback.print_exc()
+            print(".")
+            print(".")
+            print("##################################################################################################################################################################################")
+            print("#===> E R R O R : GLM model (" + model_noext + ".fsf) raised an error: ")
+            print("##################################################################################################################################################################################")
+            print(".")
+            print(".")
+            return
 
     def addline2string(self, line: str) -> None:
         """

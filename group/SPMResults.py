@@ -2,7 +2,6 @@ import csv
 import os
 
 from Global import Global
-from Project import Project
 from group.spm_utilities import CatConvResultsParams, Peak, Cluster, ResultsParams
 from utility.matlab import call_matlab_spmbatch
 from utility.utilities import fillnumber2fourdigits
@@ -49,7 +48,7 @@ class SPMResults:
     # mult_corr = "FWE" | "FDR" | "none"
     # cluster_extend = "none" | "en_corr" | "en_nocorr"
     @staticmethod
-    def runbatch_cat_results_trasformation(project:Project, _global:Global, statsdir:str, ncontrasts:int, analysis_name:str,
+    def runbatch_cat_results_trasformation(project:'Project', _global:Global, statsdir:str, ncontrasts:int, analysis_name:str,
                                            cmd_id:int=1, cat_conv_stats_params:CatConvResultsParams=None, eng=None, runit:bool=True):
 
         """

@@ -2,7 +2,7 @@ import os
 from typing import Optional
 
 from Global import Global
-from subject.Subject import Subject
+# from subject.Subject import Subject
 from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
 from utility.myfsl.fslfun import runsystem
@@ -36,7 +36,7 @@ from utility.images.transform_images import check_concat_mat, check_invert_mat, 
 
 class SubjectTransforms:
 
-    def __init__(self, subject:Subject, _global:Global):
+    def __init__(self, subject:'Subject', _global:Global):
         """
         Initialize the transformation class for a given subject.
 
@@ -44,7 +44,7 @@ class SubjectTransforms:
             subject (Subject): The subject object containing the relevant data and parameters.
             _global (Global): The global object containing the relevant parameters and settings.
         """
-        self.subject:Subject = subject
+        self.subject:'Subject' = subject
         self._global:Global  = _global
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
