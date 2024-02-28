@@ -83,7 +83,7 @@ class SubjectsData:
             If the data contains an invalid column name or if the data type conversion is not supported.
         """
         self.filepath = data
-        self.df:pandas.DataFrame
+        self.df:pandas.DataFrame = pandas.DataFrame()
         if data is not None:
             self.load(data, validcols, cols2num, delimiter, check_data)
 

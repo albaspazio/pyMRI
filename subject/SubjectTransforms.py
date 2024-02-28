@@ -185,15 +185,15 @@ class SubjectTransforms:
             "rsTOstd": self.transform_l_rs2std,
             "fmriTOstd": self.transform_l_fmri2std,
             "dtiTOstd": self.transform_l_dti2std,
-            "t2TOstd": self.transform_l_t22dti,
+            # "t2TOstd": self.transform_l_t22dti,
 
             "hrTOstd4": self.transform_l_hr2std4,
             "rsTOstd4": self.transform_l_rs2std4,
             "fmriTOstd4": self.transform_l_fmri2std4,
 
             "stdTOdti": self.transform_l_std2dti,
-            "hrTOdti": self.transform_l_hr2dti,
-            "t2TOdti": self.transform_l_hr2dti,
+            # "hrTOdti": self.transform_l_hr2dti,
+            # "t2TOdti": self.transform_l_hr2dti,
 
             "stdTOt2": self.transform_l_hr2t2,
             "hrTOt2": self.transform_l_hr2t2,
@@ -222,15 +222,15 @@ class SubjectTransforms:
             "rsTOstd": self.transform_nl_rs2std,
             "fmriTOstd": self.transform_nl_fmri2std,
             "dtiTOstd": self.transform_nl_dti2std,
-            "t2TOstd": self.transform_nl_t22dti,
+            # "t2TOstd": self.transform_nl_t22dti,
 
             "hrTOstd4": self.transform_nl_hr2std4,
             "rsTOstd4": self.transform_nl_rs2std4,
             "fmriTOstd4": self.transform_nl_fmri2std4,
 
             "stdTOdti": self.transform_nl_std2dti,
-            "hrTOdti": self.transform_nl_hr2dti,
-            "t2TOdti": self.transform_nl_hr2dti,
+            # "hrTOdti": self.transform_nl_hr2dti,
+            # "t2TOdti": self.transform_nl_hr2dti,
 
             "stdTOt2": self.transform_nl_hr2t2,
             "hrTOt2": self.transform_nl_hr2t2,

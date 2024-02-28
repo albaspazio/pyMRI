@@ -129,7 +129,7 @@ class GroupAnalysis:
                 # create the numcpu mat / con files & start randomize
                 subprocesses = []
                 for idcpu in range(numcpu):
-                    con_txt = contrast_file.get_subset_text(conids_x_cpu[idcpu])
+                    con_txt  = contrast_file.get_subset_text(conids_x_cpu[idcpu])
                     con_file = os.path.join(final_dir, random_folders[idcpu], analysis_name + "_x_" + corr_string + ".con")
                     write_text_file(con_file, con_txt)
 
@@ -149,8 +149,15 @@ class GroupAnalysis:
                 for process in subprocesses:
                     process.wait()
 
-                print("completed randomize: model: " + model_noext + " on " + input_image)
+                # move all the temp files to the final directory
+                for f in range(numcpu):
+                    temp_folder     = os.path.join(final_dir, random_folders[f])
+                    num_contrasts   = len(conids_x_cpu[f])
+                    for c in range(num_contrasts):
+                        shutil.move(os.path.join(temp_folder, out_image_name + "_tfce_corrp_tstat" + str(c+1) + ".nii.gz"), os.path.join(final_dir, out_image_name + "_tfce_corrp_tstat" + str(conids_x_cpu[f][c]+1) + ".nii.gz"))
+                        shutil.move(os.path.join(temp_folder, out_image_name + "_tstat" + str(c+1) + ".nii.gz")           , os.path.join(final_dir, out_image_name + "_tstat" + str(conids_x_cpu[f][c]+1) + ".nii.gz"))
 
+                print("completed randomize: model: " + model_noext + " on " + input_image)
 
         except NotExistingImageException as e:
             msg = e.msg + " (" + e.image.fpathnoext + ")"
@@ -168,7 +175,7 @@ class GroupAnalysis:
                 raise Exception(msg)
 
     # ---------------------------------------------------
-    #region DATA PREPARATION
+    # region DATA PREPARATION
     # ====================================================================================================================================================
 
     # given a subjects list, it creates their template and project all the c1 images to its normalized version

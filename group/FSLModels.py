@@ -35,14 +35,13 @@ class FSLModels:
         self.string             = ""    # used to compose models override
 
     # ---------------------------------------------------
-    def create_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf:str, odp:str, regressors:List[Regressor], grlab_subjlabs_subjs:str|List[str]|List[Subject], ofn:str="mult_cov", data:str|SubjectsData=None,
-                                               create_model:bool=True, group_mean_contrasts:int=1, cov_mean_contrasts:int=2, compare_covs:bool=False, ofn_postfix:str="", subj_must_exist:bool=False):
+    def create_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], grlab_subjlabs_subjs: str | List[str] | List[Subject], grp_names=None, ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True, group_mean_contrasts: int = 1, cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "", subj_must_exist: bool = False):
         """
-        This function creates a FSL GLM file starting from a template. MAnage multiple groups, with covariates and nuisance regressors.
+        This function creates a FSL GLM file starting from a template. Manage multiple groups, with covariates and nuisance regressors.
         - N covariates
         - X nuisance (without associated contrast)
         values contained in $SUBJECTS_FILE
-        covariates/nuisance regressors will be appended starting from the (NUM_GROUPS+1)th column_id
+        covariates/nuisance regressors will be appended starting from the (NUM_GROUPS+1)-th column_id
         must write $OUT_FSF_NAME variable
 
         ------------------------------------------------------------------------------------
@@ -103,6 +102,7 @@ class FSLModels:
         ------
         Exception
             If the input FSL GLM file does not exist.
+            :param grp_names:
         """
         try:
             self.string = ""
