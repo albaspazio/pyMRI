@@ -580,9 +580,14 @@ class GroupAnalysis:
             classified_tracts   = []
             os.makedirs(out_folder, exist_ok=True)
 
+            tbss_result_image = Image(tbss_result_image, must_exist=True, msg="Error in tbss_clusterize_results_by_atlas. TBSS result image (" + tbss_result_image + ") does not exist")
+
             # ----------------------------------------------------------------------------------------------------------
             # threshold tbss input, copy to out_folder, get number of voxels
-            name            = os.path.basename(tbss_result_image)
+            ntotvox_x_tract  = []
+            nsignvox_x_tract = []
+
+            name            = tbss_result_image.name
             thr_input       = Image(os.path.join(out_folder, name))
             rrun("fslmaths " + tbss_result_image + " -thr " + str(thr) + " -bin " + thr_input)
             original_voxels = thr_input.get_nvoxels()
@@ -590,18 +595,21 @@ class GroupAnalysis:
             out_str = ""
             for tract in tracts_labels:
                 tr_img              = Image(os.path.join(tracts_dir, "FMRIB58_FA-skeleton_1mm_" + tract + "_mask"))
-                tract_tot_voxels    = tr_img.get_nvoxels()
+                ntotvox_x_tract.append(tr_img.get_nvoxels())
                 out_img             = Image(os.path.join(out_folder, "sk_" + tract))
                 rrun("fslmaths " + thr_input + " -mas " + tr_img + " " + out_img)
 
-                res                 = out_img.get_nvoxels()
+                res = out_img.get_nvoxels()
+                nsignvox_x_tract.append(res)
                 if res > 0:
                     classified_tracts.append(out_img)
                 else:
                     out_img.rm()
 
                 tot_voxels = tot_voxels + res
-                out_str = out_str + tract + "\t" + str(res) + " out of " + str(tract_tot_voxels) + " voxels = " + str(round((res * 100) / tract_tot_voxels, 2)) + " %" + "\n"
+
+            for id, tract in enumerate(tracts_labels):
+                    out_str = out_str + tract + "\t" + str(nsignvox_x_tract[id]) + " / " + str(ntotvox_x_tract[id]) + " vx = " + str(round((nsignvox_x_tract[id] * 100) / ntotvox_x_tract[id], 2)) + " %\t|\t" + str(round((nsignvox_x_tract[id] * 100) / tot_voxels, 2)) + " %\n"
 
             # ------------------------------------------------
             # create unclassified image
@@ -615,8 +623,8 @@ class GroupAnalysis:
 
             # ----------------------------------------------------------------------------------------------------------
             # write log file
-            out_str = out_str + "\n" + "\n" + "tot voxels = " + str(tot_voxels) + " out of " + str(original_voxels) + "\n"
-            out_str = out_str + "unclassified image has " + str(unclass_vox)
+            out_str = out_str + "\n" + "\n" + "tot voxels = " + str(tot_voxels) + " / " + str(original_voxels) + " = " + str(round((tot_voxels * 100) / original_voxels, 2)) + " %\n"
+            out_str = out_str + "unclassified image has " + str(unclass_vox) + " voxels"
             with open(log, 'w', encoding='utf-8') as f:
                 f.write(out_str)
 
