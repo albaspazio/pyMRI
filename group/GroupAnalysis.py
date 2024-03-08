@@ -8,6 +8,7 @@ from shutil import move
 import subprocess
 from typing import List
 import numpy
+import pandas
 
 from Global import Global
 from Project import Project
@@ -632,22 +633,24 @@ class GroupAnalysis:
             print(e)
 
     # clust_res_dir: output folder of tbss's results clustering
-    # datas is a tuple of two elements containing a matrix of values and subjects
+    # datas is a pandas.DataFrame with the same number of rows as the subjects contained in subj_labels and a varying number of columns
+    # sessions are flattened. tbss output folder divide subjects by labels only, thus session is eventually appended to the subject labels
     # returns tracts_data
     @staticmethod
-    def tbss_summarize_clusterized_folder(in_clust_res_dir, datas, data_labels, tbss_folder, modality:str="FA",
-                                          subj_img_postfix="_FA_FA_to_target", ofn="scatter_tracts_") -> tuple:
+    def tbss_summarize_clusterized_folder(subj_labels:List[str], in_clust_res_dir, tbss_folder, modality:str="FA", subj_img_postfix="_FA_FA_to_target",
+                                          data:pandas.DataFrame=None, ofn="scatter_tracts_") -> tuple:
         """
-        This function takes the output of a TBSS clustering and summarizes the results in a tab-separated file.
+        This function takes the output of a TBSS clustering and possibly a DataFrame and extract dti metrics values within these fraction of tracts
+        summarizes the results in a tab-separated file.
 
         Args:
-            in_clust_res_dir (str): The path to the TBSS clustering results folder.
-            datas (tuple): A tuple containing a matrix of values and subjects.
-            data_labels (list): A list of data labels.
-            tbss_folder (str): The path to the TBSS analysis folder.
-            modality (str, optional): The modality of the TBSS analysis. Defaults to "FA".
+            subj_labels (List[str]) : The list of subject labels.
+            in_clust_res_dir (str)  : The path to the TBSS clustering results folder.
+            tbss_folder (str)       : The root path to the TBSS analysis folder.
+            modality (str, optional): The metric to extract. Defaults to "FA".
             subj_img_postfix (str, optional): The postfix of the subject images. Defaults to "_FA_FA_to_target".
-            ofn (str, optional): The name of the output file. Defaults to "scatter_tracts_".
+            data (pandas.DataFrame) : A dataframe containing a set of subject rows and data columns.
+            ofn (str, optional)     : The name of the output file. Defaults to "scatter_tracts_".
 
         Returns:
             tuple: A tuple containing the path to the output file and the tracts data.
@@ -656,20 +659,16 @@ class GroupAnalysis:
             Exception: If the input data is not valid.
 
         """
-        ndata       = len(data_labels)
-        whatdata    = datas[0][0]
-        if isinstance(whatdata, list):
-            if len(whatdata) != ndata:
-                print("ERROR in tbss_summarize_clusterized_folder: number of data columns differ from labels....exiting")
-                return
-        else:
-            if ndata != 1:
-                print("ERROR in tbss_summarize_clusterized_folder: more than one labels for one column data....exiting")
-                return
+        # check that data contains values of all subects included in subj_labels
+
+        subjs_in_data = data["subj"].tolist()
+
+        if not first_contained_in_second(subj_labels, subjs_in_data):
+            raise Exception("ERROR in tbss_summarize_clusterized_folder: at least one of subj_labels is not included in data....exiting")
 
         out_folder      = os.path.join(tbss_folder, "results")
         ifn             = get_dirname(in_clust_res_dir)
-        subjects_images = os.path.join(tbss_folder, modality)  # folder containing tbss subjects' folder of that modality
+        subjects_images = os.path.join(tbss_folder, "FA")  # by default, subjects' data are in the FA folder
 
         if modality == "FA":
             subj_img_postfix = "_FA_FA_to_target"
@@ -679,9 +678,13 @@ class GroupAnalysis:
         tracts_labels = []
 
         # compose header
-        str_data = "subj"
-        for lab in data_labels:
-            str_data = str_data + "\t" + lab
+        if data is None:
+            str_data    = "subj"
+            data_labels = []
+        else:
+            str_data = "\t".join(data.columns.to_list())
+            data_labels = data.columns.to_list()
+            data_labels.pop(0)
 
         for entry in os.scandir(in_clust_res_dir):
             if not entry.name.startswith('.') and not entry.is_dir():
@@ -693,16 +696,17 @@ class GroupAnalysis:
 
         tracts_data = []
         [tracts_data.append([]) for _ in range(len(tracts_labels))]
-        nsubj = len(datas[0])
-        for i in range(nsubj):
-            subj_label      = datas[1][i]
+
+
+        nsubj = len(subj_labels)
+        for id,subj_label in enumerate(subj_labels):
             in_img          = os.path.join(subjects_images, subj_label + "-dti_fit" + subj_img_postfix)
             subj_img        = Image(in_img, must_exist=True, msg="Error in tbss_summarize_clusterized_folder, subj image (" + in_img + "_masked" + ") is missing...exiting")
             subj_img_masked = Image(subj_img + "_masked")
             n_tracts        = 0
             str_data        = str_data + subj_label
             for id,lab in enumerate(data_labels):
-                str_data = str_data + "\t" + str(datas[0][i][id])
+                str_data = str_data + "\t" + str(data.loc[data['subj'] == subj_label, lab].values[0])
 
             for entry in os.scandir(in_clust_res_dir):
                 if not entry.name.startswith('.') and not entry.is_dir():

@@ -8,3 +8,8 @@ df.loc[(df["session"] == session) & (df["subj"] == subj_lab)]
 select index(s) of rows based on ...
 
 df.index[(df["session"] == session) & (df["subj"] == subj_lab])
+
+
+
+# Filter the DataFrame
+result = df.loc[df['subj'] == 'gigi', 'age']

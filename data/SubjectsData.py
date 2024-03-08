@@ -476,7 +476,7 @@ class SubjectsData:
     # - List[colvalues]
     # - List[List] of colnames x subjs values
     # they DO NOT filter conditions
-    def get_subject_col_value(self, subj: SubjectSD, colname: str):
+    def get_subject_col_value(self, subj: SubjectSD, colname: str) -> Any:
         """
         Returns the value of a column for a given subject.
 
@@ -598,7 +598,7 @@ class SubjectsData:
             raise DataFileException("SubjectsData.get_subjects_values_by_cols", "")
 
         return values
-    #endregion
+    # endregion
 
     # ======================================================================================
     #region GET two vectors (values, valid subjlabels) within the given [subj labels]
