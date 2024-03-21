@@ -577,23 +577,21 @@ class GroupAnalysis:
                 tracts_dir      = self._global.dti_xtract_dir
 
             log                 = os.path.join(out_folder, log_file)
-            tot_voxels          = 0
-            classified_tracts   = []
             os.makedirs(out_folder, exist_ok=True)
 
+            tot_voxels          = 0     # tot voxels in whole tbss result image
+            ntotvox_x_tract     = []    # total number of voxels in each tract
+            nsignvox_x_tract    = []    # total number of significant voxels in each tract
+            classified_tracts   = []    # list of tracts where significant voxels are > 0
             tbss_result_image = Image(tbss_result_image, must_exist=True, msg="Error in tbss_clusterize_results_by_atlas. TBSS result image (" + tbss_result_image + ") does not exist")
 
             # ----------------------------------------------------------------------------------------------------------
             # threshold tbss input, copy to out_folder, get number of voxels
-            ntotvox_x_tract  = []
-            nsignvox_x_tract = []
-
             name            = tbss_result_image.name
             thr_input       = Image(os.path.join(out_folder, name))
             rrun("fslmaths " + tbss_result_image + " -thr " + str(thr) + " -bin " + thr_input)
             original_voxels = thr_input.get_nvoxels()
 
-            out_str = ""
             for tract in tracts_labels:
                 tr_img              = Image(os.path.join(tracts_dir, "FMRIB58_FA-skeleton_1mm_" + tract + "_mask"))
                 ntotvox_x_tract.append(tr_img.get_nvoxels())
@@ -609,8 +607,9 @@ class GroupAnalysis:
 
                 tot_voxels = tot_voxels + res
 
+            out_str = "tract\tsignvx\ttotvx\ttr_perc\ttot_perc\n"
             for id, tract in enumerate(tracts_labels):
-                    out_str = out_str + tract + "\t" + str(nsignvox_x_tract[id]) + " / " + str(ntotvox_x_tract[id]) + " vx = " + str(round((nsignvox_x_tract[id] * 100) / ntotvox_x_tract[id], 2)) + " %\t|\t" + str(round((nsignvox_x_tract[id] * 100) / tot_voxels, 2)) + " %\n"
+                    out_str = out_str + tract + "\t" + str(nsignvox_x_tract[id]) + "\t" + str(ntotvox_x_tract[id]) + "\t" + str(round((nsignvox_x_tract[id] * 100) / ntotvox_x_tract[id], 2)) + "\t" + str(round((nsignvox_x_tract[id] * 100) / tot_voxels, 2)) + "\n"
 
             # ------------------------------------------------
             # create unclassified image
@@ -624,7 +623,8 @@ class GroupAnalysis:
 
             # ----------------------------------------------------------------------------------------------------------
             # write log file
-            out_str = out_str + "\n" + "\n" + "tot voxels = " + str(tot_voxels) + " / " + str(original_voxels) + " = " + str(round((tot_voxels * 100) / original_voxels, 2)) + " %\n"
+            out_str = out_str + "\n" + "tot_rec_voxels\ttot_voxels\tperc\n"
+            out_str = out_str + str(tot_voxels) + "\t" + str(original_voxels) + "\t" + str(round((tot_voxels * 100) / original_voxels, 2)) + "\n"
             out_str = out_str + "unclassified image has " + str(unclass_vox) + " voxels"
             with open(log, 'w', encoding='utf-8') as f:
                 f.write(out_str)
@@ -660,9 +660,7 @@ class GroupAnalysis:
 
         """
         # check that data contains values of all subects included in subj_labels
-
         subjs_in_data = data["subj"].tolist()
-
         if not first_contained_in_second(subj_labels, subjs_in_data):
             raise Exception("ERROR in tbss_summarize_clusterized_folder: at least one of subj_labels is not included in data....exiting")
 

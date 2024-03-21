@@ -75,6 +75,12 @@ class Project:
         self.eddy_dti_json          = os.path.join(self.script_dir, "dti_ap.json")
         self.eddy_index             = os.path.join(self.script_dir, "eddy_index.txt")
 
+        self.hasT1  = False
+        self.hasRS  = False
+        self.hasDTI = False
+        self.hasT2  = False
+
+
         self.subjects_lists_file    = os.path.join(self.script_dir, "subjects_lists.json")
 
         self.globaldata             = globaldata
@@ -82,11 +88,6 @@ class Project:
         self.subjects           = []
         self.subjects_labels    = []
         self.nsubj              = 0
-
-        self.hasT1  = False
-        self.hasRS  = False
-        self.hasDTI = False
-        self.hasT2  = False
 
         # load all available subjects list into self.subjects_lists
         with open(self.subjects_lists_file) as json_file:

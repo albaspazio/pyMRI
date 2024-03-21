@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import List
 
 from Global import Global
 from Project import Project
@@ -8,7 +9,7 @@ from data.SubjectsData import SubjectsData
 from group.SPMCovariates    import SPMCovariates
 from group.SPMPostModel import SPMPostModel, PostModel
 from group.SPMStatsUtils    import SPMStatsUtils
-from group.spm_utilities    import GrpInImages
+from group.spm_utilities import GrpInImages, Regressor
 from utility.matlab         import call_matlab_spmbatch
 from utility.fileutilities  import sed_inplace
 from group.SPMConstants     import SPMConstants

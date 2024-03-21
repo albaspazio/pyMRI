@@ -69,7 +69,7 @@ class DataProject:
 
         # load subjects data if possible
         self.data_file = ""
-        self.data = SubjectsData(data)
+        self.data = SubjectsData()
 
         self.load_data(data)
 
