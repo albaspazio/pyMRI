@@ -26,7 +26,7 @@ class Image(str):
 
     """
 
-    IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".img", ".nii", ".mgz", ".gii"]
+    IMAGE_FORMATS = [".nii.gz", ".img.gz", ".mnc.gz", ".hdr.gz", ".hdr", ".mnc", ".img", ".nii", ".mgz", ".gii", ".src.gz"]
 
     def __new__(cls, value, must_exist=False, msg:str=""):
         return super(Image, cls).__new__(cls, value)
@@ -101,7 +101,7 @@ class Image(str):
             Image: The uncompressed image.
 
         """
-        return Image(self.fpathnoext + ".nii")
+        return Image(str(self.fpathnoext + ".nii"))
 
     @property
     def cpath(self):
@@ -124,6 +124,17 @@ class Image(str):
 
         """
         return Image(self.fpathnoext + ".gii")
+
+    @property
+    def spath(self):
+        """
+        Get the path to DSI-studio dti image.
+
+        Returns:
+            Image: The dti image.
+
+        """
+        return Image(self.fpathnoext + ".src.gz")
 
     @property
     def nslices(self):
@@ -228,7 +239,7 @@ class Image(str):
         # if self == "":
         #     return False
 
-        if os.path.isfile(self.upath) or os.path.isfile(self.cpath) or os.path.isfile(self.fpathnoext + ".mgz"):
+        if os.path.isfile(self.upath) or os.path.isfile(self.cpath) or os.path.isfile(self.spath) or os.path.isfile(self.fpathnoext + ".mgz"):
             return True
 
         if os.path.isfile(self.fpathnoext + ".mnc") or os.path.isfile(self.fpathnoext + ".mnc.gz"):

@@ -265,6 +265,9 @@ class Subject:
         self.dti_ec_data        = Image(os.path.join(self.dti_dir, self.dti_ec_image_label))
         self.dti_fit_data       = Image(os.path.join(self.dti_dir, self.dti_fit_label))
 
+        self.dti_dsi_dir        = os.path.join(self.dir, "dti", "dsi")
+        self.dti_dsi_data       = Image(os.path.join(self.dti_dsi_dir, self.dti_image_label + ".src.gz"))
+
         self.dti_nodiff_data            = Image(os.path.join(self.roi_dti_dir, "nodif"))
         self.dti_nodiff_brain_data      = Image(os.path.join(self.roi_dti_dir, "nodif_brain"))
         self.dti_nodiff_brainmask_data  = Image(os.path.join(self.roi_dti_dir, "nodif_brain_mask"))
@@ -465,11 +468,13 @@ class Subject:
         - roi_fmri_dir
         - roi_t2_dir
         """
-        os.makedirs(os.path.join(self.dir, "mpr"),      exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "fmri"),     exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "dti"),      exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "t2"),       exist_ok=True)
-        os.makedirs(os.path.join(self.dir, "resting"),  exist_ok=True)
+        os.makedirs(self.t1_dir,   exist_ok=True)
+        os.makedirs(self.fmri_dir, exist_ok=True)
+        os.makedirs(self.dti_dir,  exist_ok=True)
+        os.makedirs(self.t2_dir,   exist_ok=True)
+        os.makedirs(self.rs_dir,   exist_ok=True)
+
+        os.makedirs(self.dti_dsi_dir, exist_ok=True)
 
         os.makedirs(self.roi_t1_dir,    exist_ok=True)
         os.makedirs(self.roi_std_dir,   exist_ok=True)

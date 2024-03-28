@@ -449,3 +449,58 @@ class SubjectDti:
 
     def conn_matrix(self, atlas_path="freesurfer", nroi=0):
         pass
+
+    # region DSI-STUDIO
+
+    def convert2dsi(self, type: str = "original", error_if_absent:bool=False):
+        """
+        This function converts the DTI data to DSI Studio format.
+        Args:
+            type (str, optional): The type of data to convert. Can be "original" or "ec" (eddy corrected). Defaults to "original".
+
+        Returns:
+            None.
+        """
+        if type == "original":
+            inputimg    = self.subject.dti_data
+            bvec        = self.subject.dti_bvec
+        else:
+            inputimg    = self.subject.dti_ec_data
+            bvec        = self.subject.dti_rotated_bvec
+
+        bval = self.subject.dti_bval
+
+        if not inputimg.exist:
+            if error_if_absent:
+                raise IOError("SubjectDti.convert2dsi given input image does not exist")
+            else:
+                print("SubjectDti.convert2dsi given input image does not exist...skipping conversion")
+                return
+
+        rrun("dsi_studio --action=src --source=" + inputimg + ".nii.gz" + " --bval=" + bval + " --bvec=" + bvec + " --output=" + os.path.join(self.subject.dti_dsi_dir, self.subject.dti_image_label))
+
+
+    def dsi_recon(self, in_img:Image=None, method:str="GQI", param0:float=1.25, connectometry:int=1, output:str=None, thread_count:int=1):
+
+        rec_method = "1"
+        if method == "GQI":
+            rec_method = "4"
+        elif method == "QSDR":
+            rec_method = "7"
+        else:
+            raise Exception("SubjectDti.dsi_recon given method param is not valid")
+
+        if in_img is None:
+            in_img = self.subject.dti_dsi_data
+
+        if  output is None:
+            output_str = ""
+        else:
+            output_str = " --output=" + output
+
+        if not in_img.exist:
+            raise IOError("SubjectDti.dsi_recon given input image does not exist: " + in_img)
+
+        rrun("dsi_studio --action=rec --source=" + in_img + " --method=" + rec_method + " --param0=" + str(param0) + " --record_odf=" + str(connectometry) + output_str + " --thread_count=" + str(thread_count))
+
+    # endregion
