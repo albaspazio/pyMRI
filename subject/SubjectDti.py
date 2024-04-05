@@ -451,15 +451,16 @@ class SubjectDti:
         pass
 
     # region DSI-STUDIO
-
-    def convert2dsi(self, type: str = "original", error_if_absent:bool=False):
+    def convert2dsi(self, type: str = "original", error_if_absent:bool=False) -> None:
         """
         This function converts the DTI data to DSI Studio format.
         Args:
             type (str, optional): The type of data to convert. Can be "original" or "ec" (eddy corrected). Defaults to "original".
-
+            error_if_absent (bool, optional): Whether to raise an error if the input image does not exist. Defaults to False.
         Returns:
             None.
+        Raises:
+            IOError: If the input image does not exist and error_if_absent is True.
         """
         if type == "original":
             inputimg    = self.subject.dti_data
@@ -479,28 +480,62 @@ class SubjectDti:
 
         rrun("dsi_studio --action=src --source=" + inputimg + ".nii.gz" + " --bval=" + bval + " --bvec=" + bvec + " --output=" + os.path.join(self.subject.dti_dsi_dir, self.subject.dti_image_label))
 
+        def dsi_recon(self, in_img:Image=None, method:str="GQI", param0:float=1.25, connectometry:int=1, output:str=None, thread_count:int=1):
+            """
+            This function performs DSI Studio reconstruction.
+            Args:
+                in_img (Image, optional): The input image. If None, the DSI Studio data is used. Defaults to None.
+                method (str, optional): The reconstruction method. Can be "GQI" or "QSDR". Defaults to "GQI".
+                param0 (float, optional): The parameter 0 value. Only used for GQI. Defaults to 1.25.
+                connectometry (int, optional): The connectometry value. Only used for QSDR. Defaults to 1.
+                output (str, optional): The output file path. If None, no output file is created. Defaults to None.
+                thread_count (int, optional): The thread count. Only used for GPU acceleration. Defaults to 1.
+            Returns:
+                None.
+            Raises:
+                IOError: If the input image does not exist.
+            """
+            rec_method = "1"
+            if method == "GQI":
+                rec_method = "4"
+            elif method == "QSDR":
+                rec_method = "7"
+            else:
+                raise Exception("SubjectDti.dsi_recon given method param is not valid")
 
-    def dsi_recon(self, in_img:Image=None, method:str="GQI", param0:float=1.25, connectometry:int=1, output:str=None, thread_count:int=1):
+            if in_img is None:
+                in_img = self.subject.dti_dsi_data
 
-        rec_method = "1"
-        if method == "GQI":
-            rec_method = "4"
-        elif method == "QSDR":
-            rec_method = "7"
-        else:
-            raise Exception("SubjectDti.dsi_recon given method param is not valid")
+            if  output is None:
+                output_str = ""
+            else:
+                output_str = " --output=" + output
 
-        if in_img is None:
-            in_img = self.subject.dti_dsi_data
+            if not in_img.exist:
+                raise IOError("SubjectDti.dsi_recon given input image does not exist: " + in_img)
 
-        if  output is None:
-            output_str = ""
-        else:
-            output_str = " --output=" + output
+            rrun("dsi_studio --action=rec --source=" + in_img + " --method=" + rec_method + " --param0=" + str(param0) + " --record_odf=" + str(connectometry) + output_str + " --thread_count=" + str(thread_count))
 
-        if not in_img.exist:
-            raise IOError("SubjectDti.dsi_recon given input image does not exist: " + in_img)
+        def dsi_connectivity(self, fib_file=None, threshold:int=0.001, fib_cnt:int=1000000, conn_atlas:str="HCP-MMP", conn_values:str="count,qa,trk"):
+            """
+            This function performs DSI Studio connectivity analysis.
+            Args:
+                fib_file (str, optional): The input fiber file. If None, the DSI Studio data is used. Defaults to None.
+                threshold (int, optional): The connectivity threshold. Defaults to 0.001.
+                fib_cnt (int, optional): The maximum number of fibers. Defaults to 1000000.
+                conn_atlas (str, optional): The connectivity atlas. Defaults to "HCP-MMP".
+                conn_values (str, optional): The connectivity values. Defaults to "count,qa,trk".
+            Returns:
+                None.
+            Raises:
+                IOError: If the input fiber file does not exist.
+            """
+            if fib_file is None:
+                fib_file = self.subject.dti_fib_data
 
-        rrun("dsi_studio --action=rec --source=" + in_img + " --method=" + rec_method + " --param0=" + str(param0) + " --record_odf=" + str(connectometry) + output_str + " --thread_count=" + str(thread_count))
+            if not os.path.exists(fib_file):
+                raise IOError("SubjectDti.dsi_connectivity given input fiber file does not exist: " + fib_file)
+
+            rrun(f"dsi_studio --action=trk --source={fib_file} --fiber_count={fib_cnt} --connectivity_threshold={threshold} --output=no_file --connectivity={conn_atlas} --connectivity_value={conn_values}")
 
     # endregion
