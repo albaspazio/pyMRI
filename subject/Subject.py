@@ -267,7 +267,6 @@ class Subject:
 
         self.dti_dsi_dir        = os.path.join(self.dir, "dti", "dsi")
         self.dti_dsi_data       = Image(os.path.join(self.dti_dsi_dir, self.dti_image_label + ".src.gz"))
-        self.dti_fib_data       = Image(os.path.join(self.dti_dsi_dir, self.dti_image_label + ".fib.gz"))
 
         self.dti_nodiff_data            = Image(os.path.join(self.roi_dti_dir, "nodif"))
         self.dti_nodiff_brain_data      = Image(os.path.join(self.roi_dti_dir, "nodif_brain"))
