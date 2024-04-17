@@ -1,3 +1,5 @@
+import numpy as np
+
 def is_list_of(_list, _type, checkall:bool=True):
     """
     Checks if a given variable is a list of a specific type.
@@ -101,6 +103,39 @@ def fillnumber2fourdigits(num):
     elif 9 < num < 100:
         str_num = "00" + str(num)
     elif 99 < num < 1000:
+        str_num = "0" + str(num)
+    else:
+        str_num = str(num)
+
+    return str_num
+
+
+def fillnumber2threedigits(num):
+    """
+    Adds leading zeros to a number so that it has three digits.
+
+    Parameters
+    ----------
+    num: int or float
+        The number to be formatted.
+
+    Returns
+    -------
+    str
+        The number formatted with leading zeros, as a string.
+
+    Raises
+    ------
+    ValueError
+        If the input number is greater than 999.
+
+    """
+    if num > 999:
+        raise ValueError("Error in fillnumber2threedigits, given number is > 999")
+
+    if num < 10:
+        str_num = "00" + str(num)
+    elif 9 < num < 100:
         str_num = "0" + str(num)
     else:
         str_num = str(num)
@@ -261,4 +296,8 @@ class Processes(list):
     def wait(self):
         for pr in self:
             pr.wait()
+
+
+def fisher_to_correlation(r_fisher):
+    return (np.exp(2 * r_fisher) - 1) / (np.exp(2 * r_fisher) + 1)
 

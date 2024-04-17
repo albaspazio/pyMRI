@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import os
-import traceback
 from distutils.file_util import copy_file
 from typing import List
 
 from Global import Global
 from Project import Project
 from data.SubjectsData import SubjectsData
-from group.FSLConFile import FSLConFile
+from models.FSLConFile import FSLConFile
 from group.spm_utilities import Regressor, Covariate, Nuisance
 from subject.Subject import Subject
 from utility.fileutilities import remove_ext, append_text_file, read_list_from_file

@@ -10,6 +10,7 @@ from group.SPMCovariates    import SPMCovariates
 from group.SPMPostModel import SPMPostModel, PostModel
 from group.SPMStatsUtils    import SPMStatsUtils
 from group.spm_utilities import GrpInImages, Regressor
+from subject.Subject import Subject
 from utility.matlab         import call_matlab_spmbatch
 from utility.fileutilities  import sed_inplace
 from group.SPMConstants     import SPMConstants
@@ -36,7 +37,7 @@ class SPMModels:
                                     stat_type:int,          # MULTREGR, tstt, ostt, owa, twa
                                     anal_type:int,          # vbm, ct, fmri, dartel
                                     anal_name:str,          # output analysis name
-                                    groups_instances:List[List[Subject]],   #
+                                    groups_instances:List[List[Subject]], #
                                     input_images:GrpInImages=None,  # instance of class GrpInImages, containing info to retrieve input images
                                     covs:List[Regressor]=None, cov_interactions:List[int]=None, cov_centering:bool=False, data:str|SubjectsData=None,
                                     glob_calc:str=None, expl_mask:str="icv", spm_template_name:str=None,

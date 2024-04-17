@@ -3,7 +3,7 @@ import traceback
 
 from Global import Global
 from Project import Project
-from group.ConnModels import ConnModels
+from models.ConnModels import ConnModels
 from group.spm_utilities import Covariate, Nuisance
 
 if __name__ == "__main__":

@@ -1039,7 +1039,7 @@ class Subject:
 
                         self.epi.fsl_feat("rs", self.rs_post_nuisance_image_label, mel_odn + ".ica", melodic_model,
                                           do_initreg=do_melinitreg,
-                                          std_image=self.std_img)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -model $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
+                                          std_image=self.std_img)  # run . $GLOBAL_SUBJECT_SCRIPT_DIR/subject_epi_feat.sh $SUBJ_NAME $PROJ_DIR -models $MELODIC_MODEL -odn $MELODIC_OUTPUT_DIR.ica -std_img $STANDARD_IMAGE -initreg $DO_FEAT_PREPROC_INIT_REG -ifn $RS_POST_NUISANCE_IMAGE_LABEL
                         Image(os.path.join(mel_out_dir, "filtered_func_data")).cp(postmel_img, logFile=log)
 
                 # ------------------------------------------------------------------------------------------------------

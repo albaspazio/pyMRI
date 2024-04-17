@@ -13,7 +13,7 @@ import pandas
 from Global import Global
 from Project import Project
 from subject.Subject import Subject
-from group.FSLModels import FSLModels
+from models.FSLModels import FSLModels
 from group.SPMModels import SPMModels
 from utility.exceptions import NotExistingImageException
 from utility.fileutilities import get_dirname, write_text_file
@@ -21,8 +21,8 @@ from utility.fileutilities import sed_inplace
 from utility.images.Image import Image
 from utility.matlab import call_matlab_spmbatch
 from utility.myfsl.utils.run import rrun
-from utility.utilities import listToString
-
+from utility.utilities import listToString, fillnumber2threedigits
+from utility.matlab import call_matlab_function_noret
 
 class GroupAnalysis:
     """
@@ -461,6 +461,90 @@ class GroupAnalysis:
 
         with open(ofp, 'w', encoding='utf-8') as f:
             f.write(file_str)
+
+    def prepare_structconn_groupanalysis_dsi2nbs(self, subjects_list:List[Subject], ofp:str, nnodes:int, fisher2r:bool=False, input_postfix:str= "-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.Brainnectome.count.pass.connectivity.mat"):
+        """
+        Prepare a group structural connectivity analysis for the given subjects list.
+        Args:
+            subjects_list (List[Subject]): The list of Subject objects to analyze.
+            ofp (str): The path to the output file.
+            input_postfix (str, optional): The postfix of the input files. Defaults to "-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.Brainnectome.count.pass.connectivity.mat".
+        Raises:
+            ValueError: If the output directory already exists.
+        Returns:
+            None
+        This function prepares a group connectivity analysis for the given subjects list.
+        It creates a directory for the output files and then iterates through the subjects in the list, copying their input matrices to the output directory.
+        Finally, it calls a Matlab function to create a connectivity matrix from the input files.
+
+        Note: This function assumes that the input matrices are in a specific format and that the Matlab function will be able to process them correctly.
+        It also assumes that the output directory does not already exist, as it will raise a ValueError if it does.
+        """
+
+        # if os.path.exists(ofp):
+        #     os.removedirs(ofp)
+
+        matrices_dir = os.path.join(ofp, "matrices")
+        if not os.path.exists(ofp):
+            os.makedirs(ofp)
+        if not os.path.exists(matrices_dir):
+            os.makedirs(matrices_dir)
+
+        eng = None
+        for subj in subjects_list:
+            imat = os.path.join(subj.dti_dsi_dir, subj.label + input_postfix)
+            omat = os.path.join(matrices_dir, subj.label + "_s" + str(subj.sessid) + ".mat")
+            if os.path.exists(imat):
+                shutil.copy(imat, omat)
+            else:
+                raise IOError("ERROR in prepare_nbs_group_conn_analysis, input mat of subject " + subj.label + " (sess " + str(subj.sessid) + ") does not exist")
+
+            # eng = call_matlab_function_noret("remove_vars_from_mat", [self._global.spm_functions_dir], "'" + omat + "'", endengine=False, eng=eng)
+        eng = call_matlab_function_noret("create_dsi_matrix_from_files", [self._global.spm_functions_dir], "'" + matrices_dir + "'" + ", " + str(nnodes) + ", 0", endengine=False, eng=eng)
+
+    def prepare_funcconn_groupanalysis_conn2nbs(self, subjects_list:List[Subject], infp:str, ofp:str, nnodes:int, fisher2r:bool=True, input_prefix:str= "resultsROI_Subject", input_postfix:str= "_Condition001"):
+        """
+        Prepare a group functional connectivity analysis for the given subjects list.
+        Args:
+            subjects_list (List[Subject]): The list of Subject objects to analyze.
+            ofp (str): The path to the output file.
+            input_postfix (str, optional): The postfix of the input files. Defaults to "-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.Brainnectome.count.pass.connectivity.mat".
+        Raises:
+            ValueError: If the output directory already exists.
+        Returns:
+            None
+        This function prepares a group connectivity analysis for the given subjects list.
+        It creates a directory for the output files and then iterates through the subjects in the list, copying their input matrices to the output directory.
+        Finally, it calls a Matlab function to create a connectivity matrix from the input files.
+
+        Note: This function assumes that the input matrices are in a specific format and that the Matlab function will be able to process them correctly.
+        It also assumes that the output directory does not already exist, as it will raise a ValueError if it does.
+        """
+
+        # if os.path.exists(ofp):
+        #     os.removedirs(ofp)
+
+        matrices_dir = os.path.join(ofp, "matrices")
+        if not os.path.exists(ofp):
+            os.makedirs(ofp)
+        if not os.path.exists(matrices_dir):
+            os.makedirs(matrices_dir)
+
+        eng = None
+        for i in range(len(subjects_list)):
+            zerofillednum = fillnumber2threedigits(i+1)
+            imat = os.path.join(infp, input_prefix + zerofillednum + input_postfix + ".mat")
+            omat = os.path.join(matrices_dir, input_prefix + zerofillednum + input_postfix + ".mat")
+            if os.path.exists(imat):
+                shutil.copy(imat, omat)
+            else:
+                raise IOError("ERROR in prepare_funcconn_groupanalysis_conn2nbs, input mat of subject " + str(i) + " does not exist")
+
+        eng = call_matlab_function_noret("create_conn_matrix_from_files", [self._global.spm_functions_dir], "'" + matrices_dir + "'" + ", " + str(nnodes) + ", 1", endengine=False, eng=eng)
+
+
+
+
 
     # endregion =================================================================================================================================================
 

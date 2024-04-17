@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import os
 from distutils.file_util import copy_file
+from typing import List, Any
 
+from Global import Global
+from Project import Project
 from data.SubjectsData import SubjectsData
 from group.spm_utilities import Regressor, Covariate, Nuisance
 
@@ -16,12 +19,12 @@ class ConnModels:
     This class provides methods for creating and managing the connection models used in the CONN tool.
 
     Args:
-        proj (ConnProject): The ConnProject object that this class is associated with.
+        proj (Project): The Project object that this class is associated with.
 
     Attributes:
         subjects_list (list): A list of Subject objects that are part of the current project.
         working_dir (str): The directory where temporary files are stored.
-        project (ConnProject): The ConnProject object that this class is associated with.
+        project (Project): The ConnProject object that this class is associated with.
         globaldata (GlobalData): The GlobalData object that is associated with the current project.
         string (str): A string that is used to compose the connection model files.
     """
@@ -34,7 +37,7 @@ class ConnModels:
         self.string             = ""  # used to compose models override
 
     def create_regressors_file(self, odp:str, regressors:List[Regressor], grouplabels:List[str], ofn:str="conn_covs",
-        data:str|SubjectsData=None, ofn_postfix:str="", subj_must_exist:bool=False):
+                                data:str|SubjectsData=None, ofn_postfix:str="", subj_must_exist:bool=False):
         """
         This method creates a regressors file that can be used with the FSL FEAT tool. The regressors file contains
         the regressors and covariates that will be used in the analysis.
@@ -149,7 +152,7 @@ class ConnModels:
 
     def create_regressors_file_ofsubset(self, odp:str, regressors:List[Regressor], wholesubjects_groups_or_labels:List[Any], grouplabels, ofn:str="conn_covs", data_file=None, ofn_postfix:str="", subj_must_exist:bool=False):
         """
-        This function creates a regressors file for the FSL FEAT tool, for a subset of the subjects in the current project.
+        This function creates a regressors file for the CONN tool, for a subset of the subjects in the current project.
         to be used when user want to insert groups description/covariates of a subset of the subjects included in the whole conn project.
         In this case, the script must insert zeros outside the rows described in grouplabels.
         the script assumes that all subjects specified in grouplabels, belong to Conn projects
@@ -202,7 +205,7 @@ class ConnModels:
 
         tot_expected_columns = ngroups*(1 + ncovs) + nnuis  # one for each group, ngroup for each covariate, one for each nuisance
 
-        empty_row = " ".join(["0" for _ in range(tot_expected_columns)]) # row value for subjects in the conn project but not in the given grouplabels subset
+        empty_row = " ".join(["0" for _ in range(tot_expected_columns)])  # row value for subjects in the conn project but not in the given grouplabels subset
 
         # ----------------------------------------------------------------------------------
         # get values of the subjects specified
@@ -245,7 +248,6 @@ class ConnModels:
         else:
             print("cannot manage more than 4 groups")
             return
-
 
         subjs_data = data.filter_subjects(whole_subjest_labels)
 
