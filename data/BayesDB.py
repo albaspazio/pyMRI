@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List
 
 import pandas
@@ -347,13 +349,13 @@ class BayesDB(MSHDB):
         list
             The list of MRI labels.
         """
-        total = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("mri"   , "==", 1)])
-        td    = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("group", "==", "TD"), FilterValues("mri", "==", 1)])
-        bd    = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("group", "==", "BD"), FilterValues("mri", "==", 1)])
-        sk    = self.sheets.main.select_subjlist(subj_labels, colconditions=[FilterValues("group", "==", "SZ"), FilterValues("mri", "==", 1)])
+        total = self.sheet_sd(self.main_name).select_subjlist(subj_labels, conditions=[FilterValues("mri"   , "==", 1)])
+        td    = self.sheet_sd(self.main_name).select_subjlist(subj_labels, conditions=[FilterValues("group", "==", "TD"), FilterValues("mri", "==", 1)])
+        bd    = self.sheet_sd(self.main_name).select_subjlist(subj_labels, conditions=[FilterValues("group", "==", "BD"), FilterValues("mri", "==", 1)])
+        sk    = self.sheet_sd(self.main_name).select_subjlist(subj_labels, conditions=[FilterValues("group", "==", "SZ"), FilterValues("mri", "==", 1)])
 
         return [total, td, bd, sk]
-    def bloodlabels(self, subj_labels: List[str] = None) -> List[int]:
+    def bloodlabels(self, subj_labels: List[str] = None) -> List[List[str]]:
         """
         Get the blood labels for the given subjects.
 
@@ -367,8 +369,7 @@ class BayesDB(MSHDB):
         List[int]
             The list of blood labels.
         """
-        total = self.sheets.main.select_subjlist(
-            subj_labels, colconditions=[FilterValues("immfen_code", "exist", 0)])
+        total = self.sheet_sd(self.main_name).select_subjlist(subj_labels, conditions=[FilterValues("immfen_code", "exist", 0)])
         th = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("T_HELP", "==", 1)])
         tr = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("T_REG", "==", 1)])
         nk = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("NK", "==", 1)])

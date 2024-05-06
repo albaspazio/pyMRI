@@ -137,7 +137,6 @@ class Subject:
         Args:
             images_labels (list, optional): A list of image labels to check for. If not provided,
                 the method will check for the existence of the full sequence. Defaults to None.
-
         Returns:
             bool: True if the image exists, False otherwise.
         """
@@ -234,6 +233,7 @@ class Subject:
         self.t1_cat_lh_surface          = Image(os.path.join(self.t1_cat_surface_dir, "lh.thickness.T1_" + self.label))
         self.t1_cat_resampled_surface   = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.T1_" + self.label + ".gii"))
         self.t1_cat_resampled_surface_longitudinal = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.rT1_" + self.label + ".gii"))
+        self.t1_cat_lhcentral_image     = Image(os.path.join(self.t1_cat_surface_dir, "lh.central.T1_" + self.label + ".gii"))
 
         self.t1_dartel_c1               = Image(os.path.join(self.t1_spm_dir, "c1T1_" + self.label))
         self.t1_dartel_rc1              = Image(os.path.join(self.t1_spm_dir, "rc1T1_" + self.label))

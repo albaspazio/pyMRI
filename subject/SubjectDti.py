@@ -475,7 +475,7 @@ class SubjectDti:
             if error_if_absent:
                 raise IOError("SubjectDti.convert2dsi given input image does not exist")
             else:
-                print("SubjectDti.convert2dsi given input image does not exist...skipping conversion")
+                print("SubjectDti.convert2dsi given input image (" + inputimg + ") does not exist...skipping conversion")
                 return
 
         rrun("dsi_studio --action=src --source=" + inputimg + ".nii.gz" + " --bval=" + bval + " --bvec=" + bvec + " --output=" + os.path.join(self.subject.dti_dsi_dir, self.subject.dti_image_label))

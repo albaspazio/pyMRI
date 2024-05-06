@@ -1,0 +1,15 @@
+matlabbatch{1}.spm.tools.cat.stools.surfextract.data_surf = {<INPUT_SUR>};
+matlabbatch{1}.spm.tools.cat.stools.surfextract.area = <DO_AREA>;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.gmv = <DO_GMV>;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.GI = <DO_GYR>;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.SD = <DO_SULCDEP>;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.FD = <DO_FRDIM>;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.tGI = 0;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.lGI = 0;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.GIL = 0;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.surfaces.IS = 0;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.surfaces.OS = 0;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.norm = 0;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.FS_HOME = '<UNDEFINED>';
+matlabbatch{1}.spm.tools.cat.stools.surfextract.nproc = <NPROC>;
+matlabbatch{1}.spm.tools.cat.stools.surfextract.lazy = 0;

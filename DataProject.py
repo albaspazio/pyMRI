@@ -11,6 +11,7 @@ from utility.exceptions import SubjectListException
 
 
 class DataProject:
+
     """
     A class for managing data and analysis scripts for a single project.
 
@@ -49,12 +50,12 @@ class DataProject:
 
         self.subjects_lists_file    = os.path.join(self.script_dir, "subjects_lists.json")
 
-        os.makedirs(self.script_dir,    exist_ok=True)
-        os.makedirs(self.r_dir,         exist_ok=True)
-        os.makedirs(self.input_data_dir,exist_ok=True)
+        os.makedirs(self.script_dir,     exist_ok=True)
+        os.makedirs(self.r_dir,          exist_ok=True)
+        os.makedirs(self.input_data_dir, exist_ok=True)
         os.makedirs(self.output_data_dir,exist_ok=True)
-        os.makedirs(self.stats_input,   exist_ok=True)
-        os.makedirs(self.stats_output,  exist_ok=True)
+        os.makedirs(self.stats_input,    exist_ok=True)
+        os.makedirs(self.stats_output,   exist_ok=True)
 
         self.globaldata = globaldata
 
