@@ -50,6 +50,9 @@ class SPMPostModel:
             # SPMContrasts.replace_1WAnova_contrasts(out_batch_job, spmmat, post_model)
             SPMContrasts.replace_contrasts(out_batch_job, spmmat, post_model)
 
+        elif postmodel_type == SPMConstants.OSTT:
+            SPMContrasts.replace_contrasts(out_batch_job, spmmat, post_model)
+
         elif postmodel_type == SPMConstants.TSTT:
             SPMContrasts.replace_contrasts(out_batch_job, spmmat, post_model)
 

@@ -63,7 +63,7 @@ def read_varlist_file(filepath: str, comment_char: str = "#") -> Dict[str, str]:
 # get a data list and return a \n separated string
 def list2spm_text_column(datalist: List[Any]) -> str:
     """
-    Convert a list of data into a SPM-formatted text column.
+    Convert a list of data into a SPM-formatted text column. numbers separated by \n without trailing square brackets
 
     Args:
         datalist (List[Any]): A list of data.
@@ -76,6 +76,10 @@ def list2spm_text_column(datalist: List[Any]) -> str:
 
     for r in datalist:
         datastr += (str(r) + "\n")
+
+    # remove starting [ and ending ] brackets if present.
+    datastr = datastr.replace("[", "")
+    datastr = datastr.replace("]", "")
     return datastr
 
 

@@ -85,7 +85,7 @@ class Project:
 
         self.globaldata             = globaldata
 
-        self.subjects           = []
+        self.subjects:list[Subject] = []
         self.subjects_labels    = []
         self.nsubj              = 0
 

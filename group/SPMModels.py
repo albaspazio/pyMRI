@@ -50,7 +50,7 @@ class SPMModels:
         root_outdir : str
             The root output directory for the group analysis.
         stat_type : int
-            The type of statistical analysis to perform. Can be one of SPMConstants values: "MULTREGR", "TSTT", "OWA", or "TWA".
+            The type of statistical analysis to perform. Can be one of SPMConstants values: "MULTREGR", "OSTT", "TSTT", "OWA", or "TWA".
         anal_type : int
             The type of analysis to perform. Can be one of SPMConstants values: VBM_DARTEL, CAT, or FMRI.
         anal_name : str
@@ -145,6 +145,8 @@ class SPMModels:
         if spm_template_name is None:
             if stat_type == SPMConstants.MULTREGR:
                 spm_template_name = "group_model_spm_stats_1group_multiregr_estimate"
+            elif stat_type == SPMConstants.OSTT:
+                spm_template_name = "group_model_spm_stats_1sample_ttest_estimate"
             elif stat_type == SPMConstants.TSTT:
                 spm_template_name = "group_model_spm_stats_2samples_ttest_estimate"
             elif stat_type == SPMConstants.OWA:
@@ -160,6 +162,8 @@ class SPMModels:
         # compose images string
         if stat_type == SPMConstants.MULTREGR:
             SPMStatsUtils.compose_images_string_1GROUP_MULTREGR(groups_instances[0], out_batch_job, input_images, mustExist)
+        elif stat_type == SPMConstants.OSTT:
+            SPMStatsUtils.compose_images_string_1sTT(groups_instances[0], out_batch_job, input_images, mustExist)
         elif stat_type == SPMConstants.TSTT:
             SPMStatsUtils.compose_images_string_2sTT(groups_instances, out_batch_job, input_images, mustExist)
         elif stat_type == SPMConstants.OWA:

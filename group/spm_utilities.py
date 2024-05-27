@@ -185,31 +185,36 @@ class SubjCondition:
         self._orth       = str(orth)
 
     @property
-    def duration(self):
+    def duration(self) -> str:
         """
         The duration of the condition.
-
         Returns
         -------
-        duration : float or list of float
+        duration : float or [list of float]
             The duration of the condition.
         """
         if isinstance(self._duration, np.ndarray):
-            return list2spm_text_column(self._duration)
+            text = "[" + list2spm_text_column(self._duration) + "]"
         else:
-            return str(self._duration)
+            text = str(self._duration)
+        return text.replace("\n", " ")
 
     @property
-    def onsets(self):
+    def onsets(self) -> str:
         """
         The onset times of the condition.
 
         Returns
         -------
-        onsets : list of float
+        onsets : list of float, coded as string, without trailing square brackets[]
             The onset times of the condition.
         """
-        return list2spm_text_column(self._onsets)
+        datas = []
+        if self._onsets.shape[0] == 1:
+            # data are in the other dimension
+            for n in self._onsets[0]:
+                datas.append(n)
+        return "[" + list2spm_text_column(datas) + "]"
 
     @property
     def orth(self):

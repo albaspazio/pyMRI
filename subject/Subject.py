@@ -356,7 +356,9 @@ class Subject:
         self.fmri_aroma_image           = Image(os.path.join(self.fmri_aroma_dir, "denoised_func_data_nonaggr"))
         self.fmri_regstd_aroma_dir      = os.path.join(self.fmri_aroma_dir, "reg_standard")
         self.fmri_regstd_aroma_image    = Image(os.path.join(self.fmri_regstd_aroma_dir, "filtered_func_data"))
+        self.fmri_stats_dir             = os.path.join(self.fmri_dir, "stats")
 
+        self.fmri_logs_dir              = os.path.join(self.project.script_dir, "fmri", "logs")
         # ------------------------------------------------------------------------------------------------------------------------
         # WB
         # ------------------------------------------------------------------------------------------------------------------------
@@ -1603,8 +1605,11 @@ class Subject:
                     raise Exception("ERROR IN can_run_analysis: in case of fmri, analysis_params must be a strings list")
 
                 imgs = [os.path.join(self.fmri_dir, self.label + ilab) for ilab in analysis_params]
-                fmri_images = Images(analysis_params)
+                fmri_images = Images(imgs)
 
-            return Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("swar").exist or \
+                # logs_files = [ os.path.join(self.fmri_logs_dir, ) for img in fmri_images]
+
+
+            return (Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("swar").exist or \
                    Images(fmri_images).add_prefix2name("a").exist or Images(fmri_images).add_prefix2name("ar").exist or\
-                   Images(fmri_images).add_prefix2name("wa").exist or Images(fmri_images).add_prefix2name("war").exist
+                   Images(fmri_images).add_prefix2name("wa").exist or Images(fmri_images).add_prefix2name("war").exist)
