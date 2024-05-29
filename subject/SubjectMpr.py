@@ -611,6 +611,7 @@ class SubjectMpr:
                     use_existing_nii:bool=True,
                     use_dartel:bool=True,
                     smooth_surf:int=None,
+                    extract_extra:bool=True,
                     atlases=None,
                     do_cleanup=Global.CLEANUP_LVL_MED,
                     spm_template_name="cat27_segment_customizedtemplate_tiv_smooth"):
@@ -720,7 +721,10 @@ class SubjectMpr:
 
             sed_inplace(out_batch_job, "<SURF_POSTPROCESS>", resample_string)
 
-            call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], log)
+            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], log, endengine=False)
+
+            if extract_extra is True:
+                self.cat_surf_extrameasure(eng=eng)
 
             if not use_existing_nii:
                 inputimage.upath.rm()
@@ -964,52 +968,18 @@ class SubjectMpr:
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine, eng=eng)
 
-    def cat_surf_extrameasure(self, session=1, num_proc=1, incentral_surf=None, endengine:bool=True, eng=None):
+    def cat_surf_extrameasure(self, session=1, num_proc=1, inlhcentral_surf=None, endengine:bool=True, eng=None):
 
-        if incentral_surf is None:
-            incentral_surf = self.subject.self.t1_cat_lhcentral_image
+        if inlhcentral_surf is None:
+            inlhcentral_surf = self.subject.t1_cat_lhcentral_image
 
-        spm_template_name = "subjs_cat_surf_extract"
+        spm_template_name = "subj_cat_surf_folding_sulcdepth_resamplesmooth"
 
         out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
         subj = self.subject.get_properties(session)
 
-        resample_string = ""
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.data_surf = {'" + incentral_surf + "'};\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.area = " + incentral_surf + ";\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.gmv = " + incentral_surf + ";\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.GI = " + incentral_surf + ";\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.SD = " + incentral_surf + ";\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.FD = " + incentral_surf + ";\n"
-
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.tGI = 0;\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.lGI = 0;\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.GIL = 0;\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.surfaces.IS = 0;\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.surfaces.OS = 0;\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.norm = 0;\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.FS_HOME = '<UNDEFINED>';\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.nproc = " + str(num_proc) + ";\n"
-        resample_string = resample_string + "matlabbatch{1}.spm.tools.cat.stools.surfextract.lazy = 0;\n"
-
-        write_text_file(out_batch_job, resample_string)
-
-
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.data_surf = {<INPUT_SUR>};
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.area = <DO_AREA>;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.gmv = <DO_GMV>;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.GI = <DO_GYR>;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.SD = <DO_SULCDEP>;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.FD = <DO_FRDIM>;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.tGI = 0;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.lGI = 0;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.GIL = 0;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.surfaces.IS = 0;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.surfaces.OS = 0;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.norm = 0;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.FS_HOME = '<UNDEFINED>';
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.nproc = <NPROC>;
-        # matlabbatch{1}.spm.tools.cat.stools.surfextract.lazy = 0;
+        sed_inplace(out_batch_job, "<LH_CENTRAL>", inlhcentral_surf)
+        sed_inplace(out_batch_job, "<N_PROC>", str(num_proc))
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine, eng=eng)
 

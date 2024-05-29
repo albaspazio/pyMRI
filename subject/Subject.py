@@ -642,7 +642,7 @@ class Subject:
                  do_sienax:bool=False, bet_sienax_param_string:str="-SNB -f 0.2",
                  do_reg:bool=True, do_nonlinreg:bool=True, do_seg:bool=True,
                  do_spm_seg:bool=False, spm_seg_templ:str="", spm_seg_over_bet:bool=False,
-                 do_cat_seg:bool=False, cat_use_dartel:bool=False, do_cat_surf:bool=True, cat_smooth_surf:int=None,
+                 do_cat_seg:bool=False, cat_use_dartel:bool=False, do_cat_surf:bool=True, cat_smooth_surf:int=None, do_cat_extra:bool=True,
                  do_cat_seg_long:bool=False, cat_long_sessions:List[int]=None,
                  do_cleanup:int=Global.CLEANUP_LVL_MIN,
                  use_lesionmask:bool=False, lesionmask:str="lesionmask",
@@ -713,6 +713,8 @@ class Subject:
                             run cortical thickness analysis
         cat_smooth_surf : int = None
                             The smoothing kernel size for CAT toolbox segmentation.
+        do_cat_extra : bool = True,
+                            Extract also cortical folding and sulcal depth (form left central gii) and smooth them by 20 and 12 mm
         do_cat_seg_long : bool = False
                             perform CAT toolbox segmentation with long sessions.
         cat_long_sessions :List[int] = None
@@ -859,7 +861,8 @@ class Subject:
                         spm_template_name=self._global.cat_template_name,
                         use_dartel=cat_use_dartel,
                         calc_surfaces=do_cat_surf,
-                        smooth_surf=cat_smooth_surf)
+                        smooth_surf=cat_smooth_surf,
+                        extract_extra=do_cat_extra)
 
                 if do_cat_seg_long:
                     self.mpr.cat_segment_longitudinal(
