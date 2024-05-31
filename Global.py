@@ -12,8 +12,17 @@ class Global:
     CLEANUP_LVL_MED = 1
     CLEANUP_LVL_HI  = 1
 
-    def __init__(self, fsl_ver, ignore_warnings=True):
+    def __init__(self, fsl_ver:str, ignore_warnings:bool=True):
+        """
+        Initialize the Global class.
 
+        Args:
+            fsl_ver (str): The version of FSL to use.
+            ignore_warnings (bool, optional): Whether to ignore warnings. Defaults to True.
+
+        Raises:
+            Exception: If the local.settings file is not present.
+        """
         fslswitch = fsl_switcher.FslSwitcher()
         print(fslswitch.activate_fsl_version(fsl_ver))
 
@@ -74,6 +83,7 @@ class Global:
             self.cat_shooting_template      = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_0_GS.nii")
             self.cat_template_name          = "subj_cat28_segment_shooting_tiv_smooth"
         self.cat_smooth_surf                = 12
+        self.cat_smooth_gyrif               = 20
 
         self.spm_tissue_map                 = Image(os.path.join(self.spm_dir, "tpm", "TPM.nii"), must_exist=True, msg="SPM's Standard Images not present")
         self.spm_icv_mask                   = Image(os.path.join(self.spm_dir, "tpm", "mask_ICV.nii"), must_exist=True, msg="SPM's Standard Images not present")
@@ -106,11 +116,24 @@ class Global:
 
     @staticmethod
     def get_spm_template_dir():
+        """Get the path to the SPM templates directory.
+
+        Returns:
+            str: The path to the SPM templates directory.
+        """
         filename            = inspect.getframeinfo(inspect.currentframe()).filename
         return os.path.join(os.path.dirname(os.path.abspath(filename)), "templates", "spm")
 
     def check_paths(self):
+        """
+        Check the presence of important folders and files.
 
+        Raises:
+            Exception: If any of the required folders or files are not present.
+
+        Args:
+            self (Global): The Global object.
+        """
         if len(self.project_scripts_dir) > 0:
             if os.path.isdir(self.project_scripts_dir) is False:
                 raise Exception("Error: Scripts folder is not present")

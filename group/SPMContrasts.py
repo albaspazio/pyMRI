@@ -1,18 +1,45 @@
-from group.spm_utilities import Contrast, TContrast, FContrast
+from typing import List
+
+from group.PostModel import PostModel
+from group.spm_utilities import Contrast, TContrast, Regressor
 from utility.utilities import is_list_of
 from utility.fileutilities import sed_inplace
 
 
 class SPMContrasts:
+    """
+    This class contains functions for writing SPM contrasts.
 
+    """
     # -------------------------------------------------------------------------------------------
     # first level fmri contrasts
     # -------------------------------------------------------------------------------------------
 
     # contrasts is a list of dictionaries with the following field:  name, weights, sessrep
     @staticmethod
-    def replace_1stlevel_contrasts(out_batch_job, spmmath, contrasts, deleteexisting=True, batch_id=4):
+    def replace_1stlevel_contrasts(out_batch_job:str, spmmath:str, contrasts:List[Regressor], deleteexisting:bool=True, batch_id:int=4):
+        """
+        This function creates the 1st level contrasts in the batch job file.
 
+        Parameters
+        ----------
+        out_batch_job : str
+            The path to the batch job file.
+        spmmath : str
+            The path to the SPM mat file.
+        contrasts : list
+            A list of contrasts.
+        deleteexisting : bool, optional
+            A flag indicating whether to delete existing contrasts. The default is True.
+        batch_id : int, optional
+            The ID of the Matlab batch. The default is 4.
+
+        Returns
+        -------
+        constrasts_str : str
+            The Matlab code for setting the 1st level contrasts.
+
+        """
         if not is_list_of(contrasts, Contrast):
             raise Exception("Error in spm_get_1stlevel_contrasts, given contrasts list is not of type Contrast")
 
@@ -38,13 +65,32 @@ class SPMContrasts:
         return constrasts_str
 
     # -------------------------------------------------------------------------------------------
-    # second level fmri contrasts
+    # region second level fmri contrasts
     # -------------------------------------------------------------------------------------------
-
-    # standard contrast writing given contrasts as-is
     @staticmethod
-    def replace_contrasts(out_batch_job, spmmath, post_model, deleteexisting=True, batch_id=1):
+    def replace_contrasts(out_batch_job:str, spmmath:str, post_model:PostModel, deleteexisting:bool=True, batch_id:int=1):
+        """
+        This function creates the standard (as-is) contrasts in the batch job file.
 
+        Parameters
+        ----------
+        out_batch_job : str
+            The path to the batch job file.
+        spmmath : str
+            The path to the SPM mat file.
+        post_model : PostModel
+            The post-model object.
+        deleteexisting : bool, optional
+            A flag indicating whether to delete existing contrasts. The default is True.
+        batch_id : int, optional
+            The ID of the Matlab batch. The default is 1.
+
+        Returns
+        -------
+        constrasts_str : str
+            The Matlab code for setting the contrasts.
+
+        """
         if post_model.isSpm:
             con_str = "spm.stats.con"
         else:
@@ -75,11 +121,30 @@ class SPMContrasts:
 
         return constrasts_str
 
-    # create multregr contrasts for spm and cat. post_model does not contain a Contrast list
-    # names and weights are derived from regressors
     @staticmethod
-    def replace_1group_multregr_contrasts(out_batch_job, spmmath, post_model, deleteexisting=True, batch_id=1):
+    def replace_1group_multregr_contrasts(out_batch_job:str, spmmath:str, post_model:PostModel, deleteexisting:bool=True, batch_id:int=1):
+        """
+        This function creates the multiple regression contrasts in the batch job file.
+        post_model does not contain a Contrast list, names and weights are derived from regressors
 
+        Parameters
+        ----------
+        out_batch_job : str
+            The path to the batch job file.
+        spmmath : str
+            The path to the SPM mat file.
+        post_model : PostModel
+            The post-model object.
+        deleteexisting : bool, optional
+            A flag indicating whether to delete existing contrasts. The default is True.
+        batch_id : int, optional
+            The ID of the Matlab batch. The default is 1.
+
+        Returns
+        -------
+        constrasts_str : str
+            The Matlab code for setting the contrasts.
+        """
         if post_model.isSpm:
             con_str = "spm.stats.con"
         else:
@@ -126,12 +191,29 @@ class SPMContrasts:
         
         return constrasts_str
 
-    # create 1W anova contrasts for spm and cat
-    # post_model.contrast_names contains levels' names
-    # manages only 3 or 4 levels
     @staticmethod
-    def replace_1WAnova_contrasts(out_batch_job, spmmath, post_model, deleteexisting=True, batch_id=1):
+    def replace_1WAnova_contrasts(out_batch_job:str, spmmath:str, post_model:PostModel, deleteexisting:bool=True, batch_id:int=1):
+        """
+        This function creates the 1-way ANOVA contrasts in the batch job file.
+        post_model.contrast_names contains levels' names, manages only 3 or 4 levels
+        Parameters
+        ----------
+        out_batch_job : str
+            The path to the batch job file.
+        spmmath : str
+            The path to the SPM mat file.
+        post_model : PostModel
+            The post-model object.
+        deleteexisting : bool, optional
+            A flag indicating whether to delete existing contrasts. The default is True.
+        batch_id : int, optional
+            The ID of the Matlab batch. The default is 1.
 
+        Returns
+        -------
+        constrasts_str : str
+            The Matlab code for setting the contrasts.
+        """
         if not is_list_of(post_model.contrasts, Contrast):
             raise Exception("Error in replace_1WAnova_contrasts, given contrasts list is not of type Contrast")
 
@@ -218,3 +300,5 @@ class SPMContrasts:
         sed_inplace(out_batch_job, "<CONTRASTS>", constrasts_str)
 
         return constrasts_str
+
+    # endregion

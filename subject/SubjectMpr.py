@@ -18,13 +18,23 @@ from utility.fileutilities import sed_inplace, write_text_file
 # ==================================================================================================================================================
 
 class SubjectMpr:
+    """
+    This class contains methods for pre-processing and post-processing of MPR images.
+    """
     BIAS_TYPE_NO = 0
     BIAS_TYPE_WEAK = 1
     BIAS_TYPE_STRONG = 2
 
-    def __init__(self, subject, _global):
-        self.subject = subject
-        self._global = _global
+    def __init__(self, subject:'Subject', _global:Global):
+        """
+        Initialize the SubjectMpr class.
+
+        Args:
+            subject (Subject): The subject object.
+            _global (Global): The global object.
+        """
+        self.subject:'Subject' = subject
+        self._global:Global  = _global
 
     # pre-processing:
     #   FIXING NEGATIVE RANGE
@@ -36,11 +46,29 @@ class SubjectMpr:
     def prebet(self,
                odn="anat", imgtype=1, smooth=10,
                biascorr_type=BIAS_TYPE_STRONG,
-               do_reorient=True, do_crop=True,
-               do_bet=True,
-               do_overwrite=False,
-               use_lesionmask=False, lesionmask=""
+               do_reorient:bool=True, do_crop:bool=True,
+               do_bet:bool=True,
+               do_overwrite:bool=False,
+               use_lesionmask:bool=False, lesionmask:str=""
                ):
+        """
+         Perform pre-processing steps on the MPR images.
+
+         Args:
+             odn (str, optional): The output directory name. Defaults to "anat".
+             imgtype (int, optional): The image type. Defaults to 1.
+             smooth (int, optional): The smoothing kernel size. Defaults to 10.
+             biascorr_type (int, optional): The type of bias correction. Defaults to BIAS_TYPE_STRONG.
+             do_reorient (bool, optional): Whether to reorient the image. Defaults to True.
+             do_crop (bool, optional): Whether to crop the image. Defaults to True.
+             do_bet (bool, optional): Whether to perform brain extraction. Defaults to True.
+             do_overwrite (bool, optional): Whether to overwrite existing files. Defaults to False.
+             use_lesionmask (bool, optional): Whether to use an external lesion mask. Defaults to False.
+             lesionmask (str, optional): The path to the lesion mask. Defaults to "lesionmask".
+
+         Returns:
+             bool: Whether the pre-processing was successful.
+         """
         niter = 5
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
         curdir = os.getcwd()
@@ -245,13 +273,31 @@ class SubjectMpr:
 
     def bet(self,
             odn="anat", imgtype=1,
-            do_bet=True, betfparam=None, bettypeparam="-R",
-            do_reg=True, do_nonlinreg=True,
-            do_skipflirtsearch=False,
-            do_overwrite=False,
-            use_lesionmask=False, lesionmask="lesionmask"
+            do_bet:bool=True, betfparam=None, bettypeparam="-R",
+            do_reg:bool=True, do_nonlinreg:bool=True,
+            do_skipflirtsearch:bool=False,
+            do_overwrite:bool=False,
+            use_lesionmask:bool=False, lesionmask="lesionmask"
             ):
+        """
+        Perform brain extraction on the MPR images.
 
+        Args:
+            odn (str, optional): The output directory name. Defaults to "anat".
+            imgtype (int, optional): The image type. Defaults to 1.
+            do_bet (bool, optional): Whether to perform brain extraction. Defaults to True.
+            betfparam (list, optional): The list of BET f parameters. Defaults to None.
+            bettypeparam (str, optional): The BET transformation type. Defaults to "-R".
+            do_reg (bool, optional): Whether to perform registration. Defaults to True.
+            do_nonlinreg (bool, optional): Whether to perform non-linear registration. Defaults to True.
+            do_skipflirtsearch (bool, optional): Whether to skip FLIRT search. Defaults to False.
+            do_overwrite (bool, optional): Whether to overwrite existing files. Defaults to False.
+            use_lesionmask (bool, optional): Whether to use an external lesion mask. Defaults to False.
+            lesionmask (str, optional): The path to the lesion mask. Defaults to "lesionmask".
+
+        Returns:
+            bool: Whether the brain extraction was successful.
+        """
         if betfparam is None:
             betfparam = []
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
@@ -401,15 +447,30 @@ class SubjectMpr:
     # if requested: replace label-t1_brain and label-t1_brain_mask (produced by BET)
     # if requested: replace brainmask (produced by FreeSurfer)  BUGGED !!! ignore it
     def spm_segment(self,
-                    odn="anat", imgtype=1,
-                    do_overwrite=False,
-                    do_bet_overwrite=False,
-                    add_bet_mask=False,
-                    set_origin=False,
-                    seg_templ="",
-                    spm_template_name="subj_spm_segment_tissuevolume"
+                    odn:str="anat", imgtype:int=1,
+                    do_overwrite:bool=False,
+                    do_bet_overwrite:bool=False,
+                    add_bet_mask:bool=False,
+                    set_origin:bool=False,
+                    seg_templ:str="",
+                    spm_template_name:str="subj_spm_segment_tissuevolume"
                     ):
+        """
+        Perform segmentation using SPM.
 
+        Args:
+            odn (str, optional): The output directory name. Defaults to "anat".
+            imgtype (int, optional): The image type. Defaults to 1.
+            do_overwrite (bool, optional): Whether to overwrite existing files. Defaults to False.
+            do_bet_overwrite (bool, optional): Whether to overwrite existing brain extraction files. Defaults to False.
+            add_bet_mask (bool, optional): Whether to add the BET mask to the SPM mask. Defaults to False.
+            set_origin (bool, optional): Whether to set the origin of the NIfTI image. Defaults to False.
+            seg_templ (str, optional): The path to the segmentation template. Defaults to "".
+            spm_template_name (str, optional): The name of the SPM template. Defaults to "subj_spm_segment_tissuevolume".
+
+        Returns:
+            bool: Whether the segmentation was successful.
+        """
         # define placeholder variables for input dir and image name
         if imgtype == 1:
             anatdir = os.path.join(self.subject.t1_dir, odn)
@@ -502,7 +563,16 @@ class SubjectMpr:
             log.close()
             print(e)
 
-    def spm_segment_check(self, check_dartel=True):
+    def spm_segment_check(self, check_dartel:bool=True):
+        """
+        Check the SPM segmentation results for the given subject.
+
+        Args:
+            check_dartel (bool, optional): Whether to check the Dartel results. Defaults to True.
+
+        Returns:
+            bool: Whether the SPM segmentation results are valid.
+        """
         icv_file = os.path.join(self.subject.t1_spm_dir, "icv_" + self.subject.label + ".dat")
 
         if not os.path.exists(icv_file):
@@ -531,16 +601,17 @@ class SubjectMpr:
     # assuming the bet produced a smaller mask in outer part of the gray matter, I add also the bet mask
     # if requested: replace label-t1_brain and label-t1_brain_mask (produced by BET)
     def cat_segment(self,
-                    odn="anat", imgtype=1,
-                    do_overwrite=False,
-                    set_origin=False,
-                    seg_templ="",
-                    coreg_templ="",
-                    calc_surfaces=True,
+                    odn:str="anat", imgtype:int=1,
+                    do_overwrite:bool=False,
+                    set_origin:bool=False,
+                    seg_templ:str="",
+                    coreg_templ:str="",
+                    calc_surfaces:bool=True,
                     num_proc=1,
-                    use_existing_nii=True,
-                    use_dartel=True,
-                    smooth_surf=None,
+                    use_existing_nii:bool=True,
+                    use_dartel:bool=True,
+                    smooth_surf:int=None,
+                    extract_extra:bool=True,
                     atlases=None,
                     do_cleanup=Global.CLEANUP_LVL_MED,
                     spm_template_name="cat27_segment_customizedtemplate_tiv_smooth"):
@@ -650,7 +721,10 @@ class SubjectMpr:
 
             sed_inplace(out_batch_job, "<SURF_POSTPROCESS>", resample_string)
 
-            call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], log)
+            eng = call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], log, endengine=False)
+
+            if extract_extra is True:
+                self.cat_surf_extrameasure(eng=eng)
 
             if not use_existing_nii:
                 inputimage.upath.rm()
@@ -665,7 +739,7 @@ class SubjectMpr:
             log.close()
             print(e)
 
-    def cat_segment_check(self, calc_surfaces=True):
+    def cat_segment_check(self, calc_surfaces:bool=True):
         icv_file = os.path.join(self.subject.t1_cat_dir, "tiv_" + self.subject.label + ".txt")
 
         if not os.path.exists(icv_file):
@@ -699,15 +773,15 @@ class SubjectMpr:
     def cat_segment_longitudinal(self,
                                  sessions,
                                  odn="anat", imgtype=1,
-                                 do_overwrite=False,
-                                 set_origin=False,
-                                 seg_templ="",
-                                 coreg_templ="",
-                                 calc_surfaces=True,
+                                 do_overwrite:bool=False,
+                                 set_origin:bool=False,
+                                 seg_templ:str="",
+                                 coreg_templ:str="",
+                                 calc_surfaces:bool=True,
                                  num_proc=1,
-                                 use_dartel=False,
+                                 use_dartel:bool=False,
                                  smooth_surf=None,
-                                 use_existing_nii=True,
+                                 use_existing_nii:bool=True,
                                  do_cleanup=Global.CLEANUP_LVL_MED,
                                  spm_template_name="cat_segment_longitudinal_customizedtemplate_tiv_smooth"):
 
@@ -835,7 +909,7 @@ class SubjectMpr:
             traceback.print_exc()
             print(e)
 
-    def cat_segment_longitudinal_check(self, sessions, calc_surfaces=True):
+    def cat_segment_longitudinal_check(self, sessions, calc_surfaces:bool=True):
 
         err = ""
 
@@ -868,7 +942,7 @@ class SubjectMpr:
 
         return err
 
-    def cat_surf_resample(self, session=1, num_proc=1, isLong=False, mesh32k=1, smooth_surf=None, endengine=True, eng=None):
+    def cat_surf_resample(self, session=1, num_proc=1, isLong=False, mesh32k=1, smooth_surf=None, endengine:bool=True, eng=None):
 
         if smooth_surf is None:
             smooth_surf = self.subject.t1_cat_surface_resamplefilt
@@ -894,7 +968,22 @@ class SubjectMpr:
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine, eng=eng)
 
-    def cat_tiv_calculation(self, session=1, isLong=False, endengine=True, eng=None):
+    def cat_surf_extrameasure(self, session=1, num_proc=1, inlhcentral_surf=None, endengine:bool=True, eng=None):
+
+        if inlhcentral_surf is None:
+            inlhcentral_surf = self.subject.t1_cat_lhcentral_image
+
+        spm_template_name = "subj_cat_surf_folding_sulcdepth_resamplesmooth"
+
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "mpr", postfix=self.subject.label)
+        subj = self.subject.get_properties(session)
+
+        sed_inplace(out_batch_job, "<LH_CENTRAL>", inlhcentral_surf)
+        sed_inplace(out_batch_job, "<N_PROC>", str(num_proc))
+
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir, self._global.spm_dir], endengine=endengine, eng=eng)
+
+    def cat_tiv_calculation(self, session=1, isLong:bool=False, endengine:bool=True, eng=None):
 
         spm_template_name = "mpr_cat_tiv_calculation"
 
@@ -953,7 +1042,7 @@ class SubjectMpr:
 
         call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir], endengine=endengine, eng=eng)
 
-    def surf_resampled_longitudinal_diff(self, sessions, outdir="", matlab_func="subtract_gifti"):
+    def surf_resampled_longitudinal_diff(self, sessions, outdir:str="", matlab_func="subtract_gifti"):
 
         if len(sessions) != 2:
             print("Error in surf_resampled_longitudinal_diff...given sessions are not 2")
@@ -979,10 +1068,10 @@ class SubjectMpr:
     def postbet(self,
                 odn="anat", imgtype=1, smooth=10,
                 betfparam=0.5,
-                do_reg=True, do_nonlinreg=True,
-                do_seg=True,
-                do_overwrite=False,
-                use_lesionmask=False, lesionmask="lesionmask"):
+                do_reg:bool=True, do_nonlinreg:bool=True,
+                do_seg:bool=True,
+                do_overwrite:bool=False,
+                use_lesionmask:bool=False, lesionmask="lesionmask"):
         niter = 5
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
 
@@ -1187,7 +1276,7 @@ class SubjectMpr:
             log.close()
             print(e)
 
-    def first(self, structures="", t1_image="", odn=""):
+    def first(self, structures:str="", t1_image:str="", odn:str=""):
 
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
 
@@ -1289,7 +1378,7 @@ class SubjectMpr:
     # check whether substituting bet brain with the one created by freesurfer.
     # fs mask is usually bigger then fsl/spm brain, so may need some erosion
     # since the latter op create holes within the image. I create a mask with the latter and the bet mask (which must be coregistered since fs ones are coronal)
-    def use_fs_brainmask(self, backtransfparams=" RL PA IS ", erosiontype=" -kernel boxv 5 ", is_interactive=True, do_clean=True):
+    def use_fs_brainmask(self, backtransfparams=" RL PA IS ", erosiontype=" -kernel boxv 5 ", is_interactive:bool=True, do_clean:bool=True):
 
         t1_fs_brainmask_data_orig       = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig")
         t1_fs_brainmask_data_orig_ero   = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero")
@@ -1319,7 +1408,7 @@ class SubjectMpr:
                     t1_fs_brainmask_data_orig.cpath,
                     t1_fs_brainmask_data_orig_ero.cpath]).rm()
 
-    def use_fs_brainmask_exec(self, add_previous=False, do_clean=True):
+    def use_fs_brainmask_exec(self, add_previous:bool=False, do_clean:bool=True):
 
         t1_fs_brainmask_data_orig_ero       = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero")
         t1_fs_brainmask_data_orig_ero_mask  = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero_mask")
@@ -1345,7 +1434,7 @@ class SubjectMpr:
 
     # check whether substituting bet brain with the one created by SPM-segment.
     # since the SPM GM+WM mask contains holes within the image. I create a mask with the latter and the bet mask (which must be coregistered since fs ones are coronal)
-    def use_spm_brainmask(self, backtransfparams=" RL PA IS ", erosiontype=" -kernel boxv 5 ", is_interactive=True, do_clean=True):
+    def use_spm_brainmask(self, backtransfparams=" RL PA IS ", erosiontype=" -kernel boxv 5 ", is_interactive:bool=True, do_clean:bool=True):
 
         t1_fs_brainmask_data_orig           = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig")
         t1_fs_brainmask_data_orig_ero       = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero")
@@ -1371,7 +1460,7 @@ class SubjectMpr:
                     t1_fs_brainmask_data_orig.cpath,
                     t1_fs_brainmask_data_orig_ero.cpath]).rm()
 
-    def use_spm_brainmask_exec(self, do_clean=True):
+    def use_spm_brainmask_exec(self, do_clean:bool=True):
 
         t1_fs_brainmask_data_orig_ero       = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero")
         t1_fs_brainmask_data_orig_ero_mask  = self.subject.t1_fs_brainmask_data.add_postfix2name("_orig_ero_mask")

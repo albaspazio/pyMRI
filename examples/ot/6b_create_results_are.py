@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
                 # plot_data.histogram_plot_2groups(str_lists, os.path.join(RESULTS4_OUT_DIR, "fig_" + roi["roi"] + "_" + roi["rsn"] + ".png"), "4", 1)
 
-                data = [float(d) * (-1) for d in subjects_data.get_column("T2NoGo")]  # NoGo are errors: I want hits..since data are demeaned I can just invert the sign
+                data = [float(d) * (-1) for d in subjects_data.get_subjects_column(colname="T2NoGo")]  # NoGo are errors: I want hits..since data are demeaned I can just invert the sign
                 plot_data.scatter_plot_2groups(str_lists, data, os.path.join(RESULTS4_OUT_DIR,"fig_" + roi["roi"] + "_" + roi["rsn"] + ".png"), "4", 1, colors=("white", "green"))
                 plot_data.scatter_plot_2groups(str_lists, data, os.path.join(RESULTS4_OUT_DIR, "fig_" + roi["roi"] + "_" + roi["rsn"] + ".png"), "4", 1, colors=("red", "white"))
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
                 pe = rrun("fslstats " + img + " -m -k " + res_mask)
                 sbfc_pe_train.append(float(pe))
 
-            data = [float(d) * (-1) for d in subjects_data.get_column("T1NoGo")]  # NoGo are errors: I want hits..since data are demeaned I can just invert the sign
+            data = [float(d) * (-1) for d in subjects_data.get_subjects_column(colname="T1NoGo")]  # NoGo are errors: I want hits..since data are demeaned I can just invert the sign
             plot_data.scatter_plot_dataserie(sbfc_pe_train, data[24:],os.path.join(RESULTS_SBFC_OUT_DIR, "fig_T1NoGo" + ".png"), "green", "training")
             plot_data.scatter_plot_dataserie(sbfc_pe_ctrl, data[0:24], os.path.join(RESULTS_SBFC_OUT_DIR, "fig_T1NoGo" + ".png"), "red", "controls")
 

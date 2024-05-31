@@ -1,4 +1,39 @@
-# from matlab.engine import
+"""
+This class provides a set of static methods to manage Matlab sessions and execute Matlab functions.
+
+The class provides the following methods:
+
+    start_matlab: Starts a new Matlab session or connects to an existing one.
+
+    call_matlab_function: Calls a Matlab function and returns the result.
+
+    call_matlab_function_noret: Calls a Matlab function that does not return a value.
+
+    call_matlab_spmbatch: Calls a SPM batch file that does not return a value.
+
+The class can be used as follows:
+
+import matlab.engine
+import os
+
+# Start a new Matlab session
+eng = MatlabManager.start_matlab()
+
+# Add the current directory to the Matlab path
+eng.addpath(os.path.dirname(__file__))
+
+# Call a Matlab function and get the result
+result = MatlabManager.call_matlab_function('myfunction', params='param1, param2')
+
+# Disconnect from the Matlab session
+eng.quit()
+
+# Call a Matlab function that does not return a value
+MatlabManager.call_matlab_function_noret('myfunction2')
+
+# Call a SPM batch file
+MatlabManager.call_matlab_spmbatch('myspmbatchfile')
+"""
 import os
 import subprocess
 from random import randint
@@ -8,26 +43,47 @@ import matlab.engine.engineerror
 
 
 class MatlabManager:
+    """
+    A class for managing Matlab sessions and running Matlab functions.
 
-    SESSION_NEW_PERSISTENT  = 1
-    SESSION_NEW_NOTSHARED   = 2
-    SESSION_REUSE_FIRST     = 3
-    SESSION_REUSE_NAME      = 4
+    Attributes:
+        None
 
-    # def __new__(cls):
-    #     if not hasattr(cls, 'instance'):
-    #         cls.instance = super(MatlabManager, cls).__new__(cls)
-    #     return cls.instance
+    Methods:
+        start_matlab: Starts a new Matlab session or connects to an existing one.
+        call_matlab_function: Runs a Matlab function and returns the result.
+        call_matlab_function_noret: Runs a Matlab function that does not return a result.
+        call_matlab_spmbatch: Runs a SPM batch file that does not return a result.
 
-    # start a new matlab session or connect to an existing one:
-    #   persistent=False : start a new NOT-SHARED one if not existing or connect to an existing SHARED (given by conn2existing) or the first available
-    #   persistent=True  :
-    #
-    # (if no session are active) or connect to the first one available or return None.
+    """
+
+    SESSION_NEW_PERSISTENT = 1
+    SESSION_NEW_NOTSHARED = 2
+    SESSION_REUSE_FIRST = 3
+    SESSION_REUSE_NAME = 4
 
     @staticmethod
-    def start_matlab(paths2add=None, sess_type=SESSION_REUSE_FIRST, conn2existing=""):
+    def start_matlab(paths2add=None, sess_type=SESSION_REUSE_FIRST, conn2existing:str=""):
+        """
+        Starts a new Matlab session or connects to an existing one.
 
+        Args:
+            paths2add (list): A list of paths to add to the Matlab search path.
+            sess_type (int): The type of Matlab session to start.
+                Possible values are:
+                    SESSION_NEW_PERSISTENT: Starts a new NOT-SHARED Matlab session.
+                    SESSION_NEW_NOTSHARED: Starts a new SHARED Matlab session.
+                    SESSION_REUSE_FIRST: Tries to reuse the first available Matlab session.
+                    SESSION_REUSE_NAME: Tries to reuse the Matlab session with the given name.
+            conn2existing (str): The name of an existing shared Matlab session to connect to.
+
+        Returns:
+            The Matlab engine object, or None if the session could not be started.
+
+        Raises:
+            Exception: If the Matlab session could not be started.
+
+        """
         if paths2add is None:
             paths2add = []
 
@@ -81,8 +137,25 @@ class MatlabManager:
         return eng
 
     @staticmethod
-    def call_matlab_function(func, standard_paths=None, params="", logfile=None, endengine=True, eng=None):
+    def call_matlab_function(func, standard_paths=None, params:str="", logfile=None, endengine:bool=True, eng=None):
+        """
+        Runs a Matlab function and returns the result.
 
+        Args:
+            func (str): The path to the Matlab function to run.
+            standard_paths (list): A list of paths to add to the Matlab search path.
+            params (str): The parameters to pass to the Matlab function.
+            logfile (file): A file object to write log messages to.
+            endengine (bool): Whether to end the Matlab engine after running the function.
+            eng (object): An existing Matlab engine object to use for the function call.
+
+        Returns:
+            A list containing the Matlab engine object and the function result.
+
+        Raises:
+            Exception: If the Matlab function could not be run.
+
+        """
         if standard_paths is None:
             standard_paths = []
         if eng is None:
@@ -106,8 +179,25 @@ class MatlabManager:
         return [engine, res]
 
     @staticmethod
-    def call_matlab_function_noret(func, standard_paths=None, params="", logfile=None, endengine=True, eng=None):
+    def call_matlab_function_noret(func, standard_paths=None, params:str="", logfile=None, endengine:bool=True, eng=None):
+        """
+        Runs a Matlab function that does not return a result.
 
+        Args:
+            func (str): The path to the Matlab function to run.
+            standard_paths (list): A list of paths to add to the Matlab search path.
+            params (str): The parameters to pass to the Matlab function.
+            logfile (file): A file object to write log messages to.
+            endengine (bool): Whether to end the Matlab engine after running the function.
+            eng (object): An existing Matlab engine object to use for the function call.
+
+        Returns:
+            The Matlab engine object.
+
+        Raises:
+            Exception: If the Matlab function could not be run.
+
+        """
         if standard_paths is None:
             standard_paths = []
         if eng is None:
@@ -135,10 +225,25 @@ class MatlabManager:
 
         return engine
 
-    # subcase of call_matlab_function_noret: call a SPM batch file that does not return anything
     @staticmethod
-    def call_matlab_spmbatch(func, standard_paths=None, logfile=None, endengine=True, eng=None):
+    def call_matlab_spmbatch(func, standard_paths=None, logfile=None, endengine:bool=True, eng=None):
+        """
+        Runs a SPM batch file that does not return a result.
 
+        Args:
+            func (str): The path to the SPM batch file to run.
+            standard_paths (list): A list of paths to add to the Matlab search path.
+            logfile (file): A file object to write log messages to.
+            endengine (bool): Whether to end the Matlab engine after running the function.
+            eng (object): An existing Matlab engine object to use for the function call.
+
+        Returns:
+            The Matlab engine object.
+
+        Raises:
+            Exception: If the SPM batch file could not be run.
+
+        """
         if standard_paths is None:
             standard_paths = []
         batch_file = os.path.basename(os.path.splitext(func)[0])
@@ -189,7 +294,7 @@ class MatlabManager:
         #
 
     # attempt to create a multipurpose method that receive a list of functions/params/return types
-    # def call_matlab_function(functions, params, standard_paths, logfile=None, endengine=True):
+    # def call_matlab_function(functions, params, standard_paths, logfile=None, endengine:bool=True):
     #
     #     nfunc   = len(functions)
     #     nparams = len(params)

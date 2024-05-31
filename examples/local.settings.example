@@ -1,5 +1,6 @@
 # copy this file to framework root and update the following info.
 # make it empty string if you don't have that toolbox. not empty string will be checked and if not valid will raise an error
+
 project_scripts_dir=/data/MRI/projects/SCRIPTS
 spm_dir=/data/matlab_toolbox/spm12
 cat_version=cat12.7  #  indicates the version. the dot and the following number is removed and "cat12" is used to verify toolbox presence.

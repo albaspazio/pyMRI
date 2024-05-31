@@ -69,7 +69,8 @@ if __name__ == "__main__":
             sessions_cond= []
 
             for epi_name in epi_names:
-                conditions = eng.load(os.path.join(project.script_dir, "fmri", "fmri_logs", s.label + "_" + epi_name + ".mat"), nargout=1)
+                conditions = eng.load(
+                    os.path.join(project.script_dir, "fmri", "fmri_logs", s.label + "_" + epi_name + ".mat"))
 
                 session = []
                 session.append(SubjCondition(epi_name + ": neutral",    sort(conditions["task_onsets"]["onsets_neutral"][:]._data)))

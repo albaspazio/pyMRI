@@ -1,5 +1,8 @@
 import os
+from typing import Optional
 
+from Global import Global
+# from subject.Subject import Subject
 from utility.images.Image import Image
 from utility.myfsl.utils.run import rrun
 from utility.myfsl.fslfun import runsystem
@@ -33,10 +36,16 @@ from utility.images.transform_images import check_concat_mat, check_invert_mat, 
 
 class SubjectTransforms:
 
-    def __init__(self, subject, _global):
+    def __init__(self, subject:'Subject', _global:Global):
+        """
+        Initialize the transformation class for a given subject.
 
-        self.subject = subject
-        self._global = _global
+        Args:
+            subject (Subject): The subject object containing the relevant data and parameters.
+            _global (Global): The global object containing the relevant parameters and settings.
+        """
+        self.subject:'Subject' = subject
+        self._global:Global  = _global
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # TO HR (from std, std4, rs, fmri, dti, t2)
@@ -176,15 +185,15 @@ class SubjectTransforms:
             "rsTOstd": self.transform_l_rs2std,
             "fmriTOstd": self.transform_l_fmri2std,
             "dtiTOstd": self.transform_l_dti2std,
-            "t2TOstd": self.transform_l_t22dti,
+            # "t2TOstd": self.transform_l_t22dti,
 
             "hrTOstd4": self.transform_l_hr2std4,
             "rsTOstd4": self.transform_l_rs2std4,
             "fmriTOstd4": self.transform_l_fmri2std4,
 
             "stdTOdti": self.transform_l_std2dti,
-            "hrTOdti": self.transform_l_hr2dti,
-            "t2TOdti": self.transform_l_hr2dti,
+            # "hrTOdti": self.transform_l_hr2dti,
+            # "t2TOdti": self.transform_l_hr2dti,
 
             "stdTOt2": self.transform_l_hr2t2,
             "hrTOt2": self.transform_l_hr2t2,
@@ -213,15 +222,15 @@ class SubjectTransforms:
             "rsTOstd": self.transform_nl_rs2std,
             "fmriTOstd": self.transform_nl_fmri2std,
             "dtiTOstd": self.transform_nl_dti2std,
-            "t2TOstd": self.transform_nl_t22dti,
+            # "t2TOstd": self.transform_nl_t22dti,
 
             "hrTOstd4": self.transform_nl_hr2std4,
             "rsTOstd4": self.transform_nl_rs2std4,
             "fmriTOstd4": self.transform_nl_fmri2std4,
 
             "stdTOdti": self.transform_nl_std2dti,
-            "hrTOdti": self.transform_nl_hr2dti,
-            "t2TOdti": self.transform_nl_hr2dti,
+            # "hrTOdti": self.transform_nl_hr2dti,
+            # "t2TOdti": self.transform_nl_hr2dti,
 
             "stdTOt2": self.transform_nl_hr2t2,
             "hrTOt2": self.transform_nl_hr2t2,
@@ -254,7 +263,6 @@ class SubjectTransforms:
     #             " --ref=" + stdhead + " --refmask=" + self.subject.std_img_mask_dil + " --warpres=10,10,10" +
     #             " --cout=" + self.hr2std_warp, overwrite=overwrite, logFile=logFile)
 
-
     # ==================================================================================================================================================
     # MAIN SEQUENCES TRANSFORMS
     # ==================================================================================================================================================
@@ -264,9 +272,25 @@ class SubjectTransforms:
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # it creates (8) :  hr2std_mat,  std2hr_mat,  hr2std_warp,  std2hr_warp,            hrhead2std.mat
     #                   hr2std4_mat, std42hr_mat, hr2std4_warp, std42hr_warp,           hrhead2std4.mat
-    def transform_mpr(self, overwrite=False, usehead_nl=True, logFile=None):
+    def transform_mpr(self, overwrite:bool=False, usehead_nl:bool=True, logFile=None):
+        """
+        Calculate all the transforms involved in MPR processing.
 
-        hrhead2std  = os.path.join(self.subject.roi_std_dir, "hrhead2" + self.subject.std_img_label + ".mat")
+        Parameters
+        ----------
+        overwrite : bool
+            Whether to overwrite existing files.
+        usehead_nl : bool
+            Whether to use nonlinear registration for the high-resolution to standard transformation.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+
+        """
+        hrhead2std = os.path.join(self.subject.roi_std_dir, "hrhead2" + self.subject.std_img_label + ".mat")
         hrhead2std4 = os.path.join(self.subject.roi_std4_dir, "hrhead2" + self.subject.std_img_label + "4.mat")
 
         check = self.subject.check_template()
@@ -284,28 +308,125 @@ class SubjectTransforms:
         # HIGHRES <--------> STANDARD
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # => hr2{std}.mat
-        check_flirt(self.hr2std_mat, self.subject.t1_brain_data, self.subject.std_img, overwrite=overwrite, logFile=logFile)
+        """
+        Calculates the high-resolution to standard transformation matrix.
+
+        Parameters
+        ----------
+        hrhead : str
+            The path to the high-resolution image.
+        stdhead : str
+            The path to the standard image.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+
+        """
+        check_flirt(self.hr2std_mat, self.subject.t1_brain_data, self.subject.std_img, overwrite=overwrite,
+                    logFile=logFile)
 
         # => hrhead2{std}.mat
+        """
+        Calculates the high-resolution to standard transformation matrix.
+
+        Parameters
+        ----------
+        hrhead : str
+            The path to the high-resolution image.
+        stdhead : str
+            The path to the standard image.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+
+        """
         check_flirt(hrhead2std, self.subject.t1_data, self.subject.std_head_img, overwrite=overwrite, logFile=logFile)
 
         # # => {std}2hr.mat
+        """
+        Calculates the inverse of the high-resolution to standard transformation matrix.
+
+        Parameters
+        ----------
+        stdhead : str
+            The path to the standard image.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+
+        """
         check_invert_mat(self.std2hr_mat, self.hr2std_mat, overwrite=overwrite, logFile=logFile)
 
         # NON LINEAR
         # => hr2{std}_warp
+        """
+        Calculates the nonlinear high-resolution to standard transformation.
+
+        Parameters
+        ----------
+        hrhead : str
+            The path to the high-resolution image.
+        stdhead : str
+            The path to the standard image.
+        usehead_nl : bool
+            Whether to use nonlinear registration for the high-resolution to standard transformation.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+
+        """
         if not self.hr2std_warp.exist or overwrite:
             if usehead_nl:
-                rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + " --config=" + self._global.fsl_std_mni_2mm_cnf +
+                rrun(
+                    "fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std + " --config=" + self._global.fsl_std_mni_2mm_cnf +
                     " --ref=" + self.subject.std_head_img + " --refmask=" + self.subject.std_img_mask_dil + " --warpres=10,10,10" +
                     " --cout=" + self.hr2std_warp, overwrite=overwrite, logFile=logFile)
             else:
-                rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + self.hr2std_mat + " --config=" + self._global.fsl_std_mni_2mm_cnf +
+                rrun(
+                    "fnirt --in=" + self.subject.t1_data + " --aff=" + self.hr2std_mat + " --config=" + self._global.fsl_std_mni_2mm_cnf +
                     " --ref=" + self.subject.std_head_img + " --refmask=" + self.subject.std_img_mask_dil + " --warpres=10,10,10" +
                     " --cout=" + self.hr2std_warp, overwrite=overwrite, logFile=logFile)
 
         # => {std}2hr_warp
-        check_invert_warp(self.std2hr_warp, self.hr2std_warp, self.subject.t1_data, overwrite=overwrite, logFile=logFile)
+        """
+        Calculates the inverse of the nonlinear high-resolution to standard transformation.
+
+        Parameters
+        ----------
+        stdhead : str
+            The path to the standard image.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+
+        """
+        check_invert_warp(self.std2hr_warp, self.hr2std_warp, self.subject.t1_data, overwrite=overwrite,
+                          logFile=logFile)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # HIGHRES <--------> STANDARD4
@@ -315,38 +436,148 @@ class SubjectTransforms:
 
         os.makedirs(self.subject.roi_std4_dir, exist_ok=True)
         # => hr2{std}4.mat
-        check_flirt(self.hr2std4_mat, self.subject.t1_brain_data, self.subject.std4_img, overwrite=overwrite, logFile=logFile)
+        """
+        Calculates the high-resolution to standard4 transformation matrix.
+
+        Parameters
+        ----------
+        hrhead : str
+            The path to the high-resolution image.
+        stdhead : str
+            The path to the standard4 image.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+        """
+        check_flirt(self.hr2std4_mat, self.subject.t1_brain_data, self.subject.std4_img, overwrite=overwrite,
+                    logFile=logFile)
 
         # => hrhead2{std}4.mat
+        """
+        Calculates the high-resolution to standard4 transformation matrix.
+
+        Parameters
+        ----------
+        hrhead : str
+            The path to the high-resolution image.
+        stdhead : str
+            The path to the standard4 image.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+        """
         check_flirt(hrhead2std4, self.subject.t1_data, self.subject.std4_head_img, overwrite=overwrite, logFile=logFile)
 
         # => {std}42hr.mat
+        """
+        Calculates the inverse of the high-resolution to standard4 transformation matrix.
+
+        Parameters
+        ----------
+        stdhead : str
+            The path to the standard4 image.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+        """
         check_invert_mat(self.std42hr_mat, self.hr2std4_mat, overwrite=overwrite, logFile=logFile)
 
         # NON LINEAR
         # => hr2{std}4_warp
+        """
+        Calculates the nonlinear high-resolution to standard4 transformation.
+
+        Parameters
+        ----------
+        hrhead : str
+            The path to the high-resolution image.
+        stdhead : str
+            The path to the standard4 image.
+        usehead_nl : bool
+            Whether to use nonlinear registration for the high-resolution to standard4 transformation.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+        """
         if not self.hr2std4_warp.exist or overwrite:
 
             if usehead_nl:
-                rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std4 + " --config=" + self._global.fsl_std_mni_4mm_cnf +
+                rrun(
+                    "fnirt --in=" + self.subject.t1_data + " --aff=" + hrhead2std4 + " --config=" + self._global.fsl_std_mni_4mm_cnf +
                     " --ref=" + self.subject.std4_head_img + " --refmask=" + self.subject.std4_img_mask_dil + " --warpres=10,10,10" +
                     " --cout=" + self.hr2std4_warp, overwrite=overwrite, logFile=logFile)
             else:
-                rrun("fnirt --in=" + self.subject.t1_data + " --aff=" + self.hr2std4_mat + " --config=" + self._global.fsl_std_mni_4mm_cnf +
+                rrun(
+                    "fnirt --in=" + self.subject.t1_data + " --aff=" + self.hr2std4_mat + " --config=" + self._global.fsl_std_mni_4mm_cnf +
                     " --ref=" + self.subject.std4_head_img + " --refmask=" + self.subject.std4_img_mask_dil + " --warpres=10,10,10" +
                     " --cout=" + self.hr2std4_warp, overwrite=overwrite, logFile=logFile)
 
         # => {std}42hr_warp
+        """
+        Calculates the inverse of the nonlinear high-resolution to standard4 transformation.
+
+        Parameters
+        ----------
+        stdhead : str
+            The path to the standard4 image.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+        """
         check_invert_warp(self.std42hr_warp, self.hr2std4_warp, self.subject.t1_data, overwrite=overwrite, logFile=logFile)
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # Calculate all the transforms involved in EPI processing.
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # (17/7/21) bbr co-registration fails!!!
-    # it creates (10) : example_func, rs2hr_mat , hr2rs_mat , rs2std_mat , std2rs_mat , rs2std4_mat , std42rs_mat
-    #                                 rs2std_warp, std2rs_warp, rs2std4_warp, std42rs_warp
-    def transform_rs(self, inimg=None, do_bbr=False, wmseg="", overwrite=False, logFile=None):
+    def transform_rs(self, inimg:Optional[str]=None, do_bbr=False, wmseg:str="", overwrite=False, logFile=None):
+        """
+        Calculates the high-resolution to reference space transformation matrix.
+        it creates (10) : example_func, rs2hr_mat , hr2rs_mat , rs2std_mat , std2rs_mat , rs2std4_mat , std42rs_mat
+                          rs2std_warp, std2rs_warp, rs2std4_warp, std42rs_warp
+        Parameters
+        ----------
+        inimg : str
+            The path to the input image. If None, the example function will be used.
+        do_bbr : bool
+            Whether to use BBR registration for the transformation.
+        wmseg : str
+            The path to the white matter segmentation image.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
 
+        Returns
+        -------
+        None
+
+        """
         if wmseg == "":
             wmseg = self.subject.t1_segment_wm_bbr_path
         wmseg = Image(wmseg)
@@ -364,7 +595,10 @@ class SubjectTransforms:
         if inimg is None:
             exfun = self.subject.epi.get_example_function(logFile=logFile)
         else:
-            exfun = self.subject.epi.get_nth_volume(inimg, logFile=None)
+            inimg = Image(inimg, must_exist=True, msg="SubjectTransforms.transform_rs: Input image does not exist")
+            exfun = inimg.add_postfix2name("_example_func")
+            inimg.get_nth_volume(exfun, logFile=logFile)
+            # exfun = self.subject.epi.get_nth_volume(inimg, logFile=None)
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #  RS <--> HIGHRES (linear, bbr or not)
@@ -461,8 +695,28 @@ class SubjectTransforms:
 
     # it creates (10) : example_func, fmri2hr_mat , hr2fmri_mat , fmri2std_mat , std2fmri_mat , fmri2std4_mat , std42fmri_mat
     #                                                             fmri2std_warp, std2fmri_warp, fmri2std4_warp, std42fmri_warp
-    def transform_fmri(self, fmri_labels=None, do_bbr=False, wmseg="", overwrite=False, logFile=None):
+    def transform_fmri(self, fmri_labels=None, do_bbr:bool=False, wmseg:str="", overwrite:bool=False, logFile=None):
+        """
+        This function applies the linear and nonlinear registration between the fMRI data and the high-resolution structural images.
 
+        Parameters:
+        -----------
+        fmri_labels: list, optional
+            A list of fMRI labels to be used for creating the example function. If None, all labels will be used.
+        do_bbr: bool, optional
+            A boolean indicating whether to use BBR registration or not.
+        wmseg: str, optional
+            The path to the white matter segmentation image.
+        overwrite: bool, optional
+            A boolean indicating whether to overwrite existing files or not.
+        logFile: str, optional
+            The path to the log file.
+
+        Returns:
+        --------
+        None
+
+        """
         check = self.subject.check_template()
         if check[0] != "":
             return
@@ -575,7 +829,23 @@ class SubjectTransforms:
     #                   dti2hr_warp, hr2dti_warp,
     #                   overwrites dti2std_warp, std2dti_warp
     def transform_dti_t2(self, ignore_t2=False, overwrite=False, logFile=None):
+        """
+        This function applies the linear and nonlinear registration between the diffusion MRI data and the high-resolution structural images.
 
+        Parameters:
+        -----------
+        ignore_t2: bool, optional
+            A boolean indicating whether to ignore the T2 image or not.
+        overwrite: bool, optional
+            A boolean indicating whether to overwrite existing files or not.
+        logFile: str, optional
+            The path to the log file.
+
+        Returns:
+        --------
+        None
+
+        """
         check = self.subject.check_template()
         if check[0] != "":
             return
@@ -590,6 +860,25 @@ class SubjectTransforms:
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # DTI <------> HIGHRES (linear)
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        """
+        Calculates the DTI to high-resolution transformation matrix.
+
+        Parameters
+        ----------
+        dti_img : str
+            The path to the diffusion MRI image.
+        t1_img : str
+            The path to the high-resolution structural image.
+        overwrite : bool
+            Whether to overwrite existing files.
+        logFile : str
+            The name of the log file to write to.
+
+        Returns
+        -------
+        None
+
+        """
         check_flirt(self.dti2hr_mat, self.subject.dti_nodiff_brain_data, self.subject.t1_brain_data,
                     "-bins 256 -cost normmi -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 7 -interp trilinear",
                     overwrite=overwrite, logFile=logFile)
@@ -686,7 +975,23 @@ class SubjectTransforms:
     # it creates (4): rs2fmri_mat , fmri2rs_mat
     #                 rs2fmri_warp, fmri2rs_warp
     def transform_extra(self, overwrite=False, fmri_images=None, logFile=None):
+        """
+        This function applies the linear and nonlinear registration between the resting state fMRI data and the high-resolution structural images.
 
+        Parameters:
+        -----------
+        overwrite: bool, optional
+            A boolean indicating whether to overwrite existing files or not.
+        fmri_images: list, optional
+            A list of fMRI images to be used for creating the example function. If None, all images will be used.
+        logFile: str, optional
+            The path to the log file.
+
+        Returns:
+        --------
+        None
+
+        """
         if self.subject.hasFMRI(fmri_images) and self.subject.hasRS:
 
             print(self.subject.label + "# :STARTED transform_extra: rs<->fmri")
@@ -714,8 +1019,42 @@ class SubjectTransforms:
     #                                 in linear transf, it must be betted (must contain the "_brain" text)
     #                                 in non-linear is must be a full head image.
     #
-    def transform_roi(self, regtype, pathtype="standard", outdir="", outname="", mask="", orf="", thresh=0, islin=True, rois=None):
+    def transform_roi(self, regtype, pathtype="standard", outdir:str="", outname:str="", mask:str="", orf:str="", thresh=0, islin:bool=True, rois=None):
+        """
+        This function applies the linear and nonlinear registration between the resting state fMRI data and the high-resolution structural images.
 
+        Parameters:
+        -----------
+        regtype : str
+            The type of registration to perform.
+        pathtype : str, optional
+            The type of path to the input ROI. Can be "standard", "rel", or "abs".
+        outdir : str, optional
+            The directory to save the output ROI. If not specified, the output ROI will be saved to the default directory.
+        outname : str, optional
+            The name of the output ROI. If not specified, the name of the input ROI will be used.
+        mask : str, optional
+            The path to the mask image.
+        orf : str, optional
+            The path to the output file for recording empty ROIs.
+        thresh : float, optional
+            The threshold value for empty ROI detection.
+        islin : bool, optional
+            A boolean indicating whether to perform a linear or nonlinear registration.
+        rois : list, optional
+            A list of ROIs to be transformed.
+
+        Returns:
+        --------
+        list
+            A list of transformed ROIs.
+
+        Raises:
+        -------
+        Exception
+            If the input parameters are invalid.
+
+        """
         # ===========================================================
         # SANITY CHECK
         # ===========================================================
@@ -847,32 +1186,86 @@ class SubjectTransforms:
     # TO HR (from rs, fmri, dti, t2, std, std4)
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def transform_nl_std2hr(self):
+        """
+        Returns the nonlinear and linear transformation matrices between the standard space and the high-resolution space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear and linear transformation matrices. The first element of the tuple is the nonlinear transformation matrix, and the second element is the linear transformation matrix.
+        """
         return self.std2hr_warp, self.subject.t1_data
 
     def transform_l_std2hr(self):
+        """
+        Returns the linear transformation matrix between the standard space and the high-resolution space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix.
+        """
         return self.std2hr_mat, self.subject.t1_brain_data
 
     def transform_nl_std42hr(self):
+        """
+        Returns the nonlinear transformation matrix between the standard 4D space and the high-resolution space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix.
+        """
         return self.std42hr_warp, self.subject.t1_data
 
     def transform_l_std42hr(self):
+        """
+        Returns the linear transformation matrix between the standard 4D space and the high-resolution space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix.
+        """
         return self.std42hr_mat, self.subject.t1_brain_data
 
     def transform_nl_rs2hr(self):
+        """
+        Returns the nonlinear transformation matrix between the resting-state space and the high-resolution space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix.
+        """
         print("WARNING calling transform_l_rs2hr instead of transform_nl_rs2hr")
         return self.transform_l_rs2hr()
 
     def transform_l_rs2hr(self):
+        """
+        Returns the linear transformation matrix between the resting-state space and the high-resolution space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix.
+        """
         return self.rs2hr_mat, self.subject.t1_brain_data
 
     def transform_nl_fmri2hr(self):
+        """
+        Returns the nonlinear transformation matrix between the fMRI space and the high-resolution space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix.
+        """
         print("WARNING calling transform_l_fmri2hr instead of transform_nl_fmri2hr")
         return self.transform_l_fmri2hr()
 
     def transform_l_fmri2hr(self):
+        """
+        Returns the linear transformation matrix between the fMRI space and the high-resolution space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix.
+        """
         return self.fmri2hr_mat, self.subject.t1_brain_data
 
     def transform_nl_dti2hr(self):
+        """
+        Returns the nonlinear transformation matrix between the diffusion-tensor imaging space and the high-resolution space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix.
+        """
         if self.subject.hasT2:
             return self.dti2hr_warp, self.subject.t1_data
         else:
@@ -880,172 +1273,410 @@ class SubjectTransforms:
             return self.transform_l_dti2hr()
 
     def transform_l_dti2hr(self):
+        """
+        Returns the linear transformation matrix between the diffusion-tensor imaging space and the high-resolution space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix.
+        """
         return self.dti2hr_mat, self.subject.t1_brain_data
 
     def transform_nl_t22hr(self):
+        """
+        Returns the nonlinear transformation matrix between the T2-weighted imaging space and the high-resolution space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix.
+        """
         print("WARNING calling transform_l_t22hr instead of transform_nl_t22hr")
         return self.transform_l_t22hr()
 
     def transform_l_t22hr(self):
-        return self.t22hr_mat, self.subject.t1_brain_data
+        """
+        Returns the linear transformation matrix between the T2-weighted imaging space and the high-resolution space.
 
+        Returns:
+            tuple: A tuple containing the linear transformation matrix.
+        """
+        return self.t22hr_mat, self.subject.t1_brain_data
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO RS (from hr, fmri, std, std4)
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def transform_nl_std2rs(self):
+        """
+        Returns the nonlinear transformation matrix between the standard space and the resting state space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the example resting state image.
+        """
         return self.std2rs_warp, self.subject.rs_examplefunc
 
     def transform_l_std2rs(self):
+        """
+        Returns the linear transformation matrix between the standard space and the resting state space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the example resting state image.
+        """
         return self.std2rs_mat, self.subject.rs_examplefunc
 
     def transform_nl_std42rs(self):
+        """
+        Returns the nonlinear transformation matrix between the standard 4D space and the resting state space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the example resting state image.
+        """
         return self.std42rs_warp, self.subject.rs_examplefunc
 
     def transform_l_std42rs(self):
+        """
+        Returns the linear transformation matrix between the standard 4D space and the resting state space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the example resting state image.
+        """
         return self.std42rs_mat, self.subject.rs_examplefunc
 
     def transform_nl_hr2rs(self):
+        """
+        Returns the nonlinear transformation matrix between the high-resolution space and the resting state space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the example resting state image.
+        """
         print("WARNING: transform_nl_hr2rs calls transform_l_hr2rs ")
         return self.transform_l_hr2rs()
 
     def transform_l_hr2rs(self):
+        """
+        Returns the linear transformation matrix between the high-resolution space and the resting state space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the example resting state image.
+        """
         return self.hr2rs_mat, self.subject.rs_examplefunc
 
     def transform_nl_fmri2rs(self):
+        """
+        Returns the nonlinear transformation matrix between the fMRI space and the resting state space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the example resting state image.
+        """
         return self.fmri2rs_warp, self.subject.rs_examplefunc
 
     def transform_l_fmri2rs(self):
+        """
+        Returns the linear transformation matrix between the fMRI space and the resting state space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the example resting state image.
+        """
         return self.rs2fmri_mat, self.subject.rs_examplefunc
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO FMRI (from hr, std, std4)
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def transform_nl_std2fmri(self):
+        """
+        Returns the nonlinear transformation matrix between the standard space and the fMRI space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the example fMRI image.
+        """
         return self.std2fmri_warp, self.subject.fmri_examplefunc
 
     def transform_l_std2fmri(self):
+        """
+        Returns the linear transformation matrix between the standard space and the fMRI space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the example fMRI image.
+        """
         return self.std2fmri_mat, self.subject.roi_fmri_dir
 
     def transform_nl_std42fmri(self):
+        """
+        Returns the nonlinear transformation matrix between the standard 4D space and the fMRI space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the example fMRI image.
+        """
         return self.std42fmri_warp, self.subject.fmri_examplefunc
 
     def transform_l_std42fmri(self):
+        """
+        Returns the linear transformation matrix between the standard 4D space and the fMRI space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the example fMRI image.
+        """
         return self.std42fmri_mat, self.subject.fmri_examplefunc
 
     def transform_nl_hr2fmri(self):
+        """
+        Returns the nonlinear transformation matrix between the high-resolution space and the fMRI space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the example fMRI image.
+        """
         return self.transform_l_hr2fmri()
 
     def transform_l_hr2fmri(self):
+        """
+        Returns the linear transformation matrix between the high-resolution space and the fMRI space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the example fMRI image.
+        """
         return self.hr2fmri_mat, self.subject.fmri_examplefunc
 
     def transform_nl_rs2fmri(self):
+        """
+        Returns the nonlinear transformation matrix between the resting-state space and the fMRI space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the example fMRI image.
+        """
         return self.rs2fmri_warp, self.subject.fmri_examplefunc
 
     def transform_l_rs2fmri(self):
+        """
+        Returns the linear transformation matrix between the resting-state space and the fMRI space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the example fMRI image.
+        """
         return self.fmri2rs_mat, self.subject.rs_examplefunc
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO STD (from std4, hr, rs, fmri, dti, t2)
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def transform_nl_hr2std(self):
+        """
+        Returns the nonlinear transformation matrix between the high-resolution space and the standard space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the standard image.
+        """
         return self.hr2std_warp, self.subject.std_img
 
     def transform_l_hr2std(self):
+        """
+        Returns the linear transformation matrix between the high-resolution space and the standard space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the standard image.
+        """
         return self.hr2std_mat, self.subject.std_img
 
     def transform_nl_rs2std(self):
+        """
+        Returns the nonlinear transformation matrix between the resting-state space and the standard space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the standard image.
+        """
         return self.rs2std_warp, self.subject.std_head_img
 
     def transform_l_rs2std(self):
+        """
+        Returns the linear transformation matrix between the resting-state space and the standard space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the standard image.
+        """
         return self.rs2std_mat, self.subject.std_img
 
     def transform_nl_fmri2std(self):
+        """
+        Returns the nonlinear transformation matrix between the fMRI space and the standard space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the standard image.
+        """
         return self.fmri2std_warp, self.subject.std_head_img
 
     def transform_l_fmri2std(self):
+        """
+        Returns the linear transformation matrix between the fMRI space and the standard space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the standard image.
+        """
         return self.fmri2std_mat, self.subject.std_img
 
     def transform_nl_dti2std(self):
+        """
+        Returns the nonlinear transformation matrix between the diffusion tensor imaging space and the standard space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the standard image.
+        """
         return self.dti2std_warp, self.subject.std_head_img
 
     def transform_l_dti2std(self):
+        """
+        Returns the linear transformation matrix between the diffusion tensor imaging space and the standard space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the standard image.
+        """
         return self.dti2std_mat, self.subject.std_img
 
     def transform_nl_t22std(self):
+        """
+        Returns the nonlinear transformation matrix between the T2-weighted imaging space and the standard space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the standard image.
+        """
         return self.t22std_warp, self.subject.std_head_img
 
     def transform_l_t22std(self):
+        """
+        Returns the linear transformation matrix between the T2-weighted imaging space and the standard space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the standard image.
+        """
         return self.t22std_mat, self.subject.std_img
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO STD4 (from std, hr, rs, fmri)
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def transform_nl_hr2std4(self):
+        """
+        Returns the nonlinear transformation matrix between the high-resolution space and the standard 4D space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the standard 4D image.
+        """
         return self.hr2std4_warp, self.subject.std4_head_img
 
     def transform_l_hr2std4(self):
+        """
+        Returns the linear transformation matrix between the high-resolution space and the standard 4D space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the standard 4D image.
+        """
         return self.hr2std4_mat, self.subject.std4_img
 
     def transform_nl_rs2std4(self):
+        """
+        Returns the nonlinear transformation matrix between the resting-state space and the standard 4D space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the standard 4D image.
+        """
         return self.rs2std4_warp, self.subject.std4_head_img
 
     def transform_l_rs2std4(self):
+        """
+        Returns the linear transformation matrix between the resting-state space and the standard 4D space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the standard 4D image.
+        """
         return self.rs2std4_mat, self.subject.std4_img
 
     def transform_nl_fmri2std4(self):
+        """
+        Returns the nonlinear transformation matrix between the fMRI space and the standard 4D space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the standard 4D image.
+        """
         return self.rs2std4_warp, self.subject.std4_head_img
 
     def transform_l_fmri2std4(self):
+        """
+        Returns the linear transformation matrix between the fMRI space and the standard 4D space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the standard 4D image.
+        """
         return self.fmri2std4_mat, self.subject.std4_img
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO DTI (from std, hr, t2)
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def transform_nl_std2dti(self):
+        """
+        Returns the nonlinear transformation matrix between the standard space and the diffusion tensor imaging space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the diffusion tensor imaging image.
+        """
         return self.std2dti_warp, self.subject.dti_nodiff_data
 
     def transform_l_std2dti(self):
+        """
+        Returns the linear transformation matrix between the standard space and the diffusion tensor imaging space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the diffusion tensor imaging image.
+        """
         return self.std2dti_mat, self.subject.dti_nodiff_brain_data
-
-        # ==============================================================================================================
-
-    def transform_nl_hr2dti(self):
-        if self.subject.hasT2 and self.hr2dti_warp.exist:
-            return self.hr2dti_warp, self.subject.dti_nodiff_data
-        else:
-            print(
-                "did not find the non linear registration from HR 2 DTI, I concat hr---(NL)--->std  with std ---(LIN)---> dti used a linear one")
-            return self.transform_l_hr2dti()
-
-    def transform_l_hr2dti(self):
-        return self.hr2dti_mat, self.subject.dti_nodiff_brain_data
-
-    def transform_nl_t22dti(self):
-        return self.t22dti_warp, self.subject.dti_nodiff_data
-
-    def transform_l_t22dti(self):
-        return self.t22dti_mat, self.subject.dti_nodiff_brain_data
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # TO T2 (from std, hr, dti)
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def transform_nl_std2t2(self):
+        """
+        Returns the nonlinear transformation matrix between the standard space and the T2-weighted imaging space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the T2-weighted imaging image.
+        """
         return self.dti2t2_warp, self.subject.dti_nodiff_brain_data
 
     def transform_l_std2t2(self):
+        """
+        Returns the linear transformation matrix between the standard space and the T2-weighted imaging space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the T2-weighted imaging image.
+        """
         return self.dti2t2_mat, self.subject.t2_brain_data
 
     def transform_nl_hr2t2(self):
+        """
+        Returns the nonlinear transformation matrix between the high-resolution space and the T2-weighted imaging space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the T2-weighted imaging image.
+        """
         print("WARNING calling transform_l_hr2t2 instead of transform_nl_hr2t2")
         return self.transform_l_hr2t2()
 
     def transform_l_hr2t2(self):
+        """
+        Returns the linear transformation matrix between the high-resolution space and the T2-weighted imaging space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the T2-weighted imaging image.
+        """
         return self.hr2t2_mat, self.subject.t2_brain_data
 
     def transform_nl_dti2t2(self):
+        """
+        Returns the nonlinear transformation matrix between the diffusion tensor imaging space and the T2-weighted imaging space.
+
+        Returns:
+            tuple: A tuple containing the nonlinear transformation matrix and the T2-weighted imaging image.
+        """
         return self.dti2t2_warp, self.subject.dti_nodiff_brain_data
 
     def transform_l_dti2t2(self):
+        """
+        Returns the linear transformation matrix between the diffusion tensor imaging space and the T2-weighted imaging space.
+
+        Returns:
+            tuple: A tuple containing the linear transformation matrix and the T2-weighted imaging image.
+        """
         return self.dti2t2_mat, self.subject.t2_brain_data
 
     # ==============================================================================================================
@@ -1055,7 +1686,26 @@ class SubjectTransforms:
     # creates up to 14 folders, 7 for linear and 7 for non linear transformation towards the 7 different space (hr, rs, frmi, dti, t2, std, std4)
     # user can select from which seq to which seq create the transforms
     def test_all_coregistration(self, test_dir, _from=None, _to=None, extended=False, fmri_labels=None, overwrite=False):
+        """
+        This method takes base images (t1/t1_brain, epi_example_function, dti_nodiff/dti_nodiff_brain, t2/t2_brain) and coregisters to all other modalities and standard.
+        It creates up to 14 folders, 7 for linear and 7 for non-linear transformation towards the 7 different spaces (hr, rs, fmri, dti, t2, std, std4).
+        The user can select from which sequence to which sequence to create the transforms.
 
+        Args:
+            test_dir (str): The directory where the coregistration tests will be performed.
+            _from (list, optional): A list of sequences to coregister from. If None, defaults to ["hr", "rs", "fmri", "dti", "t2", "std", "std4"].
+            _to (list, optional): A list of sequences to coregister to. If None, defaults to ["hr", "rs", "fmri", "dti", "t2", "std", "std4"].
+            extended (bool, optional): Whether to create extended coregistration paths (e.g., from std to hr). Defaults to False.
+            fmri_labels (list, optional): A list of FMRINoise labels to use for FMRICoregistration. If None, all available labels will be used.
+            overwrite (bool, optional): Whether to overwrite existing coregistration files. Defaults to False.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: If the input sequences are not valid.
+
+        """
         if _from is None:
             _from = ["hr", "rs", "fmri", "dti", "t2", "std", "std4"]
 
@@ -1326,7 +1976,28 @@ class SubjectTransforms:
 
     # open fsleyes with a sequences list coregistered to one given seq = [t1, t2, dti, rs, fmri, std, std4]
     def view_space_images(self, seq, _from=None, fmri_images=None):
+        """
+        This function is used to view the space images of a subject.
 
+        Parameters
+        ----------
+        seq : str
+            The sequence of the images to be viewed.
+        _from : list, optional
+            A list of sequences to coregister from. If None, defaults to ["hr", "rs", "fmri", "dti", "t2", "std", "std4"].
+        fmri_images : list, optional
+            A list of FMRINoise labels to use for FMRICoregistration. If None, all available labels will be used.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the input sequences are not valid.
+
+        """
         outdir = os.path.join(self.subject.roi_dir, "check_coregistration", seq)
         os.makedirs(outdir, exist_ok=True)
 

@@ -1,13 +1,36 @@
 import os
+from typing import List
+
+from Project import Project
+from subject.Subject import Subject
 from utility.images.Image import Image
 from utility.images.Images import Images
+from utility.myfsl.utils.run import rrun
 
 
 # this function assumes that user put the melodic rois of interest in the roi4_folder of a specific subfolder of the given project (where between-groups analyses are done, usually the patient folder)
 # subjects instances are given already divided by groups, in order to launch the corresponding project.run_subjects_methods
 # the script coregisters each roi into a 2mm rs individual space
-def convert_melodic_rois_to_individual(project, templ_name, popul_name, rois_list, arr_subjs_insts, thr=0.1, report_file="transform_report", num_cpu=1, mni_2mm_brain=None):
+def convert_melodic_rois_to_individual(project:Project, templ_name:str, popul_name:str, rois_list:List[str], arr_subjs_insts:List[List[Subject]], thr:int=0.1, report_file:str="transform_report", num_cpu:int=1, mni_2mm_brain:Image=None):
 
+    """
+    This function converts melodic ROIs from 4mm to 2mm in individual space.
+
+    Args:
+        project (Project): The project object.
+        templ_name (str): The template name.
+        popul_name (str): The population name.
+        rois_list (List[str]): The list of ROIs.
+        arr_subjs_insts (List[List[SubjectInstance]]): The list of subject instances.
+        thr (float, optional): The threshold value. Defaults to 0.1.
+        report_file (str, optional): The report file name. Defaults to "transform_report".
+        num_cpu (int, optional): The number of CPUs. Defaults to 1.
+        mni_2mm_brain (Image, optional): The MNI 2mm brain image. Defaults to None.
+
+    Raises:
+        Exception: If the given ROI does not exist.
+
+    """
     if mni_2mm_brain is None:
         mni_2mm_brain = project.globaldata.fsl_std_mni_2mm_brain
     else:
@@ -50,14 +73,36 @@ def convert_melodic_rois_to_individual(project, templ_name, popul_name, rois_lis
 # subjects: list of subjects instances
 # metric:   measures to analyze. values are: FA,MD,AD,RD
 
-def extract_meanvalue_from_tbssresults(project, rois, subjects, metric="FA"):
+def extract_meanvalue_from_tbssresults(project:Project, rois:Images, subjects:List[Subject], metric:str="FA"):
 
+    """
+    This function takes melodic RSN's labels created with fsleyes, parse it and
+    - extract valid and non-valid IC and returns them as lists
+    - writes in bash melodic templates (for dual regression): str_pruning_ic_id, str_arr_IC_labels, arr_IC_labels, arr_pruning_ic_id fields
+    - writes in matlab melodic templates (for fslnets):
+        templates(1)=struct('name', 'controls59', 'imagepath' , '/data/MRI/pymri/templates/images/MNI152_T1_4mm_brain', 'rsn_labels', [], 'good_nodes', []);
+        templates(1).rsn_labels={'aDMN','LAT_OCCIP','pDMN','RATN','FP','PRIM_VIS','LATN','FP2','pTemp','pSM','EXEC','SM','BG','BFP','CEREB','SM2','aTemp','LAT_OCCIP2','SAL','LAT_OCCIP3','X','SAL2'};
+        templates(1).good_nodes=[1 2 3 5 6 7 8 9 11 12 13 14 15 16 17 20 23 24 27 29 34 47];
+
+    Args:
+        project (Project): The project object.
+        rois (List[Image]): The list of normalized Image to investigate (extract mean individual metrics)
+        subjects (List[Subject]): The list of subjects instances
+        metric (str, optional): The measures to analyze. Defaults to "FA".
+
+    Returns:
+        List[List[float]]: The mean values of the given metric in each ROI.
+
+    Raises:
+        Exception: If the given metric is not valid.
+
+    """
     # sanity checks
     if metric not in ["FA", "MD", "AD", "RD"]:
         print("Error in extract_meanvalue_from_tbssresults, given metric (" + str(metric) + ") is not valid")
         return
 
-    if not Images(rois).exist:
+    if not rois.exist:
         print("Error in extract_meanvalue_from_tbssresults, one or more roi image is not valid (" + str(rois) + ")")
         return
 
@@ -96,7 +141,7 @@ def extract_meanvalue_from_tbssresults(project, rois, subjects, metric="FA"):
 #           templates(1)=struct('name', 'controls59', 'imagepath' , '/data/MRI/pymri/templates/images/MNI152_T1_4mm_brain', 'rsn_labels', [], 'good_nodes', []);
 #           templates(1).rsn_labels={'aDMN','LAT_OCCIP','pDMN','RATN','FP','PRIM_VIS','LATN','FP2','pTemp','pSM','EXEC','SM','BG','BFP','CEREB','SM2','aTemp','LAT_OCCIP2','SAL','LAT_OCCIP3','X','SAL2'};
 #           templates(1).good_nodes=[1 2 3 5 6 7 8 9 11 12 13 14 15 16 17 20 23 24 27 29 34 47];
-def parse_melodic_labels(ilabels, ibashtempl="", ifslnetstempl="", fslnetstemplname="", t1_4mm_brain="", templnum=1):
+def parse_melodic_labels(ilabels:str, ibashtempl:str="", ifslnetstempl:str="", fslnetstemplname:str="", t1_4mm_brain:str="", templnum:int=1):
 
     with open(ilabels, "r") as f:
         _str = f.readlines()

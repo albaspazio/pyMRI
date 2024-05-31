@@ -1,0 +1,15 @@
+Select Rows Based on Column Values
+
+df.loc[df['col1'] == value]
+df.loc[df['col1'].isin([value1, value2, value3, ...])]
+df.loc[(df["session"] == session) & (df["subj"] == subj_lab)]
+
+
+select index(s) of rows based on ...
+
+df.index[(df["session"] == session) & (df["subj"] == subj_lab])
+
+
+
+# Filter the DataFrame
+result = df.loc[df['subj'] == 'gigi', 'age']
