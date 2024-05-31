@@ -110,7 +110,7 @@ class SPMModels:
         if anal_type == SPMConstants.VBM_DARTEL:
             subjs_dir = os.path.join(root_outdir, "subjects")
             if input_images is None:
-                input_images = GrpInImages("dartel", subjs_dir)
+                input_images = GrpInImages(anal_type, subjs_dir)
 
             if glob_calc is None:
                 glob_calc   = "subj_icv"
@@ -122,8 +122,8 @@ class SPMModels:
             batch_prefix    = "vbmdartel_"
             statsdir        = os.path.join(root_outdir, "stats", anal_name)
 
-        elif anal_type == SPMConstants.CAT:
-            input_images = GrpInImages("ct")
+        elif anal_type == SPMConstants.CT or anal_type == SPMConstants.GYR or anal_type == SPMConstants.SDEP:
+            input_images = GrpInImages(anal_type)
             glob_calc       = ""
 
             batch_folder    = "mpr"
@@ -183,7 +183,7 @@ class SPMModels:
         SPMStatsUtils.spm_replace_explicit_mask(self.globaldata, out_batch_job, expl_mask)
 
         # model estimate
-        if anal_type == SPMConstants.CAT:
+        if anal_type == SPMConstants.CT or SPMConstants.GYR or SPMConstants.SDEP:
             sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=True))
         else:
             sed_inplace(out_batch_job, "<MODEL_ESTIMATE>", SPMStatsUtils.get_spm_model_estimate(isSurf=False))

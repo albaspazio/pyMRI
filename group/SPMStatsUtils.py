@@ -87,18 +87,10 @@ class SPMStatsUtils:
         Returns:
             None: None
         """
-        img_type    = grp_input_imgs.type
-        img_folder  = grp_input_imgs.folder
-
         cells_images = "\r"
 
-        img = ""
         for subj in group_instances:
-            if img_type == "ct":
-                img = subj.t1_cat_resampled_surface
-            elif img_type == "dartel":
-                img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
-
+            img = subj.get_analysis_image(grp_input_imgs)
             img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_1GROUP_MULTREGR")
             cells_images = cells_images + "\'" + img + "\'\r"
 
@@ -118,26 +110,12 @@ class SPMStatsUtils:
         Returns:
             None: None
         """
-        img_type    = grp_input_imgs.type
-        img_folder  = grp_input_imgs.folder
-
         subjs       = group_instances
 
         grp_images = "{\n"
-        img         = ""
         for subj in subjs:
-
-            if img_type == "ct":
-                img = subj.t1_cat_resampled_surface
-            elif img_type == "dartel":
-                # img_folder is a folder full path
-                img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
-            elif img_type == "fmri":
-                # img_folder is a folder name
-                img = os.path.join(subj.fmri_dir, "stats", img_folder, grp_input_imgs.name + ".nii")
-
+            img = subj.get_analysis_image(grp_input_imgs)
             img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_1sTT")
-
             grp_images = grp_images + "\'" + img + "\'\n"
         grp_images = grp_images + "\n}"
 
@@ -158,42 +136,20 @@ class SPMStatsUtils:
         Returns:
             None: None
         """
-        img_type    = grp_input_imgs.type
-        img_folder  = grp_input_imgs.folder
-
         subjs1      = groups_instances[0]
         subjs2      = groups_instances[1]
 
         grp1_images = "{\n"
-        img         = ""
         for subj in subjs1:
-
-            if img_type == "ct":
-                img = subj.t1_cat_resampled_surface
-            elif img_type == "dartel":
-                # img_folder is a folder full path
-                img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
-            elif img_type == "fmri":
-                # img_folder is a folder name
-                img = os.path.join(subj.fmri_dir, "stats", img_folder, grp_input_imgs.name + ".nii")
-
+            img = subj.get_analysis_image(grp_input_imgs)
             img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_2sTT")
-
             grp1_images = grp1_images + "\'" + img + "\'\n"
         grp1_images = grp1_images + "\n}"
 
         grp2_images = "{\n"
         for subj in subjs2:
-
-            if img_type == "ct":
-                img = subj.t1_cat_resampled_surface
-            elif img_type == "dartel":
-                img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
-            elif img_type == "fmri":
-                img = os.path.join(subj.fmri_dir, "stats", img_folder, grp_input_imgs.name + ".nii")
-
+            img = subj.get_analysis_image(grp_input_imgs)
             img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_2sTT")
-
             grp2_images = grp2_images + "\'" + img + "\'\n"
         grp2_images = grp2_images + "\n}"
 
@@ -216,26 +172,16 @@ class SPMStatsUtils:
             None: None
 
         """
-        img_type    = grp_input_imgs.type
-        img_folder  = grp_input_imgs.folder
-
         cells_images = ""
         gr = 0
         for subjs in group_instances:
             gr              = gr + 1
             cells_images    = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(" + str(gr) + ").scans = "
 
-            img             = ""
             grp1_images     = "{\n"
             for subj in subjs:
-
-                if img_type == "ct":
-                    img = subj.t1_cat_resampled_surface
-                elif img_type == "dartel":
-                    img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
-
+                img = subj.get_analysis_image(grp_input_imgs)
                 img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_1W")
-
                 grp1_images = grp1_images + "\'" + img + "\'\n"
             grp1_images = grp1_images + "\n};"
 
@@ -257,9 +203,6 @@ class SPMStatsUtils:
         Returns:
             None: None
         """
-        img_type    = grp_input_imgs.type
-        img_folder  = grp_input_imgs.folder
-
         factors_labels  = factors["labels"]
         cells           = factors["cells"]
 
@@ -280,16 +223,9 @@ class SPMStatsUtils:
                 cells_images    = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(" + str(ncell) + ").scans = {\n"
 
                 subjs           = cells[f1][f2]
-                img             = ""
                 for subj in subjs:
-
-                    if img_type == "ct":
-                        img = eval("subj.t1_cat_resampled_surface")
-                    elif img_type == "dartel":
-                        img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
-
+                    img = subj.get_analysis_image(grp_input_imgs)
                     img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_2W")
-
                     cells_images = cells_images + "'" + img + "'\n"
                 cells_images = cells_images + "};"
 

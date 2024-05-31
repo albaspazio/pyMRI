@@ -2,6 +2,7 @@ import os
 from typing import List
 
 from data.utilities import list2spm_text_column
+from group.SPMConstants import SPMConstants
 from utility.images.images import mid_1based
 
 import numpy as np
@@ -418,9 +419,9 @@ class GrpInImages:
 
     Parameters
     ----------
-    type : str
-        The type of images.
-        Options: "ct", "dartel", "vbm", "fmri".
+    type : int
+        The type of images. using SPMConstants
+        Options: CT, VBM_DARTEL, GYR, SDEP, VBM, FMRI".
     folder : str, optional
         The folder containing the images.
         Only used for "dartel" and "vbm" types.
@@ -429,9 +430,9 @@ class GrpInImages:
         Only used for "ct" type.
     """
 
-    valid_type = ["ct", "dartel", "vbm", "fmri"]
+    valid_type = [SPMConstants.VBM, SPMConstants.VBM_DARTEL, SPMConstants.CT, SPMConstants.FMRI, SPMConstants.GYR, SPMConstants.SDEP]
 
-    def __init__(self, type, folder=None, name=None):
+    def __init__(self, type:int, folder=None, name=None):
         """
         Initialize a GroupLevelInputImages object.
         """
@@ -440,16 +441,15 @@ class GrpInImages:
         self.name = name
 
         # folder is:
-        # fmri:     name of subject's fmri subfolder of (SUBJ_LABEL/sX/fmri/stats/)
-        # ct:       [None] always located in mpr/cat/surf
-        # dartel:   fullpath of a group-analysis folder
-        # vbm:      fullpath of a group-analysis folder
+        # fmri          :   name of subject's fmri subfolder of (SUBJ_LABEL/sX/fmri/stats/)
+        # ct/gyr/sdep   :   [None] always located in mpr/cat/surf
+        # vbm_dartel    :   fullpath of a group-analysis folder
+        # vbm           :   fullpath of a group-analysis folder
 
-        if self.type == "vbm" or self.type == "dartel" or (self.type == "ct" and self.folder is not None):
+        if (self.type == SPMConstants.VBM or self.type == SPMConstants.VBM_DARTEL or
+           (self.type == SPMConstants.CT and self.folder is not None) or (self.type == SPMConstants.GYR and self.folder is not None) or (self.type == SPMConstants.SDEP and self.folder is not None)):
             if not os.path.isdir(self.folder):
-                raise Exception(
-                    "Error in GroupLevelInputImages: not-existing images folder (" + self.folder + "), analysis type (" + str(type) + ")")
+                raise Exception("Error in GroupLevelInputImages: not-existing images folder (" + self.folder + "), analysis type (" + str(type) + ")")
 
         if self.type not in self.valid_type:
-            raise Exception(
-                "Error in GroupLevelInputImages: invalid images type (" + str(type) + ")")
+            raise Exception("Error in GroupLevelInputImages: invalid images type (" + str(type) + ")")

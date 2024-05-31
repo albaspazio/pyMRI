@@ -9,7 +9,8 @@ from shutil import move, rmtree
 from typing import List, Tuple
 
 from Global import Global
-from group.spm_utilities import FmriProcParams
+from group.SPMConstants import SPMConstants
+from group.spm_utilities import FmriProcParams, GrpInImages
 from utility.images.Image import Image
 from utility.images.Images import Images
 from utility.myfsl.utils.run import rrun
@@ -230,10 +231,14 @@ class Subject:
         self.t1_cat_mri_dir             = os.path.join(self.t1_cat_dir, "mri")
         self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
         self.t1_cat_surface_resamplefilt= self._global.cat_smooth_surf
+        self.t1_cat_gyrif_resamplefilt  = self._global.cat_smooth_gyrif
         self.t1_cat_lh_surface          = Image(os.path.join(self.t1_cat_surface_dir, "lh.thickness.T1_" + self.label))
         self.t1_cat_resampled_surface   = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.T1_" + self.label + ".gii"))
         self.t1_cat_resampled_surface_longitudinal = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.rT1_" + self.label + ".gii"))
         self.t1_cat_lhcentral_image     = Image(os.path.join(self.t1_cat_surface_dir, "lh.central.T1_" + self.label + ".gii"))
+
+        self.t1_cat_resampled_gyrific   = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_gyrif_resamplefilt) + ".mesh.gyrification.resampled_32k.T1_" + self.label + ".gii"))
+        self.t1_cat_resampled_suldepth  = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.depth.resampled_32k.T1_" + self.label + ".gii"))
 
         self.t1_dartel_c1               = Image(os.path.join(self.t1_spm_dir, "c1T1_" + self.label))
         self.t1_dartel_rc1              = Image(os.path.join(self.t1_spm_dir, "rc1T1_" + self.label))
@@ -1217,6 +1222,22 @@ class Subject:
     # 7	Unable to write to output folder (check file permissions)
     # 8	Converted some but not all of the input DICOMs
     # 9	Unable to rename files (result of dcm2niix -r y ~/in)
+
+    def get_analysis_image(self, anal_imgs:GrpInImages) -> str:
+
+        if anal_imgs.type == SPMConstants.CT:
+            img = self.t1_cat_resampled_surface
+        elif anal_imgs.type == SPMConstants.SDEP:
+            img = self.t1_cat_resampled_suldepth
+        elif anal_imgs.type == SPMConstants.GYR:
+            img = self.t1_cat_resampled_gyrific
+        elif anal_imgs.type == SPMConstants.VBM_DARTEL:
+            img = os.path.join(anal_imgs.folder, "smwc1T1_" + self.label + ".nii")
+        elif anal_imgs.type == SPMConstants.FMRI:
+            # img_folder is a folder name
+            img = os.path.join(self.fmri_dir, "stats", anal_imgs.folder, anal_imgs.name + ".nii")
+
+        return img
 
     def renameNifti(self, extpath:str, associations:dict, options:str="-z o -f %f_%p_%t_%s_%d ", cleanup:int=0, convert:bool=True, rename:bool=True):
         """

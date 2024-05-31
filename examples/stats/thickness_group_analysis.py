@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
         post_model          = PostModel(SPMConstants.OWA, covs, contrasts=contrasts, res_params=ResultsParams("none", 0.001, 0),
                                          res_conv_params=CatConvResultsParams("none", 0.001, "none"), isSpm=False)
-        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.OWA, SPMConstants.CAT, anal_name,
+        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.OWA, SPMConstants.CT, anal_name,
                                           groups_instances, covs=covs, post_model=post_model, runit=False,
                                           mustExist=False)
         #endregion
@@ -84,7 +84,7 @@ if __name__ == "__main__":
         #                          covs=None, cov_interactions=None, cov_centering=False, data_file=None,
         #                          glob_calc=None, expl_mask="icv", spm_template_name=None,
         #                          post_model=None, runit=True):
-        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.TSTT, SPMConstants.CAT, anal_name,
+        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.TSTT, SPMConstants.CT, anal_name,
                                           groups_instances, covs=covs, post_model=post_model, runit=False,
                                           mustExist=False)
 
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         #                          covs=None, cov_interactions=None, cov_centering=False, data_file=None,
         #                          glob_calc=None, expl_mask="icv", spm_template_name=None,
         #                          post_model=None, runit=True):
-        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.TWA, SPMConstants.CAT, anal_name,
+        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.TWA, SPMConstants.CT, anal_name,
                                           groups_instances, covs=covs, post_model=post_model, runit=False,
                                           mustExist=False)
 
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         post_model = PostModel(SPMConstants.MULTREGR, covs,
                                res_params=ResultsParams("none", 0.001, 0),
                                res_conv_params=CatConvResultsParams("none", 0.001, "none"), isSpm=False)
-        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.MULTREGR, SPMConstants.CAT, anal_name,
+        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.MULTREGR, SPMConstants.CT, anal_name,
                                           groups_instances, covs=covs, post_model=post_model, runit=False,
                                           mustExist=False)
         #endregion
