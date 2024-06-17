@@ -32,7 +32,7 @@ class ResultsParams:
 
     """
 
-    def __init__(self, multcorr: str = "FWE", pvalue: float = 0.05, clustext: str = None):
+    def __init__(self, multcorr: str = "FWE", pvalue: float = 0.05, clustext: int = 0):
         self.mult_corr = multcorr
         self.pvalue = pvalue
         self.cluster_extend = clustext

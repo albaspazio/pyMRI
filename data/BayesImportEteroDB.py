@@ -34,14 +34,14 @@ class BayesImportEteroDB:
         filepath (str): The path to the EteroDB file.
         sheets (dict): A dictionary of the sheet names and their dataframes.
     """
-    schema_sheets_names = ["main", "HAM A-D", "PANSS", "SANS", "SAPS", "TATE", "TLC", "YMRS"]
+    schema_sheets_names = ["main", "HAM", "PANSS", "SANS", "SAPS", "TATE", "TLC", "YMRS"]
 
     subj                = ""
     session             = 1
     group               = ""
 
     scales_data = {
-        "HAM A-D":[{"HAMA1":3},{"HAMA2":4},{"HAMA3":5},{"HAMA4":6},{"HAMA5":7},{"HAMA6":8},{"HAMA7":9},{"HAMA8":10},{"HAMA9":11},{"HAMA10":12},{"HAMA11":13},{"HAMA12":14},{"HAMA13":15},{"HAMA14":16},{"HAMATOT":17},{"HAMD1":20},{"HAMD2":26},{"HAMD3":32},{"HAMD4":38},{"HAMD5":42},{"HAMD6":46},{"HAMD7":50},{"HAMD8":56},{"HAMD9":62},{"HAMD10":68},{"HAMD11":74},{"HAMD12":80},{"HAMD13":84},{"HAMD14":88},{"HAMD15":92},{"HAMD16":98},{"HAMD17":108},{"HAMD18A":112},{"HAMD18B":116},{"HAMD19":120},{"HAMD20":125},{"HAMD21":130},{"HAMDTOT":134}],
+        "HAM":[{"HAMA1":3},{"HAMA2":4},{"HAMA3":5},{"HAMA4":6},{"HAMA5":7},{"HAMA6":8},{"HAMA7":9},{"HAMA8":10},{"HAMA9":11},{"HAMA10":12},{"HAMA11":13},{"HAMA12":14},{"HAMA13":15},{"HAMA14":16},{"HAMATOT":17},{"HAMD1":20},{"HAMD2":26},{"HAMD3":32},{"HAMD4":38},{"HAMD5":42},{"HAMD6":46},{"HAMD7":50},{"HAMD8":56},{"HAMD9":62},{"HAMD10":68},{"HAMD11":74},{"HAMD12":80},{"HAMD13":84},{"HAMD14":88},{"HAMD15":92},{"HAMD16":98},{"HAMD17":108},{"HAMD18A":112},{"HAMD18B":116},{"HAMD19":120},{"HAMD20":125},{"HAMD21":130},{"HAMDTOT":134}],
         "PANSS":  [{"PANSS_p1":3},{"PANSS_p2":4},{"PANSS_p3":5},{"PANSS_p4":6},{"PANSS_p5":7},{"PANSS_p6":8},{"PANSS_p7":9},{"PANSS_n1":12},{"PANSS_n2":13},{"PANSS_n3":14},{"PANSS_n4":15},{"PANSS_n5":16},{"PANSS_n6":17},{"PANSS_n7":18},{"PANSS_g1":21},{"PANSS_g2":22},{"PANSS_g3":23},{"PANSS_g4":24},{"PANSS_g5":25},{"PANSS_g6":26},{"PANSS_g7":27},{"PANSS_g8":28},{"PANSS_g9":29},{"PANSS_g10":30},{"PANSS_g11":31},{"PANSS_g12":32},{"PANSS_g13":33},{"PANSS_g14":34},{"PANSS_g15":35},{"PANSS_g16":36},{"PANSS_TOT_P": 10},{"PANSS_TOT_N": 19},{"PANSS_TOT_G": 37},{"PANSS_TOT": 38}],
         "SANS":   [{"SANS_1": 3}, {"SANS_2": 4}, {"SANS_3": 5}, {"SANS_4": 6}, {"SANS_5": 7}, {"SANS_6": 8}, {"SANS_7": 9}, {"SANS_8": 10}, {"SANS_9": 12}, {"SANS_10": 13}, {"SANS_11": 14}, {"SANS_12": 15}, {"SANS_13": 16}, {"SANS_14": 18}, {"SANS_15": 19}, {"SANS_16": 20}, {"SANS_17": 21}, {"SANS_18": 23}, {"SANS_19": 24}, {"SANS_20": 25}, {"SANS_21": 26}, {"SANS_22": 27}, {"SANS_23": 29}, {"SANS_24": 30}, {"SANS_25": 31}, {"SANS_TOT": 32}],
         "SAPS":   [{"SAPS_1":3}, {"SAPS_2":4}, {"SAPS_3":5}, {"SAPS_4":6}, {"SAPS_5":7}, {"SAPS_6":8}, {"SAPS_7":9}, {"SAPS_8":11}, {"SAPS_9":12}, {"SAPS_10":13},{"SAPS_11":14}, {"SAPS_12":15}, {"SAPS_13":16}, {"SAPS_14":17}, {"SAPS_15":18}, {"SAPS_16":19}, {"SAPS_17":20}, {"SAPS_18":21}, {"SAPS_19":22}, {"SAPS_20":23}, {"SAPS_21":25}, {"SAPS_22":26}, {"SAPS_23":27}, {"SAPS_24":28}, {"SAPS_25":29}, {"SAPS_26":31}, {"SAPS_27":32}, {"SAPS_28":33}, {"SAPS_29":34}, {"SAPS_30":35}, {"SAPS_31":36}, {"SAPS_32":37}, {"SAPS_33":38}, {"SAPS_34":39},{"SAPS_TOT":40}],
@@ -188,11 +188,11 @@ class BayesImportEteroDB:
             None
         """
         flags   = [ {"main":["mri_code"]},
-                    {"OA":["oa"]},
-                    {"sangue":["NK"]}, {"sangue":["T_HELP", "T_REG"]}, {"sangue":["MONO"]}, {"sangue":["B"]}, {"sangue":["PROT"]},
+                    {"BISA":["oa"]},
+                    {"BLOOD":["NK"]}, {"BLOOD":["T_HELP", "T_REG"]}, {"BLOOD":["MONO"]}, {"BLOOD":["B"]}, {"BLOOD":["PROT"]},
                     {"MATRICS":["matrics_date"]},
-                    {"main":["mri_code"], "OA":["oa"]},
-                    {"main":["mri_code"], "sangue":["NK"]}, {"main":["mri_code"], "sangue":["T_HELP", "T_REG"]}, {"main":["mri_code"], "sangue":["MONO"]}, {"main":["mri_code"], "sangue":["B"]}, {"main":["mri_code"], "sangue":["PROT"]}
+                    {"main":["mri_code"], "BISA":["oa"]},
+                    {"main":["mri_code"], "BLOOD":["NK"]}, {"main":["mri_code"], "BLOOD":["T_HELP", "T_REG"]}, {"main":["mri_code"], "BLOOD":["MONO"]}, {"main":["mri_code"], "BLOOD":["B"]}, {"main":["mri_code"], "BLOOD":["PROT"]}
                   ]
 
         # for flag in flags:

@@ -93,6 +93,17 @@ class Image(str):
         return self.cimtest()
 
     @property
+    def gexist(self):
+        """
+        Check if the compressed image exists.
+
+        Returns:
+            bool: Whether the compressed image exists.
+
+        """
+        return self.gimtest()
+
+    @property
     def upath(self):
         """
         Get the path to the uncompressed image.
@@ -320,6 +331,11 @@ class Image(str):
 
         # only gets to here if there was a hdr and an img file
         return True
+
+    # return False if surface image does not exist or True if surface image exists
+    def gimtest(self):
+        if os.path.isfile(self.fpathnoext + ".gii"):
+            return True
 
     def cp(self, dest, error_src_not_exist:bool=True, logFile=None) -> str:
         """

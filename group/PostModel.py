@@ -3,7 +3,7 @@ from typing import List
 
 from Global import Global
 from group.SPMConstants import SPMConstants
-from group.spm_utilities import ResultsParams, CatConvResultsParams, Regressor
+from group.spm_utilities import ResultsParams, CatConvResultsParams, Regressor, Contrast
 from utility.fileutilities import remove_ext
 
 
@@ -11,7 +11,7 @@ class PostModel:
     """
     This class represents a post-model.
     """
-    def __init__(self, _type:int, regressors:List[Regressor], templ_name:str=None, contrasts:List[str]=None,
+    def __init__(self, _type:int, regressors:List[Regressor], templ_name:str=None, contrasts:List[Contrast]=None,
                  res_params:ResultsParams=None, res_conv_params:CatConvResultsParams=None, isSpm:bool=True):
         """
         This function initializes a post-model.

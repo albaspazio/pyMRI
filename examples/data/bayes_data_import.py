@@ -27,8 +27,8 @@ if __name__ == "__main__":
 
         # subjects         = ["Arduino Gabriele", "Juan Kratzer", "Corsini Giovanni", "Levo Margherita", "Esposito Davide", "Priarone Ambra", "Bugliani Michele", "Risso Francesco ", "Cammalleri Michela", "Bruni Manuela", "Biggio Monica", "Nazzaro Roberto", "Barreto Cristina", "Vignone Severino", "Trabucco Alice", "Priolo Mario", "Bohlarova Darya", "Macchiavello Massimo", "Inuggi Alberto", "Iurilli Marisa", "Codou Fall", "Ghermakovsky Dumitru", "Gnaneswran Bavidran", "Pantalla Marco", "Cuccureddu Paolo", "Testa Emanuele ", "Tardito Samuele", "Espanet Giovanni", "Cevasco Maria Pia", "Bozomoala Elena Simona", "Bebeci Iridjon", "Galatini Matteo", "Cremonesi Vincenza", "Favilla Luca", "Lechiara Alessio", "Radi Ergesta", "Luciani Mariangela", "Longo Lucia ", "Sepe Francesco", "Rouissi Nejiba", "Paolini Giulio", "Pederzolli Daniela", "Repetto Marcello", "Colucci Laura", "Ubilla Julian", "Rzgar Saleh Sharif", "De noia Chiara", "Velo Alice", "Marino Margherita", "Marozzi Valentina", "Isola Fabrizio", "Da Conceicao Simona", "Bode Juxhin", "Dordolo Paola", "Paba Stefano", "Fornai Mattia", "D'Urso Agata", "Serrapica Ciro", "Cresta Sandra", "Ottonello Luca", "Serpetta Filippo ", "Marinescu Alexandro Marian", "Pullè Alberto", "Cacciatore Cinzia", "Cevasco Gina", "Sterlini Emilio", "Bacikova Lucia", "Ragni Maurizio", "Luminoso Thomas", "Meriggi Olga", "Lyakh Ruslan", "Oberti Alessandro", "Marsiglia Elisabetta", "Tasselli Rosanna", "De Lisi Giuseppe", "Roncarolo Giovanni", "Sgambato Gianluca", "Dotti Vilma", "Clavierez Cruz Sebastian", "Escelsior Andrea", "Versaggi Silvio", "Vai Eleonora", "Cattedra Simone", "Baldanzi Christian", "Esposito Natashia", "Milanti Leonardo", "Minasi Riccardo", "Pitone Giuseppe", "Ferrari Allegra", "Tergolina Camilla", "De Longis Simona", "Campodonico Alessandra", "Pepe Michele", "Bovio Anna", "Magnanini Camilla", "Firenze Stefano", "Orecchia Maria Luisa", "Russo Antonio", "Virga Brian", "Massa Sabrina", "Valerio Luca", "Gandini Alessio", "Marenco Giacomo", "Bruzzone Stefano", "Sartoris Giulia", "Villa veronica", "Gatto Marco", "Zerbi Laura", "Almondo Chiara", "Daturi Gabriele", "Pialorsi Simone", "Meinero Matteo", "Sapia Gabriele", "Iozzia Giorgia", "Chiara Cappello", "Sassarini Paolo", "Mecca Elisa", "Noli Simone", "Vigilanti Luca", "Barbera Maurizio", "Pio Stefano", "Lanino Edoardo", "Zanardi Sabrina", "Pukli Marta", "Briasco Giancarla", "Ravizza Massimiliano", "Cucalon Micheal", "Calcagno Dorotea", "Loi Andrea", "Cavazza Angela", "Rubino Davide", "Parodi Marco", "De Paoli Giampiero", "Talimani Luca", "Scevola Pamela Angela", "Lumetti Flavio", "Torres Paola Andrea", "Cristaldi Damiano", "Puglisi Luca", "Serpetto Filippo", "Ivaldi Federico", "Zerbetto Roberto", "Bode Juxhin", "Vacca Enrica"]
 
-        columns2copy        = ["socio-ana", "clinica",
-                               "AASP", "ASI", "CCAS", "HAM A-D", "MATRICS", "MEQ", "MW S-D", "OA", "PANSS",
+        columns2copy        = ["SA", "CLINIC",
+                               "AASP", "ASI", "CCAS", "HAM", "MATRICS", "MEQ", "MW", "BISA", "PANSS",
                                "PAS", "PSQI", "SANS", "SAPS", "SPQ", "STQ", "TATE", "TEMPS", "TLC", "YMRS", "ZTPI"]
         # ======================================================================================================================
         # START !!!
@@ -61,16 +61,16 @@ if __name__ == "__main__":
         #region CREATE BAYES DB:SUBJECTS WITH MRI & NK
 
         out_nk_mri_subset   = os.path.join(project.stats_input, "nk_mri_db.xlsx")   # set output file
-        nk_mri_subjects     = bayes_db.sheets["sangue"].filter_subjects(mrisubj_labels, conditions=[FilterValues("NK", "==", 1)])
+        nk_mri_subjects     = bayes_db.sheets["BLOOD"].filter_subjects(mrisubj_labels, conditions=[FilterValues("NK", "==", 1)])
         nk_mri_labels       = nk_mri_subjects.labels
 
 
         # define which columns insert into the excel
         nk_mri_shcol   = {"main"     : ["mri_code", "group", "age", "gender"],
-                          "clinica"  : ["disdur"],
-                          "sangue"   : ["immfen_code", "CD56_BR_CD16_NEG_DIM", "CD56_DIM_CD16_BR", "CD56_DIM_CD16_DIM_NEG", "CD56_NEG_CD16_BR", "FS0", "FS1", "FS2", "FS3", "FS4", "FS5", "FS6", "FS7", "FS8", "FS9", "FS10", "FS11"],
+                          "CLINIC"  : ["disdur"],
+                          "BLOOD"   : ["immfen_code", "CD56_BR_CD16_NEG_DIM", "CD56_DIM_CD16_BR", "CD56_DIM_CD16_DIM_NEG", "CD56_NEG_CD16_BR", "FS0", "FS1", "FS2", "FS3", "FS4", "FS5", "FS6", "FS7", "FS8", "FS9", "FS10", "FS11"],
                           "ASI"      : ["ASI_TOT"],
-                          "HAM A-D"  : ["HAMD_TOT", "HAMA_TOT"],
+                          "HAM"  : ["HAMD_TOT", "HAMA_TOT"],
                           "PANSS"    : ["PANSS_TOT_P", "PANSS_TOT_N", "PANSS_TOT_G", "PANSS_TOT"],
                           "SANS"     : ["SANS_TOT"],
                           "SAPS"     : ["SAPS_TOT"],

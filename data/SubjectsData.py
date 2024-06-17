@@ -256,6 +256,8 @@ class SubjectsData:
 
         subjs = SubjectSDList([s for s in self.subjects if s.label in subj_labels])
 
+        # if len(subjs) !=  TODO: check if some subject is missing
+
         if sessions is not None:
             if isinstance(sessions, int):
                 sessions = [sessions for s in subjs.labels]  # 1-fill

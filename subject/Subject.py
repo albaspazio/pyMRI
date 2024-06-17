@@ -157,6 +157,15 @@ class Subject:
         """
         return self.wb_data.exist
 
+    def hasCT(self):
+        """
+        Check if a white matter image exists for this subject.
+
+        Returns:
+            bool: True if a white matter image exists, False otherwise.
+        """
+        return self.t1_cat_resampled_surface.gexist
+
     def get_properties(self, sess:int=1):
         """
         Get the properties for a specific session.
