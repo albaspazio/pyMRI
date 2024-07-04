@@ -53,6 +53,8 @@ class Global:
         self.trackvis_bin           = local_settings_data["trackvis_bin"]
         self.autoptx_script_dir     = local_settings_data["autoptx_script_dir"]
         self.eddy_gpu_exe_name      = local_settings_data["eddy_gpu_exe_name"]
+        self.def_dsi_rec            = local_settings_data["def_dsi_rec"]
+        self.def_dsi_conntempl      = local_settings_data["def_dsi_conntempl"]
 
         self.cat_foldername         = self.cat_version.split('.')[0]
         self.cat_dir                = os.path.join(self.spm_dir, "toolbox", self.cat_foldername)

@@ -1618,8 +1618,22 @@ class Subject:
                     continue
                 if not os.path.exists(os.path.join(rootdir, tract)):
                     return False
-
             return True
+
+        elif analysis_type == "dsi_group":
+            # "XXXX-dti.src.gz.odf.gqi.1.25.fib.gz"
+            if analysis_params is None:
+                analysis_params = self._global.def_dsi_rec
+            name = os.path.join(self.dti_dsi_dir, self.label + "-dti.src.gz." + analysis_params + ".fib.gz")
+
+            return os.path.exists(name)
+
+        elif analysis_type == "dsi_conn_group":
+            # "XXXX-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.bn274.count.pass.connectivity.mat"
+            if analysis_params is None:
+                analysis_params = [self._global.def_dsi_rec, self._global.def_dsi_conntempl]
+            name = os.path.join(self.dti_dsi_dir, self.label + "-dti.src.gz." + analysis_params[0] + ".fib.gz.tt.gz." + analysis_params[1] + ".count.pass.connectivity.mat")
+            return os.path.exists(name)
 
         # RESTING
         elif analysis_type == "melodic":
