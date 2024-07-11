@@ -328,6 +328,11 @@ class FilterValues:
                 return False
             else:
                 return True
+        elif self.op == "noexist":
+            if str(value) == "" or str(value).lower() == "na" or str(value).lower() == "nan":
+                return True
+            else:
+                return False
 
     def areValid(self, values:List[Any]):
         """

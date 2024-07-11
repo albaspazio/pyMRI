@@ -37,11 +37,12 @@ class DataProject:
         data_file (str): The path to the data file for the project.
         data (SubjectsData): A SubjectsData instance containing the project's data.
     """
-    def __init__(self, name:str, globaldata:Global, data:str|SubjectsData="data.xlsx"):
+    def __init__(self, name:str, script_dir:str, data:str|SubjectsData="data.xlsx"):
 
         self.name               = name
 
-        self.script_dir         = os.path.join(globaldata.project_scripts_dir, self.name)
+        # self.script_dir         = os.path.join(globaldata.project_scripts_dir, self.name)
+        self.script_dir         = script_dir
         self.r_dir              = os.path.join(self.script_dir, "r")
         self.input_data_dir     = os.path.join(self.script_dir, "input_data")
         self.output_data_dir    = os.path.join(self.script_dir, "output_data")
@@ -57,7 +58,7 @@ class DataProject:
         os.makedirs(self.stats_input,    exist_ok=True)
         os.makedirs(self.stats_output,   exist_ok=True)
 
-        self.globaldata = globaldata
+        # self.globaldata = globaldata
 
         self.subjects           = []
         self.subjects_labels    = []

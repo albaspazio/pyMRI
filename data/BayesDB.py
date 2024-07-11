@@ -12,6 +12,7 @@ from data.SubjectSDList import SubjectSDList
 from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
 
+
 class BayesDB(MSHDB):
     """
     The BayesDB class provides an interface to a collection of MSHDB sheets that contain data on multiple subjects.
@@ -93,12 +94,12 @@ class BayesDB(MSHDB):
     second_col_name = "session"
     third_col_name  = "group"
 
-    schema_sheets_names = [ "main", "socio-ana", "clinica", "sangue", "ceres", "carico_farm",
-                            "AASP", "ASI", "CCAS", "HAM A-D", "MATRICS", "MEQ", "MW S-D", "OA", "PANSS",
+    schema_sheets_names = [ "main", "SA", "CLINIC", "BLOOD", "CERES", "PHARLOAD",
+                            "AASP", "ASI", "CCAS", "HAM", "MATRICS", "MEQ", "MW", "BISA", "PANSS",
                             "PAS", "PSQI", "SANS", "SAPS", "SPQ", "STQ", "TATE", "TEMPS", "TLC", "YMRS", "ZTPI"]
 
     date_format         = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
-    dates               = {"main":["birth_date", "recruitment_date"], "MATRICS":["matrics_date"]}
+    dates               = {"main":["birth_date", "recruitment_date"], "MATRICS":["MATRICS_date"]}
     to_be_rounded       = {"main":["age"]}
 
     def __init__(self, data:str|Sheets|GDriveSheet=None, can_different_subjs:bool=False, password:str="", calc_flags:bool=True, sortonload:bool=True):
@@ -370,11 +371,11 @@ class BayesDB(MSHDB):
             The list of blood labels.
         """
         total = self.sheet_sd(self.main_name).select_subjlist(subj_labels, conditions=[FilterValues("immfen_code", "exist", 0)])
-        th = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("T_HELP", "==", 1)])
-        tr = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("T_REG", "==", 1)])
-        nk = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("NK", "==", 1)])
-        mono = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("MONO", "==", 1)])
-        bi = self.sheet_sd("sangue").select_subjlist(subj_labels, conditions=[FilterValues("B", "==", 1)])
+        th = self.sheet_sd("BLOOD").select_subjlist(subj_labels, conditions=[FilterValues("T_HELP", "==", 1)])
+        tr = self.sheet_sd("BLOOD").select_subjlist(subj_labels, conditions=[FilterValues("T_REG", "==", 1)])
+        nk = self.sheet_sd("BLOOD").select_subjlist(subj_labels, conditions=[FilterValues("NK", "==", 1)])
+        mono = self.sheet_sd("BLOOD").select_subjlist(subj_labels, conditions=[FilterValues("MONO", "==", 1)])
+        bi = self.sheet_sd("BLOOD").select_subjlist(subj_labels, conditions=[FilterValues("B", "==", 1)])
 
         return [total, th, tr, nk, mono, bi]
 
@@ -420,11 +421,11 @@ class BayesDB(MSHDB):
                   ]
 
         in_sheets_cells = [{"main":["mri_code"]},
-                           {"OA":["oa"]},
-                           {"sangue":["NK"]}, {"sangue":["T_HELP", "T_REG"]}, {"sangue":["MONO"]}, {"sangue":["B"]}, {"sangue":["PROT"]},
-                           {"MATRICS":["matrics_date"]},
-                           {"main":["mri_code"], "OA":["oa"]},
-                           {"main":["mri_code"], "sangue":["NK"]}, {"main":["mri_code"], "sangue":["T_HELP", "T_REG"]}, {"main":["mri_code"], "sangue":["MONO"]}, {"main":["mri_code"], "sangue":["B"]}, {"main":["mri_code"], "sangue":["PROT"]}
+                           {"BISA":["oa"]},
+                           {"BLOOD":["NK"]}, {"BLOOD":["T_HELP", "T_REG"]}, {"BLOOD":["MONO"]}, {"BLOOD":["B"]}, {"BLOOD":["PROT"]},
+                           {"MATRICS":["MATRICS_date"]},
+                           {"main":["mri_code"], "BISA":["oa"]},
+                           {"main":["mri_code"], "BLOOD":["NK"]}, {"main":["mri_code"], "BLOOD":["T_HELP", "T_REG"]}, {"main":["mri_code"], "BLOOD":["MONO"]}, {"main":["mri_code"], "BLOOD":["B"]}, {"main":["mri_code"], "BLOOD":["PROT"]}
                            ]
 
         for id,val in enumerate(cols2write):
@@ -434,7 +435,7 @@ class BayesDB(MSHDB):
             for subj in self.subjects:
                 values = []
 
-                for id_1, src_sheet_lab in enumerate(list(in_sheets_cells[id].keys())):   # e.g. ["main", "OA"]
+                for id_1, src_sheet_lab in enumerate(list(in_sheets_cells[id].keys())):   # e.g. ["main", "BISA"]
                     # e.g. "main"
                     if src_sheet_lab in self.sheets:
                         src_sd:SubjectsData = self.sheet_sd(src_sheet_lab)

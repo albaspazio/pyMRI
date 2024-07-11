@@ -72,6 +72,7 @@ class Sheets(dict):
         self.schema_sheets_names = sh_name
         self.main_id = main_id
 
+    @property
     def main(self) -> SubjectsData:
         """
         Returns the main sheet as a SubjectsData object.
@@ -87,6 +88,7 @@ class Sheets(dict):
         except:
             return SubjectsData()
 
+    @property
     def all_subjects(self) -> SubjectSDList:
         """
         Returns a list of all subjects from all sheets as a SubjectSDList object.
@@ -97,16 +99,20 @@ class Sheets(dict):
             A list of all subjects from all sheets as a SubjectSDList object
 
         """
-        all_subjs = SubjectSDList(self.main.subjects.copy())
+        try:
+            all_subjs = SubjectSDList(self.main.subjects.copy())
 
-        for sh in self:
-            if sh == self.schema_sheets_names[self.main_id]:  # skip main
-                continue
-            subjs = self[sh].subjects
-            all_subjs.union_norep(subjs)
+            for sh in self:
+                if sh == self.schema_sheets_names[self.main_id]:  # skip main
+                    continue
+                subjs = self[sh].subjects
+                all_subjs.union_norep(subjs)
 
-        return all_subjs
+            return all_subjs
+        except:
+            return []
 
+    @property
     def is_consistent(self) -> bool:
         """
         Returns True if all sheets contain the same list of subjects, False otherwise.
