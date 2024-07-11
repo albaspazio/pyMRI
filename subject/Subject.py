@@ -9,7 +9,8 @@ from shutil import move, rmtree
 from typing import List, Tuple
 
 from Global import Global
-from group.spm_utilities import FmriProcParams
+from group.SPMConstants import SPMConstants
+from group.spm_utilities import FmriProcParams, GrpInImages
 from utility.images.Image import Image
 from utility.images.Images import Images
 from utility.myfsl.utils.run import rrun
@@ -156,6 +157,15 @@ class Subject:
         """
         return self.wb_data.exist
 
+    def hasCT(self):
+        """
+        Check if a white matter image exists for this subject.
+
+        Returns:
+            bool: True if a white matter image exists, False otherwise.
+        """
+        return self.t1_cat_resampled_surface.gexist
+
     def get_properties(self, sess:int=1):
         """
         Get the properties for a specific session.
@@ -230,10 +240,14 @@ class Subject:
         self.t1_cat_mri_dir             = os.path.join(self.t1_cat_dir, "mri")
         self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
         self.t1_cat_surface_resamplefilt= self._global.cat_smooth_surf
+        self.t1_cat_gyrif_resamplefilt  = self._global.cat_smooth_gyrif
         self.t1_cat_lh_surface          = Image(os.path.join(self.t1_cat_surface_dir, "lh.thickness.T1_" + self.label))
         self.t1_cat_resampled_surface   = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.T1_" + self.label + ".gii"))
         self.t1_cat_resampled_surface_longitudinal = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.rT1_" + self.label + ".gii"))
         self.t1_cat_lhcentral_image     = Image(os.path.join(self.t1_cat_surface_dir, "lh.central.T1_" + self.label + ".gii"))
+
+        self.t1_cat_resampled_gyrific   = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_gyrif_resamplefilt) + ".mesh.gyrification.resampled_32k.T1_" + self.label + ".gii"))
+        self.t1_cat_resampled_suldepth  = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.depth.resampled_32k.T1_" + self.label + ".gii"))
 
         self.t1_dartel_c1               = Image(os.path.join(self.t1_spm_dir, "c1T1_" + self.label))
         self.t1_dartel_rc1              = Image(os.path.join(self.t1_spm_dir, "rc1T1_" + self.label))
@@ -356,7 +370,9 @@ class Subject:
         self.fmri_aroma_image           = Image(os.path.join(self.fmri_aroma_dir, "denoised_func_data_nonaggr"))
         self.fmri_regstd_aroma_dir      = os.path.join(self.fmri_aroma_dir, "reg_standard")
         self.fmri_regstd_aroma_image    = Image(os.path.join(self.fmri_regstd_aroma_dir, "filtered_func_data"))
+        self.fmri_stats_dir             = os.path.join(self.fmri_dir, "stats")
 
+        self.fmri_logs_dir              = os.path.join(self.project.script_dir, "fmri", "logs")
         # ------------------------------------------------------------------------------------------------------------------------
         # WB
         # ------------------------------------------------------------------------------------------------------------------------
@@ -640,7 +656,7 @@ class Subject:
                  do_sienax:bool=False, bet_sienax_param_string:str="-SNB -f 0.2",
                  do_reg:bool=True, do_nonlinreg:bool=True, do_seg:bool=True,
                  do_spm_seg:bool=False, spm_seg_templ:str="", spm_seg_over_bet:bool=False,
-                 do_cat_seg:bool=False, cat_use_dartel:bool=False, do_cat_surf:bool=True, cat_smooth_surf:int=None,
+                 do_cat_seg:bool=False, cat_use_dartel:bool=False, do_cat_surf:bool=True, cat_smooth_surf:int=None, do_cat_extra:bool=True,
                  do_cat_seg_long:bool=False, cat_long_sessions:List[int]=None,
                  do_cleanup:int=Global.CLEANUP_LVL_MIN,
                  use_lesionmask:bool=False, lesionmask:str="lesionmask",
@@ -711,6 +727,8 @@ class Subject:
                             run cortical thickness analysis
         cat_smooth_surf : int = None
                             The smoothing kernel size for CAT toolbox segmentation.
+        do_cat_extra : bool = True,
+                            Extract also cortical folding and sulcal depth (form left central gii) and smooth them by 20 and 12 mm
         do_cat_seg_long : bool = False
                             perform CAT toolbox segmentation with long sessions.
         cat_long_sessions :List[int] = None
@@ -857,7 +875,8 @@ class Subject:
                         spm_template_name=self._global.cat_template_name,
                         use_dartel=cat_use_dartel,
                         calc_surfaces=do_cat_surf,
-                        smooth_surf=cat_smooth_surf)
+                        smooth_surf=cat_smooth_surf,
+                        extract_extra=do_cat_extra)
 
                 if do_cat_seg_long:
                     self.mpr.cat_segment_longitudinal(
@@ -1212,6 +1231,22 @@ class Subject:
     # 7	Unable to write to output folder (check file permissions)
     # 8	Converted some but not all of the input DICOMs
     # 9	Unable to rename files (result of dcm2niix -r y ~/in)
+
+    def get_analysis_image(self, anal_imgs:GrpInImages) -> str:
+
+        if anal_imgs.type == SPMConstants.CT:
+            img = self.t1_cat_resampled_surface
+        elif anal_imgs.type == SPMConstants.SDEP:
+            img = self.t1_cat_resampled_suldepth
+        elif anal_imgs.type == SPMConstants.GYR:
+            img = self.t1_cat_resampled_gyrific
+        elif anal_imgs.type == SPMConstants.VBM_DARTEL:
+            img = os.path.join(anal_imgs.folder, "smwc1T1_" + self.label + ".nii")
+        elif anal_imgs.type == SPMConstants.FMRI:
+            # img_folder is a folder name
+            img = os.path.join(self.fmri_dir, "stats", anal_imgs.folder, anal_imgs.name + ".nii")
+
+        return img
 
     def renameNifti(self, extpath:str, associations:dict, options:str="-z o -f %f_%p_%t_%s_%d ", cleanup:int=0, convert:bool=True, rename:bool=True):
         """
@@ -1583,8 +1618,22 @@ class Subject:
                     continue
                 if not os.path.exists(os.path.join(rootdir, tract)):
                     return False
-
             return True
+
+        elif analysis_type == "dsi_group":
+            # "XXXX-dti.src.gz.odf.gqi.1.25.fib.gz"
+            if analysis_params is None:
+                analysis_params = self._global.def_dsi_rec
+            name = os.path.join(self.dti_dsi_dir, self.label + "-dti.src.gz." + analysis_params + ".fib.gz")
+
+            return os.path.exists(name)
+
+        elif analysis_type == "dsi_conn_group":
+            # "XXXX-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.bn274.count.pass.connectivity.mat"
+            if analysis_params is None:
+                analysis_params = [self._global.def_dsi_rec, self._global.def_dsi_conntempl]
+            name = os.path.join(self.dti_dsi_dir, self.label + "-dti.src.gz." + analysis_params[0] + ".fib.gz.tt.gz." + analysis_params[1] + ".count.pass.connectivity.mat")
+            return os.path.exists(name)
 
         # RESTING
         elif analysis_type == "melodic":
@@ -1603,8 +1652,11 @@ class Subject:
                     raise Exception("ERROR IN can_run_analysis: in case of fmri, analysis_params must be a strings list")
 
                 imgs = [os.path.join(self.fmri_dir, self.label + ilab) for ilab in analysis_params]
-                fmri_images = Images(analysis_params)
+                fmri_images = Images(imgs)
 
-            return Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("swar").exist or \
+                # logs_files = [ os.path.join(self.fmri_logs_dir, ) for img in fmri_images]
+
+
+            return (Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("swar").exist or \
                    Images(fmri_images).add_prefix2name("a").exist or Images(fmri_images).add_prefix2name("ar").exist or\
-                   Images(fmri_images).add_prefix2name("wa").exist or Images(fmri_images).add_prefix2name("war").exist
+                   Images(fmri_images).add_prefix2name("wa").exist or Images(fmri_images).add_prefix2name("war").exist)

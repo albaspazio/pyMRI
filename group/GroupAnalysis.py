@@ -462,13 +462,13 @@ class GroupAnalysis:
         with open(ofp, 'w', encoding='utf-8') as f:
             f.write(file_str)
 
-    def prepare_structconn_groupanalysis_dsi2nbs(self, subjects_list:List[Subject], ofp:str, nnodes:int, fisher2r:bool=False, input_postfix:str= "-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.Brainnectome.count.pass.connectivity.mat"):
+    def prepare_structconn_groupanalysis_dsi2nbs(self, subjects_list:List[Subject], ofp:str, nnodes:int, fisher2r:bool=False, input_postfix:str|None=None):
         """
         Prepare a group structural connectivity analysis for the given subjects list.
         Args:
             subjects_list (List[Subject]): The list of Subject objects to analyze.
             ofp (str): The path to the output file.
-            input_postfix (str, optional): The postfix of the input files. Defaults to "-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.Brainnectome.count.pass.connectivity.mat".
+            input_postfix (str, optional): The postfix of the input files. Defaults to "-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.bn274.count.pass.connectivity.mat".
         Raises:
             ValueError: If the output directory already exists.
         Returns:
@@ -480,6 +480,9 @@ class GroupAnalysis:
         Note: This function assumes that the input matrices are in a specific format and that the Matlab function will be able to process them correctly.
         It also assumes that the output directory does not already exist, as it will raise a ValueError if it does.
         """
+
+        if input_postfix is None:
+            input_postfix =  "-dti.src.gz." + self._global.def_dsi_rec + ".fib.gz.tt.gz." + self._global.def_dsi_conntempl + ".count.pass.connectivity.mat"
 
         # if os.path.exists(ofp):
         #     os.removedirs(ofp)

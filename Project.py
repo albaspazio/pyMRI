@@ -85,7 +85,7 @@ class Project:
 
         self.globaldata             = globaldata
 
-        self.subjects           = []
+        self.subjects:list[Subject] = []
         self.subjects_labels    = []
         self.nsubj              = 0
 
@@ -753,6 +753,38 @@ class Project:
 
             icv_scores.append(round(float(values[1]) + float(values[2]) + float(values[3]), 4))
         return icv_scores
+
+    def create_lists(self, group_label=None):
+
+        if group_label is None:
+            subjs = self.subjects
+        else:
+            subjs = self.load_subjects(group_label)
+
+        lists = [{"label": "auto_t1", "list": []}, {"label": "auto_ct", "list": []}, {"label": "auto_dti", "list": []}, {"label": "auto_rs", "list": []}]
+
+        for s in subjs:
+            if s.hasT1:
+                lists[0]["list"].append(s.label)
+            if s.hasCT:
+                lists[1]["list"].append(s.label)
+            if s.hasDTI:
+                lists[2]["list"].append(s.label)
+            if s.hasRS:
+                lists[3]["list"].append(s.label)
+
+        with open(self.subjects_lists_file, mode="r") as json_file:
+            subjects        = json.load(json_file)
+            subjects_lists  = subjects["subjects"]
+
+        # remove auto lists
+        subjects_lists = [d for d in subjects_lists if d.get("label") not in ["auto_t1", "auto_ct", "auto_dti", "auto_rs"]]
+        subjects_lists = subjects_lists + lists
+
+        subjects["subjects"] = subjects_lists
+
+        with open(self.subjects_lists_file, mode="w") as json_file:
+            json.dump(subjects, json_file, indent=4)
 
     #endregion ==================================================================================================================
 

@@ -9,7 +9,9 @@ class SPMConstants:
         OWA (int): A constant for one-way analysis of variance.
         TWA (int): A constant for two-way analysis of variance.
         VBM_DARTEL (int): A constant for VBM-DARTEL analysis.
-        CAT (int): A constant for Cortical Thickness analysis.
+        CT (int): A constant for Cortical Thickness analysis. (CAT)
+        GYR (int): A constant for Cortical gyrification analysis. (CAT)
+        SDEP (int): A constant for Sulcal Depth analysis. (CAT)
         FMRI (int): A constant for functional MRI analysis.
         stats_types (list): A list of statistical analysis types.
         analysis_types (list): A list of analysis types.
@@ -21,9 +23,12 @@ class SPMConstants:
     OWA = 4
     TWA = 5
 
+    VBM = 10
     VBM_DARTEL = 11
-    CAT = 12
+    CT = 12
     FMRI = 13
+    GYR = 14
+    SDEP = 15
 
     stats_types = [MULTREGR, OSTT, TSTT, OWA, TWA]
-    analysis_types = [VBM_DARTEL, CAT, FMRI]
+    analysis_types = [VBM_DARTEL, CT, FMRI, GYR, SDEP]

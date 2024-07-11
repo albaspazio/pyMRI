@@ -56,7 +56,7 @@ if __name__ == "__main__":
         post_model          = PostModel(SPMConstants.MULTREGR, covs,
                                         res_params=ResultsParams("FWE", 0.05, 20),
                                         res_conv_params=CatConvResultsParams("FWE", 0.05, "none"), isSpm=False)
-        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.MULTREGR, SPMConstants.CAT, anal_name,
+        spm_analysis.batchrun_group_stats(project.ct_dir, SPMConstants.MULTREGR, SPMConstants.CT, anal_name,
                                           groups_instances, covs=covs, post_model=post_model, runit=False,
                                           mustExist=False)
 

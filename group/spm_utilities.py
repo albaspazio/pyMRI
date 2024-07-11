@@ -2,6 +2,7 @@ import os
 from typing import List
 
 from data.utilities import list2spm_text_column
+from group.SPMConstants import SPMConstants
 from utility.images.images import mid_1based
 
 import numpy as np
@@ -31,7 +32,7 @@ class ResultsParams:
 
     """
 
-    def __init__(self, multcorr: str = "FWE", pvalue: float = 0.05, clustext: str = None):
+    def __init__(self, multcorr: str = "FWE", pvalue: float = 0.05, clustext: int = 0):
         self.mult_corr = multcorr
         self.pvalue = pvalue
         self.cluster_extend = clustext
@@ -185,31 +186,36 @@ class SubjCondition:
         self._orth       = str(orth)
 
     @property
-    def duration(self):
+    def duration(self) -> str:
         """
         The duration of the condition.
-
         Returns
         -------
-        duration : float or list of float
+        duration : float or [list of float]
             The duration of the condition.
         """
         if isinstance(self._duration, np.ndarray):
-            return list2spm_text_column(self._duration)
+            text = "[" + list2spm_text_column(self._duration) + "]"
         else:
-            return str(self._duration)
+            text = str(self._duration)
+        return text.replace("\n", " ")
 
     @property
-    def onsets(self):
+    def onsets(self) -> str:
         """
         The onset times of the condition.
 
         Returns
         -------
-        onsets : list of float
+        onsets : list of float, coded as string, without trailing square brackets[]
             The onset times of the condition.
         """
-        return list2spm_text_column(self._onsets)
+        datas = []
+        if self._onsets.shape[0] == 1:
+            # data are in the other dimension
+            for n in self._onsets[0]:
+                datas.append(n)
+        return "[" + list2spm_text_column(datas) + "]"
 
     @property
     def orth(self):
@@ -413,9 +419,9 @@ class GrpInImages:
 
     Parameters
     ----------
-    type : str
-        The type of images.
-        Options: "ct", "dartel", "vbm", "fmri".
+    type : int
+        The type of images. using SPMConstants
+        Options: CT, VBM_DARTEL, GYR, SDEP, VBM, FMRI".
     folder : str, optional
         The folder containing the images.
         Only used for "dartel" and "vbm" types.
@@ -424,9 +430,9 @@ class GrpInImages:
         Only used for "ct" type.
     """
 
-    valid_type = ["ct", "dartel", "vbm", "fmri"]
+    valid_type = [SPMConstants.VBM, SPMConstants.VBM_DARTEL, SPMConstants.CT, SPMConstants.FMRI, SPMConstants.GYR, SPMConstants.SDEP]
 
-    def __init__(self, type, folder=None, name=None):
+    def __init__(self, type:int, folder=None, name=None):
         """
         Initialize a GroupLevelInputImages object.
         """
@@ -435,16 +441,15 @@ class GrpInImages:
         self.name = name
 
         # folder is:
-        # fmri:     name of subject's fmri subfolder of (SUBJ_LABEL/sX/fmri/stats/)
-        # ct:       [None] always located in mpr/cat/surf
-        # dartel:   fullpath of a group-analysis folder
-        # vbm:      fullpath of a group-analysis folder
+        # fmri          :   name of subject's fmri subfolder of (SUBJ_LABEL/sX/fmri/stats/)
+        # ct/gyr/sdep   :   [None] always located in mpr/cat/surf
+        # vbm_dartel    :   fullpath of a group-analysis folder
+        # vbm           :   fullpath of a group-analysis folder
 
-        if self.type == "vbm" or self.type == "dartel" or (self.type == "ct" and self.folder is not None):
+        if (self.type == SPMConstants.VBM or self.type == SPMConstants.VBM_DARTEL or
+           (self.type == SPMConstants.CT and self.folder is not None) or (self.type == SPMConstants.GYR and self.folder is not None) or (self.type == SPMConstants.SDEP and self.folder is not None)):
             if not os.path.isdir(self.folder):
-                raise Exception(
-                    "Error in GroupLevelInputImages: not-existing images folder (" + self.folder + "), analysis type (" + str(type) + ")")
+                raise Exception("Error in GroupLevelInputImages: not-existing images folder (" + self.folder + "), analysis type (" + str(type) + ")")
 
         if self.type not in self.valid_type:
-            raise Exception(
-                "Error in GroupLevelInputImages: invalid images type (" + str(type) + ")")
+            raise Exception("Error in GroupLevelInputImages: invalid images type (" + str(type) + ")")

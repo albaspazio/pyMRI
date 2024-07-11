@@ -53,6 +53,8 @@ class Global:
         self.trackvis_bin           = local_settings_data["trackvis_bin"]
         self.autoptx_script_dir     = local_settings_data["autoptx_script_dir"]
         self.eddy_gpu_exe_name      = local_settings_data["eddy_gpu_exe_name"]
+        self.def_dsi_rec            = local_settings_data["def_dsi_rec"]
+        self.def_dsi_conntempl      = local_settings_data["def_dsi_conntempl"]
 
         self.cat_foldername         = self.cat_version.split('.')[0]
         self.cat_dir                = os.path.join(self.spm_dir, "toolbox", self.cat_foldername)
@@ -83,6 +85,7 @@ class Global:
             self.cat_shooting_template      = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_MNI152NLin2009cAsym", "Template_0_GS.nii")
             self.cat_template_name          = "subj_cat28_segment_shooting_tiv_smooth"
         self.cat_smooth_surf                = 12
+        self.cat_smooth_gyrif               = 20
 
         self.spm_tissue_map                 = Image(os.path.join(self.spm_dir, "tpm", "TPM.nii"), must_exist=True, msg="SPM's Standard Images not present")
         self.spm_icv_mask                   = Image(os.path.join(self.spm_dir, "tpm", "mask_ICV.nii"), must_exist=True, msg="SPM's Standard Images not present")

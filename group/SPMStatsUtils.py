@@ -34,7 +34,7 @@ class SPMStatsUtils:
         conditions_string = ""
         for c in range(1, len(conditions) + 1):
             conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").name = \'" + conditions[c - 1].name + "\';" + "\n")
-            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").onset = [" + conditions[c - 1].onsets + "];\n")
+            conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").onset = " + conditions[c - 1].onsets + ";\n")
             conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").tmod = 0;\n")
             conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").duration = " + conditions[c - 1].duration + ";\n")
             conditions_string += ("matlabbatch{1}.spm.stats.fmri_spec.sess.cond(" + str(c) + ").pmod = struct('name', {}, 'param', {}, 'poly', {});\n")
@@ -87,22 +87,75 @@ class SPMStatsUtils:
         Returns:
             None: None
         """
-        img_type    = grp_input_imgs.type
-        img_folder  = grp_input_imgs.folder
-
         cells_images = "\r"
 
-        img = ""
         for subj in group_instances:
-            if img_type == "ct":
-                img = subj.t1_cat_resampled_surface
-            elif img_type == "dartel":
-                img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
-
+            img = subj.get_analysis_image(grp_input_imgs)
             img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_1GROUP_MULTREGR")
             cells_images = cells_images + "\'" + img + "\'\r"
 
         sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
+
+    @staticmethod
+    def compose_images_string_1sTT(group_instances:List['Subject'], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
+        """
+        This function generates a MATLAB script for setting up the conditions for a single-session analysis.
+
+        Args:
+            group_instances (List[Subject]): A list of subjects of a group.
+            out_batch_job (str): The path to the MATLAB script file.
+            grp_input_imgs (InputImages): The input images for the group analysis.
+            mustExist (bool, optional): Whether to raise an exception if the input images do not exist. Defaults to True.
+
+        Returns:
+            None: None
+        """
+        subjs       = group_instances
+
+        grp_images = "{\n"
+        for subj in subjs:
+            img = subj.get_analysis_image(grp_input_imgs)
+            img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_1sTT")
+            grp_images = grp_images + "\'" + img + "\'\n"
+        grp_images = grp_images + "\n}"
+
+        # set job file
+        sed_inplace(out_batch_job, "<GROUP_IMAGES>", grp_images)
+
+    @staticmethod
+    def compose_images_string_2sTT(groups_instances:List[List['Subject']], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
+        """
+        This function generates a MATLAB script for setting up the conditions for a single-session analysis.
+
+        Args:
+            groups_instances (List[List[Subject]]): A list of subject groups.
+            out_batch_job (str): The path to the MATLAB script file.
+            grp_input_imgs (InputImages): The input images for the group analysis.
+            mustExist (bool, optional): Whether to raise an exception if the input images do not exist. Defaults to True.
+
+        Returns:
+            None: None
+        """
+        subjs1      = groups_instances[0]
+        subjs2      = groups_instances[1]
+
+        grp1_images = "{\n"
+        for subj in subjs1:
+            img = subj.get_analysis_image(grp_input_imgs)
+            img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_2sTT")
+            grp1_images = grp1_images + "\'" + img + "\'\n"
+        grp1_images = grp1_images + "\n}"
+
+        grp2_images = "{\n"
+        for subj in subjs2:
+            img = subj.get_analysis_image(grp_input_imgs)
+            img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_2sTT")
+            grp2_images = grp2_images + "\'" + img + "\'\n"
+        grp2_images = grp2_images + "\n}"
+
+        # set job file
+        sed_inplace(out_batch_job, "<GROUP1_IMAGES>", grp1_images)
+        sed_inplace(out_batch_job, "<GROUP2_IMAGES>", grp2_images)
 
     @staticmethod
     def compose_images_string_1W(group_instances:List['Subject'], out_batch_job:str, grp_input_imgs, mustExist:bool=True):
@@ -119,26 +172,16 @@ class SPMStatsUtils:
             None: None
 
         """
-        img_type    = grp_input_imgs.type
-        img_folder  = grp_input_imgs.folder
-
         cells_images = ""
         gr = 0
         for subjs in group_instances:
             gr              = gr + 1
             cells_images    = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.anova.icell(" + str(gr) + ").scans = "
 
-            img             = ""
             grp1_images     = "{\n"
             for subj in subjs:
-
-                if img_type == "ct":
-                    img = subj.t1_cat_resampled_surface
-                elif img_type == "dartel":
-                    img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
-
+                img = subj.get_analysis_image(grp_input_imgs)
                 img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_1W")
-
                 grp1_images = grp1_images + "\'" + img + "\'\n"
             grp1_images = grp1_images + "\n};"
 
@@ -160,9 +203,6 @@ class SPMStatsUtils:
         Returns:
             None: None
         """
-        img_type    = grp_input_imgs.type
-        img_folder  = grp_input_imgs.folder
-
         factors_labels  = factors["labels"]
         cells           = factors["cells"]
 
@@ -183,16 +223,9 @@ class SPMStatsUtils:
                 cells_images    = cells_images + "matlabbatch{1}.spm.stats.factorial_design.des.fd.icell(" + str(ncell) + ").scans = {\n"
 
                 subjs           = cells[f1][f2]
-                img             = ""
                 for subj in subjs:
-
-                    if img_type == "ct":
-                        img = eval("subj.t1_cat_resampled_surface")
-                    elif img_type == "dartel":
-                        img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
-
+                    img = subj.get_analysis_image(grp_input_imgs)
                     img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_2W")
-
                     cells_images = cells_images + "'" + img + "'\n"
                 cells_images = cells_images + "};"
 
@@ -201,61 +234,6 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<FACTOR2_NAME>",    factors_labels[1])
         sed_inplace(out_batch_job, "<FACTOR2_NLEV>",    str(nlevels[1]))
         sed_inplace(out_batch_job, "<FACTORS_CELLS>",   cells_images)
-
-    @staticmethod
-    def compose_images_string_2sTT(groups_instances:List[List['Subject']], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
-        """
-        This function generates a MATLAB script for setting up the conditions for a single-session analysis.
-
-        Args:
-            groups_instances (List[List[Subject]]): A list of subject groups.
-            out_batch_job (str): The path to the MATLAB script file.
-            grp_input_imgs (InputImages): The input images for the group analysis.
-            mustExist (bool, optional): Whether to raise an exception if the input images do not exist. Defaults to True.
-
-        Returns:
-            None: None
-        """
-        img_type    = grp_input_imgs.type
-        img_folder  = grp_input_imgs.folder
-
-        subjs1      = groups_instances[0]
-        subjs2      = groups_instances[1]
-
-        grp1_images = "{\n"
-        img         = ""
-        for subj in subjs1:
-
-            if img_type == "ct":
-                img = subj.t1_cat_resampled_surface
-            elif img_type == "dartel":
-                img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
-            elif img_type == "fmri":
-                img = os.path.join(subj.fmri_dir, "stats", img_folder, grp_input_imgs.name + ".nii")
-
-            img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_2sTT")
-
-            grp1_images = grp1_images + "\'" + img + "\'\n"
-        grp1_images = grp1_images + "\n}"
-
-        grp2_images = "{\n"
-        for subj in subjs2:
-
-            if img_type == "ct":
-                img = subj.t1_cat_resampled_surface
-            elif img_type == "dartel":
-                img = os.path.join(img_folder, "smwc1T1_" + subj.label + ".nii")
-            elif img_type == "fmri":
-                img = os.path.join(subj.fmri_dir, "stats", img_folder, grp_input_imgs.name + ".nii")
-
-            img = Image(img, must_exist=mustExist, msg="SPMStatsUtils.compose_images_string_2sTT")
-
-            grp2_images = grp2_images + "\'" + img + "\'\n"
-        grp2_images = grp2_images + "\n}"
-
-        # set job file
-        sed_inplace(out_batch_job, "<GROUP1_IMAGES>", grp1_images)
-        sed_inplace(out_batch_job, "<GROUP2_IMAGES>", grp2_images)
     #endregion
 
     # ---------------------------------------------------------------------------

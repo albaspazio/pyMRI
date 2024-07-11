@@ -150,7 +150,7 @@ class ConnModels:
 
         write_text_file(output_covsfile, self.string)
 
-    def create_regressors_file_ofsubset(self, odp:str, regressors:List[Regressor], wholesubjects_groups_or_labels:List[Any], grouplabels, ofn:str="conn_covs", data_file=None, ofn_postfix:str="", subj_must_exist:bool=False):
+    def create_regressors_file_ofsubset(self, odp:str, regressors:List[Regressor], wholesubjects_groups_or_labels:List[Any], grouplabels, ofn:str="conn_covs", data_file=None, ofn_postfix:str="", subj_must_exist:bool=False, debug:bool=False):
         """
         This function creates a regressors file for the CONN tool, for a subset of the subjects in the current project.
         to be used when user want to insert groups description/covariates of a subset of the subjects included in the whole conn project.
@@ -279,6 +279,7 @@ class ConnModels:
                 self.addline2string(string)
 
         write_text_file(output_covsfile, self.string)
+        print("create model file " + output_covsfile)
 
     def addline2string(self, line:str=""):
         """
