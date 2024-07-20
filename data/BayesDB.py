@@ -23,8 +23,6 @@ class BayesDB(MSHDB):
     ----------
     data : str, Sheets, or GDriveSheet
         The data source for the database. This can be a path to an Excel file, a Google Sheet, or a Python dictionary containing the data.
-    can_different_subjs : bool, optional
-        If True, subjects can have different sessions in different sheets.
     password : str, optional
         The password for the encrypted Excel file.
     calc_flags : bool, optional
@@ -55,18 +53,17 @@ class BayesDB(MSHDB):
 
     Methods
     -------
-    load(data=None, can_different_subjs=False, password="", calc_flags=True, sortonload=True)
-        Load the data from the given file or DataFrame.
-    save(outfile=None)
-        Save the data to the given file.
+    remove_extra_columns(hdr)
+        Remove the extra columns from the given list.
+
+    overridden Methods
+    -------
     sort(by_items=["subj", "session"], ascending=[True, True])
         Sort the data by the given items and in the given order.
     is_valid(df)
         Check if the given DataFrame is valid.
     add_default_columns(subjs, df)
         Add the default columns (subj, session, group) to the given DataFrame.
-    remove_extra_columns(hdr)
-        Remove the extra columns from the given list.
     add_default_rows(subjs=None)
         Add the default rows (subj, session, group) to the given DataFrame.
     add_default_row(subj)
@@ -77,7 +74,7 @@ class BayesDB(MSHDB):
         Remove the given subjects from the database.
     rename_subjects(assoc_dict, update=False)
         Rename the subjects in the database.
-    add_new_subjects(newdb, can_diff_subjs=None, copy_previous_sess=None, update=False)
+    add_new_subjects(newdb, copy_previous_sess=None, update=False)
         Add the subjects from the given database.
     get_groups(subjs=None)
         Get the groups for the given subjects.
@@ -102,11 +99,12 @@ class BayesDB(MSHDB):
     dates               = {"main":["birth_date", "recruitment_date"], "MATRICS":["MATRICS_date"]}
     to_be_rounded       = {"main":["age"]}
 
-    def __init__(self, data:str|Sheets|GDriveSheet=None, can_different_subjs:bool=False, password:str="", calc_flags:bool=True, sortonload:bool=True):
+    def __init__(self, data: str | Sheets | GDriveSheet = None, password: str = "", calc_flags: bool = True,
+                 sortonload: bool = True):
         """
         Initialize the class.
         """
-        super().__init__(data, self.schema_sheets_names, 0, True, "subj", can_different_subjs=can_different_subjs, password=password, sortonload=sortonload)
+        super().__init__(data, self.schema_sheets_names, 0, True, "subj", password=password, sortonload=sortonload)
         if calc_flags:
             self.calc_flags()
 
@@ -212,7 +210,7 @@ class BayesDB(MSHDB):
 
         return df
 
-    def add_default_row(self, subj:SubjectSD):
+    def add_default_row(self, subj:SubjectSD) -> dict:
         """
         Add the default row for the given subject.
 
@@ -264,8 +262,12 @@ class BayesDB(MSHDB):
         BayesDB
             The BayesDB object with the given subjects removed.
         """
-        mshdb = super().remove_subjects(subjects2remove, update)
-        return BayesDB(mshdb.sheets)
+        db = super().remove_subjects(subjects2remove, update)
+
+        if isinstance(db, BayesDB):
+            return db
+        else:
+            return BayesDB(db.sheets)
 
     def rename_subjects(self, assoc_dict, update=False) -> 'BayesDB':
         """
@@ -286,7 +288,8 @@ class BayesDB(MSHDB):
         mshdb = super().rename_subjects(assoc_dict, update)
         return BayesDB(mshdb.sheets)
 
-    def add_new_subjects(self, newdb:'MSHDB', can_diff_subjs=None, copy_previous_sess=None, update=False) -> 'BayesDB':
+    def add_new_subjects(self, newdb: 'MSHDB', can_update=False, must_exist=False, copy_previous_sess=None,
+                         update=False) -> 'BayesDB':
         """
         Add the subjects from the given database to the current database.
 
@@ -294,8 +297,10 @@ class BayesDB(MSHDB):
         ----------
         newdb : MSHDB
             The MSHDB object from which the subjects should be added.
-        can_diff_subjs : bool, optional
-            If True, subjects can have different sessions in different sheets, by default None.
+        can_update : bool, optional
+            define whether already existing subjects shall be upgraded or ignored
+        must_exist : bool, optional
+            define whether subjects in newdb must exist (e.g. when adding only auot) or not
         copy_previous_sess : bool, optional
             If True, the previous sessions will be copied to the new sheets, by default None.
         update : bool, optional
@@ -305,9 +310,11 @@ class BayesDB(MSHDB):
         -------
         BayesDB
             The BayesDB object with the added subjects.
+            :param must_exist:
+            :param can_update:
         """
-        mshdb   = super().add_new_subjects(newdb, can_diff_subjs, copy_previous_sess, update)
-        bayesdb = BayesDB(mshdb.sheets)
+        bayesdb   = super().add_new_subjects(newdb, can_update=can_update, must_exist=must_exist, copy_previous_sess=copy_previous_sess, update=update)
+        # bayesdb = BayesDB(mshdb.sheets)
 
         bayesdb = bayesdb.sort()
         bayesdb.calc_flags()
@@ -315,6 +322,15 @@ class BayesDB(MSHDB):
             self = bayesdb
 
         return bayesdb
+
+    def copy(self) -> 'BayesDB':
+        '''
+        return a deep copy of current instance
+        :return: BayesDB
+        '''
+        cp           = super().copy()
+        cp.__class__ = BayesDB
+        return cp
 
     def get_groups(self, subjs:SubjectSDList=None) -> List[str]:
         """

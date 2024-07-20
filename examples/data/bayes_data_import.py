@@ -3,7 +3,7 @@ import traceback
 from DataProject import DataProject
 from Global import Global
 from data.BayesDB import BayesDB
-from data.BayesImportEteroDB import BayesImportEteroDB
+from data.BayesImporter import BayesImporter
 from data.utilities import *
 from utility.exceptions import SubjectListException
 
@@ -101,7 +101,7 @@ if __name__ == "__main__":
         # ============================================================================================================
         #region read an etero and add to db
         input_etero = os.path.join(project.input_data_dir, "ABC_etero.xlsx")
-        etero_db = BayesImportEteroDB(input_etero)
+        etero_db = BayesImporter(input_etero)
 
         etero_bayes = etero_db.export_bayes()
         final_db    = bayes_db.add_new_subjects(etero_bayes)

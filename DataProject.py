@@ -24,7 +24,7 @@ class DataProject:
     Attributes:
         name (str): The name of the project.
         globaldata (GlobalData): A GlobalData instance containing global project settings and data.
-        script_dir (str): The directory containing the project's scripts.
+        proj_dir (str): The directory containing the project's scripts.
         r_dir (str): The directory containing the project's R scripts.
         input_data_dir (str): The directory containing the project's input data.
         output_data_dir (str): The directory containing the project's output data.
@@ -37,21 +37,21 @@ class DataProject:
         data_file (str): The path to the data file for the project.
         data (SubjectsData): A SubjectsData instance containing the project's data.
     """
-    def __init__(self, name:str, script_dir:str, data:str|SubjectsData="data.xlsx"):
+    def __init__(self, name:str, proj_dir:str, data:str|SubjectsData="data.xlsx"):
 
         self.name               = name
 
-        # self.script_dir         = os.path.join(globaldata.project_scripts_dir, self.name)
-        self.script_dir         = script_dir
-        self.r_dir              = os.path.join(self.script_dir, "r")
-        self.input_data_dir     = os.path.join(self.script_dir, "input_data")
-        self.output_data_dir    = os.path.join(self.script_dir, "output_data")
+        # self.proj_dir         = os.path.join(globaldata.project_scripts_dir, self.name)
+        self.proj_dir         = proj_dir
+        self.r_dir              = os.path.join(self.proj_dir, "r")
+        self.input_data_dir     = os.path.join(self.proj_dir, "input_data")
+        self.output_data_dir    = os.path.join(self.proj_dir, "output_data")
         self.stats_input        = os.path.join(self.r_dir, "indata")
         self.stats_output       = os.path.join(self.r_dir, "results")
 
-        self.subjects_lists_file    = os.path.join(self.script_dir, "subjects_lists.json")
+        self.subjects_lists_file    = os.path.join(self.proj_dir, "subjects_lists.json")
 
-        os.makedirs(self.script_dir,     exist_ok=True)
+        os.makedirs(self.proj_dir,       exist_ok=True)
         os.makedirs(self.r_dir,          exist_ok=True)
         os.makedirs(self.input_data_dir, exist_ok=True)
         os.makedirs(self.output_data_dir,exist_ok=True)
@@ -93,8 +93,8 @@ class DataProject:
             data_file = ""
             if os.path.exists(data):
                 data_file = data
-            elif os.path.isfile(os.path.join(self.script_dir, data)):
-                data_file = os.path.join(self.script_dir, data)
+            elif os.path.isfile(os.path.join(self.proj_dir, data)):
+                data_file = os.path.join(self.proj_dir, data)
 
             if data_file != "":
                 d = SubjectsData(data_file)

@@ -38,8 +38,6 @@ class MSHDB:
         If True, warnings will be suppressed when the first column of a sheet is not called "subj".
     first_col_name : str
         The name of the first column of each sheet.
-    can_different_subjs : bool
-        If True, subjects can appear in different sheets.
     password : str
         The password for decrypting an Excel file.
     sortonload : bool
@@ -82,7 +80,7 @@ class MSHDB:
         Rename the subjects in the database.
     remove_subjects(subjects2remove, update=False)
         Remove subjects from the database.
-    add_new_subjects(newdb, can_diff_subjs=None, copy_previous_sess=None, update=False)
+    add_new_subjects(newdb, copy_previous_sess=None, update=False)
         Add new subjects to the database.
     select_df(subjs=None, sheets_cols=None, outfile='')
         Select a subset of the data from the database.
@@ -108,17 +106,18 @@ class MSHDB:
     round_decimals  = 2
     date_format     = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
 
-    def __init__(self, data:str|Sheets|GDriveSheet=None, sheetnames:List[str]=None, main_id:int=0, suppress_nosubj:bool=True, first_col_name:str="subj", can_different_subjs:bool=False, password:str="", sortonload:bool=True):
+    def __init__(self, data: str | Sheets | GDriveSheet = None, sheetnames: List[str] = None, main_id: int = 0,
+                 suppress_nosubj: bool = True, first_col_name: str = "subj", password: str = "",
+                 sortonload: bool = True):
 
         super().__init__()
         self.schema_sheets_names= sheetnames
         self.main_id            = main_id
         self.suppress_nosubj    = suppress_nosubj
-        self.first_col_name     = first_col_name        # e.g. "subj"
-        self.can_diff_subjs     = can_different_subjs
+        self.first_col_name     = first_col_name            # e.g. "subj"
         self.password           = password
 
-        self.main_name:str      = sheetnames[main_id]      # e.g. "main"
+        self.main_name:str      = sheetnames[main_id]       # e.g. "main"
 
         self.data_source        = None
 
@@ -134,6 +133,14 @@ class MSHDB:
     @property
     def main(self) -> SubjectsData:
         return self.sheet_sd(self.main_name)
+
+    @property
+    def len(self):
+        return len(self.subjects)
+
+    @property
+    def is_empty(self):
+        return (self.len == 0)
 
     # returns all unique subjects labels across all sessions
     @property
@@ -213,7 +220,7 @@ class MSHDB:
                 sd = SubjectsData(df)
                 # Add the SubjectsData object to the sheets dictionary
                 # TODO: Check if this condition is necessary
-                # if not self.can_diff_subjs:
+                # if not self.mustbeconsistent:
                 #     self.check_labels(sd.subjects, sheet)  # raise an exception
                 self.sheets[sheet_name] = sd
         elif isinstance(data, Sheets):
@@ -237,7 +244,7 @@ class MSHDB:
                     sd = SubjectsData(df)
                     # Add the SubjectsData object to the sheets dictionary
                     # TODO: Check if this condition is necessary
-                    # if not self.can_diff_subjs:
+                    # if not self.mustbeconsistent:
                     #     self.check_labels(sd.subjects, sheet)  # raise an exception
                     self.sheets[wsh.title] = sd
             except gspread.exceptions.APIError as ex:
@@ -336,7 +343,6 @@ class MSHDB:
         """
         df[self.first_col_name] = subjs.labels
         return df
-
 
     def remove_extra_columns(self, hdr: list) -> list:
         """
@@ -472,7 +478,7 @@ class MSHDB:
             sheets[sh] = sheets[sh].remove_subjects(subjects2remove)
 
         if update:
-            self.sheets = sheets.copy()
+            self.sheets = sheets
             return self
         else:
             return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.first_col_name)
@@ -488,7 +494,7 @@ class MSHDB:
     #
     # parse all sheets and determine the list of all subjects contained across all given sheets
     # if it finds a new subj that already existed -> ignore that subject and add remaining
-    def add_new_subjects(self, newdb: 'MSHDB', can_diff_subjs=None, copy_previous_sess=None, update=False) -> 'MSHDB':
+    def add_new_subjects(self, newdb: 'MSHDB', can_update: bool = False, must_exist: bool=False, copy_previous_sess: list | None = None, update: bool = False) -> 'MSHDB':
         """
         Add brand-new subjects to the database.
 
@@ -496,8 +502,10 @@ class MSHDB:
         ----------
         newdb : 'MSHDB'
             The MSHDB object containing the new subjects.
-        can_diff_subjs : bool, optional
-            Whether the new subjects can have different subject lists across sheets, by default None (same as in the current database).
+        can_update : bool, optional
+            define whether already existing subjects shall be upgraded or ignored
+        must_exist : bool, optional
+            define whether subjects in newdb must exist or not
         copy_previous_sess : list, optional
             A list of sheet names containing previous sessions of subjects, by default None.
         update : bool, optional
@@ -507,87 +515,53 @@ class MSHDB:
         -------
         'MSHDB'
             The updated MSHDB object.
-
-        Raises
-        ------
-        Exception
-            If the new subjects have different subject lists across sheets and can_diff_subjs is False.
+            :param must_exist:
+            :param can_update:
         """
-        if can_diff_subjs is None:
-            can_diff_subjs = self.can_diff_subjs
+        # divide in a) brandnew subjects (to make consistent and append)
+        #           b) existing one (eventually to update some sheets)
+        all_newsubjs:SubjectSDList      = newdb.sheets.all_subjects  # union (no rep) of all subjects-sessions included in all new sheets
+        duplicated_subjs:SubjectSDList  = all_newsubjs.is_in(self.subjects)
 
-        # verify that new subjects lists are identical across sheets
-        if can_diff_subjs is False and not newdb.sheets.is_consistent:
-            raise Exception("Error in MSSubjectsData.add_subjects: new subjects lists differ across sheets")
-
-        # this method cannot overwrite existing subjects: thus verify that added subjects are really new
-        all_subjs = newdb.sheets.all_subjects  # all union (no rep) of all subjects-sessions included in all new sheets
-        intersecting_subjs = all_subjs.is_in(self.subjects)
-        if len(intersecting_subjs) > 0:
-            # remove already existing subjects and update all_subjs
-            newdb = newdb.remove_subjects(intersecting_subjs)
-            all_subjs = newdb.sheets.all_subjects
-            print("Warning in MSHDB.add_new_subjects: The following subjects/sessions (" + str(intersecting_subjs.labels) + ") were already present and will be ignored")
-
-        # start cycling through all existing sheets, adding missing sheets with all new subj rows or integrating the given sheets with missing subjects
-        for sh in self.schema_sheets_names:
-
-            if sh not in list(newdb.sheets.keys()):  # new data does NOT contain this sheet.
-
-                # in case new subjects has a previous session, decide whether copying data from session 1 or create a default (subj/session/group) df
-                if copy_previous_sess is None:
-                    # create a new sheet sd with new subjects default info (subj, and e.g. group / session)
-                    df = newdb.add_default_rows(all_subjs)
-                else:
-                    if sh in copy_previous_sess:
-                        df = pandas.DataFrame()
-                        sd = self.sheet_sd(sh)
-                        for s in all_subjs:
-                            if s.session > 1:
-                                subj_session1 = sd.get_subj_session(s.label, 1)
-                                if subj_session1 is None:
-                                    raise Exception("Error in MSHDB.add_new_subjects: new subject is a follow-up, but session 1 is missing...aborting")
-                                else:
-                                    subj_row = sd.get_subject(subj_session1)
-                                    subj_row["session"] = s.session
-                                    if len(df) == 0:
-                                        df = pd.DataFrame(columns=list(subj_row.keys()))
-                                        df.loc[len(df)] = subj_row
-                                    else:
-                                        df.loc[len(df)] = subj_row
-                            else:
-                                df.loc[len(df)] = {self.first_col_name: s.label, self.second_col_name: s.session}
-
-                    else:
-                        df = newdb.add_default_rows(all_subjs)
-
-                    # check if a previous session is pre
-                newdb.sheets[sh] = SubjectsData(df)
-
-            else:  # new data contain this sheet
-
-                # I must add to the new data, a row for all other subjects not present in this new sheet
-                ds = newdb.sheets[sh]
-                for subj in all_subjs:
-                    if not ds.subjects.contains(subj):
-                        # this subj exist in some other new sheets, but not here -> add it
-                        # P.S. could have passed row=None and let SubjectsData manage it, but calling a MSHDB subclass method I'm sure it is more complete
-                        ds.add_row(subj, newdb.add_default_row(subj))
-
-        # has all sheets and all subjects are brand new
-        if update is True:
-            for sh in newdb.sheets:
-                self.sheet_sd(sh).add_sd([newdb.sheet_sd(sh)])
-                self.sheet_sd(sh).df = self.sheet_sd(sh).df.sort_values(by=[self.first_col_name], ignore_index=True)
-
-            return True
-
+        if len(duplicated_subjs) > 0 and can_update is True:   # there are duplicates and I can update existing
+            print("The following subjects already exist in the DB: " + str(duplicated_subjs.labels))
+            duplicated_db = newdb.filter_subjects(duplicated_subjs)   # deep copy
         else:
-            sheets = self.sheets.copy()
-            for sh in newdb.sheets:
-                sheets[sh].add_sd([newdb.sheets[sh]])
-                sheets[sh].df = sheets[sh].df.sort_values(by=[self.first_col_name], ignore_index=True)
-            return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.first_col_name)
+            duplicated_db = None
+
+        reallynew_db = None
+        if must_exist is False:
+            reallynew_db = newdb.remove_subjects(duplicated_subjs, update=True)     # remove from newdb subjects already existing (deep copy).
+                                                                                    # P.S. I update newdb and get a references (not a deep copy)
+                                                                                    # in this way MSHDB.remove_subjects return an instance of BayesDB when called from
+            if not reallynew_db.is_empty:
+                # make really new subjects db consistent
+                reallynew_db.make_consistent2(self)
+                reallynew_subjs = reallynew_db.sheets.all_subjects
+
+        # -------------------------------------------------------
+        currdb = self.copy()
+
+        # add new subjects
+        if reallynew_db is not None:
+            for sh in reallynew_db.sheet_labels:
+                currdb.sheet_sd(sh).add_sd([reallynew_db.sheet_sd(sh)])
+
+        if duplicated_db is not None:
+            # update existing subjects
+            for sh in duplicated_db.sheet_labels:
+                df:pandas.DataFrame = duplicated_db.sheet_sd(sh).df
+                for s in duplicated_subjs:
+                    original_id     = currdb.main.get_subjid_by_session(s.label, s.session)             # get the original index of the subject to be updated
+                    new_row         = df.loc[(df['subj'] == s.label) & (df['session'] == s.session)]    # extract the subject row from duplicated_db
+                    new_row.index   = [int(original_id[0])]                                             # update its index to make update working
+
+                    currdb.sheet_sd(sh).df.update(new_row)
+
+        if update is True:
+            self = currdb
+
+        return currdb
     # endregion
 
     # ======================================================================================
@@ -719,7 +693,11 @@ class MSHDB:
                 for col in self.dates[sh]:
                     date_values = []
                     for subj in sd.subjects:
-                        value = sd.get_subject_col_value(subj, col)
+                        try:
+                            value = sd.get_subject_col_value(subj, col)
+                        except Exception as e:
+                            continue
+
                         try:
                             date_values.append(pandas.to_datetime(value))
                         except:
@@ -745,7 +723,9 @@ class MSHDB:
                 if ds.num == 0:
                     continue
                 for col in self.to_be_rounded[sh]:
-                    ds.df[col] = ds.df[col].apply(lambda x: round(x, self.round_decimals) if str(x) != "" else x)
+
+                    if col in ds.df.columns:
+                        ds.df[col] = ds.df[col].apply(lambda x: round(x, self.round_decimals) if str(x) != "" else x)
 
                     # ds.df[col] = ds.df[col].round(self.round_decimals)
 
@@ -837,3 +817,80 @@ class MSHDB:
                 raise Exception("Error in MSSubjectsData.load: labels of sheet " + sheet + " does not correspond to main one...correct XLS file\n")
             else:
                 return True
+
+    def make_consistent2(self, mainDB:MSHDB, copy_previous_sess=None):
+        """
+        make db consistent to a given one:
+        # start cycling through given db sheets and do the following:
+        # - not existing sheet: if a list of sheet is given and previous session is indicated, copy later values
+        # - existing sheet    : add a default row for those subj that are not present in self but already exist in given db
+
+        Parameters
+        ----------
+        mainDB:MSHDB
+        copy_previous_sess=None
+
+        Returns
+        ----------
+        nothing
+        """
+
+        for sh in mainDB.schema_sheets_names:
+
+            if sh not in list(self.sheets.keys()):  # new data does NOT contain this sheet.
+
+                # I don't want to copy a previous session, or I don't want to copy data of this specific sheet
+                if copy_previous_sess is None or sh not in copy_previous_sess:
+                    # create a new sheet sd with new subjects default info (subj or subj - session - group)
+                    df = self.add_default_rows(self.sheets.all_subjects)
+                else:
+                    # in case new subjects has session=1, decide whether copying data from such session or create a default row
+                    df = pandas.DataFrame()
+                    sd: SubjectsData = mainDB.sheet_sd(sh)
+                    for s in all_newsubjs:
+                        if s.session > 1:
+                            subj_session1 = sd.get_subj_session(s.label, 1)
+                            if subj_session1 is None:
+                                raise Exception(
+                                    "Error in MSHDB.add_new_subjects: new subject is a follow-up, but session 1 is missing...aborting")
+                            else:
+                                subj_row = sd.get_subject(subj_session1)
+                                subj_row["session"] = s.session
+                                if len(df) == 0:
+                                    df = pd.DataFrame(columns=list(subj_row.keys()))
+                                    df.loc[len(df)] = subj_row
+                                else:
+                                    df.loc[len(df)] = subj_row
+                        else:
+                            # doesn't have a session=1, add default row
+                            df.loc[len(df)] = self.add_default_row(s)
+
+                self.sheets[sh] = SubjectsData(df)
+
+            else:  # new data contain this sheet
+
+                # I must add to the new data, a row for all other subjects not present in this new sheet
+                sd: SubjectsData = self.sheet_sd(sh)
+                for subj in self.sheets.all_subjects:
+                    if not sd.subjects.contains(subj):
+                        # this subj exist in some other new sheets, but not here -> add it
+                        # P.S. could have passed row=None and let SubjectsData manage it, but calling a MSHDB subclass method I'm sure it is more complete
+                        sd.add_row(subj, self.add_default_row(subj))
+
+    def filter_subjects(self, subj: SubjectSDList) -> MSHDB:
+
+        filtered_sheets = Sheets(self.sheet_labels, self.main_id)
+        for sh in self.sheet_labels:
+            filtered_sheets[sh] = self.sheet_sd(sh).extract_subjset(subj)
+
+        return MSHDB(filtered_sheets, self.sheet_labels)
+
+    def copy(self) -> 'MSHDB':
+        '''
+        return a deep copy of current instance
+        :return:
+        '''
+        db = MSHDB(None, self.sheet_labels, self.main_id)
+        for sh in self.sheets:
+            db.sheets[sh] = SubjectsData(self.sheet_sd(sh).df.copy())
+        return db

@@ -141,7 +141,6 @@ class SubjectsData:
             A list of SubjectSD objects.
         """
         return SubjectSDList([SubjectSD(index, row[self.first_col_name], row[self.second_col_name]) for index, row in self.df.iterrows()])
-
     # endregion
 
     # =====================================================================================
@@ -230,6 +229,19 @@ class SubjectsData:
 
         return self.df
 
+    # ======================================================================================
+    #region GET SubjectsData
+    def extract_subjset(self, subj2extract:SubjectSDList, validcols:List[str]=None) -> 'SubjectsData':
+        '''
+        Returns a subset of the present SubjectsData containing only the given subjects
+
+        :param subj2extract:
+        :param validcols:
+        :return: SubjectsData instance
+        '''
+        return SubjectsData(self.select_df(subj2extract, validcols))
+
+    #endregion
     # ======================================================================================
     #region GET SubjectSDList
     # only methods the select a SubjectSDList managing a list of subjects' label, sessios and filtering conditions on other columns

@@ -92,6 +92,9 @@ class SubjectSDList(list):
             SubjectSDList: The list of SubjectSD objects that are present in the current list.
         """
         res = []
+        if len(self) == 0:
+            return SubjectSDList([])
+
         for s in self:
             doexist = False
             for ss in subj_list:

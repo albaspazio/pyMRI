@@ -6,7 +6,7 @@ from data.SubjectSDList import SubjectSDList
 
 class Sheets(dict):
     """
-    A class to store data from multiple sheets in a consistent format.
+    A class to store SubjectsData from multiple sheets in a consistent format.
 
     Parameters
     ----------
@@ -171,3 +171,6 @@ class Sheets(dict):
         if report != "":
             print("Sheets.is_equal show the following differences")
             return False
+
+    def remove_sheet(self, sh:str):
+        del self[sh]
