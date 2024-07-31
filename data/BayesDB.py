@@ -78,7 +78,7 @@ class BayesDB(MSHDB):
         Add the subjects from the given database.
     get_groups(subjs=None)
         Get the groups for the given subjects.
-    mrilabels(subj_labels=None)
+    mri_labels(subj_labels=None)
         Get the MRI labels for the given subjects.
     bloodlabels(subj_labels=None)
         Get the blood labels for the given subjects.
@@ -87,6 +87,9 @@ class BayesDB(MSHDB):
     calc_flags(outfile=None)
         Calculate the flags for the database.
     """
+
+    unique_columns = ["subj", "session"]
+    extra_columns  = ["group"]
 
     second_col_name = "session"
     third_col_name  = "group"
@@ -351,8 +354,29 @@ class BayesDB(MSHDB):
 
         return self.main.get_subjects_column(subjs, "group")
 
+    def mri_sd(self, subj_labels:List[str]=None) -> list[SubjectSDList]:
+        """
+        Get the SubjectSDList for the given subjects.
+
+        Parameters
+        ----------
+        subj_labels : List[str], optional
+            The list of subject labels, by default None.
+
+        Returns
+        -------
+        list
+            The list of MRI labels.
+        """
+        total = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, conditions=[FilterValues("mri", "==", 1)])
+        td    = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, conditions=[FilterValues("group", "==", "TD"), FilterValues("mri", "==", 1)])
+        bd    = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, conditions=[FilterValues("group", "==", "BD"), FilterValues("mri", "==", 1)])
+        sk    = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, conditions=[FilterValues("group", "==", "SZ"), FilterValues("mri", "==", 1)])
+
+        return [total, td, bd, sk]
+
     # region GET LISTS OF INTERESTS
-    def mrilabels(self, subj_labels:List[str]=None) -> list:
+    def mri_labels(self, subj_labels:List[str]=None) -> list[list[str]]:
         """
         Get the MRI labels for the given subjects.
 
@@ -366,13 +390,35 @@ class BayesDB(MSHDB):
         list
             The list of MRI labels.
         """
-        total = self.sheet_sd(self.main_name).select_subjlist(subj_labels, conditions=[FilterValues("mri"   , "==", 1)])
-        td    = self.sheet_sd(self.main_name).select_subjlist(subj_labels, conditions=[FilterValues("group", "==", "TD"), FilterValues("mri", "==", 1)])
-        bd    = self.sheet_sd(self.main_name).select_subjlist(subj_labels, conditions=[FilterValues("group", "==", "BD"), FilterValues("mri", "==", 1)])
-        sk    = self.sheet_sd(self.main_name).select_subjlist(subj_labels, conditions=[FilterValues("group", "==", "SZ"), FilterValues("mri", "==", 1)])
 
-        return [total, td, bd, sk]
-    def bloodlabels(self, subj_labels: List[str] = None) -> List[List[str]]:
+        lists = self.mri_sd(subj_labels)
+
+        return [lists[0].labels, lists[1].labels, lists[2].labels, lists[3].labels]
+
+    def blood_sd(self, subj_labels: List[str] = None) -> List[SubjectSDList]:
+        """
+        Get the blood SubjectSDList for the given subjects.
+
+        Parameters
+        ----------
+        subj_labels : List[str], optional
+            The list of subject labels, by default None.
+
+        Returns
+        -------
+        List[int]
+            The list of blood labels.
+        """
+        total   = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, conditions=[FilterValues("immfen_code", "exist", 0)])
+
+        th      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, conditions=[FilterValues("T_HELP", "==", 1)])
+        tr      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, conditions=[FilterValues("T_REG", "==", 1)])
+        nk      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, conditions=[FilterValues("NK", "==", 1)])
+        mono    = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, conditions=[FilterValues("MONO", "==", 1)])
+        bi      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, conditions=[FilterValues("B", "==", 1)])
+
+        return [total, th, tr, nk, mono, bi]
+    def blood_labels(self, subj_labels: List[str] = None) -> List[List[str]]:
         """
         Get the blood labels for the given subjects.
 
@@ -386,16 +432,28 @@ class BayesDB(MSHDB):
         List[int]
             The list of blood labels.
         """
-        total = self.sheet_sd(self.main_name).select_subjlist(subj_labels, conditions=[FilterValues("immfen_code", "exist", 0)])
-        th = self.sheet_sd("BLOOD").select_subjlist(subj_labels, conditions=[FilterValues("T_HELP", "==", 1)])
-        tr = self.sheet_sd("BLOOD").select_subjlist(subj_labels, conditions=[FilterValues("T_REG", "==", 1)])
-        nk = self.sheet_sd("BLOOD").select_subjlist(subj_labels, conditions=[FilterValues("NK", "==", 1)])
-        mono = self.sheet_sd("BLOOD").select_subjlist(subj_labels, conditions=[FilterValues("MONO", "==", 1)])
-        bi = self.sheet_sd("BLOOD").select_subjlist(subj_labels, conditions=[FilterValues("B", "==", 1)])
 
-        return [total, th, tr, nk, mono, bi]
+        lists = self.blood_sd(subj_labels)
+        return [lists[0].labels, lists[1].labels, lists[2].labels, lists[3].labels, lists[4].labels, lists[5].labels]
 
-    def bisection_labels(self, subj_labels: List[str] = None) -> List[int]:
+    def bisection_sd(self, subj_labels: List[str] = None) -> SubjectSDList:
+        """
+        Get the bisection SubjectSDList for the given subjects.
+
+        Parameters
+        ----------
+        subj_labels : List[str], optional
+            The list of subject labels, by default None.
+
+        Returns
+        -------
+        List[str]
+            The list of bisection labels.
+        """
+        total = self.sheets.main.filter_subjects(subj_labels, colconditions=[FilterValues("oa", "==", 1)])
+
+        return [total]    # endregion
+    def bisection_labels(self, subj_labels: List[str] = None) -> List[str]:
         """
         Get the bisection labels for the given subjects.
 
@@ -406,13 +464,10 @@ class BayesDB(MSHDB):
 
         Returns
         -------
-        List[int]
+        List[str]
             The list of bisection labels.
         """
-        total = self.sheets.main.select_subjlist(
-            subj_labels, colconditions=[FilterValues("oa", "==", 1)])
-
-        return [total]    # endregion
+        return [self.bisection_sd(subj_labels).labels]    # endregion
 
     def calc_flags(self, outfile:Optional[str]=None):
         """
@@ -454,7 +509,7 @@ class BayesDB(MSHDB):
                 for id_1, src_sheet_lab in enumerate(list(in_sheets_cells[id].keys())):   # e.g. ["main", "BISA"]
                     # e.g. "main"
                     if src_sheet_lab in self.sheets:
-                        src_sd:SubjectsData = self.sheet_sd(src_sheet_lab)
+                        src_sd:SubjectsData = self.get_sheet_sd(src_sheet_lab)
                         # SubjectSD(i,lab,sess)
                         for in_col in list(in_sheets_cells[id].values())[id_1]:      # e.g. ["mri_code"]
                             # e.g. "mri_code"
@@ -493,6 +548,6 @@ class BayesDB(MSHDB):
             The sorted database.
         """
         for sh in self.sheets:
-            self.sheet_sd(sh).df = self.sheet_sd(sh).df.sort_values(by=by_items, ascending=ascending, ignore_index=True)
+            self.get_sheet_sd(sh).df = self.get_sheet_sd(sh).df.sort_values(by=by_items, ascending=ascending, ignore_index=True)
 
         return self

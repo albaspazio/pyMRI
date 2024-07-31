@@ -50,11 +50,11 @@ if __name__ == "__main__":
         # region SOME USEFUL LISTS
 
         # SUBJECTS WITH BLOOD SAMPLES
-        bloodsubj_labels    = bayes_db.bloodlabels()[0] # 6 list of subjects with blood samples (total, th, tr, nk, mono, bi)
+        bloodsubj_labels    = bayes_db.blood_labels()[0] # 6 list of subjects with blood samples (total, th, tr, nk, mono, bi)
 
         # ============================================================================================================
         # SUBJECTS WITH MRI
-        mrisubj_labels      = bayes_db.mrilabels()[0] # 4 list of subjects with mri (all, td, bd, sz)
+        mrisubj_labels      = bayes_db.mri_labels()[0] # 4 list of subjects with mri (all, td, bd, sz)
         # endregion
 
         # ============================================================================================================

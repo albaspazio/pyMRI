@@ -14,10 +14,12 @@ from utility.exceptions import DataFileException
 from data.SubjectsData import SubjectsData
 from data.Sheets import Sheets
 
+
 class BayesImporter:
     """
     This class provides methods to import data from an excel file into a BayesDB object.
     Args:
+        schema (str) : path to json containing valid columns
         data (str or dict): The path to the excel file to be parsed or a dictionary of the sheets.
         password (str, optional): The password for decrypting the excel file. Defaults to "".
 
@@ -47,7 +49,7 @@ class BayesImporter:
     schemas_json:str    = ""
     date_format         = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
     round_decimals      = 2
-
+    empty_value         = "INSERISCI"
     # format: each key (e.g. main) is a sheet name.
     # each value is a list of dictionary specifying the rows to be modified (key) and the id of the column to modify
     # these values are defined in the json
@@ -108,11 +110,11 @@ class BayesImporter:
         if isinstance(data, str):
             # Check if the given data is a file
             if not os.path.exists(data):
-                raise DataFileException("BayesImportEteroDB.load", "given data param (" + data + ") is not a valid file")
+                raise DataFileException("BayesImporter.load", "given data param (" + data + ") is not a valid file")
 
             # Check if the file is an Excel file
             if not data.endswith(".xls") and not data.endswith(".xlsx"):
-                raise Exception("Error in BayesImportEteroDB.load: unknown data file format")
+                raise Exception("Error in BayesImporter.load: unknown data file format")
 
             # Set the filepath
             self.filepath = data
@@ -154,7 +156,7 @@ class BayesImporter:
         # self.check_tot()
         return BayesDB(self.sheets, calc_flags=False)
 
-    def __sheet_df(self, name: str) -> pandas.DataFrame:
+    def __sheet_df(self, name: str) -> SubjectsData:
         """
         Returns the pandas dataframe for the given sheet name.
 
@@ -231,10 +233,6 @@ class BayesImporter:
             for col in self.dates[sh]:
                 label = list(col.keys())[0]
                 value = list(col.values())[0]
-
-                # row_id = list(df["LABELS"]).index(label)
-                # self.sheet_df(sh).iloc[row_id, value] = df.iloc[row_id, value].strftime(self.date_format)
-
 
                 id_row  = [i for i, v in enumerate(list(df["LABELS"])) if label in v][0]
                 val     = df.iloc[id_row, value]
@@ -391,7 +389,7 @@ class BayesImporter:
         self.sheets["main"]     = SubjectsData(pd.DataFrame.from_dict([main]))
 
     # presently unused
-    def __set_sheet(self, scale_name: str) -> pandas.DataFrame:
+    def __set_sheet(self, scale_name: str):
         """
         This function creates a new SubjectsData in each sheet
 
@@ -407,15 +405,42 @@ class BayesImporter:
         df = self.__sheet_df(scale_name)
         sh = {"subj": self.subj, "session": self.session, "group": self.group}
 
-        for item in self.schemas_lists[scale_name]:
-            r = self.schemas_lists[scale_name][item][0]
-            c = self.schemas_lists[scale_name][item][1]
+        try:
+            for item in self.schemas_lists[scale_name]:
 
-            if r < df.shape[0] and c < df.shape[1]:
-                sh[item] = df.iloc[r, c]
-            else:
-                msg = "Error in __set_sheet limit exceeded in sheet: " + scale_name + ", df is [" + str(df.shape[0]) + "," + str(df.shape[1]) + "] and requested indices are: " + str(r) + "," + str(c)
-                raise Exception(msg)
+                if item == "CAN_BE_EMPTY":
+                    continue
+
+                r = self.schemas_lists[scale_name][item][0]
+                c = self.schemas_lists[scale_name][item][1]
+
+                if r < df.shape[0] and c < df.shape[1]:
+
+                    value = df.iloc[r, c]
+
+                    # check whether is an empty value
+                    if value == self.empty_value:
+                        still_valid = False     # by default is not a valid scale
+                        # check if this empty value is allowed
+                        if "CAN_BE_EMPTY" in self.schemas_lists[scale_name].keys():
+                            # this scale allow at least one empty value
+                            for i,canempty_elem in enumerate(self.schemas_lists[scale_name]["CAN_BE_EMPTY"]):
+                                if canempty_elem[0] == r and canempty_elem[1] == c:
+                                    sh[item]    = numpy.nan     # this value can be empty
+                                    still_valid = True          # set the flag to avoid scale deletion
+                                    continue                    # exit the for
+
+                        if still_valid is False:
+                            del self.sheets[scale_name]
+                            print("Scale " + scale_name + " is incomplete, skipping it.....")
+                            return
+                    else:
+                        sh[item] = value
+                else:
+                    msg = "Error in __set_sheet limit exceeded in sheet: " + scale_name + ", df is [" + str(df.shape[0]) + "," + str(df.shape[1]) + "] and requested indices are: " + str(r) + "," + str(c)
+                    raise Exception(msg)
+        except Exception as e:
+            a = 1
 
         self.sheets[scale_name] = SubjectsData(pd.DataFrame.from_dict([sh]))
 

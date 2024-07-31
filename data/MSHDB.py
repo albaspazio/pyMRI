@@ -106,6 +106,10 @@ class MSHDB:
     round_decimals  = 2
     date_format     = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
 
+    unique_columns = ["subj"]
+    extra_columns  = [] #["group"]
+
+
     def __init__(self, data: str | Sheets | GDriveSheet = None, sheetnames: List[str] = None, main_id: int = 0,
                  suppress_nosubj: bool = True, first_col_name: str = "subj", password: str = "",
                  sortonload: bool = True):
@@ -132,7 +136,7 @@ class MSHDB:
     # self.main sheet contains the list of DB subjects
     @property
     def main(self) -> SubjectsData:
-        return self.sheet_sd(self.main_name)
+        return self.get_sheet_sd(self.main_name)
 
     @property
     def len(self):
@@ -254,7 +258,7 @@ class MSHDB:
         # Return the sheets dictionary
         return self.sheets
 
-    def sheet_sd(self, name: str) -> SubjectsData:
+    def get_sheet_sd(self, name: str) -> SubjectsData:
         """
         Returns the SubjectsData object for a specific sheet.
 
@@ -274,8 +278,46 @@ class MSHDB:
             If the sheet does not exist.
         """
         if name not in self.schema_sheets_names:
-            raise Exception("Error in MSHDB.sheet: ")
+            raise Exception("Error in MSHDB.get_sheet_sd: given sheet name does not exist")
+
+        if not bool(self.sheets[name]):
+            raise Exception("Error in MSHDB.get_sheet_sd: given-sheet's SubjectsData does not exist")
+
         return self.sheets[name]
+
+    def set_sheet_sd(self, name: str, sd:SubjectsData, createit:bool=True):
+        """
+        Set the SubjectsData object for a specific sheet.
+
+        Parameters
+        ----------
+        name : str
+            The name of the sheet.
+        sd:SubjectsData
+            The instance to assign to given sheet
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        Exception
+            If the sheet does not exist.
+        """
+        if name not in self.sheets.keys():
+            if createit:
+                self.sheets[name] = {}
+            else:
+                raise Exception("Error in MSHDB.set_sheet_sd: given sheet does not exist and I was not asked to create it")
+
+        if name not in self.schema_sheets_names:
+            raise Exception("Error in MSHDB.set_sheet_sd: given sheet SubjectsData does not exist")
+
+        if not isinstance(sd, SubjectsData):
+            raise Exception("Error in MSHDB.set_sheet_sd: given SubjectsData does not exist")
+
+        self.sheets[name] = sd
 
     # ======================================================================================
     # region WILL BE OVERRIDDEN
@@ -416,7 +458,7 @@ class MSHDB:
             If the new columns contain subjects that are not already in the database.
 
         """
-        sheet_sd = self.sheet_sd(shname)
+        sheet_sd = self.get_sheet_sd(shname)
 
         if self.first_col_name not in subjdf.columns.values:
             raise Exception("Error in addColumns: given subjdf does not contain a subj column")
@@ -545,18 +587,18 @@ class MSHDB:
         # add new subjects
         if reallynew_db is not None:
             for sh in reallynew_db.sheet_labels:
-                currdb.sheet_sd(sh).add_sd([reallynew_db.sheet_sd(sh)])
+                currdb.get_sheet_sd(sh).add_sd([reallynew_db.get_sheet_sd(sh)])
 
         if duplicated_db is not None:
             # update existing subjects
             for sh in duplicated_db.sheet_labels:
-                df:pandas.DataFrame = duplicated_db.sheet_sd(sh).df
+                df:pandas.DataFrame = duplicated_db.get_sheet_sd(sh).df
                 for s in duplicated_subjs:
                     original_id     = currdb.main.get_subjid_by_session(s.label, s.session)             # get the original index of the subject to be updated
                     new_row         = df.loc[(df['subj'] == s.label) & (df['session'] == s.session)]    # extract the subject row from duplicated_db
                     new_row.index   = [int(original_id[0])]                                             # update its index to make update working
 
-                    currdb.sheet_sd(sh).df.update(new_row)
+                    currdb.get_sheet_sd(sh).df.update(new_row)
 
         if update is True:
             self = currdb
@@ -596,7 +638,7 @@ class MSHDB:
         df = self.add_default_columns(subjs, df)
 
         for sheetname in sheets_cols:
-            sd: SubjectsData = self.sheet_sd(sheetname)
+            sd: SubjectsData = self.get_sheet_sd(sheetname)
             cols: List[str] = sheets_cols[sheetname]
             if cols[0] == "*":
                 hdr = sd.header.copy()
@@ -628,7 +670,7 @@ class MSHDB:
         for sh in self.schema_sheets_names:
             if sort is not None:
                 if isinstance(sort, list):
-                    self.sheet_sd(sh).df.sort_values(by=sort, inplace=True)
+                    self.get_sheet_sd(sh).df.sort_values(by=sort, inplace=True)
                 else:
                     raise Exception("Error in MSHDB.save_excel: sort parameter is not a list")
 
@@ -636,13 +678,13 @@ class MSHDB:
             with pd.ExcelWriter(outdata, engine="xlsxwriter") as writer:
 
                 for sh in self.schema_sheets_names:
-                    self.sheet_sd(sh).df.to_excel(writer, sheet_name=sh, startrow=1, header=False, index=False)
+                    self.get_sheet_sd(sh).df.to_excel(writer, sheet_name=sh, startrow=1, header=False, index=False)
 
                     # create a table
                     workbook = writer.book
                     worksheet = writer.sheets[sh]
-                    (max_row, max_col) = self.sheet_sd(sh).df.shape
-                    column_settings = [{"header": column} for column in self.sheet_sd(sh).df.columns]
+                    (max_row, max_col) = self.get_sheet_sd(sh).df.shape
+                    column_settings = [{"header": column} for column in self.get_sheet_sd(sh).df.columns]
                     worksheet.add_table(0, 0, max_row, max_col - 1, {
                         "columns": column_settings})  # Add the Excel table structure. Pandas will add the data.
                     worksheet.set_column(0, max_col - 1, 12)  # Make the columns wider for clarity.
@@ -686,7 +728,7 @@ class MSHDB:
         """
         for sh in self.dates:
             if sh in self.sheets.keys():
-                sd: SubjectsData = self.sheet_sd(sh)
+                sd: SubjectsData = self.get_sheet_sd(sh)
                 if sd.num == 0:
                     continue
 
@@ -701,8 +743,7 @@ class MSHDB:
                         try:
                             date_values.append(pandas.to_datetime(value))
                         except:
-                            raise Exception(
-                                "Error in MSHDB.__format_dates: value (" + value + ") in column " + col + " of sheet " + sh + " is not a valid date")
+                            raise Exception("Error in MSHDB.__format_dates: value (" + value + ") in column " + col + " of sheet " + sh + " is not a valid date")
 
                     try:
                         if len(date_values) > 0:
@@ -719,7 +760,7 @@ class MSHDB:
         """
         for sh in self.to_be_rounded:
             if sh in self.sheets.keys():
-                ds: SubjectsData = self.sheet_sd(sh)
+                ds: SubjectsData = self.get_sheet_sd(sh)
                 if ds.num == 0:
                     continue
                 for col in self.to_be_rounded[sh]:
@@ -846,7 +887,7 @@ class MSHDB:
                 else:
                     # in case new subjects has session=1, decide whether copying data from such session or create a default row
                     df = pandas.DataFrame()
-                    sd: SubjectsData = mainDB.sheet_sd(sh)
+                    sd: SubjectsData = mainDB.get_sheet_sd(sh)
                     for s in all_newsubjs:
                         if s.session > 1:
                             subj_session1 = sd.get_subj_session(s.label, 1)
@@ -870,7 +911,7 @@ class MSHDB:
             else:  # new data contain this sheet
 
                 # I must add to the new data, a row for all other subjects not present in this new sheet
-                sd: SubjectsData = self.sheet_sd(sh)
+                sd: SubjectsData = self.get_sheet_sd(sh)
                 for subj in self.sheets.all_subjects:
                     if not sd.subjects.contains(subj):
                         # this subj exist in some other new sheets, but not here -> add it
@@ -881,7 +922,7 @@ class MSHDB:
 
         filtered_sheets = Sheets(self.sheet_labels, self.main_id)
         for sh in self.sheet_labels:
-            filtered_sheets[sh] = self.sheet_sd(sh).extract_subjset(subj)
+            filtered_sheets[sh] = self.get_sheet_sd(sh).extract_subjset(subj)
 
         return MSHDB(filtered_sheets, self.sheet_labels)
 
@@ -892,5 +933,5 @@ class MSHDB:
         '''
         db = MSHDB(None, self.sheet_labels, self.main_id)
         for sh in self.sheets:
-            db.sheets[sh] = SubjectsData(self.sheet_sd(sh).df.copy())
+            db.sheets[sh] = SubjectsData(self.get_sheet_sd(sh).df.copy())
         return db

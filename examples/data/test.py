@@ -36,10 +36,10 @@ if __name__ == "__main__":
         # subjs = SubjectSDList(sd.subjects)
         # new_subjs = subjs.filter(sd, [FilterValues("age", "<", 50)])
 
-        some_subjs              = sd.filter_subjects(some_subjects)
-        some_sess1_subjs        = sd.filter_subjects(some_subjects, [1])
-        some_male_sess1_subjs   = sd.filter_subjects(some_subjects, [1], [FilterValues("gender", "=", 1 )])
-        some_female_sess1_subjs = sd.filter_subjects(some_subjects, [1], [FilterValues("gender", "=", 2 )])
+        some_subjs              = sd.select_subs_labels(some_subjects)
+        some_sess1_subjs        = sd.select_subs_labels(some_subjects, [1])
+        some_male_sess1_subjs   = sd.select_subs_labels(some_subjects, [1], [FilterValues("gender", "=", 1 )])
+        some_female_sess1_subjs = sd.select_subs_labels(some_subjects, [1], [FilterValues("gender", "=", 2 )])
 
         a=1
 

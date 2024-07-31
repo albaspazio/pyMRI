@@ -195,7 +195,7 @@ class DataProject:
 
     # GROUP_LABEL or SUBLABELS LIST or SUBJINSTANCES LIST => VALID SUBLABELS LIST
     # returns [labels]
-    def get_subjects_labels(self, grlab_subjlabs_subjs:str|List[str]=None, must_exist:bool=True):
+    def get_subjects_labels(self, grlab_subjlabs_subjs:str|List[str]=None, must_exist:bool=True) -> List[str]:
         """
         Get subject labels.
 
@@ -264,7 +264,7 @@ class DataProject:
     # SUBJLABELS LIST => VALID SUBJLABELS LIST or []
     # check whether all subjects listed in subjects are valid
     # returns given list if all valid
-    def __get_valid_subjlabels(self, subj_labels:List[str], sessions:List[int]=None):
+    def __get_valid_subjlabels(self, subj_labels:List[str], sessions:List[int]=None) -> List[str]:
         """
         Check whether all subjects listed in subjects are valid.
 

@@ -207,7 +207,7 @@ class Project:
         valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, sess_id, must_exist)
 
         if select_conds is not None:
-            valid_subj_labels = self.data.select_subjlist(valid_subj_labels, [sess_id], select_conds)
+            valid_subj_labels = self.data.select_subs_labels(valid_subj_labels, [sess_id], select_conds)
 
         return [Subject(subj_lab, self, sess_id) for subj_lab in valid_subj_labels]
 

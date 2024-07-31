@@ -1,15 +1,10 @@
-import shutil
 import traceback
-import zipfile
 
 from DataProject import DataProject
 from Global import Global
-from data.MSHDB import MSHDB
-from data.SubjectsData import SubjectsData
-from data.CeresImporter import CeresImporter
+from data.VolBrainImporter import CeresImporter
 from data.utilities import *
 from utility.exceptions import SubjectListException
-from utility.fileutilities import remove_ext, read_keys_values_from_file
 
 if __name__ == "__main__":
 
@@ -23,7 +18,7 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_name           = "ceres"
+        proj_name           = "volbrain"
         project             = DataProject(proj_name, globaldata)
 
         # input

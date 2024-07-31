@@ -390,7 +390,7 @@ class SubjectsData:
             subjs = self.subjects
 
         newdf = pd.DataFrame()
-        rows = df.iloc[subjs.ids]
+        rows  = df.iloc[subjs.ids]
         newdf = newdf._append(rows, ignore_index=True)
 
         if update is True:
@@ -460,7 +460,7 @@ class SubjectsData:
 
     # ======================================================================================
     #region GET subjects labels (select some rows within the given list of subjects)
-    def select_subjlist(self, subj_labels: List[str] = None, sessions: List[int] = None, conditions: List[FilterValues] = None) -> List[str]:
+    def select_subs_labels(self, subj_labels: List[str] = None, sessions: List[int] = None, conditions: List[FilterValues] = None) -> List[str]:
         """
         Filter subjects based on their labels, sessions, and conditions on other columns.
 
@@ -476,11 +476,8 @@ class SubjectsData:
         Returns
         -------
         SubjectSDList
-            A list of filtered subjects.
+            A list of filtered subjects' labels.
         """
-        if sessions is None:
-            sessions = [1]
-
         return self.filter_subjects(subj_labels, sessions, conditions).labels
     #endregion
 
@@ -952,6 +949,9 @@ class SubjectsData:
 
         if row is None:
             row = {self.first_col_name: subj.label, self.second_col_name: subj.session}
+
+        if len(self.df) == 0:
+            self.df = pandas.DataFrame(columns=list(row.keys()))
 
         self.df.loc[len(self.df)] = row
 

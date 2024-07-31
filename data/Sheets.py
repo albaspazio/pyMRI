@@ -10,7 +10,7 @@ class Sheets(dict):
 
     Parameters
     ----------
-    sh_name : List[str], optional
+    sh_names : List[str], optional
         A list of sheet names, by default None
     main_id : int, optional
         The index of the main sheet, by default 0
@@ -33,13 +33,13 @@ class Sheets(dict):
     is_equal
     """
 
-    def __new__(cls, sh_name: List[str] = None, main_id: int = 0):
+    def __new__(cls, sh_names: List[str] = None, main_id: int = 0, init: bool = False):
         """
         The __new__ method is a special method that is called when a new instance of the Sheets class is created.
 
         Parameters
         ----------
-        sh_name : List[str], optional
+        sh_names : List[str], optional
             A list of sheet names, by default None
         main_id : int, optional
             The index of the main sheet, by default 0
@@ -48,17 +48,18 @@ class Sheets(dict):
         -------
         Sheets
             A new instance of the Sheets class
+            :param init:
 
         """
         return super(Sheets, cls).__new__(cls, None)
 
-    def __init__(self, sh_name: List[str] = None, main_id: int = 0):
+    def __init__(self, sh_names: List[str] = None, main_id: int = 0, init: bool = False):
         """
         The __init__ method is a special method that is called when an instance of the Sheets class is initialized.
 
         Parameters
         ----------
-        sh_name : List[str], optional
+        sh_names : List[str], optional
             A list of sheet names, by default None
         main_id : int, optional
             The index of the main sheet, by default 0
@@ -69,8 +70,12 @@ class Sheets(dict):
 
         """
         super().__init__()
-        self.schema_sheets_names = sh_name
+        self.schema_sheets_names = sh_names
         self.main_id = main_id
+
+        if init is True:
+            for sh in sh_names:
+                self[sh] = SubjectsData()
 
     @property
     def main(self) -> SubjectsData:
