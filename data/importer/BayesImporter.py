@@ -68,10 +68,10 @@ class BayesImporter:
         with open(self.schemas_json) as json_file:
             self.schemas_lists = json.load(json_file)
 
-        self.to_be_rounded          = self.schemas_lists["TO_BE_ROUNDED"]
-        self.dates                  = self.schemas_lists["DATES"]
-        self.input_sheets_names     = self.schemas_lists["IN_SHEETS_NAMES"]
-        self.schema_sheets_names    = self.schemas_lists["OUT_SHEETS_NAMES"]
+        self.to_be_rounded          = self.schemas_lists["to_be_rounded"]
+        self.dates                  = self.schemas_lists["dates"]
+        self.input_sheets_names     = self.schemas_lists["in_sheets_names"]
+        self.schema_sheets_names    = self.schemas_lists["out_sheets_names"]
 
         self.main_name              = self.schema_sheets_names[self.main_id]
 

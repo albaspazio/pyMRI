@@ -101,31 +101,47 @@ class MSHDB:
     """
 
     valid_dtypes    = ['Int8', 'Int16', 'Int32', 'Int64', 'UInt8', 'UInt16', 'UInt32', 'UInt64', 'float64', 'float32']
-    dates           = {}
-    to_be_rounded   = {}
-    round_decimals  = 2
-    date_format     = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
 
-    unique_columns = ["subj"]
-    extra_columns  = [] #["group"]
+    unique_columns      = ["subj"]
+    main_id             = 0
+    schema_sheets_names = []
+    date_format         = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
+    dates               = {}
+    to_be_rounded       = {}
+    round_decimals      = 2
+    extra_columns       = [] #["group"]
 
-
-    def __init__(self, data: str | Sheets | GDriveSheet = None, sheetnames: List[str] = None, main_id: int = 0,
-                 suppress_nosubj: bool = True, first_col_name: str = "subj", password: str = "",
-                 sortonload: bool = True):
+    def __init__(self, schema:str,
+                    data: str | Sheets | GDriveSheet = None,
+                    suppress_nosubj: bool = True,
+                    password: str = "",
+                    sortonload: bool = True):
 
         super().__init__()
-        self.schema_sheets_names= sheetnames
-        self.main_id            = main_id
-        self.suppress_nosubj    = suppress_nosubj
-        self.first_col_name     = first_col_name            # e.g. "subj"
-        self.password           = password
 
-        self.main_name:str      = sheetnames[main_id]       # e.g. "main"
+        self.schemas_json           = schema
 
-        self.data_source        = None
+        with open(self.schemas_json) as json_file:
+            self.schemas_lists = json.load(json_file)
 
-        self.sheets:Sheets      = Sheets(self.schema_sheets_names, main_id)
+            self.unique_columns         = self.schemas_lists["unique_columns"]
+            self.main_id                = self.schemas_lists["main_id"]
+            self.schema_sheets_names    = self.schemas_lists["schema_sheets_names"]
+
+            self.date_format            = self.schemas_lists["date_format"]
+            self.dates                  = self.schemas_lists["dates"]
+            self.to_be_rounded          = self.schemas_lists["to_be_rounded"]
+            self.round_decimals         = self.schemas_lists["round_decimals"]
+            self.extra_columns          = self.schemas_lists["extra_columns"]
+
+        self.suppress_nosubj        = suppress_nosubj
+        self.password               = password
+
+        self.main_name:str          = self.schema_sheets_names[self.main_id]       # e.g. "main"
+
+        self.data_source            = None
+
+        self.sheets:Sheets          = Sheets(self.schema_sheets_names, self.main_id)
 
         if data is not None:
             self.load(data, sort=sortonload)
@@ -213,7 +229,11 @@ class MSHDB:
                 data = self.decrypt_excel(data, self.password)
             # Read the Excel file into a Pandas DataFrame
             xls = pd.ExcelFile(data)
-            for sheet_name in xls.sheet_names:
+
+            if self.schema_sheets_names is None:
+                self.schema_sheets_names = xls.sheet_names
+
+            for sheet_name in self.schema_sheets_names:
                 df = pd.read_excel(xls, sheet_name)
                 # Verify that the first column is valid
                 df = self.is_valid(df)
@@ -336,7 +356,7 @@ class MSHDB:
             The sorted DataFrame.
 
         """
-        return df.sort_values(by=[self.first_col_name], ignore_index=True)
+        return df.sort_values(by=self.unique_columns, ignore_index=True)
 
     def is_valid(self, df: pandas.DataFrame) -> pandas.DataFrame:
         """
@@ -358,13 +378,22 @@ class MSHDB:
             If the first column is not called "subj" and suppress_nosubj is False.
 
         """
-        if df.columns[0] != self.first_col_name:
+        isvalid = True
+        for i,v in enumerate(self.unique_columns):
+            if df.columns[i] != self.unique_columns[i]:
+                isvalid = False
+
+        if not isvalid:
             if self.suppress_nosubj:
-                df.columns.values[0] = self.first_col_name
+
+                for i, v in enumerate(self.unique_columns):
+                    df.columns.values[i] = self.unique_columns[i]
                 print("Warning in MXLSDB.load: first column was not called subj, I renamed it to subj....check if it's ok")
                 return df
             else:
-                raise Exception("Error in MXLSDB.load: first column is not called " + self.first_col_name)
+                raise Exception("Error in MXLSDB.load: first column is not called " + self.unique_columns[0])
+        else:
+            return df
 
     def add_default_columns(self, subjs: SubjectSDList, df: pandas.DataFrame) -> pandas.DataFrame:
         """
@@ -383,7 +412,7 @@ class MSHDB:
             The input DataFrame with a new column containing the subject labels.
 
         """
-        df[self.first_col_name] = subjs.labels
+        df[self.unique_columns[0]] = subjs.labels
         return df
 
     def remove_extra_columns(self, hdr: list) -> list:
@@ -401,7 +430,13 @@ class MSHDB:
             The input header with the specified column removed.
 
         """
-        hdr.remove(self.first_col_name)
+
+        for colname in self.unique_columns:
+            hdr.remove(colname)
+
+        for colname in self.extra_columns:
+            hdr.remove(colname)
+
         return hdr
 
     def add_default_rows(self, subjs: SubjectSDList = None) -> pandas.DataFrame:
@@ -420,7 +455,7 @@ class MSHDB:
 
         """
         df = pandas.DataFrame()
-        df[self.first_col_name] = subjs.labels
+        df[self.unique_columns[0]] = subjs.labels
 
         return df
 
@@ -439,7 +474,7 @@ class MSHDB:
             The default row for the subject.
 
         """
-        return {self.first_col_name: subj.label}
+        return {self.unique_columns[0]: subj.label}
 
     def add_new_columns(self, shname: str, subjdf: pandas.DataFrame) -> None:
         """
@@ -460,11 +495,12 @@ class MSHDB:
         """
         sheet_sd = self.get_sheet_sd(shname)
 
-        if self.first_col_name not in subjdf.columns.values:
-            raise Exception("Error in addColumns: given subjdf does not contain a subj column")
+        for colname in self.unique_columns:
+            if colname not in subjdf.columns.values:
+                raise Exception("Error in addColumns: given subjdf does not contain a mandatory unique column: " + colname)
 
-        new_sd = SubjectsData(subjdf)
-        new_subjs = new_sd.subjects
+        new_sd      = SubjectsData(subjdf)
+        new_subjs   = new_sd.subjects
 
         if new_subjs.is_in(self.subjects):  # all subjects included in subjdf are already present in the db
             sheet_sd.add_columns_df(subjdf, can_overwrite=False)
@@ -496,7 +532,7 @@ class MSHDB:
             self.sheets = sheets
             return self
         else:
-            return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.first_col_name)
+            return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.unique_columns[0])
 
     def remove_subjects(self, subjects2remove: SubjectSDList, update: bool = False) -> "MSHDB":
         """
@@ -523,7 +559,7 @@ class MSHDB:
             self.sheets = sheets
             return self
         else:
-            return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.first_col_name)
+            return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.unique_columns[0])
 
     # add brand-new subjects:
     # Since it thought to may accept also incomplete sheets. it must preserve db integrity
@@ -820,7 +856,7 @@ class MSHDB:
         if update:
             self.sheets = sheets
 
-        return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.first_col_name)
+        return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.unique_columns[0])
 
     # presently not used. TODO: fix MSHDB.check_labels
     def check_labels(self, newsubjs:SubjectSDList, sheet:str) -> bool:

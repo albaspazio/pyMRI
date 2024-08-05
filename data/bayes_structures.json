@@ -1,11 +1,12 @@
 {
-  "columns": ["subj", "session"],
-  "schema_sheets_names" : [ "main", "SA", "CLINIC", "BLOOD", "CERES", "PHARLOAD",
+  "unique_columns": ["subj", "session"],
+  "main_id": 0,
+  "schema_sheets_names" : [ "main", "SA", "CLINIC", "BLOOD", "CERES", "AGE", "PHARLOAD",
                             "AASP", "ASI", "CCAS", "HAM", "MATRICS", "MEQ", "MW", "BISA", "PANSS",
                             "PAS", "PSQI", "SANS", "SAPS", "SPQ", "STQ", "TATE", "TEMPS", "TLC", "YMRS", "ZTPI"],
   "date_format":"%d-%b-%Y" ,
   "dates":{"main":["birth_date", "recruitment_date"], "MATRICS":["MATRICS_date"]},
   "to_be_rounded":{"main":["age"]},
-  "round_decimals":2
-
+  "round_decimals":2,
+  "extra_columns": ["group"]
 }

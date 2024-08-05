@@ -36,12 +36,6 @@ class BayesDB(MSHDB):
         The list of Sheet objects that make up the database.
     subjects : SubjectSDList
         The list of SubjectSD objects that are in the database.
-    first_col_name : str
-        The name of the first column (usually "subj").
-    second_col_name : str
-        The name of the second column (usually "session").
-    third_col_name : str
-        The name of the third column (usually "group").
     schema_sheets_names : list
         The list of sheet names that define the schema of the database.
     date_format : str
@@ -60,8 +54,6 @@ class BayesDB(MSHDB):
     -------
     sort(by_items=["subj", "session"], ascending=[True, True])
         Sort the data by the given items and in the given order.
-    is_valid(df)
-        Check if the given DataFrame is valid.
     add_default_columns(subjs, df)
         Add the default columns (subj, session, group) to the given DataFrame.
     add_default_rows(subjs=None)
@@ -80,78 +72,35 @@ class BayesDB(MSHDB):
         Get the groups for the given subjects.
     mri_labels(subj_labels=None)
         Get the MRI labels for the given subjects.
-    bloodlabels(subj_labels=None)
+    mri_sd(subj_labels=None)
+        Get the MRI SubjectsSD for the given subjects.
+    blood_labels(subj_labels=None)
         Get the blood labels for the given subjects.
+    blood_sd(subj_labels=None)
+        Get the blood SubjectsSD for the given subjects.
     bisection_labels(subj_labels=None)
         Get the bisection labels for the given subjects.
+    bisection_sd(subj_labels=None)
+        Get the bisection SubjectsSD for the given subjects.
     calc_flags(outfile=None)
         Calculate the flags for the database.
     """
 
-    unique_columns = ["subj", "session"]
-    extra_columns  = ["group"]
-
-    second_col_name = "session"
-    third_col_name  = "group"
-
-    schema_sheets_names = [ "main", "SA", "CLINIC", "BLOOD", "CERES", "PHARLOAD",
-                            "AASP", "ASI", "CCAS", "HAM", "MATRICS", "MEQ", "MW", "BISA", "PANSS",
-                            "PAS", "PSQI", "SANS", "SAPS", "SPQ", "STQ", "TATE", "TEMPS", "TLC", "YMRS", "ZTPI"]
-
-    date_format         = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
-    dates               = {"main":["birth_date", "recruitment_date"], "MATRICS":["MATRICS_date"]}
-    to_be_rounded       = {"main":["age"]}
-
-    def __init__(self, data: str | Sheets | GDriveSheet = None, password: str = "", calc_flags: bool = True,
-                 sortonload: bool = True):
+    def __init__(self,  schema:str,
+                        data: str | Sheets | GDriveSheet = None,
+                        password: str = "",
+                        calc_flags: bool = True,
+                        sortonload: bool = True):
         """
         Initialize the class.
         """
-        super().__init__(data, self.schema_sheets_names, 0, True, "subj", password=password, sortonload=sortonload)
+
+        super().__init__(schema, data,True, password=password, sortonload=sortonload)
         if calc_flags:
             self.calc_flags()
 
     # ======================================================================================
     # region OVERRIDE
-    def sort_values(self, df:pandas.DataFrame) -> pandas.DataFrame:
-        """
-        Sort the given DataFrame by the first and second columns.
-
-        Parameters
-        ----------
-        df : pandas.DataFrame
-            The DataFrame to be sorted.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The sorted DataFrame.
-        """
-        return df.sort_values(by=[self.first_col_name, self.second_col_name], ignore_index=True)
-
-    def is_valid(self, df:pandas.DataFrame) -> pandas.DataFrame:
-        """
-        Check if the given DataFrame has the correct columns.
-
-        Parameters
-        ----------
-        df : pandas.DataFrame
-            The DataFrame to be checked.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The given DataFrame if it is valid, or an error message if it is not valid.
-        """
-        if df.columns[0] != self.first_col_name or df.columns[1] != self.second_col_name:
-            if self.suppress_nosubj:
-                df.columns.values[0] = self.first_col_name
-                df.columns.values[1] = self.second_col_name
-                print("Warning in BayesDB.load: either first or second column was not called subj or session, I renamed them....check if it's ok")
-            else:
-                raise Exception("Error in BayesDB.load: either first (" + df.columns.values[0] + ") or second (" + df.columns.values[1] + ") column was not called subj or session ")
-        return df
-
     def add_default_columns(self, subjs:SubjectSDList, df:pandas.DataFrame):
         """
         Add the default columns (subj, session, group) to the given DataFrame.
@@ -168,29 +117,9 @@ class BayesDB(MSHDB):
         pandas.DataFrame
             The given DataFrame with the default columns added.
         """
-        df[self.first_col_name]  = subjs.labels
-        df[self.second_col_name] = subjs.sessions
+        df[self.unique_columns[0]] = subjs.labels
+        df[self.unique_columns[1]] = subjs.sessions
         return df
-
-    def remove_extra_columns(self, hdr:list) -> list:
-        """
-        Remove the extra columns from the given list.
-
-        Parameters
-        ----------
-        hdr : list
-            The list of column headers.
-
-        Returns
-        -------
-        list
-            The list of column headers without the extra columns.
-        """
-        hdr.remove(self.first_col_name)
-        hdr.remove(self.second_col_name)
-        if "group" in hdr:
-            hdr.remove("group")
-        return hdr
 
     def add_default_rows(self, subjs:SubjectSDList=None):
         """
@@ -207,9 +136,9 @@ class BayesDB(MSHDB):
             The DataFrame with the default rows added.
         """
         df                          = pandas.DataFrame()
-        df[self.first_col_name]     = subjs.labels
-        df[self.second_col_name]    = subjs.sessions
-        df[self.third_col_name]     = self.get_groups(subjs)
+        df[self.unique_columns[0]]  = subjs.labels
+        df[self.unique_columns[1]]  = subjs.sessions
+        df[self.extra_columns[0]]   = self.get_groups(subjs)
 
         return df
 
@@ -227,27 +156,7 @@ class BayesDB(MSHDB):
         dict
             The default row for the given subject.
         """
-        return {self.first_col_name: subj.label, self.second_col_name:subj.session, "group":self.get_groups(SubjectSDList([subj]))[0]}
-
-    def add_new_columns(self, shname: str, subjdf: pandas.DataFrame):
-        """
-        Add new columns to the given sheet.
-
-        Parameters
-        ----------
-        shname : str
-            The name of the sheet.
-        subjdf : pandas.DataFrame
-            The DataFrame containing the data for the new columns.
-
-        Raises
-        ------
-        Exception
-            If the given DataFrame does not contain a session column.
-        """
-        if self.second_col_name not in subjdf.columns.values:
-            raise Exception("Error in addColumns: given subjdf does not contain a session column")
-        super().add_new_columns(shname, subjdf)
+        return {self.unique_columns[0]: subj.label, self.unique_columns[1]:subj.session, "group":self.get_groups(SubjectSDList([subj]))[0]}
 
     def remove_subjects(self, subjects2remove:SubjectSDList, update=False) -> 'BayesDB':
         """
@@ -532,7 +441,7 @@ class BayesDB(MSHDB):
         if outfile is not None:
             self.save(outfile)
 
-    def sort(self, by_items:List[str]=["subj", "session"], ascending=[True, True]):
+    def sort(self, by_items:List[str]=None, ascending=[True, True]):
         """Sort the database by the given items and in the given order.
 
         Parameters
@@ -547,6 +456,9 @@ class BayesDB(MSHDB):
         BayesDB
             The sorted database.
         """
+        if by_items is None:
+            by_items = self.unique_columns
+
         for sh in self.sheets:
             self.get_sheet_sd(sh).df = self.get_sheet_sd(sh).df.sort_values(by=by_items, ascending=ascending, ignore_index=True)
 
