@@ -51,8 +51,9 @@ class SubjectsData:
     The data frame must contain two columns: "subj" and "session", which contain the subject label and session, respectively.
     """
 
-    first_col_name = "subj"
-    second_col_name = "session"
+    first_col_name          = "subj"
+    second_col_name         = "session"
+    df: pandas.DataFrame    = None
 
     def __init__(self, data:str|pandas.DataFrame=None, validcols:List[str]=None, cols2num:List[str]|dict=None, delimiter:str='\t', check_data:bool=True):
         """
@@ -82,8 +83,8 @@ class SubjectsData:
         Exception
             If the data contains an invalid column name or if the data type conversion is not supported.
         """
-        self.filepath = data
-        self.df:pandas.DataFrame = pandas.DataFrame()
+        self.filepath   = data
+        self.df         = pandas.DataFrame()
         if data is not None:
             self.load(data, validcols, cols2num, delimiter, check_data)
 

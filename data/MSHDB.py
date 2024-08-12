@@ -3,6 +3,7 @@ from __future__ import annotations
 import collections
 import io
 import os
+import json
 from typing import List
 from datetime import date, datetime
 
@@ -102,6 +103,7 @@ class MSHDB:
 
     valid_dtypes    = ['Int8', 'Int16', 'Int32', 'Int64', 'UInt8', 'UInt16', 'UInt32', 'UInt64', 'float64', 'float32']
 
+    sheets:Sheets       = None
     unique_columns      = ["subj"]
     main_id             = 0
     schema_sheets_names = []
@@ -111,28 +113,28 @@ class MSHDB:
     round_decimals      = 2
     extra_columns       = [] #["group"]
 
-    def __init__(self, schema:str,
-                    data: str | Sheets | GDriveSheet = None,
-                    suppress_nosubj: bool = True,
-                    password: str = "",
-                    sortonload: bool = True):
+    def __init__(self, file_schema: str,
+                 data: str | Sheets | GDriveSheet = None,
+                 suppress_nosubj: bool = True,
+                 password: str = "",
+                 sortonload: bool = True):
 
         super().__init__()
 
-        self.schemas_json           = schema
+        self.schema_file           = file_schema
 
-        with open(self.schemas_json) as json_file:
-            self.schemas_lists = json.load(json_file)
+        with open(self.schema_file) as json_file:
+            self.schema = json.load(json_file)
 
-            self.unique_columns         = self.schemas_lists["unique_columns"]
-            self.main_id                = self.schemas_lists["main_id"]
-            self.schema_sheets_names    = self.schemas_lists["schema_sheets_names"]
+            self.unique_columns         = self.schema["unique_columns"]
+            self.main_id                = self.schema["main_id"]
+            self.schema_sheets_names    = self.schema["schema_sheets_names"]
 
-            self.date_format            = self.schemas_lists["date_format"]
-            self.dates                  = self.schemas_lists["dates"]
-            self.to_be_rounded          = self.schemas_lists["to_be_rounded"]
-            self.round_decimals         = self.schemas_lists["round_decimals"]
-            self.extra_columns          = self.schemas_lists["extra_columns"]
+            self.date_format            = self.schema["date_format"]
+            self.dates                  = self.schema["dates"]
+            self.to_be_rounded          = self.schema["to_be_rounded"]
+            self.round_decimals         = self.schema["round_decimals"]
+            self.extra_columns          = self.schema["extra_columns"]
 
         self.suppress_nosubj        = suppress_nosubj
         self.password               = password
@@ -141,7 +143,7 @@ class MSHDB:
 
         self.data_source            = None
 
-        self.sheets:Sheets          = Sheets(self.schema_sheets_names, self.main_id)
+        self.sheets                 = Sheets(sh_names=self.schema_sheets_names, main_id=self.main_id)
 
         if data is not None:
             self.load(data, sort=sortonload)
@@ -532,7 +534,7 @@ class MSHDB:
             self.sheets = sheets
             return self
         else:
-            return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.unique_columns[0])
+            return MSHDB(self.schema_file, sheets)
 
     def remove_subjects(self, subjects2remove: SubjectSDList, update: bool = False) -> "MSHDB":
         """
@@ -559,7 +561,7 @@ class MSHDB:
             self.sheets = sheets
             return self
         else:
-            return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.unique_columns[0])
+            return MSHDB(self.schema_file, sheets)
 
     # add brand-new subjects:
     # Since it thought to may accept also incomplete sheets. it must preserve db integrity
@@ -648,7 +650,7 @@ class MSHDB:
     #                       "SAPS": ["SAPS_TOT"],
     #                       "YMRS": ["YMRS_TOT"]}
     # SUBSET all excel by rows and sheets' cols
-    def select_df(self, subjs: SubjectSDList = None, sheets_cols: dict = None, outfile: str = "") -> pandas.DataFrame:
+    def select_df(self, subjs: SubjectSDList = None, sheets_cols: dict = None, outfile: str = "") -> pandas.DataFrame|None:
         """
         Selects data from the database and returns it as a Pandas DataFrame.
 
@@ -787,7 +789,7 @@ class MSHDB:
                             sd.df[col] = pandas.Series(date_values).dt.strftime(self.date_format)
                     except:
                         raise Exception(
-                            "Error in MSHDB.__format_dates: value (" + date_values + ") in column " + col + " of sheet " + sh + " cannot be formatted as desired")
+                            "Error in MSHDB.__format_dates: value (" + str(date_values) + ") in column " + col + " of sheet " + sh + " cannot be formatted as desired")
 
     def __round_columns(self):
         """
@@ -856,7 +858,7 @@ class MSHDB:
         if update:
             self.sheets = sheets
 
-        return MSHDB(sheets, self.schema_sheets_names, self.main_id, first_col_name=self.unique_columns[0])
+        return MSHDB(self.schema_file, sheets)
 
     # presently not used. TODO: fix MSHDB.check_labels
     def check_labels(self, newsubjs:SubjectSDList, sheet:str) -> bool:
@@ -956,18 +958,18 @@ class MSHDB:
 
     def filter_subjects(self, subj: SubjectSDList) -> MSHDB:
 
-        filtered_sheets = Sheets(self.sheet_labels, self.main_id)
+        filtered_sheets = Sheets(sh_names=self.sheet_labels, main_id=self.main_id)
         for sh in self.sheet_labels:
             filtered_sheets[sh] = self.get_sheet_sd(sh).extract_subjset(subj)
 
-        return MSHDB(filtered_sheets, self.sheet_labels)
+        return MSHDB(self.schema_file, filtered_sheets)
 
     def copy(self) -> 'MSHDB':
         '''
         return a deep copy of current instance
         :return:
         '''
-        db = MSHDB(None, self.sheet_labels, self.main_id)
+        db = MSHDB(self.schema_file, None)
         for sh in self.sheets:
             db.sheets[sh] = SubjectsData(self.get_sheet_sd(sh).df.copy())
         return db

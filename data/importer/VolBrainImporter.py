@@ -34,7 +34,7 @@ class VolBrainImporter:
         Parse the input folder and return a SubjectsData object containing the data.
     """
 
-    def __init__(self, schemas:str, inputfolder, outfile=None):
+    def __init__(self, schema_file:str, inputfolder, outfile=None):
         """
         Initialize the CeresImporter class.
 
@@ -47,17 +47,16 @@ class VolBrainImporter:
         outcolnames : list of str, optional
             The list of output column names. If None, the default column names will be used.
         """
-        self.schemas_json   = schemas
         self.inputfolder    = inputfolder
         self.outfile        = outfile
 
-        with open(self.schemas_json) as json_file:
-            self.schemas_lists = json.load(json_file)
+        with open(schema_file) as json_file:
+            self.schema = json.load(json_file)
 
-        self.valid_columns              = self.schemas_lists["valid_columns"]
-        self.valid_columns_short        = self.schemas_lists["valid_columns_short"]
-        self.out_valid_columns          = self.schemas_lists["out_valid_columns"]
-        self.out_valid_columns_shorts   = self.schemas_lists["out_valid_columns_shorts"]
+        self.valid_columns              = self.schema["valid_columns"]
+        self.valid_columns_short        = self.schema["valid_columns_short"]
+        self.out_valid_columns          = self.schema["out_valid_columns"]
+        self.out_valid_columns_shorts   = self.schema["out_valid_columns_shorts"]
 
         self.subs_data = self.parseFolder(self.valid_columns_short)
 

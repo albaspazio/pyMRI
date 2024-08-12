@@ -22,7 +22,7 @@ class DataFileException(Exception):
         param (str): Parameter associated with the error.
     """
 
-    def __init__(self, msg, param):
+    def __init__(self, msg, param=None):
         self.msg = msg
         self.param = param
 

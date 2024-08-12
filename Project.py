@@ -24,6 +24,8 @@ from utility.fileutilities import sed_inplace, remove_ext
 
 class Project:
 
+    data:SubjectsData = None
+
     def __init__(self, folder:str, globaldata:Global, data:str|SubjectsData="data.xlsx"):
         """
         Initialize a Project instance.
@@ -96,7 +98,7 @@ class Project:
 
         # load subjects data if possible
         self.data_file = ""
-        self.data:SubjectsData = SubjectsData()
+        self.data = SubjectsData()
 
         self.load_data(data)
 

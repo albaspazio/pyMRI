@@ -86,7 +86,7 @@ class BayesDB(MSHDB):
         Calculate the flags for the database.
     """
 
-    def __init__(self,  schema:str,
+    def __init__(self,  file_schema:str,
                         data: str | Sheets | GDriveSheet = None,
                         password: str = "",
                         calc_flags: bool = True,
@@ -95,7 +95,7 @@ class BayesDB(MSHDB):
         Initialize the class.
         """
 
-        super().__init__(schema, data,True, password=password, sortonload=sortonload)
+        super().__init__(file_schema, data, True, password=password, sortonload=sortonload)
         if calc_flags:
             self.calc_flags()
 
@@ -179,7 +179,7 @@ class BayesDB(MSHDB):
         if isinstance(db, BayesDB):
             return db
         else:
-            return BayesDB(db.sheets)
+            return BayesDB(self.schema_file, db.sheets)
 
     def rename_subjects(self, assoc_dict, update=False) -> 'BayesDB':
         """
@@ -198,9 +198,9 @@ class BayesDB(MSHDB):
             The BayesDB object with the renamed subjects.
         """
         mshdb = super().rename_subjects(assoc_dict, update)
-        return BayesDB(mshdb.sheets)
+        return BayesDB(self.schema, mshdb.sheets)
 
-    def add_new_subjects(self, newdb: 'MSHDB', can_update=False, must_exist=False, copy_previous_sess=None,
+    def add_new_subjects(self, newdb: 'MSHDB', can_update:bool=False, must_exist:bool=False, copy_previous_sess:list | None =None,
                          update=False) -> 'BayesDB':
         """
         Add the subjects from the given database to the current database.
@@ -213,7 +213,7 @@ class BayesDB(MSHDB):
             define whether already existing subjects shall be upgraded or ignored
         must_exist : bool, optional
             define whether subjects in newdb must exist (e.g. when adding only auot) or not
-        copy_previous_sess : bool, optional
+        copy_previous_sess : list | None, optional
             If True, the previous sessions will be copied to the new sheets, by default None.
         update : bool, optional
             If True, the changes will be reflected in the current object, by default False.
@@ -359,7 +359,7 @@ class BayesDB(MSHDB):
         List[str]
             The list of bisection labels.
         """
-        total = self.sheets.main.filter_subjects(subj_labels, colconditions=[FilterValues("oa", "==", 1)])
+        total = self.sheets.main.filter_subjects(subj_labels, conditions=[FilterValues("oa", "==", 1)])
 
         return [total]    # endregion
     def bisection_labels(self, subj_labels: List[str] = None) -> List[str]:

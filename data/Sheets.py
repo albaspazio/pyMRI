@@ -1,5 +1,7 @@
 from typing import List
 
+import pandas
+
 from data.SubjectsData import SubjectsData
 from data.SubjectSDList import SubjectSDList
 
@@ -33,7 +35,7 @@ class Sheets(dict):
     is_equal
     """
 
-    def __new__(cls, sh_names: List[str] = None, main_id: int = 0, init: bool = False):
+    def __new__(cls, data:dict=None, sh_names: List[str] = None, main_id: int = 0, init: bool = False):
         """
         The __new__ method is a special method that is called when a new instance of the Sheets class is created.
 
@@ -53,7 +55,7 @@ class Sheets(dict):
         """
         return super(Sheets, cls).__new__(cls, None)
 
-    def __init__(self, sh_names: List[str] = None, main_id: int = 0, init: bool = False):
+    def __init__(self, data:dict=None, sh_names: List[str] = None, main_id: int = 0, init: bool = False):
         """
         The __init__ method is a special method that is called when an instance of the Sheets class is initialized.
 
@@ -63,7 +65,8 @@ class Sheets(dict):
             A list of sheet names, by default None
         main_id : int, optional
             The index of the main sheet, by default 0
-
+        init: bool, optional
+            indicates whether init the dict with empty SubjectsData instances
         Returns
         -------
         None
@@ -92,6 +95,13 @@ class Sheets(dict):
             return self[self.schema_sheets_names[self.main_id]]
         except:
             return SubjectsData()
+
+
+    def sheet(self, sh_name:str) -> SubjectsData:
+        return self[sh_name]
+
+    def sheet_df(self, sh_name:str) -> pandas.DataFrame:
+        return self.sheet(sh_name).df
 
     @property
     def all_subjects(self) -> SubjectSDList:
@@ -145,7 +155,7 @@ class Sheets(dict):
             A copy of the Sheets object
 
         """
-        sheets = Sheets(self.schema_sheets_names, self.main_id)
+        sheets = Sheets(sh_names=self.schema_sheets_names, main_id=self.main_id)
         for sh in self:
             sheets[sh] = self[sh]
 

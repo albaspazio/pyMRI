@@ -19,8 +19,9 @@ class BayesImporter:
     """
     This class provides methods to import data from an excel file into a BayesDB object.
     Args:
-        schema (str) : path to json containing valid columns
+        import_schema (str) : path to json containing valid columns
         data (str or dict): The path to the excel file to be parsed or a dictionary of the sheets.
+        bayes_schema (str) : path to json containing full bayes schema
         password (str, optional): The password for decrypting the excel file. Defaults to "".
 
     Attributes:
@@ -41,39 +42,52 @@ class BayesImporter:
     """
     input_sheets_names:list     = []
     schema_sheets_names:list    = []
-
-    subj                = ""
-    session             = 1
-    group               = ""
-
-    schemas_json:str    = ""
     date_format         = "%d-%b-%Y" #"%b/%d/%Y"    # DD/MM/YYYY
     round_decimals      = 2
-    empty_value         = "INSERISCI"
     # format: each key (e.g. main) is a sheet name.
     # each value is a list of dictionary specifying the rows to be modified (key) and the id of the column to modify
     # these values are defined in the json
     to_be_rounded:dict   = {}
     dates:dict           = {}
 
-    def __init__(self, schemas:str, data:str|dict=None, main_id=0, password:str=""):
+    subj                = ""
+    session             = 1
+    group               = ""
+
+    import_schema:dict  = {}
+    bayes_schema:dict   = {}
+
+    empty_value         = "INSERISCI"
+
+    sheets:Sheets       = None
+
+    def __init__(self,  import_schema_file: str,
+                        bayes_schema:str,
+                        data: str | dict = None,
+                        password: str = ""):
         super().__init__()
 
-        self.schemas_json       = schemas
-        self.main_id            = main_id
+        self.bayes_schema_file  = bayes_schema
+        self.import_schema_file = import_schema_file
         self.password           = password
-
         self.filepath           = ""
 
-        with open(self.schemas_json) as json_file:
-            self.schemas_lists = json.load(json_file)
+        with open(import_schema_file) as json_file:
+            self.import_schema = json.load(json_file)
 
-        self.to_be_rounded          = self.schemas_lists["to_be_rounded"]
-        self.dates                  = self.schemas_lists["dates"]
-        self.input_sheets_names     = self.schemas_lists["in_sheets_names"]
-        self.schema_sheets_names    = self.schemas_lists["out_sheets_names"]
+            self.input_sheets_names     = self.import_schema["in_sheets_names"]
+            self.schema_sheets_names    = self.import_schema["out_sheets_names"]
 
-        self.main_name              = self.schema_sheets_names[self.main_id]
+            self.main_id                = self.import_schema["main_id"]
+            self.date_format            = self.import_schema["date_format"]
+            self.dates                  = self.import_schema["dates"]
+            self.to_be_rounded          = self.import_schema["to_be_rounded"]
+            self.round_decimals         = self.import_schema["round_decimals"]
+
+        self.main_name                  = self.schema_sheets_names[self.main_id]
+
+        with open(bayes_schema) as json_file:
+            self.bayes_schema = json.load(json_file)
 
         if data is not None:
             self.load(data)
@@ -105,8 +119,6 @@ class BayesImporter:
         Exception
             If the data file format is unknown.
         """
-        self.sheets:Sheets = Sheets(self.schema_sheets_names, self.main_id)
-
         if isinstance(data, str):
             # Check if the given data is a file
             if not os.path.exists(data):
@@ -127,16 +139,18 @@ class BayesImporter:
             # Read the Excel file
             xls = pd.ExcelFile(data)
 
+            self.sheets = Sheets(sh_names=self.schema_sheets_names, main_id=self.main_id)
+
             # Loop through the sheets
             for sheet_name in xls.sheet_names:
 
                 if sheet_name in self.schema_sheets_names:
-                    self.sheets[sheet_name] = pd.read_excel(xls, sheet_name)
+                    self.sheets[sheet_name] = SubjectsData(pd.read_excel(xls, sheet_name), check_data=False)
 
         elif isinstance(data, dict):
             # Check if the given data is a dictionary of sheets
             # TODO: Check if the dictionary contains valid sheets
-            self.sheets = data
+            self.sheets = Sheets(data, sh_names=self.schema_sheets_names, main_id=self.main_id)
 
         else:
             raise Exception("Error in MXLSDB.load: unknown data format, not a str, not a dict")
@@ -145,7 +159,7 @@ class BayesImporter:
         self.__round_columns()
 
         # adjust each sheet
-        if "auto" in self.schemas_json:
+        if "auto" in self.import_schema_file:
             self.__set_main_auto()
         else:
             self.__set_main()
@@ -154,24 +168,7 @@ class BayesImporter:
             self.__set_sheet(sh)
 
         # self.check_tot()
-        return BayesDB(self.sheets, calc_flags=False)
-
-    def __sheet_df(self, name: str) -> SubjectsData:
-        """
-        Returns the pandas dataframe for the given sheet name.
-
-        Args:
-            name (str): The name of the sheet.
-
-        Raises:
-            Exception: If the sheet name is not valid.
-
-        Returns:
-            pandas.DataFrame: The dataframe for the given sheet name.
-        """
-        if name not in self.schema_sheets_names:
-            raise Exception("Error in MSHDB.sheet: ")
-        return self.sheets[name]
+        return BayesDB(self.bayes_schema_file, self.sheets, calc_flags=False)
 
     def __decrypt_excel(self, fpath: str, pwd: str) -> io.BytesIO:
         """Decrypts an Excel file using the given password.
@@ -204,7 +201,7 @@ class BayesImporter:
             None
         """
         for sh in self.to_be_rounded:
-            df: pandas.DataFrame = self.sheets[sh]
+            df: pandas.DataFrame = self.sheets.sheet_df(sh)
             if df.size == 0:
                 continue
             for col in self.to_be_rounded[sh]:
@@ -212,7 +209,7 @@ class BayesImporter:
                 value = list(col.values())[0]
 
                 row_id = list(df["LABELS"]).index(label)
-                self.__sheet_df(sh).iloc[row_id, value] = round(df.iloc[row_id, value], self.round_decimals)
+                self.sheets.sheet_df(sh).iloc[row_id, value] = round(df.iloc[row_id, value], self.round_decimals)
 
     def __format_dates(self):
         """
@@ -226,7 +223,7 @@ class BayesImporter:
             None
         """
         for sh in self.dates:
-            df: pandas.DataFrame = self.sheets[sh]
+            df: pandas.DataFrame = self.sheets.sheet_df(sh)
             if df.size == 0:
                 continue
 
@@ -240,9 +237,9 @@ class BayesImporter:
                 if isinstance(val, datetime.datetime):
                     # series = df["LABELS"]
                     # row_id = series[series.str.contains(label)].index   #list(df["LABELS"]).index(label)
-                    self.__sheet_df(sh).iloc[id_row, value] = df.iloc[id_row, value].strftime(self.date_format)
+                    self.sheets.sheet_df(sh).iloc[id_row, value] = df.iloc[id_row, value].strftime(self.date_format)
                 else:
-                    self.__sheet_df(sh).iloc[id_row, value] = ""
+                    self.sheets.sheet_df(sh).iloc[id_row, value] = ""
                     # formatted_date = df.loc[df['LABELS'] == label]["VALUES"].iat[0].strftime(self.date_format)
 
     def __set_main(self):
@@ -258,7 +255,7 @@ class BayesImporter:
         self.main_default_cols = {"mri":0, "oa":0, "nk":0, "t":0, "m":0, "b":0, "prot":0,
                                 "mat":0, "mri_oa":0, "mri_nk":0, "mri_t":0, "mri_m":0, "mri_b":0, "mri_prot":0}
 
-        df = self.sheets["main"]
+        df = self.sheets.sheet_df("main")
 
         main    = {}
         SA      = {}
@@ -369,7 +366,7 @@ class BayesImporter:
         # self.main_columns = {   "subj":"", "session":1, "group":"", "centre":"", "birth_date":"",
         #                         "recruitment_date":"", "age":0, "gender":"", "auto":0, "etero":0}
 
-        df = self.sheets["main"]
+        df = self.sheets.sheet_df("main")
 
         main    = {}
 
@@ -402,17 +399,17 @@ class BayesImporter:
         Raises:
             ValueError: If the given scale name is not valid.
         """
-        df = self.__sheet_df(scale_name)
+        df = self.sheets.sheet_df(scale_name)
         sh = {"subj": self.subj, "session": self.session, "group": self.group}
 
         try:
-            for item in self.schemas_lists[scale_name]:
+            for item in self.import_schema[scale_name]:
 
                 if item == "CAN_BE_EMPTY":
                     continue
 
-                r = self.schemas_lists[scale_name][item][0]
-                c = self.schemas_lists[scale_name][item][1]
+                r = self.import_schema[scale_name][item][0]
+                c = self.import_schema[scale_name][item][1]
 
                 if r < df.shape[0] and c < df.shape[1]:
 
@@ -422,9 +419,9 @@ class BayesImporter:
                     if value == self.empty_value:
                         still_valid = False     # by default is not a valid scale
                         # check if this empty value is allowed
-                        if "CAN_BE_EMPTY" in self.schemas_lists[scale_name].keys():
+                        if "CAN_BE_EMPTY" in self.import_schema[scale_name].keys():
                             # this scale allow at least one empty value
-                            for i,canempty_elem in enumerate(self.schemas_lists[scale_name]["CAN_BE_EMPTY"]):
+                            for i,canempty_elem in enumerate(self.import_schema[scale_name]["CAN_BE_EMPTY"]):
                                 if canempty_elem[0] == r and canempty_elem[1] == c:
                                     sh[item]    = numpy.nan     # this value can be empty
                                     still_valid = True          # set the flag to avoid scale deletion

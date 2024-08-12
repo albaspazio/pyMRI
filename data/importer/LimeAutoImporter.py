@@ -39,8 +39,8 @@ class LimeAutoImporter:
         filepath (str): The path to the EteroDB file.
         sheets (dict): A dictionary of the sheet names and their dataframes.
     """
-    input_sheets_names:list     = []
-    output_sheets_names:list    = []
+    input_sheets_names:dict     = {}
+    output_sheets_names:dict    = {}
 
     subj                = ""
     session             = 1
@@ -56,25 +56,34 @@ class LimeAutoImporter:
     to_be_rounded:dict   = {}
     dates:dict           = {}
 
-    sheets:Sheets = None
-    def __init__(self, schemas:str, data:str=None, main_id=0, password:str=""):
+    sheets:Sheets        = None
+
+    def __init__(self,  import_schema_file: str,
+                        bayes_schema_file:str,
+                        data:str=None,
+                        password:str= ""):
         super().__init__()
 
-        self.schemas_json       = schemas
-        self.main_id            = main_id
         self.password           = password
-
         self.filepath           = ""
+        self.bayes_schema_file  = bayes_schema_file
 
-        with open(self.schemas_json) as json_file:
-            self.schemas_lists = json.load(json_file)
+        with open(import_schema_file) as json_file:
+            self.import_schema = json.load(json_file)
 
-        self.to_be_rounded          = self.schemas_lists["TO_BE_ROUNDED"]
-        self.dates                  = self.schemas_lists["DATES"]
-        self.input_sheets_names     = self.schemas_lists["IN_SHEETS_NAMES"]
-        self.output_sheets_names    = self.schemas_lists["OUT_SHEETS_NAMES"]
+            self.input_sheets_names     = self.import_schema["in_sheets_names"]
+            self.schema_sheets_names    = self.import_schema["out_sheets_names"]
 
-        self.main_name              = self.output_sheets_names[self.main_id]
+            self.main_id                = self.import_schema["main_id"]
+            self.date_format            = self.import_schema["date_format"]
+            self.dates                  = self.import_schema["dates"]
+            self.to_be_rounded          = self.import_schema["to_be_rounded"]
+            self.round_decimals         = self.import_schema["round_decimals"]
+
+        self.main_name                  = self.schema_sheets_names[self.main_id]
+
+        with open(bayes_schema_file) as json_file:
+            self.bayes_schema = json.load(json_file)
 
         if data is not None:
             self.load(data)
@@ -130,7 +139,7 @@ class LimeAutoImporter:
         else:
             raise Exception("Error in MXLSDB.load: unknown data format, not a str")
 
-        bayesdb = BayesDB(calc_flags=False)
+        bayesdb = BayesDB(self.bayes_schema_file, calc_flags=False)
 
         for sh in self.output_sheets_names:
             bayesdb.set_sheet_sd(sh, SubjectsData())
@@ -143,22 +152,6 @@ class LimeAutoImporter:
         # self.check_tot()
         return bayesdb # BayesDB(self.sheets, calc_flags=False)
 
-    def __sheet_df(self, name: str) -> SubjectsData:
-        """
-        Returns the pandas dataframe for the given sheet name.
-
-        Args:
-            name (str): The name of the sheet.
-
-        Raises:
-            Exception: If the sheet name is not valid.
-
-        Returns:
-            pandas.DataFrame: The dataframe for the given sheet name.
-        """
-        if name not in self.output_sheets_names:
-            raise Exception("Error in MSHDB.sheet: ")
-        return self.sheets[name]
 
     def __decrypt_excel(self, fpath: str, pwd: str) -> io.BytesIO:
         """Decrypts an Excel file using the given password.
@@ -199,7 +192,7 @@ class LimeAutoImporter:
                 value = list(col.values())[0]
 
                 row_id = list(df["LABELS"]).index(label)
-                self.__sheet_df(sh).iloc[row_id, value] = round(df.iloc[row_id, value], self.round_decimals)
+                self.sheets.sheet_df(sh).iloc[row_id, value] = round(df.iloc[row_id, value], self.round_decimals)
 
     def __format_dates(self):
         """
@@ -231,9 +224,9 @@ class LimeAutoImporter:
                 if isinstance(val, datetime.datetime):
                     # series = df["LABELS"]
                     # row_id = series[series.str.contains(label)].index   #list(df["LABELS"]).index(label)
-                    self.__sheet_df(sh).iloc[id_row, value] = df.iloc[id_row, value].strftime(self.date_format)
+                    self.sheets.sheet_df(sh).iloc[id_row, value] = df.iloc[id_row, value].strftime(self.date_format)
                 else:
-                    self.__sheet_df(sh).iloc[id_row, value] = ""
+                    self.sheets.sheet_df(sh).iloc[id_row, value] = ""
                     # formatted_date = df.loc[df['LABELS'] == label]["VALUES"].iat[0].strftime(self.date_format)
 
     def __set_subject(self, bayesdb:BayesDB, subj:pandas.Series)-> BayesDB:
@@ -264,9 +257,9 @@ class LimeAutoImporter:
             for scale_name in self.input_sheets_names:
                 sh = {"subj":main["subj"], "session":main["session"], "group":main["group"]}
 
-                for item in self.schemas_lists[scale_name]:
+                for item in self.import_schema[scale_name]:
 
-                    c       = self.schemas_lists[scale_name][item]
+                    c       = self.import_schema[scale_name][item]
                     value   = subj.iloc[c]
 
                     if isinstance(value, str):
@@ -296,14 +289,8 @@ class LimeAutoImporter:
 
 
 
-
-
-
-
-
-
     # presently unused
-    def __set_sheet(self, scale_name: str) -> SubjectsData:
+    def __set_sheet(self, scale_name: str):
         """
         This function creates a new SubjectsData in each sheet
 
@@ -316,12 +303,12 @@ class LimeAutoImporter:
         Raises:
             ValueError: If the given scale name is not valid.
         """
-        df = self.__sheet_df(scale_name)
+        df = self.sheets.sheet_df(scale_name)
         sh = {"subj": self.subj, "session": self.session, "group": self.group}
 
-        for item in self.schemas_lists[scale_name]:
-            r = self.schemas_lists[scale_name][item][0]
-            c = self.schemas_lists[scale_name][item][1]
+        for item in self.import_schema[scale_name]:
+            r = self.import_schema[scale_name][item][0]
+            c = self.import_schema[scale_name][item][1]
 
             if r < df.shape[0] and c < df.shape[1]:
                 sh[item] = df.iloc[r, c]

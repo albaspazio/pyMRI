@@ -4,7 +4,6 @@ import json
 import os
 from typing import List, Any
 
-from Global import Global
 from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
 from utility.exceptions import SubjectListException
@@ -17,13 +16,12 @@ class DataProject:
 
     Args:
         name (str): The name of the project.
-        globaldata (GlobalData): A GlobalData instance containing global project settings and data.
+        proj_dir (str): path to project dir.
         data : str | SubjectsData, optional. The path to the data file, by default "data.dat" or a SubjectsData instance.
                                              If not specified, the data file will be loaded from the default location.
 
     Attributes:
         name (str): The name of the project.
-        globaldata (GlobalData): A GlobalData instance containing global project settings and data.
         proj_dir (str): The directory containing the project's scripts.
         r_dir (str): The directory containing the project's R scripts.
         input_data_dir (str): The directory containing the project's input data.

@@ -1,7 +1,7 @@
 {
   "unique_columns": ["subj", "session"],
   "main_id": 0,
-  "schema_sheets_names" : [ "main", "SA", "CLINIC", "BLOOD", "CERES", "AGE", "PHARLOAD",
+  "schema_sheets_names" : [ "main", "SA", "CLINIC", "BLOOD", "CERES", "PHARLOAD",
                             "AASP", "ASI", "CCAS", "HAM", "MATRICS", "MEQ", "MW", "BISA", "PANSS",
                             "PAS", "PSQI", "SANS", "SAPS", "SPQ", "STQ", "TATE", "TEMPS", "TLC", "YMRS", "ZTPI"],
   "date_format":"%d-%b-%Y" ,

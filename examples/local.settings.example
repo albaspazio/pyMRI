@@ -13,3 +13,4 @@ trackvis_bin=/data/MRI/bash-fsl-pipeline/external_tools/dtk
 eddy_gpu_exe_name=eddy_cuda9.1
 def_dsi_rec=odf.gqi.1.25
 def_dsi_conntempl=bn274
+local_schemas=/data/MRI/pymri/schemas

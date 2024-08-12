@@ -3,7 +3,7 @@ import traceback
 from DataProject import DataProject
 from Global import Global
 from data.BayesDB import BayesDB
-from data.BayesImporter import BayesImporter
+from data.importer.BayesImporter import BayesImporter
 from data.utilities import *
 from utility.exceptions import SubjectListException
 
