@@ -837,10 +837,10 @@ class GroupAnalysis:
 
         for mod in modalities:
             orig_image      = Image(os.path.join(src_folder, "stats", "all_" + mod + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing")
-            dest_image      = os.path.join(new_folder, "stats", "all_" + mod + "_skeletonised")
+            dest_image      = os.path.join(new_stats_folder, "all_" + mod + "_skeletonised")
 
             orig_mean_image = Image(os.path.join(src_folder, "stats", "mean_" + mod + "_skeleton_mask"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing")
-            dest_mean_image = os.path.join(new_folder, "stats", "mean_" + mod + "_skeleton_mask")
+            dest_mean_image = os.path.join(new_stats_folder, "mean_" + mod + "_skeleton_mask")
 
             orig_image.filter_volumes(vols2keep, dest_image)
 
