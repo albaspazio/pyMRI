@@ -39,7 +39,7 @@ class ConnModels:
     def create_regressors_file(self, odp:str, regressors:List[Regressor], grouplabels:List[str], ofn:str="conn_covs",
                                 data:str|SubjectsData=None, ofn_postfix:str="", subj_must_exist:bool=False):
         """
-        This method creates a regressors file that can be used with the FSL FEAT tool. The regressors file contains
+        This method creates a regressors file that can be used with the Conn tool. The regressors file contains
         the regressors and covariates that will be used in the analysis.
 
         Args:
@@ -115,7 +115,7 @@ class ConnModels:
             self.string = self.string + str_covs
         self.string = self.string[:-1]
 
-        self.addline2string()
+        self.__addline2string()
 
         if ngroups == 1:
             groups_strings = ["1"]
@@ -145,7 +145,7 @@ class ConnModels:
                     value_string = " ".join(covsvalue)
                     string = string + " " + value_string
 
-                self.addline2string(string)
+                self.__addline2string(string)
                 curr_subjid = curr_subjid + 1
 
         write_text_file(output_covsfile, self.string)
@@ -235,7 +235,7 @@ class ConnModels:
             self.string = self.string + str_covs
         self.string = self.string[:-1]
 
-        self.addline2string()
+        self.__addline2string()
 
         if ngroups == 1:
             groups_strings = ["1"]
@@ -262,7 +262,7 @@ class ConnModels:
                     group_id = gr_id
 
             if group_id == -1:
-                self.addline2string(empty_row)
+                self.__addline2string(empty_row)
             else:
                 string = groups_strings[group_id]
 
@@ -276,12 +276,12 @@ class ConnModels:
                     value_string = " ".join(covsvalue)
                     string = string + " " + value_string
 
-                self.addline2string(string)
+                self.__addline2string(string)
 
         write_text_file(output_covsfile, self.string)
         print("create model file " + output_covsfile)
 
-    def addline2string(self, line:str=""):
+    def __addline2string(self, line:str=""):
         """
         This function appends a line to the self.string attribute.
 

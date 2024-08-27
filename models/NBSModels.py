@@ -115,7 +115,7 @@ class NBSModels:
         #     self.string = self.string + str_covs
         # self.string = self.string[:-1]
         #
-        # self.addline2string()
+        # self.__addline2string()
 
         if ngroups == 1:
             groups_strings = ["1"]
@@ -145,12 +145,12 @@ class NBSModels:
                     value_string = " ".join(covsvalue)
                     string = string + " " + value_string
 
-                self.addline2string(string)
+                self.__addline2string(string)
                 curr_subjid = curr_subjid + 1
 
         write_text_file(output_covsfile, self.string)
 
-    def addline2string(self, line:str=""):
+    def __addline2string(self, line:str=""):
         """
         This function appends a line to the self.string attribute.
 

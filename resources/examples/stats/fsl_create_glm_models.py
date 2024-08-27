@@ -36,19 +36,19 @@ if __name__ == "__main__":
         # ONE GROUP
 
         # regressors = [Nuisance("age"), Nuisance("gender")]
-        # fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [all_grp], "grp1", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
+        # fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [all_grp], ofn="grp1", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
         #
         # regressors = [Covariate("age"), Covariate("gender")]
-        # fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [all_grp], "grp1", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
+        # fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [all_grp], ofn="grp1", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
         #
         # regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
-        # fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [all_grp], "grp1", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
+        # fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [all_grp], ofn="grp1", create_model=False, group_mean_contrasts=2, cov_mean_contrasts=2)
         #
         # regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
-        # fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [all_grp], "grp1_simple", create_model=False, group_mean_contrasts=0)
+        # fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [all_grp], ofn="grp1_simple", create_model=False, group_mean_contrasts=0)
         #
         # regressors = [Nuisance("age"), Nuisance("gender"), Covariate("FS0"), Covariate("FS1")]
-        # fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [all_grp], "grp1_simple_compcovs", create_model=False, group_mean_contrasts=0, compare_covs=True)
+        # fslmodels.create_Mgroups_Ncov_Xnuisance_glm_file(input_template, outfolder, regressors, [all_grp], ofn="grp1_simple_compcovs", create_model=False, group_mean_contrasts=0, compare_covs=True)
 
 
         # TWO GROUPS

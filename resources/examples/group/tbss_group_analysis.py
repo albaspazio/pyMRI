@@ -52,7 +52,7 @@ if __name__ == "__main__":
         srd_folder = os.path.join(project.tbss_dir, population_label)
         dest_folder = os.path.join(project.tbss_dir, "test")
 
-        # analysis.create_analysis_folder_from_existing(srd_folder, dest_folder, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
+        # analysis.create_analysis_folder_from_existing_keep(srd_folder, dest_folder, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
 
     except Exception as e:
         print(e)

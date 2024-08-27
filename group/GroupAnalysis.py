@@ -295,6 +295,8 @@ class GroupAnalysis:
         if len(self.subjects_list) == 0:
             print("ERROR in tbss_run_fa, given grlab_subjlabs_subjs params is neither a string nor a list")
             return
+        else:
+            print("Starting tbss_run with " + str(nsubj) + " subjects")
 
         root_analysis_folder = os.path.join(self.project.tbss_dir, odn)
 
@@ -812,12 +814,12 @@ class GroupAnalysis:
 
         return res_file
 
-    # create a new tbss analysis folder (only stats one), filtering an existing analysis folder
+    # create a new tbss analysis folder (only stats one), filtering an existing analysis folder (specifying what to keep)
     # vols2keep: 0-based list of indices to keep
     @staticmethod
-    def create_analysis_folder_from_existing(src_folder, new_folder, vols2keep, modalities=None):
+    def create_analysis_folder_from_existing_keep(src_folder, new_folder, vols2keep, modalities=None):
         """
-        Creates a new analysis folder from an existing one, by copying the necessary files and filtering the volumes.
+        Creates a new analysis folder from an existing one, by copying the necessary files and keeping the given volumes.
 
         Args:
             src_folder (str): The path to the existing analysis folder.
@@ -836,15 +838,43 @@ class GroupAnalysis:
         os.makedirs(new_stats_folder, exist_ok=True)
 
         for mod in modalities:
-            orig_image      = Image(os.path.join(src_folder, "stats", "all_" + mod + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing")
+            orig_image      = Image(os.path.join(src_folder, "stats", "all_" + mod + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
             dest_image      = os.path.join(new_stats_folder, "all_" + mod + "_skeletonised")
 
-            orig_mean_image = Image(os.path.join(src_folder, "stats", "mean_" + mod + "_skeleton_mask"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing")
+            orig_mean_image = Image(os.path.join(src_folder, "stats", "mean_" + mod + "_skeleton_mask"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
             dest_mean_image = os.path.join(new_stats_folder, "mean_" + mod + "_skeleton_mask")
 
             orig_image.filter_volumes(vols2keep, dest_image)
 
             orig_mean_image.cp(dest_mean_image)
+
+    # create a new tbss analysis folder (only stats one), filtering an existing analysis folder (specifying what to remove)
+    # vols2remove: 0-based list of indices to remove
+    @staticmethod
+    def create_analysis_folder_from_existing_remove(src_folder:str, new_folder:str, vols2remove:List[int], modalities:List[str] | None=None):
+        """
+        Creates a new analysis folder from an existing one, by copying the necessary files and removing the given volumes.
+
+        Args:
+            src_folder (str): The path to the existing analysis folder.
+            new_folder (str): The path to the new analysis folder.
+            vols2keep (List[int]): A list of volume indices to keep.
+            modalities (Optional[List[str]]): A list of modalities to copy. If not specified, all modalities will be copied.
+
+        Returns:
+            None
+        """
+        if modalities is None:
+            modalities = ["FA", "MD", "L1", "L23"]
+
+        # get number of subjects (assumes all modalities contains the same number of volumes)
+        orig_image = Image(os.path.join(src_folder, "stats", "all_" + modalities[0] + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
+
+        nvols = orig_image.getnvol()
+        all_ids = [i for i in range(nvols)]
+        all_ids = [all_ids.remove(i) for i in vols2remove]
+
+        GroupAnalysis.create_analysis_folder_from_existing_keep(src_folder, new_folder, all_ids, modalities)
 
     #endregion
 

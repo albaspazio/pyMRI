@@ -114,11 +114,11 @@ class Global:
         self.fsl_std_mni_2mm_cnf            = os.path.join(self.fsl_dir, "etc", "flirtsch", "T1_2_MNI152_2mm.cnf")
 
         # useful for melodic analysis
-        self.fsl_std_mni_4mm_head           = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
-        self.fsl_std_mni_4mm_brain          = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
-        self.fsl_std_mni_4mm_brain_mask     = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain_mask"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
-        self.fsl_std_mni_4mm_brain_mask_dil = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain_mask_dil"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
-        self.fsl_std_mni_4mm_cnf            = os.path.join(self.framework_dir, "templates", "images", "T1_2_MNI152_4mm.cnf")
+        self.fsl_std_mni_4mm_head           = Image(os.path.join(self.framework_dir, "resources","templates", "images", "MNI152_T1_4mm"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
+        self.fsl_std_mni_4mm_brain          = Image(os.path.join(self.framework_dir, "resources","templates", "images", "MNI152_T1_4mm_brain"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
+        self.fsl_std_mni_4mm_brain_mask     = Image(os.path.join(self.framework_dir, "resources","templates", "images", "MNI152_T1_4mm_brain_mask"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
+        self.fsl_std_mni_4mm_brain_mask_dil = Image(os.path.join(self.framework_dir, "resources","templates", "images", "MNI152_T1_4mm_brain_mask_dil"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
+        self.fsl_std_mni_4mm_cnf            = os.path.join(self.framework_dir, "resources","templates", "images", "T1_2_MNI152_4mm.cnf")
 
         self.fsl_std_mean_skeleton          = Image(os.path.join(self.fsl_data_std_dir, "FMRIB58_FA-skeleton_1mm"), must_exist=True, msg="FSL's Standard Images not present")
 
@@ -129,7 +129,7 @@ class Global:
                                               "ilf_l", "ilf_r", "ifo_l", "ifo_r", "mcp", "mdlf_l", "mdlf_r", "or_l", "or_r",
                                               "str_l", "str_r", "slf1_l", "slf1_r", "slf2_l", "slf2_r", "slf3_l", "slf3_r", "ac",
                                               "uf_l", "uf_r", "vof_l", "vof_r", "cc"]
-        self.dti_xtract_dir                 = os.path.join(self.framework_dir, "templates", "images", "xtract", "mean_skeleton")
+        self.dti_xtract_dir                 = os.path.join(self.framework_dir, "resources", "templates", "images", "xtract", "mean_skeleton")
 
     @staticmethod
     def get_spm_template_dir():

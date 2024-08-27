@@ -337,7 +337,7 @@ class Image(str):
         if os.path.isfile(self.fpathnoext + ".gii"):
             return True
 
-    def cp(self, dest, error_src_not_exist:bool=True, logFile=None) -> str:
+    def cp(self, dest:str, error_src_not_exist:bool=True, logFile=None) -> str:
         """
         Copy the image to a destination.
 
@@ -787,7 +787,7 @@ class Image(str):
         Filter volumes from an image.
 
         Args:
-            vols2keep (list): A list of volumes to keep.
+            vols2keep (list): A 0-based list of volumes to keep.
             filtered_image (Image): The filtered image.
 
         Returns:
@@ -803,7 +803,7 @@ class Image(str):
         for i in range(0, nvols):
             if i in vols2keep:
                 strnum = fillnumber2fourdigits(i)
-                Image(os.path.join(outdir, "temp_" + strnum)).mv(os.path.join(tempdir, "temp_" + strnum))
+                Image(os.path.join(outdir, "temp_" + strnum)).mv(Image(os.path.join(tempdir, "temp_" + strnum)))
 
         currdir = os.getcwd()
 

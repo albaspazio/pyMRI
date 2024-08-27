@@ -10,7 +10,7 @@ from builtins import str
 import os
 import argparse
 import subprocess
-import ICA_AROMA_functions as aromafunc
+import resources.external.ica_aroma.ICA_AROMA_functions as aromafunc
 import shutil
 
 # Change to script directory
@@ -239,7 +239,7 @@ print('  - classification')
 motionICs = aromafunc.classification(outDir, maxRPcorr, edgeFract, HFC, csfFract)
 
 if args.generate_plots:
-    from classification_plots import classification_plot
+    from resources.external.ica_aroma.classification_plots import classification_plot
 
     classification_plot(os.path.join(outDir, 'classification_overview.txt'),
                         outDir)
