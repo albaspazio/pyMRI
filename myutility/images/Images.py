@@ -1,7 +1,7 @@
 import os
 from shutil import move
 
-from utility.images.Image import Image
+from myutility.images.Image import Image
 
 
 class Images(list):

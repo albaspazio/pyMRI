@@ -45,8 +45,8 @@ import warnings
 import six
 
 # from   fsl.utils.platform import platform as fslplatform
-import utility.myfsl.utils.fslsub as fslsub
-import utility.myfsl.utils.tempdir                  as tempdir
+import myutility.myfsl.utils.fslsub as fslsub
+import myutility.myfsl.utils.tempdir                  as tempdir
 
 log = logging.getLogger(__name__)
 

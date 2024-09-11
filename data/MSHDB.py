@@ -17,7 +17,7 @@ from data.Sheets import Sheets
 from data.SubjectSD import SubjectSD
 from data.SubjectSDList import SubjectSDList
 from data.SubjectsData import SubjectsData
-from utility.exceptions import DataFileException
+from myutility.exceptions import DataFileException
 
 
 class MSHDB:

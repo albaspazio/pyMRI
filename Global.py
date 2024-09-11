@@ -2,8 +2,8 @@ import inspect
 import os
 
 from data.utilities import read_varlist_file
-from utility.images.Image import Image
-from utility.myfsl import fsl_switcher
+from myutility.images.Image import Image
+from myutility.myfsl import fsl_switcher
 
 
 class Global:
@@ -69,10 +69,10 @@ class Global:
 
         # --------------------------------------------------------------------------------------------------------
 
-        self.data_templates_dir     = os.path.join(self.framework_dir, "templates")
-        self.spm_templates_dir      = os.path.join(self.framework_dir, "templates", "spm")
-        self.spm_functions_dir      = os.path.join(self.framework_dir, "external", "matlab")
-        self.ica_aroma_script       = os.path.join(self.framework_dir, "external", "ica_aroma", "ICA_AROMA.py")
+        self.data_templates_dir     = os.path.join(self.framework_dir, "resources", "templates")
+        self.spm_templates_dir      = os.path.join(self.framework_dir, "resources", "templates", "spm")
+        self.spm_functions_dir      = os.path.join(self.framework_dir, "resources", "external", "matlab")
+        self.ica_aroma_script       = os.path.join(self.framework_dir, "resources", "external", "ica_aroma", "ICA_AROMA.py")
 
         # ==============================================================================================================
         # MRI SECTION
@@ -139,7 +139,7 @@ class Global:
             str: The path to the SPM templates directory.
         """
         filename            = inspect.getframeinfo(inspect.currentframe()).filename
-        return os.path.join(os.path.dirname(os.path.abspath(filename)), "templates", "spm")
+        return os.path.join(os.path.dirname(os.path.abspath(filename)), "resources", "templates", "spm")
 
     def check_paths(self):
         """

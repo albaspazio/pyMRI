@@ -10,9 +10,8 @@ import pandas as pd
 from data.SubjectSD import SubjectSD
 from data.SubjectSDList import SubjectSDList
 from data.utilities import demean_serie, FilterValues
-from utility.exceptions import DataFileException
-from utility.list import same_elements
-from utility.utilities import argsort, reorder_list
+from myutility.exceptions import DataFileException
+from myutility.list import same_elements, reorder_list, _argsort
 
 
 # =====================================================================================
@@ -655,7 +654,7 @@ class SubjectsData:
             res = demean_serie(res, ndecim)
 
         if sort:
-            sort_schema = argsort(res)
+            sort_schema = _argsort(res)
             res.sort()
             lab = reorder_list(subjs.labels, sort_schema)
 

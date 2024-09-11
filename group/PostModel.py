@@ -4,7 +4,7 @@ from typing import List
 from Global import Global
 from group.SPMConstants import SPMConstants
 from group.spm_utilities import ResultsParams, CatConvResultsParams, Regressor, Contrast
-from utility.fileutilities import remove_ext
+from myutility.fileutilities import remove_ext
 
 
 class PostModel:

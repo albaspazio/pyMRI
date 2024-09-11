@@ -6,7 +6,7 @@ from shutil import copyfile
 from Global import Global
 from Project import Project
 from data.SubjectsDataDict import SubjectsDataDict
-from utility.myfsl.utils.run import rrun
+from myutility.myfsl.utils.run import rrun
 
 if __name__ == "__main__":
 

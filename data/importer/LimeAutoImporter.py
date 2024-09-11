@@ -11,7 +11,7 @@ import os
 
 from data.BayesDB import BayesDB
 from data.SubjectSD import SubjectSD
-from utility.exceptions import DataFileException
+from myutility.exceptions import DataFileException
 from data.SubjectsData import SubjectsData
 from data.Sheets import Sheets
 

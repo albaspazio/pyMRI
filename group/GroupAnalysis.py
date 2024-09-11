@@ -15,14 +15,15 @@ from Project import Project
 from subject.Subject import Subject
 from models.FSLModels import FSLModels
 from group.SPMModels import SPMModels
-from utility.exceptions import NotExistingImageException
-from utility.fileutilities import get_dirname, write_text_file
-from utility.fileutilities import sed_inplace
-from utility.images.Image import Image
-from utility.matlab import call_matlab_spmbatch
-from utility.myfsl.utils.run import rrun
-from utility.utilities import listToString, fillnumber2threedigits
-from utility.matlab import call_matlab_function_noret
+from myutility.exceptions import NotExistingImageException
+from myutility.fileutilities import get_dirname, write_text_file
+from myutility.fileutilities import sed_inplace
+from myutility.images.Image import Image
+from myutility.matlab import call_matlab_spmbatch
+from myutility.myfsl.utils.run import rrun
+from myutility.utilities import fillnumber2threedigits
+from myutility.list import listToString
+from myutility.matlab import call_matlab_function_noret
 
 class GroupAnalysis:
     """
@@ -100,6 +101,9 @@ class GroupAnalysis:
                     p = subprocess.Popen(["randomise", "-i", input_image, "-m", input_mask, "-o", os.path.join(final_dir, out_image_name), "-d", model_noext + ".mat", "-t", model_noext + ".con", "-n", str(perm), "--T2", "-V"])
                     rrun("sleep " + str(delay))
                     return p
+                else:
+                    print("model: " + model_noext + " on " + input_image + " is ok")
+                    return
             else:
                 contrast_file   = FSLModels.read_fsl_contrasts_file(model_con)
                 numcpu          = min(contrast_file.ncontrasts, numcpu)
@@ -146,7 +150,9 @@ class GroupAnalysis:
                             rrun("sleep " + str(delay))
                         except Exception as e:
                             print(e)
-
+                    else:
+                        print("model: " + model_noext + " on " + input_image + " is ok")
+                        return
                 for process in subprocesses:
                     process.wait()
 
@@ -839,10 +845,10 @@ class GroupAnalysis:
 
         for mod in modalities:
             orig_image      = Image(os.path.join(src_folder, "stats", "all_" + mod + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
-            dest_image      = os.path.join(new_stats_folder, "all_" + mod + "_skeletonised")
+            dest_image      = Image(os.path.join(new_stats_folder, "all_" + mod + "_skeletonised"))
 
             orig_mean_image = Image(os.path.join(src_folder, "stats", "mean_" + mod + "_skeleton_mask"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
-            dest_mean_image = os.path.join(new_stats_folder, "mean_" + mod + "_skeleton_mask")
+            dest_mean_image = Image(os.path.join(new_stats_folder, "mean_" + mod + "_skeleton_mask"))
 
             orig_image.filter_volumes(vols2keep, dest_image)
 
@@ -872,7 +878,8 @@ class GroupAnalysis:
 
         nvols = orig_image.getnvol()
         all_ids = [i for i in range(nvols)]
-        all_ids = [all_ids.remove(i) for i in vols2remove]
+        for i in vols2remove:
+            all_ids.remove(i)
 
         GroupAnalysis.create_analysis_folder_from_existing_keep(src_folder, new_folder, all_ids, modalities)
 

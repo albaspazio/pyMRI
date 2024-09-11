@@ -4,7 +4,7 @@ import pandas as pd
 from DataProject import DataProject
 from Global import Global
 from data.utilities import *
-from utility.exceptions import SubjectListException
+from myutility.exceptions import SubjectListException
 from data.SubjectsData import SubjectsData
 from data.SubjectSDList import SubjectSDList
 

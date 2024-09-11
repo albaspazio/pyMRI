@@ -3,9 +3,9 @@ import json
 import os
 from shutil import move
 
-from utility.images.Image import Image
-from utility.myfsl.utils.run import rrun
-from utility.utilities import fillnumber2fourdigits
+from myutility.images.Image import Image
+from myutility.myfsl.utils.run import rrun
+from myutility.utilities import fillnumber2fourdigits
 
 
 # ===============================================================================================================================
@@ -163,5 +163,3 @@ def remove_volumes_from_4D(inimg: str, vols2rem0based: list, outname: str) -> No
     rrun(f"fslmerge -t {outname} TEMP*")
 
     os.chdir(curr_dir)
-
-

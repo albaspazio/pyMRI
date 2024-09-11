@@ -6,7 +6,7 @@ from typing import List, Any
 
 from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
-from utility.exceptions import SubjectListException
+from myutility.exceptions import SubjectListException
 
 
 class DataProject:

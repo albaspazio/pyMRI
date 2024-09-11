@@ -17,9 +17,10 @@ import os
 from statistics import mean
 from typing import Dict, List, Any
 
-from utility.fileutilities import write_text_file
+from myutility.fileutilities import write_text_file
 # read file as:   lab1=val1\nlab2=val2\n....etc
-from utility.utilities import listToString
+from myutility.list import listToString
+
 
 # =====================================================================================
 # ACCESSORY

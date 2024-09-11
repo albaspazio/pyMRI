@@ -3,9 +3,9 @@ from typing import Optional
 
 from Global import Global
 # from subject.Subject import Subject
-from utility.images.Image import Image
-from utility.myfsl.utils.run import rrun
-from utility.myfsl.fslfun import runsystem
+from myutility.images.Image import Image
+from myutility.myfsl.utils.run import rrun
+from myutility.myfsl.fslfun import runsystem
 # Class contains all the available transformations across different sequences.
 #
 # there can be 60 transformation among t1, t2, dti, rs, fmri, std, std4
@@ -30,7 +30,7 @@ from utility.myfsl.fslfun import runsystem
 #   DTI   <----------> HR <---> STD
 #   DTI   <--> T2 <--> HR <---> STD
 #
-from utility.images.transform_images import check_concat_mat, check_invert_mat, check_convert_warp_mw, check_invert_warp, \
+from myutility.images.transform_images import check_concat_mat, check_invert_mat, check_convert_warp_mw, check_invert_warp, \
     check_flirt, check_apply_mat, check_convert_warp_wmw, check_convert_warp_ww, check_apply_warp
 
 

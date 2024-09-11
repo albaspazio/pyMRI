@@ -3,7 +3,7 @@ from Project import Project
 from data.SubjectsData import SubjectsData
 
 from data.utilities import *
-from utility.exceptions import SubjectListException
+from myutility.exceptions import SubjectListException
 
 if __name__ == "__main__":
 

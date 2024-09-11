@@ -11,15 +11,15 @@ from typing import List, Tuple
 from Global import Global
 from group.SPMConstants import SPMConstants
 from group.spm_utilities import FmriProcParams, GrpInImages
-from utility.images.Image import Image
-from utility.images.Images import Images
-from utility.myfsl.utils.run import rrun
+from myutility.images.Image import Image
+from myutility.images.Images import Images
+from myutility.myfsl.utils.run import rrun
 from subject.SubjectDti import SubjectDti
 from subject.SubjectEpi import SubjectEpi
 from subject.SubjectMpr import SubjectMpr
 from subject.SubjectTransforms import SubjectTransforms
-from utility.myfsl.fslfun import runsystem
-from utility.fileutilities import extractall_zip, sed_inplace
+from myutility.myfsl.fslfun import runsystem
+from myutility.fileutilities import extractall_zip, sed_inplace
 
 
 class Subject:

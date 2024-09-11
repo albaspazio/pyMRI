@@ -99,7 +99,7 @@ def submit(command,
     :return:             tuple of submitted job ids
     """
 
-    from utility.myfsl.utils.run import runfsl
+    from myutility.myfsl.utils.run import runfsl
 
     base_cmd = ['fsl_sub']
 

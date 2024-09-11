@@ -2,9 +2,9 @@ import traceback
 
 from DataProject import DataProject
 from Global import Global
-from data.VolBrainImporter import CeresImporter
+from data.importer.VolBrainImporter import VolBrainImporter
 from data.utilities import *
-from utility.exceptions import SubjectListException
+from myutility.exceptions import SubjectListException
 
 if __name__ == "__main__":
 
@@ -31,10 +31,10 @@ if __name__ == "__main__":
         # START !!!
         # ======================================================================================================================
         # parse folder, create structure, save it to excel
-        CeresImporter(csv_folder, output_file)
+        VolBrainImporter(csv_folder, output_file)
 
         # parse folder, return structure
-        ceres_importer  = CeresImporter(csv_folder)
+        ceres_importer  = VolBrainImporter(csv_folder)
         subjs_data      = ceres_importer.subs_data
 
         # .... edit df .....

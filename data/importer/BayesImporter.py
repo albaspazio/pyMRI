@@ -10,7 +10,7 @@ import pandas as pd
 import os
 
 from data.BayesDB import BayesDB
-from utility.exceptions import DataFileException
+from myutility.exceptions import DataFileException
 from data.SubjectsData import SubjectsData
 from data.Sheets import Sheets
 

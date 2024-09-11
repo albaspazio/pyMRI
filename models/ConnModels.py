@@ -10,8 +10,8 @@ from data.SubjectsData import SubjectsData
 from group.spm_utilities import Regressor, Covariate, Nuisance
 
 # create factorial designs, multiple regressions, t-test
-from utility.myfsl.utils.run import rrun
-from utility.fileutilities import remove_ext, append_text_file, write_text_file
+from myutility.myfsl.utils.run import rrun
+from myutility.fileutilities import remove_ext, append_text_file, write_text_file
 
 
 class ConnModels:

@@ -10,10 +10,10 @@ from data.SubjectsData import SubjectsData
 from models.FSLConFile import FSLConFile
 from group.spm_utilities import Regressor, Covariate, Nuisance
 from subject.Subject import Subject
-from utility.fileutilities import remove_ext, append_text_file, read_list_from_file
-from utility.list import same_elements
+from myutility.fileutilities import remove_ext, append_text_file, read_list_from_file
+from myutility.list import same_elements
 # create factorial designs, multiple regressions, t-test
-from utility.myfsl.utils.run import rrun
+from myutility.myfsl.utils.run import rrun
 
 
 class FSLModels:
@@ -347,7 +347,7 @@ class FSLModels:
             return
 
 
-    def create_subset_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], grlab_subjlabs_subjs: str | List[str] | List[Subject], wholesubjects_groups_or_labels:List[Any], ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True, group_mean_contrasts: int = 1, cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "", subj_must_exist: bool = False):
+    def create_subset_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], grlab_subjlabs_subjs: str | List[str] | List[Subject], wholesubjects_groups_or_labels:str|List[str]|List[Subject], ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True, group_mean_contrasts: int = 1, cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "", subj_must_exist: bool = False):
         """
         This version is designed to work when the order of the subjects defined in the given groups differs from the one defined in the 4D files used.
         e.g. imagine the 4D file (e.g. a tbss skeletonized file) is divided in 1:10 (pat1), 11:20 (pat2)
@@ -494,7 +494,9 @@ class FSLModels:
                 for rname in nuis_label:
                     ofn += ("_" + rname)
 
-            output_glm_fsf = os.path.join(odp, ofn + ofn_postfix)
+            output_glm_fsf  = os.path.join(odp, ofn + ofn_postfix)
+            model_noext     = remove_ext(output_glm_fsf)
+
             os.makedirs(odp, exist_ok=True)
             copy_file(input_fsf, output_glm_fsf + ".fsf")
 
@@ -672,7 +674,6 @@ class FSLModels:
             append_text_file(output_glm_fsf + ".fsf", self.string)
             # -----------------------------------------------------------------------------------------------
             # create model
-            model_noext = remove_ext(output_glm_fsf)
             if create_model:
                 rrun("feat_model " + model_noext)
 

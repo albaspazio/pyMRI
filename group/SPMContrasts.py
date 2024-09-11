@@ -2,8 +2,8 @@ from typing import List
 
 from group.PostModel import PostModel
 from group.spm_utilities import Contrast, TContrast, Regressor
-from utility.utilities import is_list_of
-from utility.fileutilities import sed_inplace
+from myutility.list import is_list_of
+from myutility.fileutilities import sed_inplace
 
 
 class SPMContrasts:

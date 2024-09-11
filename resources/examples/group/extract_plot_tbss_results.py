@@ -3,8 +3,8 @@ import os
 from Global import Global
 from Project import Project
 from group.GroupAnalysis import GroupAnalysis
-from data.SubjectsDataDict import SubjectsDataDict
-from utility.utilities import remove_items_from_list
+from data.SubjectsData import SubjectsData
+from myutility.list import remove_items_from_list
 from data.plot_data import scatter_plot_dataserie
 #                                                           project.tbss_dir
 # this script takes one or more TBSS stats results (projectx/group_analysis/tbss/, population, "stats", "FA/L23", analysis_name, ..._tfce_corrp_tstat1.nii.gz)
@@ -31,7 +31,7 @@ if __name__ == "__main__":
         subjects        = project.load_subjects(group_label, must_exist=False)
 
         datafile        = os.path.join(project.script_dir, "data_sensoryprofile_bis_57.txt")  # is a tab limited data matrix with a header in the first row
-        data            = SubjectsDataDict(datafile)
+        data            = SubjectsData(datafile)
         # ==================================================================================================================
 
         population      = "controls57_FMRIB58"  # "controls57"
@@ -91,7 +91,7 @@ if __name__ == "__main__":
             # res_file = analysis.tbss_summarize_clusterized_folder(out_folder, age_spsts_splr_bist, ["age", "sp_sts", "sp_lr", "bis_t"], tbss_folder, subj_img_postfix="_FA_to_target_" + measure)    # for other modalities
             # res_file = "/data/MRI/projects/past_controls/group_analysis/tbss/controls57_FMRIB58/results/scatter_tracts_tbss_FA_ctrl57_sp_sts_sp_lr_bis_t_x_age_gender_tfce_corrp_tstat1_age_sp_sts_sp_lr_bis_t.dat"
 
-            data                = SubjectsDataDict(res_file)
+            data                = SubjectsData(res_file)
             valid_tract_labels  = remove_items_from_list(data.header, data_labels + ["subj"])  # in data.header we have subj and the data column
             if doplot:
                 os.makedirs(plot_folder, exist_ok=True)

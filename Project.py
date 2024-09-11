@@ -17,9 +17,9 @@ from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
 from subject.Subject import Subject
 from data.SubjectSDList import SubjectSDList
-from utility.exceptions import SubjectListException
-from utility.images.Image import Image
-from utility.fileutilities import sed_inplace, remove_ext
+from myutility.exceptions import SubjectListException
+from myutility.images.Image import Image
+from myutility.fileutilities import sed_inplace, remove_ext
 
 
 class Project:

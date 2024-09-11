@@ -7,7 +7,7 @@ from data.SubjectsData import SubjectsData
 from data.utilities import list2spm_text_column
 from group.spm_utilities import Covariate, Regressor
 from subject.Subject import Subject
-from utility.fileutilities import sed_inplace
+from myutility.fileutilities import sed_inplace
 
 
 # class used to replace covariates strings in SPM batch

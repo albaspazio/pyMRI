@@ -8,7 +8,7 @@ from group.SPMStatsUtils import SPMStatsUtils
 
 import os
 
-from utility.images.Image import Image
+from myutility.images.Image import Image
 
 # NECESSARY STEPS TO IMPORT AND PREPROCESS A NEW SUBJECT
 # 1) get data

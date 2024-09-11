@@ -1,16 +1,18 @@
+from __future__ import annotations
+
+import collections
 import ntpath
 import os
 import shutil
-from shutil import move, copyfile
 import xml.etree.ElementTree as ET
-import collections
-from typing import Optional
+from shutil import move, copyfile
+from typing import Optional, List
 
 # https://stackoverflow.com/questions/30045106/python-how-to-extend-str-and-overload-its-constructor
-from utility.exceptions import NotExistingImageException
-from utility.myfsl.utils.run import rrun
-from utility.utilities import fillnumber2fourdigits
-from utility.fileutilities import compress, gunzip
+from myutility.exceptions import NotExistingImageException
+from myutility.fileutilities import compress, gunzip
+from myutility.myfsl.utils.run import rrun
+from myutility.utilities import fillnumber2fourdigits
 
 
 class Image(str):
@@ -31,7 +33,7 @@ class Image(str):
     def __new__(cls, value, must_exist=False, msg:str=""):
         return super(Image, cls).__new__(cls, value)
 
-    def __init__(self, value, must_exist=False, msg:str="Given Image path is empty"):
+    def __init__(self, value:str, must_exist=False, msg:str="Given Image path is empty"):
         """
         Initialize the Image object.
 
@@ -552,7 +554,7 @@ class Image(str):
         """
         rrun("fslmaths " + self + " -mas " + mask + " " + out)
 
-    def imsplit(self, templabel=None, subdirmame:str=""):
+    def imsplit(self, templabel=None, subdirmame:str="") -> tuple[str, str]:
         """
         Split an image into multiple volumes.
 
@@ -570,12 +572,12 @@ class Image(str):
             label = templabel
 
         currdir = os.getcwd()
-        outdir = os.path.join(self.dir, subdirmame)
+        outdir  = os.path.join(self.dir, subdirmame)
         os.makedirs(outdir, exist_ok=True)
         os.chdir(outdir)
         rrun('fslsplit ' + self + " " + label + " -t")
         os.chdir(currdir)
-        return outdir,  label
+        return outdir, label
 
     def quick_smooth(self, outimg=None, logFile=None):
         """
@@ -782,37 +784,38 @@ class Image(str):
             self.unzip(dest=self, replace=replace)
 
     # preserve given volumes
-    def filter_volumes(self, vols2keep, filtered_image):
+    def filter_volumes(self, vols2keep:List[int], filtered_image:'Image'):
         """
-        Filter volumes from an image.
+        create a new 4D image (filtered_image) preserving the volumes of self specified in vols2keep.
 
         Args:
             vols2keep (list): A 0-based list of volumes to keep.
-            filtered_image (Image): The filtered image.
+            filtered_image (Image): The output filtered image.
 
         Returns:
             None
 
         """
-        outdir, outprefix = self.imsplit("temp_")
-        nvols = self.getnvol()
+        tempdir, outprefix  = self.imsplit("temp_", "tempXXX") # split image in the subfolder tempXXX
+        nvols               = self.getnvol()
 
-        tempdir = os.path.join(outdir, "tempXXXX")
-        os.makedirs(tempdir, exist_ok=True)
+        outdir              = filtered_image.dir
+        outtempdir          = os.path.join(outdir, "tempXXX")
+        os.makedirs(outtempdir, exist_ok=True)
 
         for i in range(0, nvols):
             if i in vols2keep:
                 strnum = fillnumber2fourdigits(i)
-                Image(os.path.join(outdir, "temp_" + strnum)).mv(Image(os.path.join(tempdir, "temp_" + strnum)))
+                Image(os.path.join(tempdir, outprefix + strnum)).mv(Image(os.path.join(outtempdir, outprefix + strnum)))
 
         currdir = os.getcwd()
-
-        os.chdir(tempdir)
-        self.immerge(filtered_image)
+        os.chdir(outtempdir)
+        Image.immerge(filtered_image)
 
         shutil.rmtree(tempdir)
+        shutil.rmtree(outtempdir)
         os.chdir(currdir)
-        os.system("rm " + os.path.join(outdir, "temp_*"))
+        # os.system("rm " + os.path.join(outdir, "temp_*"))
 
     def get_nth_volume(self, out_img=None, out_mask_img=None, volnum=3, logFile=None):
         """
@@ -866,6 +869,7 @@ class Image(str):
         """
         return Image(os.path.join(self.dir, prefix + self.name + self.ext))
 
+    @staticmethod
     def immerge(out_img: str, premerge_labels=None):
         """
         Merge a set of images into a single image.

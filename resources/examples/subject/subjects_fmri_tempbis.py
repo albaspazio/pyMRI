@@ -4,7 +4,7 @@ import traceback
 from Global import Global
 from Project import Project
 from subject.Subject import Subject
-from utility.images.Image import Image
+from myutility.images.Image import Image
 from group.spm_utilities import SubjResultsParam, TContrast, FContrast, SubjCondition, FmriProcParams
 from numpy import sort, asarray
 

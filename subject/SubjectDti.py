@@ -3,9 +3,9 @@ import os
 from shutil import copyfile
 
 from Global import Global
-from utility.fileutilities import write_text_file
-from utility.images.Image import Image
-from utility.myfsl.utils.run import rrun
+from myutility.fileutilities import write_text_file
+from myutility.images.Image import Image
+from myutility.myfsl.utils.run import rrun
 
 
 class SubjectDti:

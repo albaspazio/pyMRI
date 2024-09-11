@@ -1,7 +1,7 @@
 from Global import Global
 from Project import Project
 
-from utility.images.Image import Image
+from myutility.images.Image import Image
 
 if __name__ == "__main__":
 

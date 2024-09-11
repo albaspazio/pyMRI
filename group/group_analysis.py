@@ -3,9 +3,9 @@ from typing import List
 
 from Project import Project
 from subject.Subject import Subject
-from utility.images.Image import Image
-from utility.images.Images import Images
-from utility.myfsl.utils.run import rrun
+from myutility.images.Image import Image
+from myutility.images.Images import Images
+from myutility.myfsl.utils.run import rrun
 
 
 # this function assumes that user put the melodic rois of interest in the roi4_folder of a specific subfolder of the given project (where between-groups analyses are done, usually the patient folder)

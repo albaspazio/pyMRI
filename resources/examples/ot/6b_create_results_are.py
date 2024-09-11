@@ -6,9 +6,9 @@ from Global import Global
 from Project import Project
 from data.SubjectsDataDict import SubjectsDataDict
 from data.utilities import process_results
-from utility.images.Image import Image
-from utility.myfsl.fslfun import run_notexisting_img
-from utility.myfsl.utils.run import rrun
+from myutility.images.Image import Image
+from myutility.myfsl.fslfun import run_notexisting_img
+from myutility.myfsl.utils.run import rrun
 from data import plot_data
 
 if __name__ == "__main__":

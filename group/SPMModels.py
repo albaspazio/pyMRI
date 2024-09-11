@@ -11,8 +11,8 @@ from group.SPMPostModel import SPMPostModel, PostModel
 from group.SPMStatsUtils    import SPMStatsUtils
 from group.spm_utilities import GrpInImages, Regressor
 from subject.Subject import Subject
-from utility.matlab         import call_matlab_spmbatch
-from utility.fileutilities  import sed_inplace
+from myutility.matlab         import call_matlab_spmbatch
+from myutility.fileutilities  import sed_inplace
 from group.SPMConstants     import SPMConstants
 
 

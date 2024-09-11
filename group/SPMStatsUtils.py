@@ -5,11 +5,11 @@ from Global import Global
 from data.SubjectsData import SubjectsData
 from data.utilities import list2spm_text_column
 from group.spm_utilities import SubjCondition, GrpInImages
-from utility.exceptions import DataFileException
-from utility.images.Image import Image
-from utility.matlab import call_matlab_function_noret, call_matlab_spmbatch
-from utility.utilities import is_list_of
-from utility.fileutilities import sed_inplace
+from myutility.exceptions import DataFileException
+from myutility.images.Image import Image
+from myutility.matlab import call_matlab_function_noret, call_matlab_spmbatch
+from myutility.list import is_list_of
+from myutility.fileutilities import sed_inplace
 
 
 class SPMStatsUtils:
