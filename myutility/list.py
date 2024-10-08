@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import collections
-from typing import List
+from typing import List, Any
 
 
 def indices(lst1, value) -> List[int]:
@@ -206,7 +206,7 @@ def get_intersecting(lst1, lst2) -> list:
     return res
 
 
-def is_list_of(_list, _type, checkall:bool=True):
+def is_list_of(_list:List[Any], _type: type, checkall:bool=True) -> bool:
     """
     Checks if a given variable is a list of a specific type.
 
@@ -226,16 +226,18 @@ def is_list_of(_list, _type, checkall:bool=True):
         True if the variable is a list of the specified type, False otherwise.
 
     """
-    if isinstance(_list, list):
-        if not checkall:
-            if isinstance(_list[0], _type):
-                return True
-        else:
-            for i in _list:
-                if not isinstance(i, _type):
-                    return False
-            return True
-    return False
+    if not isinstance(_list, list):
+        return False  # If it's not a list, return False
+
+    if len(_list) == 0:  # Check if the list is empty
+        return False  # Return False for empty lists
+
+    if checkall:
+        # Check if all elements in the list are of the given type
+        return all(isinstance(item, _type) for item in _list)
+    else:
+        # Check only the first element
+        return isinstance(_list[0], _type)
 
 # apply the given permutation to a list
 def reorder_list(_list, neworder):

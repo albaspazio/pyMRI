@@ -1,3 +1,5 @@
+from typing import Any
+
 
 class SubjectListException(Exception):
     """
@@ -8,24 +10,22 @@ class SubjectListException(Exception):
         param (str): Parameter associated with the error.
     """
 
-    def __init__(self, msg, param):
+    def __init__(self, msg, param:Any=None):
         self.msg = msg
         self.param = param
 
-
 class DataFileException(Exception):
     """
-    Exception class for data file operations.
+    Exception class for Subject data access operations.
 
     Attributes:
         msg (str): Error message.
         param (str): Parameter associated with the error.
     """
 
-    def __init__(self, msg, param=None):
+    def __init__(self, msg, param:Any=None):
         self.msg = msg
         self.param = param
-
 
 class NotExistingImageException(Exception):
     """

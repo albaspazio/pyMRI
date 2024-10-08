@@ -11,7 +11,7 @@ The following importers:
 BayesImporter
 LimeAutoImporter
 
-SubjectSD
+SID
 
 
 

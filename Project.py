@@ -12,12 +12,13 @@ from threading import Thread
 
 from typing import List, Tuple, Any
 
+from DataProject import DataProject
 from Global import Global
 from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
 from subject.Subject import Subject
-from data.SubjectSDList import SubjectSDList
-from myutility.exceptions import SubjectListException
+from data.SIDList import SIDList
+from myutility.exceptions import SubjectListException, DataFileException
 from myutility.images.Image import Image
 from myutility.fileutilities import sed_inplace, remove_ext
 
@@ -25,6 +26,17 @@ from myutility.fileutilities import sed_inplace, remove_ext
 class Project:
 
     data:SubjectsData = None
+
+    @property
+    def subject_labels(self) -> List[str]:
+        if len(self.subjects) > 0:
+            return [subj.label for subj in self.subjects]
+        else:
+            return []
+
+    @property
+    def nsubj(self) -> int:
+        return len(self.subjects)
 
     def __init__(self, folder:str, globaldata:Global, data:str|SubjectsData="data.xlsx"):
         """
@@ -82,14 +94,12 @@ class Project:
         self.hasDTI = False
         self.hasT2  = False
 
-
         self.subjects_lists_file    = os.path.join(self.script_dir, "subjects_lists.json")
 
         self.globaldata             = globaldata
 
         self.subjects:list[Subject] = []
-        self.subjects_labels    = []
-        self.nsubj              = 0
+        self.nsubj                  = 0
 
         # load all available subjects list into self.subjects_lists
         with open(self.subjects_lists_file) as json_file:
@@ -102,12 +112,11 @@ class Project:
 
         self.load_data(data)
 
-    # if must_exist=true:   loads in self.subjects, a list of subjects instances associated to a valid grouplabel or a subjlabels list
-    # if must_exist=false:  only create
-    # returns this list
     def load_subjects(self, group_or_subjlabels:str|List[str], sess_id:int=1, must_exist:bool=True) -> List[Subject]:
         """
-        Load subjects based on a group label or a list of subject labels.
+        create a list of Subject based on a grouplabel or a list of subjlabels, and a single session.
+        if must_exist=true:   loads in self.subjects
+        if must_exist=false:  only create the list and return it
 
         Parameters
         ----------
@@ -132,19 +141,17 @@ class Project:
             subjects           = self.get_subjects(group_or_subjlabels, sess_id, must_exist)
 
         except SubjectListException as e:
-            raise SubjectListException("load_subjects", e.param)  # send whether the group label was not present
+            raise SubjectListException("Error in Project.load_subjects", e.param)  # send whether the group label was not present
                                                                         # or one of the subjects was not valid
         if must_exist:
             self.subjects           = subjects
-            self.subjects_labels    = [subj.label for subj in self.subjects]
-            self.nsubj              = len(self.subjects)
 
         return subjects
 
-    # get a deepcopy of subject with given label
     def get_subject(self, subj_label:str, sess:int=1, must_exist:bool=True) -> Subject:
         """
-        Get a subject instance with the given subject label.
+        Get an indipendent (deepcopy or brand new instance) Subject instance with the given subject label/session.
+        if must_exist is True check whether it exists and raise SubjectListException whether it not
 
         Parameters
         ----------
@@ -179,11 +186,14 @@ class Project:
     # ==================================================================================================================
     # region GET SUBJECTS' LABELS or INSTANCES
     # ==================================================================================================================
-    # IN:   GROUP_LABEL | SUBLABELS LIST
+    # IN:   GROUP_LABEL | SUBLABELS LIST, sess_id, select_conds
     # OUT:  [VALID SUBJECT INSTANCES LIST]
-    def get_subjects(self, group_or_subjlabels:str|List[str]=None, sess_id:int=1, must_exist:bool=True, select_conds:List[FilterValues]=None) -> List[Subject]:
+    def get_subjects(self, group_or_subjlabels:str|List[str]=None, sess_id:int=1,
+                     must_exist:bool=True, select_conds:List[FilterValues]=None) -> List[Subject]:
         """
-        Load subjects based on a group label or a list of subject labels.
+        Load subjects based on a group label or a list of subject labels and a single session.
+        can select
+        can also filters subjects according to a list of FilterValues
 
         Parameters
         ----------
@@ -205,19 +215,23 @@ class Project:
         ------
         SubjectListException
             If the group or any of the subjects do not exist and `must_exist` is True.
+        DataFileException
+            If the method apply some FilterValues and subjects selected in previous steps does not have data contained in the select_cond
         """
         valid_subj_labels = self.get_subjects_labels(group_or_subjlabels, sess_id, must_exist)
 
         if select_conds is not None:
-            valid_subj_labels = self.data.select_subs_labels(valid_subj_labels, [sess_id], select_conds)
+            valid_subj_labels = self.data.filter_subjects(valid_subj_labels, [sess_id], select_conds).labels
 
         return [Subject(subj_lab, self, sess_id) for subj_lab in valid_subj_labels]
 
     # IN:   GROUP_LABEL | SUBLABELS LIST | SUBJINSTANCES LIST
     # OUT:  [VALID SUBLABELS LIST]
-    def get_subjects_labels(self, grlab_subjlabs_subjs:str|List[str]|List[Subject]=None, sess_id=1, must_exist:bool=True) -> List[str]:
+    def get_subjects_labels(self, grlab_subjlabs_subjs:str|List[str]|List[Subject]=None,
+                            sess_id:int=1, must_exist:bool=True) -> List[str]:
         """
-        Get a list of subject labels based on a group label or a list of subject labels.
+        Get a list of subject labels based on a group label or a list of subject labels and a single session.
+        if must_exist=True check also that they exist, otherwise throw SubjectListException
 
         Parameters
         ----------
@@ -238,73 +252,44 @@ class Project:
         SubjectListException
             If the group or any of the subjects do not exist and `must_exist` is True.
         """
+        labels = []
         if grlab_subjlabs_subjs is None:
             if len(self.subjects_labels) == 0:
                 raise SubjectListException("get_subjects_labels", "given grlab_subjlabs_subjs is None and no group is loaded")
             else:
-                return self.subjects_labels         # if != 0, a list of validated subjects exist
+                labels = self.subjects_labels         # if != 0, a subjects list has been already validated
 
         elif isinstance(grlab_subjlabs_subjs, str):  # must be a group_label and have its associated subjects list
-            return self.__get_valid_subjlabels_from_group(grlab_subjlabs_subjs, sess_id, must_exist)
+            for grp in self.subjects_lists:
+                if grp["label"] == group_label:
+                    labels = grp["list"]
+            raise SubjectListException("get_subjects_labels", "given group_label (" + group_label + ") does not exist in subjects_lists")
 
         elif isinstance(grlab_subjlabs_subjs, list):
             if isinstance(grlab_subjlabs_subjs[0], str) is True:
-                # list of subjects' names
-                if must_exist:
-                    self.__assert_valid_subjlabels(grlab_subjlabs_subjs, sess_id)
-                return grlab_subjlabs_subjs   # [string]
+                labels =  grlab_subjlabs_subjs   # [string]
 
             elif isinstance(grlab_subjlabs_subjs[0], Subject):
-                return [subj.label for subj in grlab_subjlabs_subjs]
+                labels = [subj.label for subj in grlab_subjlabs_subjs]
             else:
                 raise SubjectListException("get_subjects_labels", "the given grlab_subjlabs_subjs param is not a string list, first value is: " + str(grlab_subjlabs_subjs[0]))
         else:
+            # grlab_subjlabs_subjs does not belong to expected types
             raise SubjectListException("get_subjects_labels", "the given grlab_subjlabs_subjs param is not a valid param (None, string  or string list), is: " + str(grlab_subjlabs_subjs))
+
+        if must_exist:
+            self.__assert_valid_subjlabels(labels, sess_id)
+
     # endregion
 
     # =========================================================================
     # region PRIVATE VALIDATION ROUTINES
     # =========================================================================
-
-    # must_exist=True   -> check list is valid and whether all subjects belonging to the given group_label are valid
-    # must_exist=False  -> if list if present, returns its associated subjects' labels without verifying their validity
-    # IN:   GROUP_LAB
-    # OUT:  [VALID SUBJLABELS LIST] or SubjectListException
-    def __get_valid_subjlabels_from_group(self, group_label:str, sess_id=1, must_exist:bool=True) -> List[str]:
-        """
-        Get a list of subject labels based on a group label or a list of subject labels.
-
-        Parameters
-        ----------
-        group_label : str
-            The group label.
-        sess_id : int, optional
-            The session ID, by default 1.
-        must_exist : bool, optional
-            If True, raise an exception if the group or any of the subjects do not exist, by default True.
-
-        Returns
-        -------
-        List[str]
-            The list of subject labels.
-
-        Raises
-        ------
-        SubjectListException
-            If the group or any of the subjects do not exist and `must_exist` is True.
-        """
-        for grp in self.subjects_lists:
-            if grp["label"] == group_label:
-                if must_exist:
-                    self.__assert_valid_subjlabels(grp["list"], sess_id)
-                return grp["list"]
-        raise SubjectListException("__get_valid_subjlabels_from_group", "given group_label (" + group_label + ") does not exist in subjects_lists")
-
     # check whether all subjects listed in subjects are valid
     # returns given list if all valid
     # IN:   SUBJLABELS LIST
     # OUT:  [VALID SUBJLABELS LIST] or SubjectListException
-    def __assert_valid_subjlabels(self, subj_labels:List[str], sess_id: int = 1):
+    def __assert_valid_subjlabels(self, subj_labels:List[str], sess_id:int=1) -> None:
         """
         Check if all subjects in the given list exist.
 
@@ -553,8 +538,7 @@ class Project:
     # ==================================================================================================================
     #region D A T A
 
-    # load a data_file if exist
-    def load_data(self, data:str|SubjectsData) -> SubjectsData:
+    def load_data(self, data: str | SubjectsData) -> SubjectsData:
         """
         Load data into the project.
 
@@ -565,7 +549,7 @@ class Project:
             SubjectsData: The loaded data file.
 
         Raises:
-            TypeError: if given data is neither a string nor a SubjectsData instance.
+            DataFileException: if given data is neither a string nor a SubjectsData instance.
         """
         if isinstance(data, str):
             data_file = ""
@@ -582,13 +566,11 @@ class Project:
         elif isinstance(data, SubjectsData):
             self.data       = data
         else:
-            raise TypeError("ERROR in Project.load_data: given data param (" + str(data) + ") is neither a SubjectsData nor a string")
+            raise DataFileException("ERROR in Project.load_data: given data param (" + str(data) + ") is neither a SubjectsData nor a string")
 
         return self.data
 
-    # validate data dictionary. if param is none -> takes it from self.data
-    #                           otherwise try to load it
-    def validate_data(self, data:str|SubjectsData=None) -> SubjectsData:
+    def validate_data(self, data: str | SubjectsData=None) -> SubjectsData:
         """
         Load a data file into the project.
 
@@ -599,13 +581,13 @@ class Project:
             SubjectsData: The loaded data.
 
         Raises:
-            Exception: If the given data is neither a SubjectsData instance nor a string path to a data file.
+            DataFileException: If the given data is neither a SubjectsData instance nor a string path to a data file.
         """
         if data is None:
             if self.data.num > 0:
                 return self.data
             else:
-                raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is None and project's data is not loaded")
+                raise DataFileException("ERROR in Project.validate_data: given data param (" + str(data) + ") is None and project's data is not loaded")
         else:
             if isinstance(data, SubjectsData):
                 return data
@@ -613,14 +595,14 @@ class Project:
                 if os.path.exists(data):
                     return SubjectsData(data)
                 else:
-                    raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is a string that does not point to a valid file to load")
+                    raise DataFileException("ERROR in Project.validate_data: given data param (" + str(data) + ") is a string that does not point to a valid file to load")
             else:
-                raise Exception("ERROR in Project.validate_data: given data param (" + str(data) + ") is neither a SubjectsData nor a string")
+                raise DataFileException("ERROR in Project.validate_data: given data param (" + str(data) + ") is neither a SubjectsData nor a string")
 
-    # returns a matrix (values x subjects) containing values of the requested columns of given subjects
-    # user can also pass a datafile path or a custom subj_dictionary
-    def get_subjects_values_by_cols(self, grlab_subjlabs_subjs:str|List[str]|List[Subject], columns_list:List[str], data:str|SubjectsData=None, sort:bool=False,
-                                    demean_flags:List[bool]=None, sess_id:str=None, must_exist:bool=False) -> List[List[Any]]:
+    #(subj_labels/group label | column(s) | sess_ids) -> Tuple[List[List[Any]], List[str], List[int]]  (also add sids.labels, sids.sess_ids)
+    def get_subjects_values_by_cols(self, grlab_subjlabs_subjs: str | List[str] | List[Subject],
+                                    columns_list: List[str], sess_id: int = 1, data: str | SubjectsData = None,
+                                    sort: bool = False, demean_flags: List[bool] = None, must_exist: bool = False) -> Tuple[List[List[Any]], List[str], List[int]]:
         """
         Returns a matrix (values x subjects) containing values of the requested columns of given subjects.
 
@@ -635,30 +617,21 @@ class Project:
         - must_exist (bool, optional): If True, raise an exception if a subject does not exist.
 
         Returns:
-        list: A list of values.
+            List: A list of values.
 
         Raises:
-        Exception: If the given data is neither a SubjectsData instance nor a string path to a data file.
+            SubjectListException: If the group or any of the subjects do not exist and must_exist is True.
+            DataFileException: If the given data is neither a SubjectsData instance nor a string path to a data file.
         """
         subj_labels = self.get_subjects_labels(grlab_subjlabs_subjs, sess_id, must_exist=must_exist)
         valid_data  = self.validate_data(data)
 
-        if sess_id is not None:
-            sessions = [sess_id for s in subj_labels]     # 1-fill
-        else:
-            sessions = None
+        sids:SIDList    = valid_data.filter_subjects(subj_labels, [sess_id])
 
-        subjsSD_list:SubjectSDList = valid_data.filter_subjects(subj_labels, sessions)
+        return valid_data.get_subjects_values_by_cols(sids, columns_list, demean_flags=demean_flags), sids.labels, sids.sessions
 
-        if valid_data is not None:
-            return valid_data.get_subjects_values_by_cols(subjsSD_list, columns_list, demean_flags=demean_flags)
-        else:
-            return []
-
-    # - [values]
-    # - [labels]
-    # user can also pass a datafile path or a custom subj_dictionary
-    def get_filtered_column(self, grlab_subjlabs_subjs:str|List[str]|List[Subject], column, data=None, sort:bool=False, sess_id=1, select_conds:List[FilterValues]=None) -> Tuple[list, List[str]]:
+    def get_filtered_column(self, grlab_subjlabs_subjs: str | List[str] | List[Subject], column, sess_id:int=1, data=None,
+                            select_conds: List[FilterValues] = None, sort: bool = False) -> Tuple[list, List[str], List[int]]:
         """
         Returns a list of values and a list of labels for a given column, filtered by given conditions.
 
@@ -674,46 +647,35 @@ class Project:
         tuple: A tuple containing a list of values and a list of labels.
 
         Raises:
-        Exception: If the given data is neither a SubjectsData instance nor a string path to a data file.
+        DataFileException: If the given data is neither a SubjectsData instance nor a string path to a data file.
         """
         subj_labels = self.get_subjects_labels(grlab_subjlabs_subjs, sess_id)
-        valid_data  = self.validate_data(data)
+        valid_sd    = self.validate_data(data)
 
-        sessions = [sess_id for s in subj_labels]     # sess_id-fill
-        subjsSD_list:SubjectSDList = valid_data.filter_subjects(subj_labels, sessions, conditions=select_conds)
+        sids:SIDList    = valid_sd.filter_subjects(subj_labels, [sess_id], conditions=select_conds)
 
-        if valid_data is None:
-            raise Exception("Error in Project.get_filtered_column: valid_data is None")
-        else:
-            return valid_data.get_filtered_column(subjsSD_list, column, sort=sort)
+        return valid_sd.get_subjects_column(sids, column, sort=sort), sids.labels, sids.sessions
 
-    def add_data_column(self, colname: str, subjects: SubjectSDList, values):
-        """
-        Adds a new column to the data.
+    #endregion
 
-        Args:
-            colname (str): The name of the column.
-            subjects (SubjectSDList): The subjects to add the column to.
-            values (list): The values of the column for each subject.
+    # ==================================================================================================================
+    # region ACCESSORY
 
-        Returns:
-            None.
-        """
-        self.data.add_column(colname, values, subjects)
-
-    # added data_file in order to add v
     def add_icv_to_data(self, grlab_subjlabs_subjs:str|List[str]|List[Subject]=None, updatefile:bool=False, df=None, sess_id=1):
         """
         Add the intracranial volume (ICV) to the data.
 
         Parameters:
-        grlab_subjlabs_subjs (str or List[str] or List[Subject]): The group label or a list of subjects' label/instances. If None, all subjects are used.
-        updatefile (bool, optional): If True, update the data file, by default False.
-        df (SubjectsData, optional): The data to use. If None, the project's data is used.
-        sess_id (int, optional): The session ID.
+            grlab_subjlabs_subjs (str or List[str] or List[Subject]): The group label or a list of subjects' label/instances. If None, all subjects are used.
+            updatefile (bool, optional): If True, update the data file, by default False.
+            df (SubjectsData, optional): The data to use. If None, the project's data is used.
+            sess_id (int, optional): The session ID.
 
         Returns:
-        None.
+            None.
+
+        Raises:
+            DataFileException if some icv subjects file are missing
         """
         if grlab_subjlabs_subjs is None:
             grlab_subjlabs_subjs = self.get_subjects_labels()
@@ -725,14 +687,9 @@ class Project:
         subjsids = self.data.filter_subjects(grlab_subjlabs_subjs, [sess_id])
         self.data.add_column("icv", icvs, subjsids, df)
 
-    #endregion
-
-    # ==================================================================================================================
-    # region ACCESSORY
-
-    def get_subjects_icv(self, grlab_subjlabs_subjs:str|List[str]|List[Subject], sess_id:int=1):
+    def get_subjects_icv(self, grlab_subjlabs_subjs:str|List[str]|List[Subject], sess_id:int=1) -> List[float]:
         """
-        Returns the intracranial volume (ICV) for a given group of subjects.
+        Read icv_subjlabel.dat file and returns the intracranial volume (ICV) for a given group of subjects.
 
         Args:
             grlab_subjlabs_subjs (str or List[str] or List[Subject]): The group label or a list of subjects' label/instances.
@@ -740,6 +697,9 @@ class Project:
 
         Returns:
             List[float]: A list of ICV scores.
+
+        Raises:
+            DataFileException if icv subjects file is missing
         """
         if isinstance(grlab_subjlabs_subjs[0], Subject):  # so caller does not have to set also the sess_id, is a xprojects parameter
             subjects_list:List[Subject] = grlab_subjlabs_subjs
@@ -747,16 +707,23 @@ class Project:
             subjects_list = self.get_subjects(grlab_subjlabs_subjs, sess_id)
 
         icv_scores = []
+        missing_files = []
         for subj in subjects_list:
-            with open(subj.t1_spm_icv_file) as fp:
-                fp.readline()
-                line    = fp.readline().rstrip()
-                values  = line.split(',')
+            try:
+                with open(subj.t1_spm_icv_file) as fp:
+                    fp.readline()
+                    line    = fp.readline().rstrip()
+                    values  = line.split(',')
+                    icv_scores.append(round(float(values[1]) + float(values[2]) + float(values[3]), 4))
 
-            icv_scores.append(round(float(values[1]) + float(values[2]) + float(values[3]), 4))
+            except OSError:
+                missing_files.append(subj.t1_spm_icv_file)
+
+        if len(missing_files) > 0:
+            raise DataFileException("Error in Project.get_subjects_icv: icv files of some subject/session are missing", str(missing_files))
         return icv_scores
 
-    def create_lists(self, group_label=None):
+    def create_subjects_lists(self, group_label=None):
 
         if group_label is None:
             subjs = self.subjects
@@ -983,4 +950,5 @@ class Project:
             print("completed block " + str(bl) + " with processes: " + str(subjects[bl]))
 
     #endregion
+
     # ==================================================================================================================

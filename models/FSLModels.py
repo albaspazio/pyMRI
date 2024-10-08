@@ -149,8 +149,8 @@ class FSLModels:
                 all_subj += labels
                 nsubjs += len(labels)
 
-            covs_values = self.project.get_subjects_values_by_cols(all_subj, covs_label)
-            nuis_values = self.project.get_subjects_values_by_cols(all_subj, nuis_label)
+            covs_values = self.project.get_subjects_values_by_cols(all_subj, covs_label)[0]
+            nuis_values = self.project.get_subjects_values_by_cols(all_subj, nuis_label)[0]
 
             for id, val in enumerate(covs_values):
                 if len(val) != nsubjs:
@@ -475,8 +475,8 @@ class FSLModels:
 
             # covs_values = self.project.get_subjects_values_by_cols(all_subj, covs_label)
             # nuis_values = self.project.get_subjects_values_by_cols(all_subj, nuis_label)
-            covs_values = self.project.get_subjects_values_by_cols(whole_subjest_labels, covs_label)
-            nuis_values = self.project.get_subjects_values_by_cols(whole_subjest_labels, nuis_label)
+            covs_values = self.project.get_subjects_values_by_cols(whole_subjest_labels, covs_label)[0]
+            nuis_values = self.project.get_subjects_values_by_cols(whole_subjest_labels, nuis_label)[0]
 
             for id, val in enumerate(covs_values):
                 if len(val) != nsubjs:

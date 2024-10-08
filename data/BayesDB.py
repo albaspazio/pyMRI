@@ -7,8 +7,8 @@ import pandas
 from data.GDriveSheet import GDriveSheet
 from data.MSHDB import MSHDB
 from data.Sheets import Sheets
-from data.SubjectSD import SubjectSD
-from data.SubjectSDList import SubjectSDList
+from data.SID import SID
+from data.SIDList import SIDList
 from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
 
@@ -34,8 +34,8 @@ class BayesDB(MSHDB):
     ----------
     sheets : list of Sheet
         The list of Sheet objects that make up the database.
-    subjects : SubjectSDList
-        The list of SubjectSD objects that are in the database.
+    subjects : SIDList
+        The list of SID objects that are in the database.
     schema_sheets_names : list
         The list of sheet names that define the schema of the database.
     date_format : str
@@ -101,14 +101,14 @@ class BayesDB(MSHDB):
 
     # ======================================================================================
     # region OVERRIDE
-    def add_default_columns(self, subjs:SubjectSDList, df:pandas.DataFrame):
+    def add_default_columns(self, subjs:SIDList, df:pandas.DataFrame):
         """
         Add the default columns (subj, session, group) to the given DataFrame.
 
         Parameters
         ----------
-        subjs : SubjectSDList
-            The list of SubjectSD objects.
+        subjs : SIDList
+            The list of SID objects.
         df : pandas.DataFrame
             The DataFrame to be modified.
 
@@ -121,14 +121,14 @@ class BayesDB(MSHDB):
         df[self.unique_columns[1]] = subjs.sessions
         return df
 
-    def add_default_rows(self, subjs:SubjectSDList=None):
+    def add_default_rows(self, subjs:SIDList=None):
         """
         Add the default rows (subj, session, group) to the given DataFrame.
 
         Parameters
         ----------
-        subjs : SubjectSDList, optional
-            The list of SubjectSD objects, by default None.
+        subjs : SIDList, optional
+            The list of SID objects, by default None.
 
         Returns
         -------
@@ -142,30 +142,30 @@ class BayesDB(MSHDB):
 
         return df
 
-    def add_default_row(self, subj:SubjectSD) -> dict:
+    def add_default_row(self, subj:SID) -> dict:
         """
         Add the default row for the given subject.
 
         Parameters
         ----------
-        subj : SubjectSD
-            The SubjectSD object.
+        subj : SID
+            The SID object.
 
         Returns
         -------
         dict
             The default row for the given subject.
         """
-        return {self.unique_columns[0]: subj.label, self.unique_columns[1]:subj.session, "group":self.get_groups(SubjectSDList([subj]))[0]}
+        return {self.unique_columns[0]: subj.label, self.unique_columns[1]:subj.session, "group":self.get_groups(SIDList([subj]))[0]}
 
-    def remove_subjects(self, subjects2remove:SubjectSDList, update=False) -> 'BayesDB':
+    def remove_subjects(self, subjects2remove:SIDList, update=False) -> 'BayesDB':
         """
         Remove the given subjects from the database.
 
         Parameters
         ----------
-        subjects2remove : SubjectSDList
-            The list of SubjectSD objects to be removed.
+        subjects2remove : SIDList
+            The list of SID objects to be removed.
         update : bool, optional
             If True, the changes will be reflected in the current object, by default False.
 
@@ -244,14 +244,14 @@ class BayesDB(MSHDB):
         cp.__class__ = BayesDB
         return cp
 
-    def get_groups(self, subjs:SubjectSDList=None) -> List[str]:
+    def get_groups(self, subjs:SIDList=None) -> List[str]:
         """
         Get the groups for the given subjects.
 
         Parameters
         ----------
-        subjs : SubjectSDList, optional
-            The list of SubjectSD objects, by default None.
+        subjs : SIDList, optional
+            The list of SID objects, by default None.
 
         Returns
         -------
@@ -263,9 +263,9 @@ class BayesDB(MSHDB):
 
         return self.main.get_subjects_column(subjs, "group")
 
-    def mri_sd(self, subj_labels:List[str]=None) -> list[SubjectSDList]:
+    def mri_sd(self, subj_labels:List[str]=None) -> list[SIDList]:
         """
-        Get the SubjectSDList for the given subjects.
+        Get the SIDList for the given subjects.
 
         Parameters
         ----------
@@ -304,9 +304,9 @@ class BayesDB(MSHDB):
 
         return [lists[0].labels, lists[1].labels, lists[2].labels, lists[3].labels]
 
-    def blood_sd(self, subj_labels: List[str] = None) -> List[SubjectSDList]:
+    def blood_sd(self, subj_labels: List[str] = None) -> List[SIDList]:
         """
-        Get the blood SubjectSDList for the given subjects.
+        Get the blood SIDList for the given subjects.
 
         Parameters
         ----------
@@ -345,9 +345,9 @@ class BayesDB(MSHDB):
         lists = self.blood_sd(subj_labels)
         return [lists[0].labels, lists[1].labels, lists[2].labels, lists[3].labels, lists[4].labels, lists[5].labels]
 
-    def bisection_sd(self, subj_labels: List[str] = None) -> SubjectSDList:
+    def bisection_sd(self, subj_labels: List[str] = None) -> SIDList:
         """
-        Get the bisection SubjectSDList for the given subjects.
+        Get the bisection SIDList for the given subjects.
 
         Parameters
         ----------
@@ -419,7 +419,7 @@ class BayesDB(MSHDB):
                     # e.g. "main"
                     if src_sheet_lab in self.sheets:
                         src_sd:SubjectsData = self.get_sheet_sd(src_sheet_lab)
-                        # SubjectSD(i,lab,sess)
+                        # SID(i,lab,sess)
                         for in_col in list(in_sheets_cells[id].values())[id_1]:      # e.g. ["mri_code"]
                             # e.g. "mri_code"
                             if in_col not in src_sd.header:

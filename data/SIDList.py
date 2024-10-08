@@ -1,36 +1,39 @@
 from typing import List
+import copy
 
-from data.SubjectSD import SubjectSD
+import numpy as np
+
+from data.SID import SID
 
 
-class SubjectSDList(list):
+class SIDList(list):
     """
-    A list of SubjectSD objects.
+    A list of SID objects.
 
     Attributes:
-        list: A list of SubjectSD objects.
+        list: A list of SID objects.
 
     Methods:
         filter: Filters the list based on select conditions.
-        is_in: Checks if a list of SubjectSD objects is present in the current list.
-        union_norep: Unions two lists of SubjectSD objects, removing duplicates.
-        are_equal: Checks if two lists of SubjectSD objects are equal.
-        contains: Checks if a SubjectSD object is present in the current list.
+        is_in: Checks if a list of SID objects is present in the current list.
+        union_norep: Unions two lists of SID objects, removing duplicates.
+        are_equal: Checks if two lists of SID objects are equal.
+        contains: Checks if a SID object is present in the current list.
     """
 
-    def __init__(self, subjects: List[SubjectSD]):
+    def __init__(self, subjects: List[SID]):
         """
-        Initializes the SubjectSDList.
+        Initializes the SIDList.
 
         Args:
-            subjects (List[SubjectSD]): A list of SubjectSD objects.
+            subjects (List[SID]): A list of SID objects.
         """
         super().__init__(item for item in subjects)
 
     @property
     def labels(self) -> List[str]:
         """
-        Returns a list of labels from the SubjectSD objects in the list.
+        Returns a list of labels from the SID objects in the list.
 
         Returns:
             List[str]: A list of labels.
@@ -40,24 +43,25 @@ class SubjectSDList(list):
     @property
     def ids(self) -> List[int]:
         """
-        Returns a list of IDs from the SubjectSD objects in the list.
+        Returns a list of IDs from the SID objects in the list.
 
         Returns:
             List[int]: A list of IDs.
         """
-        return [s.id for s in self]
+        _list = [s.id for s in self]
+        return np.array(_list).flatten().tolist()
 
     @property
     def sessions(self) -> List[int]:
         """
-        Returns a list of sessions from the SubjectSD objects in the list.
+        Returns a list of sessions from the SID objects in the list.
 
         Returns:
             List[int]: A list of sessions.
         """
         return [s.session for s in self]
 
-    def filter(self, sd, select_conds=None) -> 'SubjectSDList':
+    def filter(self, sd, select_conds=None) -> 'SIDList':
         """
         Filters the list based on select conditions.
 
@@ -66,7 +70,7 @@ class SubjectSDList(list):
             select_conds (List[SelectCondition]): A list of select conditions.
 
         Returns:
-            SubjectSDList: The filtered list.
+            SIDList: The filtered list.
         """
         res = []
         if select_conds is None:
@@ -79,40 +83,41 @@ class SubjectSDList(list):
                         add = False
                 if add:
                     res.append(s)
-            return SubjectSDList(res)
+            return SIDList(res)
 
-    def is_in(self, subj_list: 'SubjectSDList') -> 'SubjectSDList':
+    def is_in(self, subj_list: 'SIDList') -> 'SIDList':
         """
-        Checks if a list of SubjectSD objects is present in the current list.
+        Checks if a list of SID objects is present in the current list.
 
         Args:
-            subj_list (SubjectSDList): The list of SubjectSD objects.
+            subj_list (SIDList): The list of SID objects.
 
         Returns:
-            SubjectSDList: The list of SubjectSD objects that are present in the current list.
+            SIDList: The list of SID objects that are present in the current list.
         """
         res = []
         if len(self) == 0:
-            return SubjectSDList([])
+            return SIDList([])
 
-        for s in self:
+        for s in subj_list:
             doexist = False
-            for ss in subj_list:
+            for ss in self:
                 if s.is_equal(ss):
                     doexist = True
                     break
             if doexist:
                 res.append(s)
 
-        return SubjectSDList(res)
+        return SIDList(res)
 
-    def union_norep(self, subj_list: 'SubjectSDList'):
+    def union_norep(self, subj_list: 'SIDList') -> 'SIDList':
         """
-        Unions two lists of SubjectSD objects, removing duplicates.
+        Unions two lists of SID objects, removing duplicates.
 
         Args:
-            subj_list (SubjectSDList): The list of SubjectSD objects to be unioned.
+            subj_list (SIDList): The list of SID objects to be unioned.
         """
+
         for s in subj_list:
             add = True
             for ss in self:
@@ -122,12 +127,12 @@ class SubjectSDList(list):
             if add:
                 self.append(s)
 
-    def are_equal(self, subj_list: 'SubjectSDList') -> bool:
+    def are_equal(self, subj_list: 'SIDList') -> bool:
         """
-        Checks if two lists of SubjectSD objects are equal.
+        Checks if two lists of SID objects are equal.
 
         Args:
-            subj_list (SubjectSDList): The list of SubjectSD objects to be compared.
+            subj_list (SIDList): The list of SID objects to be compared.
 
         Returns:
             bool: True if the two lists are equal, False otherwise.
@@ -144,15 +149,15 @@ class SubjectSDList(list):
 
         return exist
 
-    def contains(self, subj: SubjectSD) -> bool:
+    def contains(self, subj: SID) -> bool:
         """
-        Checks if a SubjectSD object is present in the current list.
+        Checks if a SID object is present in the current list.
 
         Args:
-            subj (SubjectSD): The SubjectSD object to be checked.
+            subj (SID): The SID object to be checked.
 
         Returns:
-            bool: True if the SubjectSD object is present, False otherwise.
+            bool: True if the SID object is present, False otherwise.
         """
         for s in self:
             if s.is_equal(subj):

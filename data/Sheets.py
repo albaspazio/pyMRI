@@ -3,7 +3,7 @@ from typing import List
 import pandas
 
 from data.SubjectsData import SubjectsData
-from data.SubjectSDList import SubjectSDList
+from data.SIDList import SIDList
 
 
 class Sheets(dict):
@@ -104,18 +104,18 @@ class Sheets(dict):
         return self.sheet(sh_name).df
 
     @property
-    def all_subjects(self) -> SubjectSDList:
+    def all_subjects(self) -> SIDList:
         """
-        Returns a list of all subjects from all sheets as a SubjectSDList object.
+        Returns a list of all subjects from all sheets as a SIDList object.
 
         Returns
         -------
-        SubjectSDList
-            A list of all subjects from all sheets as a SubjectSDList object
+        SIDList
+            A list of all subjects from all sheets as a SIDList object
 
         """
         try:
-            all_subjs = SubjectSDList(self.main.subjects.copy())
+            all_subjs = SIDList(self.main.subjects.copy())
 
             for sh in self:
                 if sh == self.schema_sheets_names[self.main_id]:  # skip main
@@ -138,7 +138,7 @@ class Sheets(dict):
             True if all sheets contain the same list of subjects, False otherwise
 
         """
-        all_subjs:SubjectSDList = self.all_subjects
+        all_subjs:SIDList = self.all_subjects
         for sh in self:
             if not all_subjs.are_equal(self[sh].subjects):
                 return False

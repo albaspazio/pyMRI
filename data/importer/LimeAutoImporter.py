@@ -10,7 +10,7 @@ import pandas as pd
 import os
 
 from data.BayesDB import BayesDB
-from data.SubjectSD import SubjectSD
+from data.SID import SID
 from myutility.exceptions import DataFileException
 from data.SubjectsData import SubjectsData
 from data.Sheets import Sheets
@@ -249,7 +249,7 @@ class LimeAutoImporter:
         main["group"]           = subj["group"]
         main["auto"]            = 1
 
-        subj_sd:SubjectSD       = SubjectSD(-1, main["subj"], main["session"])
+        subj_sd:SID       = SID(main["subj"], main["session"], -1)
 
         bayesdb.get_sheet_sd("main").add_row(subj_sd, main)
 

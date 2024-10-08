@@ -95,8 +95,8 @@ class ConnModels:
             all_subj += labels
             nsubjs += len(labels)
 
-        covs_values = self.project.get_subjects_values_by_cols(all_subj, covs_label)
-        nuis_values = self.project.get_subjects_values_by_cols(all_subj, nuis_label)
+        covs_values = self.project.get_subjects_values_by_cols(all_subj, covs_label)[0]
+        nuis_values = self.project.get_subjects_values_by_cols(all_subj, nuis_label)[0]
 
         # ------------------------------------------------------------------------------------
         # define output filename...add regressors/nuis to given ofn containing groups info
