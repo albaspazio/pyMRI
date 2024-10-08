@@ -18,14 +18,14 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_name           = "volbrain"
-        project             = DataProject(proj_name, globaldata)
+        proj_dir = "/data/MRI/pymri_projects_scripts/volbrain"
+        project             = DataProject(proj_dir)
 
         # input
         csv_folder          = os.path.join(project.input_data_dir, "3T")
 
         # output
-        output_file         = os.path.join(project.stats_input, "ceres_short_3t.xlsx")
+        output_file         = os.path.join(project.output_data_dir, "ceres_short_3t.xlsx")
 
         # ======================================================================================================================
         # START !!!

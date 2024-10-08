@@ -178,12 +178,12 @@ class Subject:
         """
         return self.set_properties(sess, True)
 
-    # this method has 2 usages:
-    # 1) DEFAULT : to create filesystem names at startup    => returns : self  (DOUBT !! alternatively may always return a deepcopy)
-    # 2) to get a copy with names of another session        => returns : deepcopy(self)
     def set_properties(self, sess:int=1, rollback:bool=False):
         """
         Set the properties for a specific session.
+        it has two usages:
+        1) rollback=False (DEFAULT) : to create filesystem names at startup         => returns : self  (TODO: doubt, alternatively may always return a deepcopy)
+        2) rollback=True            : to get a copy with names of another session   => returns : deepcopy(self)
 
         Args:
             sess (int): The session ID.
@@ -401,11 +401,11 @@ class Subject:
 
         # ------------------------------------------------------------------------------------------------------------------------
         if rollback:
-            self_copy = deepcopy(self)
-            self.set_properties(self.sessid, False)
-            return self_copy
+            self_copy = deepcopy(self)                      # get a deep copy of self with given sessid
+            self.set_properties(self.sessid, False) # restore previous self.sessid
+            return self_copy                                # returns deepcopy of instance with given sessid
         else:
-            self.sessid = sess
+            self.sessid = sess                              # returns reference of new instance
             return self
 
     def set_templates(self, stdimg:str=""):

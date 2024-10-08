@@ -14,8 +14,8 @@ import pandas as pd
 
 from data.GDriveSheet import GDriveSheet
 from data.Sheets import Sheets
-from data.SubjectSD import SubjectSD
-from data.SubjectSDList import SubjectSDList
+from data.SID import SID
+from data.SIDList import SIDList
 from data.SubjectsData import SubjectsData
 from myutility.exceptions import DataFileException
 
@@ -50,7 +50,7 @@ class MSHDB:
         A dictionary containing the sheets in the database, where the keys are the sheet names and the values are SubjectsData objects.
     main : SubjectsData
         The SubjectsData object for the main sheet.
-    subjects : SubjectSDList
+    subjects : SIDList
         A list of all the subjects in the database.
     sheet_labels : list
         A list of the sheet names in the database.
@@ -166,13 +166,13 @@ class MSHDB:
 
     # returns all unique subjects labels across all sessions
     @property
-    def subjects(self) -> SubjectSDList:
+    def subjects(self) -> SIDList:
         """
         Returns:
-            SubjectSDList: A list of all the subjects in the database.
+            SIDList: A list of all the subjects in the database.
         """
         if self.main_name not in self.sheets:
-            return SubjectSDList([])
+            return SIDList([])
         else:
             return self.main.subjects
 
@@ -300,7 +300,7 @@ class MSHDB:
             If the sheet does not exist.
         """
         if name not in self.schema_sheets_names:
-            raise Exception("Error in MSHDB.get_sheet_sd: given sheet name does not exist")
+            raise Exception("Error in MSHDB.get_sheet_sd: given sheet name (" + name + ") does not exist")
 
         if not bool(self.sheets[name]):
             raise Exception("Error in MSHDB.get_sheet_sd: given-sheet's SubjectsData does not exist")
@@ -397,14 +397,14 @@ class MSHDB:
         else:
             return df
 
-    def add_default_columns(self, subjs: SubjectSDList, df: pandas.DataFrame) -> pandas.DataFrame:
+    def add_default_columns(self, subjs: SIDList, df: pandas.DataFrame) -> pandas.DataFrame:
         """
         Add a column containing the subject labels to a DataFrame.
 
         Parameters
         ----------
-        subjs : SubjectSDList
-            A list of SubjectSD objects.
+        subjs : SIDList
+            A list of SID objects.
         df : pandas.DataFrame
             A Pandas DataFrame.
 
@@ -441,13 +441,13 @@ class MSHDB:
 
         return hdr
 
-    def add_default_rows(self, subjs: SubjectSDList = None) -> pandas.DataFrame:
+    def add_default_rows(self, subjs: SIDList = None) -> pandas.DataFrame:
         """
         Add default rows to the database.
 
         Parameters
         ----------
-        subjs : SubjectSDList, optional
+        subjs : SIDList, optional
             The list of subjects to add, by default None
 
         Returns
@@ -461,13 +461,13 @@ class MSHDB:
 
         return df
 
-    def add_default_row(self, subj: SubjectSD) -> dict:
+    def add_default_row(self, subj: SID) -> dict:
         """
         Add a default row to the database for a specific subject.
 
         Parameters
         ----------
-        subj : SubjectSD
+        subj : SID
             The subject to add the default row for.
 
         Returns
@@ -536,13 +536,13 @@ class MSHDB:
         else:
             return MSHDB(self.schema_file, sheets)
 
-    def remove_subjects(self, subjects2remove: SubjectSDList, update: bool = False) -> "MSHDB":
+    def remove_subjects(self, subjects2remove: SIDList, update: bool = False) -> "MSHDB":
         """
         Remove subjects from the database.
 
         Parameters
         ----------
-        subjects2remove : SubjectSDList
+        subjects2remove : SIDList
             The list of subjects to remove.
         update : bool, optional
             Whether to update the database with the removed subjects, by default False
@@ -600,8 +600,8 @@ class MSHDB:
         """
         # divide in a) brandnew subjects (to make consistent and append)
         #           b) existing one (eventually to update some sheets)
-        all_newsubjs:SubjectSDList      = newdb.sheets.all_subjects  # union (no rep) of all subjects-sessions included in all new sheets
-        duplicated_subjs:SubjectSDList  = all_newsubjs.is_in(self.subjects)
+        all_newsubjs:SIDList      = newdb.sheets.all_subjects  # union (no rep) of all subjects-sessions included in all new sheets
+        duplicated_subjs:SIDList  = all_newsubjs.is_in(self.subjects)
 
         if len(duplicated_subjs) > 0 and can_update is True:   # there are duplicates and I can update existing
             print("The following subjects already exist in the DB: " + str(duplicated_subjs.labels))
@@ -650,14 +650,14 @@ class MSHDB:
     #                       "SAPS": ["SAPS_TOT"],
     #                       "YMRS": ["YMRS_TOT"]}
     # SUBSET all excel by rows and sheets' cols
-    def select_df(self, subjs: SubjectSDList = None, sheets_cols: dict = None, outfile: str = "") -> pandas.DataFrame|None:
+    def select_df(self, subjs: SIDList = None, sheets_cols: dict = None, outfile: str = "") -> pandas.DataFrame | None:
         """
         Selects data from the database and returns it as a Pandas DataFrame.
 
         Parameters
         ----------
-        subjs : SubjectSDList, optional
-            A list of SubjectSD objects, by default None
+        subjs : SIDList, optional
+            A list of SID objects, by default None
         sheets_cols : dict, optional
             A dictionary of sheet names and lists of columns to select, by default None
         outfile : str, optional
@@ -825,7 +825,7 @@ class MSHDB:
         """
         return self.sheets.is_equal(db.sheets)
 
-    def add_column(self, col_label, values, subjs:SubjectSDList=None, position=None, df=None, update=False) -> 'MSHDB':
+    def add_column(self, col_label, values, subjs:SIDList=None, position=None, df=None, update=False) -> 'MSHDB':
         """
         Add a new column to the database.
 
@@ -835,8 +835,8 @@ class MSHDB:
             The label of the new column.
         values : list or numpy.ndarray
             The values to add to the new column. If values is a list, it must have the same length as the number of subjects in the database. If values is a numpy.ndarray, it must have the same shape as the number of subjects in the database.
-        subjs : SubjectSDList, optional
-            A list of SubjectSD objects, by default None
+        subjs : SIDList, optional
+            A list of SID objects, by default None
         position : int, optional
             The position of the new column, by default None
         df : pandas.DataFrame, optional
@@ -861,14 +861,14 @@ class MSHDB:
         return MSHDB(self.schema_file, sheets)
 
     # presently not used. TODO: fix MSHDB.check_labels
-    def check_labels(self, newsubjs:SubjectSDList, sheet:str) -> bool:
+    def check_labels(self, newsubjs:SIDList, sheet:str) -> bool:
         """
         Check if the labels of a sheet are consistent with the main sheet.
 
         Parameters
         ----------
-        newsubjs : SubjectSDList
-            The list of SubjectSD objects in the sheet.
+        newsubjs : SIDList
+            The list of SID objects in the sheet.
         sheet : str
             The name of the sheet.
 
@@ -928,12 +928,11 @@ class MSHDB:
                     sd: SubjectsData = mainDB.get_sheet_sd(sh)
                     for s in all_newsubjs:
                         if s.session > 1:
-                            subj_session1 = sd.get_subj_session(s.label, 1)
+                            subj_session1:SID = sd.get_sid(s.label, 1)
                             if subj_session1 is None:
-                                raise Exception(
-                                    "Error in MSHDB.add_new_subjects: new subject is a follow-up, but session 1 is missing...aborting")
+                                raise Exception("Error in MSHDB.add_new_subjects: new subject is a follow-up, but session 1 is missing...aborting")
                             else:
-                                subj_row = sd.get_subject(subj_session1)
+                                subj_row = sd.get_sid_dict(subj_session1)
                                 subj_row["session"] = s.session
                                 if len(df) == 0:
                                     df = pd.DataFrame(columns=list(subj_row.keys()))
@@ -956,11 +955,11 @@ class MSHDB:
                         # P.S. could have passed row=None and let SubjectsData manage it, but calling a MSHDB subclass method I'm sure it is more complete
                         sd.add_row(subj, self.add_default_row(subj))
 
-    def filter_subjects(self, subj: SubjectSDList) -> MSHDB:
+    def filter_subjects(self, sids: SIDList) -> MSHDB:
 
         filtered_sheets = Sheets(sh_names=self.sheet_labels, main_id=self.main_id)
         for sh in self.sheet_labels:
-            filtered_sheets[sh] = self.get_sheet_sd(sh).extract_subjset(subj)
+            filtered_sheets[sh] = self.get_sheet_sd(sh).extract_subjset(sids)
 
         return MSHDB(self.schema_file, filtered_sheets)
 

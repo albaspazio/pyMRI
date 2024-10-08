@@ -339,7 +339,7 @@ class SPMStatsUtils:
             if not data.exist_filled_column(method, slabels):
                 raise DataFileException("spm_replace_global_calculation", "given data_file does not contain a valid value of column " + method + " for all subjects")
 
-            str_icvs = list2spm_text_column(data.get_filtered_column(slabels, method)[0])
+            str_icvs = list2spm_text_column(data.get_subjects_column(slabels, method))
             gc_str = user_corr_str1 + str_icvs + user_corr_str2  # list2spm_text_column ends with a "\n"
 
         sed_inplace(out_batch_job, "<FACTDES_GLOBAL>", gc_str)

@@ -76,7 +76,7 @@ class SPMCovariates:
                 cov = []
                 cov_name    = covs[cov_id].name
                 for subjs in groups_instances:
-                    cov = cov + project.get_subjects_values_by_cols(subjs, [cov_name], data)[0]
+                    cov = cov + project.get_filtered_column(subjs, cov_name, data=data)[0]
                 str_cov = "\n" + list2spm_text_column(cov)  # ends with a "\n"
 
                 cov_string = cov_string + "matlabbatch{" + str(batch_id) + "}.spm.stats.factorial_design.cov(" + str(cov_id + 1) + ").c = "
@@ -110,7 +110,7 @@ class SPMCovariates:
 
         cov_values = []
         for grp in groups_labels:
-            cov_values = cov_values + project.get_subjects_values_by_cols(grp, [cov.name], data)[0]
+            cov_values = cov_values + project.get_filtered_column(grp, cov.name, data=data)[0]
         str_cov = "\n" + list2spm_text_column(cov_values)  # ends with a "\n"
 
         cov_string =              "matlabbatch{" + str(batch_id) + "}.spm.stats.factorial_design.cov.c = "
