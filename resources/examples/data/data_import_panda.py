@@ -15,16 +15,13 @@ if __name__ == "__main__":
         # HEADER
         # ======================================================================================================================
         script_dir  = os.path.dirname(__file__)
-        project     = DataProject(script_dir, "data.xlsx")
+        project     = DataProject(script_dir, data="data.xlsx")
         SESS_ID     = 1
         num_cpu     = 1
         group_label = "all"
-        # subjects = project.load_subjects(group_label, SESS_ID, must_exist=False)
 
         test_labels = project.get_subjects_labels("test")
         valid_cols  = ["age", "FS0"]
-        # datafile = os.path.join(project.script_dir, "data.xlsx")  # is a tab limited data matrix with a header in the first row
-        # datafile = os.path.join(project.script_dir, "data.dat")  # is a tab limited data matrix with a header in the first row
         # ==================================================================================================================
         # test getting filtered data columns
         data = SubjectsData(data=os.path.join(script_dir, "data.xlsx"))
