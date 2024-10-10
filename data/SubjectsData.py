@@ -389,14 +389,59 @@ class SubjectsData:
     #endregion
 
     # ======================================================================================
+    #region (SIDS|conditions) -> SIDS
+    def filter_sids(self, conditions: List[FilterValues], sids: SIDList = None) -> SIDList:
+        """
+        Filter SIDList based on conditions on other columns.
+
+        Parameters
+        ----------
+        sids: SIDList, optional
+            A list of SIDS to filter. If None, all subjects will be included.
+        conditions: List[FilterValues], optional
+            A list of conditions to apply. If None, no conditions will be applied.
+
+        Returns
+        -------
+        SIDList
+            A list of filtered subjects.
+
+        Raises
+        -------
+        DataFileException
+            If subjects selected in previous steps does not have data contained in the select_cond
+
+        """
+        if sids is None:
+            sids = self.subjects
+
+        if conditions is not None:
+            res = []
+            for sid in sids:
+                add = True
+                for selcond in conditions:
+                    if not selcond.isValid(self.get_subject_col_value(sid, selcond.colname)):
+                        add = False
+                if add:
+                    res.append(sid)
+            return SIDList(res)
+        else:
+            return sids
+
+    #endregion
+
+    # ======================================================================================
     #region (SIDS|validcols) -> SubjectsData
     def extract_subjset(self, sids:SIDList, validcols:List[str]=None) -> 'SubjectsData':
         '''
         Returns a subset of the present SubjectsData containing only the given subjects
 
-        :param subj2extract:
-        :param validcols:
-        :return: SubjectsData instance
+        Parameters:
+            sids (SIDList): A list of subjects to include.
+            validcols (List[str]): A list of column names to include in the data. If None, all columns will be included.
+
+        Returns:
+            SubjectsData: A subset of the present SubjectsData containing only the given subjects.
         '''
         return SubjectsData(self.select_df(sids, validcols))
 
@@ -550,7 +595,6 @@ class SubjectsData:
 
         return self.df.loc[sid.id, validcols].to_dict()
 
-    # def get_subjects(self, subj_labels:List[str]=None, sessions:List[int]=[1], validcols:List[str]=None, select_conds:List[FilterValues]=None) -> List[dict]:
     def get_sids_dict(self, sids:SIDList=None, validcols:List[str]=None) -> List[dict]:
         """
         Returns a list of dictionaries containing the data for the selected subjects and columns.
@@ -653,7 +697,7 @@ class SubjectsData:
 
         if sort:
             sort_schema = _argsort(values)
-            res.sort()
+            values.sort()
             lab = reorder_list(sids.labels, sort_schema)
 
         return values
@@ -845,14 +889,13 @@ class SubjectsData:
 
     # ======================================================================================
     # region (subj_label / subj_label|sess_id) -> sess_ids | id
-    def get_subjid_by_session(self, subj_lab:str, sess_id:int=1, error_if_empty:bool=True) -> int:
+    def get_subjid_by_session(self, subj_lab:str, sess_id:int=1, error_if_empty:bool=True) -> pandas.Index:
         """
         Returns the index of the subject with the given subject label and session, if it exists in the data frame.
 
         Parameters:
             subj_lab (str): The subject label.
-            session (int): The session number.
-            df (pandas.DataFrame, optional): A pandas data frame to retrieve the sessions from. If None, the internal data frame will be used.
+            sess_id (int): The session number.
             error_if_empty: bool : if subject does not exist (no session is available) raise an exception or return []
 
         Returns:
@@ -863,6 +906,7 @@ class SubjectsData:
         """
         if self.exist_subject_session(subj_lab, sess_id):
             return self.df.index[(self.df[self.second_col_name] == sess_id) & (self.df[self.first_col_name] == subj_lab)]
+            # return int(self.df.index[(self.df[self.second_col_name] == sess_id) & (self.df[self.first_col_name] == subj_lab)].values[0])
         else:
             if error_if_empty:
                 raise DataFileException("SubjectsData.get_subjid_by_session")

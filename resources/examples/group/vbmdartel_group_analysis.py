@@ -29,8 +29,8 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        subjects = project.load_subjects(group_label, SESS_ID)
-        #project.add_icv_to_data(group_label) # add icv to all data
+        subjects = project.load_subjects(group_label, [SESS_ID])
+        project.add_icv_to_data(subjects) # add icv to all data
 
         analysis            = GroupAnalysis(project)
         spm_analysis        = SPMModels(project)
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         #                                                           data_file=None, glob_calc="subj_icv", cov_interactions=None,
         #                                                           expl_mask="icv", spm_template_name="spm_stats_1group_multiregr_check_estimate",
         #                                                           spm_contrasts_template_name="", runit=True):
-        groups_instances    = [project.get_subjects("grp1", SESS_ID)]
+        groups_instances    = [project.get_subjects("grp1", [SESS_ID])]
         covs                = [Covariate("gender"), Covariate("age")]
         anal_name           = "multregr_age_gender"
         postmodel           = PostModel("group_postmodel_spm_stats_contrasts_results",

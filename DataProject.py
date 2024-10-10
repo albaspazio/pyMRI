@@ -175,8 +175,6 @@ class DataProject:
         elif is_list_of(grlab_subjlabs_subjs, str):
             return grlab_subjlabs_subjs   # [string]
 
-        # elif is_list_of(grlab_subjlabs_subjs, Subject):
-        #     return [s.label for s in grlab_subjlabs_subjs]   # [Subject]
         else:
             # grlab_subjlabs_subjs does not belong to expected types
             raise SubjectListException("Error in get_subjects_labels", "the given grlab_subjlabs_subjs param is not a valid param (None, string  or string list), is: " + str(grlab_subjlabs_subjs))

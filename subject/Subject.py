@@ -68,6 +68,10 @@ class Subject:
         self.dti:SubjectDti                 = SubjectDti(self, self._global)
         self.epi:SubjectEpi                 = SubjectEpi(self, self._global)
 
+    @property
+    def exist(self):
+        return os.path.exists(self.dir)
+
     def hasSeq(self, _type:str, images_labels:List[str]=None):
         """
         Check if a specific sequence type exists for this subject.
@@ -131,6 +135,26 @@ class Subject:
         """
         return self.t2_data.exist
 
+    @property
+    def hasWB(self):
+        """
+        Check if a white matter image exists for this subject.
+
+        Returns:
+            bool: True if a white matter image exists, False otherwise.
+        """
+        return self.wb_data.exist
+
+    @property
+    def hasCT(self):
+        """
+        Check if a white matter image exists for this subject.
+
+        Returns:
+            bool: True if a white matter image exists, False otherwise.
+        """
+        return self.t1_cat_resampled_surface.gexist
+
     def hasFMRI(self, images_labels:List[str]=None):
         """
         Check if a specific fMRI image exists for this subject.
@@ -146,25 +170,6 @@ class Subject:
         else:
             imgs = [os.path.join(self.fmri_dir, self.label + ilab) for ilab in images_labels]
             return Images(imgs).exist
-
-    @property
-    def hasWB(self):
-        """
-        Check if a white matter image exists for this subject.
-
-        Returns:
-            bool: True if a white matter image exists, False otherwise.
-        """
-        return self.wb_data.exist
-
-    def hasCT(self):
-        """
-        Check if a white matter image exists for this subject.
-
-        Returns:
-            bool: True if a white matter image exists, False otherwise.
-        """
-        return self.t1_cat_resampled_surface.gexist
 
     def get_properties(self, sess:int=1):
         """
@@ -464,8 +469,12 @@ class Subject:
     # ==================================================================================================
     # GENERAL
     # ==================================================================================================
-    def exist(self):
-        return os.path.exists(self.dir)
+
+    def is_in(self, subjects:List[Subject]) -> bool:
+        for subj in subjects:
+            if subj.label == self.label and subj.sessid == self.sessid:
+                return True
+        return False
 
     def create_file_system(self):
         """

@@ -3,7 +3,6 @@ import os
 from Global import Global
 from Project import Project
 from group.spm_utilities import FmriProcParams, Contrast, SubjCondition
-from subject.Subject import Subject
 from numpy import sort
 
 if __name__ == "__main__":
@@ -44,7 +43,7 @@ if __name__ == "__main__":
         epi_names       = ["target", "frame"]
 
         # ---------------------------------------------------------------------------------------------------------------------
-        subjects        = project.load_subjects(group_label, SESS_ID)
+        subjects        = project.load_subjects(group_label, [SESS_ID])
         kwparams = []
         for s in subjects:
             kwparams.append({"epi_images":[os.path.join(s.fmri_dir, s.label + "-fmri_" + epi_names[0] ), os.path.join(s.fmri_dir, s.label + "-fmri_" + epi_names[1])],
@@ -54,7 +53,7 @@ if __name__ == "__main__":
         # ---------------------------------------------------------------------------------------------------------------------
         # 1st level stat analysis: two separate sessions, 3 regressors
         # ---------------------------------------------------------------------------------------------------------------------
-        subjects        = project.load_subjects(group_label, SESS_ID)
+        subjects        = project.load_subjects(group_label, [SESS_ID])
         epi_names       = ["target", "frame"]
         images_type     = "swar"
 
@@ -94,7 +93,7 @@ if __name__ == "__main__":
         # ---------------------------------------------------------------------------------------------------------------------
         # REMOVE SLICES
         # ---------------------------------------------------------------------------------------------------------------------
-        # subjects = project.load_subjects("removeSlice", SESS_ID)
+        # subjects = project.load_subjects("removeSlice", [SESS_ID])
         # for s in subjects:
         #     for sess in epi_names:
         #         imgname = os.path.join(s.fmri_dir, s.label + "-epi_" + sess)
@@ -108,7 +107,7 @@ if __name__ == "__main__":
         #     for s in subjects:
         #         in_ap_img = os.path.join(s.fmri_dir, "a" + s.label + "-epi_" + sess)
         #         kwparams.append({"in_ap_images":[in_ap_img], "in_pa_img":s.fmri_pa_data, "acq_params": project.topup_fmri_params})
-        #         project.run_subjects_methods("epi", "topup_corrections", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+        #         project.run_subjects_methods("epi", "topup_corrections", kwparams, project.subjects, nthread=num_cpu)
 
         # ---------------------------------------------------------------------------------------------------------------------
         # SLICE TIMING
@@ -124,7 +123,7 @@ if __name__ == "__main__":
         # ==================================================================================================================
         # CHECK ALL REGISTRATION
         # ==================================================================================================================
-        # subjects    = project.load_subjects(group_label, SESS_ID)
+        # subjects    = project.load_subjects(group_label, [SESS_ID])
 
         # outdir      = os.path.join(project.group_analysis_dir, "registration_check_mpr_2_std")
         # project.check_all_coregistration(outdir, _from=["hr"], _to=["std"], num_cpu=num_cpu)
@@ -135,16 +134,16 @@ if __name__ == "__main__":
         # ---------------------------------------------------------------------------------------------------------------------
         # EPI CO-REGISTRATION TO TEMPLATE
         # ---------------------------------------------------------------------------------------------------------------------
-        # subjects    = project.load_subjects(group_label, SESS_ID)
+        # subjects    = project.load_subjects(group_label, [SESS_ID])
         # for p in range(len(subjects)):
         #     kwparams.append({"do_bbr":False, "is_rs":False, "epi_img":os.path.join(subjects[p].epi_dir, "ar" + subjects[p].epi_image_label)})
-        # project.run_subjects_methods("transform_epi", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+        # project.run_subjects_methods("transform_epi", kwparams, project.subjects, nthread=num_cpu)
 
         # ---------------------------------------------------------------------------------------------------------------------
         # TRANSFORM AR => WAR => SWAR (normalize & smooth)
         # ---------------------------------------------------------------------------------------------------------------------
-        # subjects    = project.load_subjects(group_label, SESS_ID)
-        # project.run_subjects_methods("epi_fsl2standard_smooth", [], project.get_subjects_labels(), nthread=num_cpu)
+        # subjects    = project.load_subjects(group_label, [SESS_ID])
+        # project.run_subjects_methods("epi_fsl2standard_smooth", [], project.subjects, nthread=num_cpu)
 
         # ---------------------------------------------------------------------------------------------------------------------
         # TRANSFORM WAR => SWAR  (smooth only)
@@ -153,8 +152,8 @@ if __name__ == "__main__":
         # cd /data/MRI/projects/BISECTION_PISA2/subjects
         # for s in *; do echo $s; mv $s/s1/epi/swar$s-epi.nii $s/s1/epi/s1war$s-epi.nii; done
         # #
-        # subjects    = project.load_subjects(group_label, SESS_ID)
-        # project.run_subjects_methods("epi_smooth",  [{"epi_image":"WAR", "fwhm":6}] , project.get_subjects_labels(), nthread=num_cpu)
+        # subjects    = project.load_subjects(group_label, [SESS_ID])
+        # project.run_subjects_methods("epi_smooth",  [{"epi_image":"WAR", "fwhm":6}] , project.subjects, nthread=num_cpu)
 
     except Exception as e:
         print(e)

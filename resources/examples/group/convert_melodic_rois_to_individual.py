@@ -31,8 +31,8 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        subjects_bd = project_bd.load_subjects(group_label_bd, SESS_ID)
-        subjects_td = project_td.load_subjects(group_label_td, SESS_ID)
+        subjects_bd = project_bd.load_subjects(group_label_bd, [SESS_ID])
+        subjects_td = project_td.load_subjects(group_label_td, [SESS_ID])
 
         # TR = 2.0
         template_name = "templ_ctrl_bd_all266"

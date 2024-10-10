@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import os
 from distutils.file_util import copy_file
-from typing import List, Any
+from typing import List
 
 from Global import Global
 from Project import Project
 from data.SubjectsData import SubjectsData
 from models.FSLConFile import FSLConFile
 from group.spm_utilities import Regressor, Covariate, Nuisance
+from myutility.exceptions import SubjectListException
 from subject.Subject import Subject
 from myutility.fileutilities import remove_ext, append_text_file, read_list_from_file
-from myutility.list import same_elements
+from myutility.list import same_elements, is_list_of
 # create factorial designs, multiple regressions, t-test
 from myutility.myfsl.utils.run import rrun
 
@@ -35,7 +36,9 @@ class FSLModels:
         self.string             = ""    # used to compose models override
 
     # ---------------------------------------------------
-    def create_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], grlab_subjlabs_subjs: str | List[str] | List[Subject], ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True, group_mean_contrasts: int = 1, cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "", subj_must_exist: bool = False):
+    def create_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], groups_instances:List[List[Subject]],
+                                               ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True, group_mean_contrasts: int = 1,
+                                               cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "", subj_must_exist: bool = False):
         """
         This function creates a FSL GLM file starting from a template. Manage multiple groups, with covariates and nuisance regressors.
         - N covariates
@@ -74,8 +77,8 @@ class FSLModels:
             The path to the output directory.
         regressors : list
             A list of regressors, including covariates and nuisance regressors. indicating whether adding respectively a contrast or not
-        grlab_subjlabs_subjs : list
-            A list of group labels or subject labels. eg: 3 groups  ["grp1","grp2","grp3"] or [["s11", "s12", ..., "s1n"], ["s21", ..."s2m"], ["s31", ..., "s3k"]]
+        groups_instances:List[List[Subject]]
+            A list of Subject's list specifying the list of Subject of each group
         ofn : str, optional
             The output file name prefix, by default "mult_cov".
         data : str, optional
@@ -102,7 +105,7 @@ class FSLModels:
         ------
         Exception
             If the input FSL GLM file does not exist.
-            :param grp_names:
+
         """
         try:
             self.string = ""
@@ -111,16 +114,26 @@ class FSLModels:
             if not os.path.exists(input_fsf):
                 raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, input fsf file is missing...exiting")
 
+            if not is_list_of(groups_instances[0], Subject):
+                raise SubjectListException("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file: given subjects is not a list of Subject", str(groups_instances))
+
             if bool(regressors):
                 data = self.project.validate_data(data)
                 data.validate_covs(regressors)
             else:
                 data = None
 
-            ngroups = len(grlab_subjlabs_subjs)  # number of groups in the design. each group will have its regressor (EV).
+            ngroups = len(groups_instances)  # number of groups in the design. each group will have its regressor (EV).
             if ngroups > 3:
                 raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, no more than three groups are supported")
 
+            # ----------------------------------------------------------------------------------
+            # create a list with all Subject instances
+            subjs_instances = []
+            for subjs in groups_instances:
+                subjs_instances = subjs_instances + subjs
+
+            nsubjs = len(subjs_instances)
             # ------------------------------------------------------------------------------------
             # divide regressors in covariates and nuisances
             covs_label = []
@@ -137,20 +150,8 @@ class FSLModels:
             if ngroups == 1 and ncovs == 0 and group_mean_contrasts == 0:
                 raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, when one group is investigated, either cov_mean_contrasts or group_mean_contrasts must be > 0....exiting")
 
-            # ----------------------------------------------------------------------------------
-            # get subjects values
-            subj_labels_by_groups:List[List[str]]   = []
-            all_subj:List[str]                      = []
-
-            nsubjs      = 0
-            for grp in grlab_subjlabs_subjs:
-                labels:List[str] = self.project.get_subjects_labels(grp, must_exist=subj_must_exist)
-                subj_labels_by_groups.append(labels)
-                all_subj += labels
-                nsubjs += len(labels)
-
-            covs_values = self.project.get_subjects_values_by_cols(all_subj, covs_label)[0]
-            nuis_values = self.project.get_subjects_values_by_cols(all_subj, nuis_label)[0]
+            covs_values = self.project.get_subjects_values_by_cols(subjs_instances, covs_label)[0]
+            nuis_values = self.project.get_subjects_values_by_cols(subjs_instances, nuis_label)[0]
 
             for id, val in enumerate(covs_values):
                 if len(val) != nsubjs:
@@ -159,6 +160,7 @@ class FSLModels:
             for id, val in enumerate(nuis_values):
                 if len(val) != nsubjs:
                     raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file: number of cov values of cov " + covs_label[id] + " differs from subjects number")
+
             # ------------------------------------------------------------------------------------
             # define output filename...add regressors/nuis to given ofn containing groups info
             for rname in covs_label:
@@ -228,8 +230,8 @@ class FSLModels:
             self.__addline2string("# ==================================================================")
             self.__addline2string("")
             self.__addline2string("subjects included")
-            for slab in all_subj:
-                self.__addline2string(slab)
+            for subj in subjs_instances:
+                self.__addline2string(subj.label)
             self.__addline2string("-------------------------------------------------------------------")
 
             # Number of subjects
@@ -267,7 +269,7 @@ class FSLModels:
             self.__addline2string("#====================== set groups' means to actual values")
             subjid = 1
             for gr in range(1, ngroups+1):
-                for _ in subj_labels_by_groups[gr - 1]:
+                for _ in groups_instances[gr - 1]:
                     self.__addline2string("set fmri(evg" + str(subjid) + "." + str(gr) + ") 1")
                     subjid += 1
 
@@ -314,7 +316,7 @@ class FSLModels:
                 sid = 1
                 for gr in range(ngroups):
                     evid = startEVid + covid*ngroups + gr
-                    for s in range(len(subj_labels_by_groups[gr])):
+                    for _ in range(len(groups_instances[gr])):
                         self.__addline2string("set fmri(evg" + str(sid) + "." + str(evid) + ") " + str(covs_values[covid][sid-1]))
                         sid += 1
                     # evid += 1
@@ -347,7 +349,9 @@ class FSLModels:
             return
 
 
-    def create_subset_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], grlab_subjlabs_subjs: str | List[str] | List[Subject], wholesubjects_groups_or_labels:str|List[str]|List[Subject], ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True, group_mean_contrasts: int = 1, cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "", subj_must_exist: bool = False):
+    def create_subset_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], groups_instances: List[List[Subject]], whole_group_instances:List[Subject],
+                                                      ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True,
+                                                      group_mean_contrasts: int = 1, cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "", subj_must_exist: bool = False):
         """
         This version is designed to work when the order of the subjects defined in the given groups differs from the one defined in the 4D files used.
         e.g. imagine the 4D file (e.g. a tbss skeletonized file) is divided in 1:10 (pat1), 11:20 (pat2)
@@ -420,10 +424,8 @@ class FSLModels:
         ------
         Exception
             If the input FSL GLM file does not exist.
-            :param grp_names:
         """
         try:
-            self.string = ""
             # ------------------------------------------------------------------------------------
             # sanity checks
             if not os.path.exists(input_fsf):
@@ -435,12 +437,20 @@ class FSLModels:
             else:
                 data = None
 
-            ngroups = len(grlab_subjlabs_subjs)  # number of groups in the design. each group will have its regressor (EV).
+            ngroups = len(groups_instances)  # number of groups in the design. each group will have its regressor (EV).
             if ngroups > 3:
                 raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file, no more than three groups are supported")
 
-            whole_subjest_labels = self.project.get_subjects_labels(wholesubjects_groups_or_labels, must_exist=False)
-            # nwholesubjects       = len(whole_subjest_labels)
+            # ----------------------------------------------------------------------------------
+            # get subjects values
+            # create a list with all Subject instances
+            subjs_instances = []
+            for subjs in groups_instances:
+                subjs_instances = subjs_instances + subjs
+
+            nsubjs = len(subjs_instances)
+            if not same_elements(subjs_instances, whole_group_instances):
+                raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file, the list of subjects contained in the wholesubjects_groups_or_labels  does not coincide with the list of subjects specified in grlab_subjlabs_subjs")
 
             # ------------------------------------------------------------------------------------
             # divide regressors in covariates and nuisances
@@ -458,33 +468,18 @@ class FSLModels:
             if ngroups == 1 and ncovs == 0 and group_mean_contrasts == 0:
                 raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file, when one group is investigated, either cov_mean_contrasts or group_mean_contrasts must be > 0....exiting")
 
-            # ----------------------------------------------------------------------------------
-            # get subjects values
-            subj_labels_by_groups:List[List[str]]   = []
-            all_subj:List[str]                      = []
-
-            nsubjs      = 0
-            for grp in grlab_subjlabs_subjs:
-                labels:List[str] = self.project.get_subjects_labels(grp, must_exist=subj_must_exist)
-                subj_labels_by_groups.append(labels)
-                all_subj += labels
-                nsubjs += len(labels)
-
-            if not same_elements(all_subj, whole_subjest_labels):
-                raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file, the list of subjects contained in the wholesubjects_groups_or_labels  does not coincide with the list of subjects specified in grlab_subjlabs_subjs")
-
-            # covs_values = self.project.get_subjects_values_by_cols(all_subj, covs_label)
-            # nuis_values = self.project.get_subjects_values_by_cols(all_subj, nuis_label)
-            covs_values = self.project.get_subjects_values_by_cols(whole_subjest_labels, covs_label)[0]
-            nuis_values = self.project.get_subjects_values_by_cols(whole_subjest_labels, nuis_label)[0]
+            covs_values = self.project.get_subjects_values_by_cols(whole_group_instances, covs_label)[0]
+            nuis_values = self.project.get_subjects_values_by_cols(whole_group_instances, nuis_label)[0]
 
             for id, val in enumerate(covs_values):
                 if len(val) != nsubjs:
-                    raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file: number of cov values of cov " + covs_label[id] + " differs from subjects number")
+                    raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file: number of values of covariate " + covs_label[id] + " differs from subjects number")
 
             for id, val in enumerate(nuis_values):
                 if len(val) != nsubjs:
-                    raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file: number of cov values of cov " + covs_label[id] + " differs from subjects number")
+                    raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file: number of values of nuisance " + covs_label[id] + " differs from subjects number")
+
+
             # ------------------------------------------------------------------------------------
             # define output filename...add regressors/nuis to given ofn containing groups info
             for rname in covs_label:
@@ -533,6 +528,7 @@ class FSLModels:
             # ------------------------------------------------------------------------------------
             # SUMMARY
             # ------------------------------------------------------------------------------------
+            self.string = ""
             print("---------------- S U M M A R Y -------------------------------------------------------------------------------")
             print("creating Ncov_Xnuisance with the following parameters:")
             print("filename :" + output_glm_fsf)
@@ -556,8 +552,8 @@ class FSLModels:
             self.__addline2string("# ==================================================================")
             self.__addline2string("")
             self.__addline2string("subjects included")
-            for slab in all_subj:
-                self.__addline2string(slab)
+            for subj in subjs_instances:
+                self.__addline2string(subj.label)
             self.__addline2string("-------------------------------------------------------------------")
 
             # Number of subjects
@@ -596,12 +592,12 @@ class FSLModels:
             # here I must respect the order defined in the 4D file, so I cycle through the whole list and for each subject I retrieve the groups it belongs to
             subjid = 1
 
-            for subj_lab in whole_subjest_labels:
+            for subj in whole_group_instances:
 
                 # determine to which group belong
                 group_id = -1  # does not belong
-                for gr_id, gr_labels in enumerate(subj_labels_by_groups):
-                    if subj_lab in gr_labels:
+                for gr_id, gr_instances in enumerate(groups_instances):
+                    if subj.is_in(gr_instances):    # gr_instances is a List[Subject]
                         group_id = gr_id + 1
 
                 if group_id == -1:
@@ -625,7 +621,7 @@ class FSLModels:
 
             self.__addline2string("#====================== set nuisance values")
             # here I must respect the order defined in the 4D file, so I cycle through the whole list and for each subject I retrieve its nuisance values
-            for id, subj_lab in enumerate(whole_subjest_labels):
+            for id, _ in enumerate(whole_group_instances):
                 for col_id in range(nnuis):
                     cnt  = col_id + 1 + ngroups
                     # cnt2 = (s-1)*nnuis + id
@@ -653,12 +649,12 @@ class FSLModels:
             for covid in range(ncovs):
                 subjid = 1
 
-                for subj_lab in whole_subjest_labels:
+                for subj in whole_group_instances:
 
                     # determine to which group belong
                     group_id = -1  # does not belong
-                    for gr_id, gr_labels in enumerate(subj_labels_by_groups):
-                        if subj_lab in gr_labels:
+                    for gr_id, gr_instances in enumerate(groups_instances):
+                        if subj.is_in(gr_instances):
                             group_id = gr_id
 
                     if group_id == -1:
@@ -914,9 +910,6 @@ class FSLModels:
                         self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid_plus1) + ") -1")
                         self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid_plus2) + ") 1")
 
-
-
-
     def __addline2string(self, line: str) -> None:
         """
         Add a line to the internal string buffer.
@@ -1001,4 +994,3 @@ class FSLModels:
                     confile.matrix.append(lines[id + 1 + i])
 
         return confile
-

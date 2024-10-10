@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import collections
 import io
-import os
 import json
+import os
+from datetime import datetime
 from typing import List
-from datetime import date, datetime
 
 import gspread
 import msoffcrypto
@@ -13,9 +13,9 @@ import pandas
 import pandas as pd
 
 from data.GDriveSheet import GDriveSheet
-from data.Sheets import Sheets
 from data.SID import SID
 from data.SIDList import SIDList
+from data.Sheets import Sheets
 from data.SubjectsData import SubjectsData
 from myutility.exceptions import DataFileException
 
@@ -31,8 +31,6 @@ class MSHDB:
     ----------
     data : str, Sheets, or GDriveSheet
         The data source for the database. This can be a path to an Excel file, a Google Sheet, or a Python dictionary containing the data.
-    sheetnames : list of str
-        A list of the names of the sheets in the database. If not provided, the sheet names will be inferred from the data source.
     main_id : int
         The index of the main sheet in the sheetnames list.
     suppress_nosubj : bool
@@ -601,9 +599,12 @@ class MSHDB:
         # divide in a) brandnew subjects (to make consistent and append)
         #           b) existing one (eventually to update some sheets)
         all_newsubjs:SIDList      = newdb.sheets.all_subjects  # union (no rep) of all subjects-sessions included in all new sheets
-        duplicated_subjs:SIDList  = all_newsubjs.is_in(self.subjects)
+        duplicated_subjs:SIDList  = all_newsubjs.is_in(self.subjects, context_self=True)    # context self in order to may remove duplicated subjs from newdb
 
         if len(duplicated_subjs) > 0 and can_update is True:   # there are duplicates and I can update existing
+
+            raise Exception("MSHDB.add_new_subjects....this feature is buggy !!! cannot update existing subjects") # TODO: fix MSHDB.add_new_subjects
+
             print("The following subjects already exist in the DB: " + str(duplicated_subjs.labels))
             duplicated_db = newdb.filter_subjects(duplicated_subjs)   # deep copy
         else:
@@ -616,7 +617,7 @@ class MSHDB:
                                                                                     # in this way MSHDB.remove_subjects return an instance of BayesDB when called from
             if not reallynew_db.is_empty:
                 # make really new subjects db consistent
-                reallynew_db.make_consistent2(self)
+                reallynew_db.make_consistent_to(self)
                 reallynew_subjs = reallynew_db.sheets.all_subjects
 
         # -------------------------------------------------------
@@ -634,7 +635,7 @@ class MSHDB:
                 for s in duplicated_subjs:
                     original_id     = currdb.main.get_subjid_by_session(s.label, s.session)             # get the original index of the subject to be updated
                     new_row         = df.loc[(df['subj'] == s.label) & (df['session'] == s.session)]    # extract the subject row from duplicated_db
-                    new_row.index   = [int(original_id[0])]                                             # update its index to make update working
+                    new_row.index   = [int(original_id[0])]                                          # update its index to make update working
 
                     currdb.get_sheet_sd(sh).df.update(new_row)
 
@@ -897,7 +898,7 @@ class MSHDB:
             else:
                 return True
 
-    def make_consistent2(self, mainDB:MSHDB, copy_previous_sess=None):
+    def make_consistent_to(self, mainDB:MSHDB, copy_previous_sess=None):
         """
         make db consistent to a given one:
         # start cycling through given db sheets and do the following:
@@ -926,7 +927,7 @@ class MSHDB:
                     # in case new subjects has session=1, decide whether copying data from such session or create a default row
                     df = pandas.DataFrame()
                     sd: SubjectsData = mainDB.get_sheet_sd(sh)
-                    for s in all_newsubjs:
+                    for s in sd.subjects:
                         if s.session > 1:
                             subj_session1:SID = sd.get_sid(s.label, 1)
                             if subj_session1 is None:

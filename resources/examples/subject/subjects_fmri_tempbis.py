@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
         # ======================================================================================================================
         group_label     = "tempbis_er_with_ctrl"
-        subjects        = subjproject.load_subjects(group_label, SESS_ID)
+        subjects        = subjproject.load_subjects(group_label, [SESS_ID])
         log_dirname     = "temp_bis_er_with_ctrl"
         subjproject.can_run_analysis("fmri")
 
@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
         # EVENT RELATED, hpf=100, stim_dur=0
         # run_1stlevel_analysis(eng, project, "tempbis_er" , ["tempbis_er"], hpf_er, stim_duration, images_type, "tempbis_er_swa", fmri_params, contrasts_tempbis_er, num_cpu)
-        run_1stlevel_analysis(eng, project, [subjproject.get_subject("1041"), subjproject.get_subject("1043")], ["task", "rest"], hpf_er, stim_duration, log_dirname, images_type, "tempbis_er_ctrl_swar", fmri_params, contrasts_tempbis_er_ctrl, num_cpu)
+        run_1stlevel_analysis(eng, project, [subjproject.get_subject_session("1041"), subjproject.get_subject_session("1043")], ["task", "rest"], hpf_er, stim_duration, log_dirname, images_type, "tempbis_er_ctrl_swar", fmri_params, contrasts_tempbis_er_ctrl, num_cpu)
 
         # BLOCK DESIGN, hpf=100, stim_dur=0
         # run_1stlevel_analysis(eng, project, "tempbis_blocks", ["task", "rest"], hpf_bl, None, images_type, "tempbis_bl_swa", fmri_params, contrasts_tempbis_bl, num_cpu)
