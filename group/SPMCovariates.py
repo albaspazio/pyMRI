@@ -88,7 +88,7 @@ class SPMCovariates:
             sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
 
     @staticmethod
-    def spm_replace_stats_add_1cov_manygroups(out_batch_job: str, groups_labels: List[List[Any]], project: Project,
+    def spm_replace_stats_add_1cov_manygroups(out_batch_job: str, groups_instances: List[List[Subject]], project: Project,
                                               cov:str|Covariate, batch_id: int = 1, cov_interaction:List[int]=None, data:str|SubjectsData=None, centering:bool=False) -> None:
         """
         This function adds a single covariate to an SPM batch file, where the covariate is defined across multiple groups.
@@ -109,7 +109,7 @@ class SPMCovariates:
             icc = 5
 
         cov_values = []
-        for grp in groups_labels:
+        for grp in groups_instances:
             cov_values = cov_values + project.get_filtered_column(grp, cov.name, data=data)[0]
         str_cov = "\n" + list2spm_text_column(cov_values)  # ends with a "\n"
 

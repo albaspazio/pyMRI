@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # subject.create_file_system()
     # subject.mpr2nifti(subject.t1_dir, 1)
 
-    subjects = project.load_subjects(group_label, SESS_ID)
+    subjects = project.load_subjects(group_label, [SESS_ID])
 
     subject = subjects[0]
     # hdr = fslfun.read_header(subject.t1_data)

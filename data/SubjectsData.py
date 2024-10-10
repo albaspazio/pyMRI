@@ -389,6 +389,48 @@ class SubjectsData:
     #endregion
 
     # ======================================================================================
+    #region (SIDS|conditions) -> SIDS
+    def filter_sids(self, conditions: List[FilterValues], sids: SIDList = None) -> SIDList:
+        """
+        Filter SIDList based on conditions on other columns.
+
+        Parameters
+        ----------
+        sids: SIDList, optional
+            A list of SIDS to filter. If None, all subjects will be included.
+        conditions: List[FilterValues], optional
+            A list of conditions to apply. If None, no conditions will be applied.
+
+        Returns
+        -------
+        SIDList
+            A list of filtered subjects.
+
+        Raises
+        -------
+        DataFileException
+            If subjects selected in previous steps does not have data contained in the select_cond
+
+        """
+        if sids is None:
+            sids = self.subjects
+
+        if conditions is not None:
+            res = []
+            for sid in sids:
+                add = True
+                for selcond in conditions:
+                    if not selcond.isValid(self.get_subject_col_value(sid, selcond.colname)):
+                        add = False
+                if add:
+                    res.append(sid)
+            return SIDList(res)
+        else:
+            return sids
+
+    #endregion
+
+    # ======================================================================================
     #region (SIDS|validcols) -> SubjectsData
     def extract_subjset(self, sids:SIDList, validcols:List[str]=None) -> 'SubjectsData':
         '''
@@ -550,7 +592,6 @@ class SubjectsData:
 
         return self.df.loc[sid.id, validcols].to_dict()
 
-    # def get_subjects(self, subj_labels:List[str]=None, sessions:List[int]=[1], validcols:List[str]=None, select_conds:List[FilterValues]=None) -> List[dict]:
     def get_sids_dict(self, sids:SIDList=None, validcols:List[str]=None) -> List[dict]:
         """
         Returns a list of dictionaries containing the data for the selected subjects and columns.

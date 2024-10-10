@@ -32,8 +32,8 @@ if __name__ == "__main__":
 
         ctrl_group_label    = "ctrl_for_patients_study"     # an age-matched subset of all controls
         patient_group_label = "all_patients"                # the patient group of interest
-        ctrl_subjects       = ctrl_project.get_subjects(ctrl_group_label, SESS_ID)
-        pat_subjects        = ctrl_project.get_subjects(patient_group_label, SESS_ID)
+        ctrl_subjects       = ctrl_project.get_subjects(ctrl_group_label, [SESS_ID])
+        pat_subjects        = ctrl_project.get_subjects(patient_group_label, [SESS_ID])
 
         covs                = [Nuisance("gender"), Nuisance("age")]
         populations_name    = "a_population"

@@ -403,7 +403,7 @@ class GroupAnalysis:
 
     # read a matrix file (not a classical subjects_data file) and add total ICV as last column
     # here it assumes [integer, integer, integer, integer, integer, float4]
-    def add_icv_2_data_matrix(self, grlab_subjlabs_subjs:str|List[str], input_data_file:str=None, sess_id:int=1):
+    def add_icv_2_data_matrix(self, subjects:List[Subject], input_data_file:str=None):
         """
         Add the intracranial volume (ICV) to a data matrix.
 
@@ -419,8 +419,7 @@ class GroupAnalysis:
             print("ERROR in add_icv_2_data_matrix, given data_file does not exist")
             return
 
-        subjects    = self.project.get_subjects_labels(grlab_subjlabs_subjs)
-        icvs        = self.project.get_subjects_icv(grlab_subjlabs_subjs, sess_id)
+        icvs        = self.project.get_subjects_icv(subjects)
 
         nsubj       = len(subjects)
         ndata       = len(icvs)
