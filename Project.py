@@ -88,8 +88,6 @@ class Project:
 
         self.globaldata             = globaldata
 
-        self.nsubj                  = 0
-
         # load all available subjects list into self.subjects_lists
         with open(self.subjects_lists_file) as json_file:
             subjects            = json.load(json_file)
@@ -209,7 +207,7 @@ class Project:
             List[int]: The list of available sessions for the given subject.
 
         Raises:
-            DataFileException: If error_if_empty is True and no session is available for given subj_label.
+            SubjectExistException: If error_if_empty is True and no session is available for given subj_label.
         """
         search_folder = os.path.join(self.subjects_dir, subj_lab)
         sessions = [int(f[1:]) for f in os.listdir(search_folder) if os.path.isdir(os.path.join(search_folder, f))]
@@ -218,7 +216,7 @@ class Project:
             return sessions
         else:
             if error_if_empty:
-                raise DataFileException("SubjectsData.get_subject_available_sessions: given subj " + subj_lab + " does not have any session")
+                raise SubjectExistException("SubjectsData.get_subject_available_sessions: given subj " + subj_lab + " does not have any session")
             else:
                 return []
 
@@ -246,7 +244,7 @@ class Project:
 
         Raises
         ------
-        SubjectListException
+        SubjectExistException
             If the group or any of the subjects do not exist and `must_exist` is True.
         """
         subj_labels = self.get_subjects_labels(group_or_subjlabels)
@@ -254,10 +252,15 @@ class Project:
         # get list of subjects with given labels and session (add subj/sess only if exist, raise error if not exist but must_exist=True)
         subjects = []
         for subj_lab in subj_labels:
-            for sess_id in sess_ids:
+            if sess_ids is None:
+                sessions = self.get_subject_available_sessions(subj_lab)
+            else:
+                sessions = sess_ids
+
+            for sess_id in sessions:
                 subj = Subject(subj_lab, self, sess_id)
                 if not subj.exist and must_exist is True:
-                    raise SubjectListException("Error in Project.get_subjects: requested subject (" + subj_lab + " | " + str(sess_id) + " ) does not exist")
+                    raise SubjectExistException("Error in Project.get_subjects: requested subject (" + subj_lab + " | " + str(sess_id) + " ) does not exist")
                 elif subj.exist:
                     subjects.append(subj)
         return subjects
@@ -275,8 +278,8 @@ class Project:
 
         Returns
         -------
-        List[str]
-            The list of subject labels.
+            List[str]
+             The list of subject labels.
 
         Raises
         ------
@@ -288,24 +291,22 @@ class Project:
             if len(self.subjects_labels) == 0:
                 raise SubjectListException("get_subjects_session_labels", "given grlab_subjlabs_subjs is None and no group is loaded")
             else:
-                labels = self.subjects_labels         # if != 0, a subjects list has been already validated
+                return self.subjects_labels         # if != 0, a subjects list has been already validated
 
         elif isinstance(grlab_subjlabs_subjs, str):  # must be a group_label and have its associated subjects list
             for grp in self.subjects_lists:
                 if grp["label"] == grlab_subjlabs_subjs:
-                    labels = grp["list"]
+                    return grp["list"]
             raise SubjectListException("get_subjects_session_labels", "given group_label (" + grlab_subjlabs_subjs + ") does not exist in subjects_lists")
 
         elif isinstance(grlab_subjlabs_subjs, list):
             if isinstance(grlab_subjlabs_subjs[0], str) is True:
-                labels =  grlab_subjlabs_subjs   # [string]
+                return  grlab_subjlabs_subjs   # [string]
             else:
                 raise SubjectListException("get_subjects_session_labels", "the given grlab_subjlabs_subjs param is not a string list, first value is: " + str(grlab_subjlabs_subjs[0]))
         else:
             # grlab_subjlabs_subjs does not belong to expected types
             raise SubjectListException("get_subjects_session_labels", "the given grlab_subjlabs_subjs param is not a valid param (None, string  or string list), is: " + str(grlab_subjlabs_subjs))
-
-        return labels
 
     # endregion
 
@@ -323,7 +324,8 @@ class Project:
             SIDList: A list of SID objects.
         """
         subjects = self.validate_subjects(subjects)
-        return [self.data.get_sid(subj.label, subj.sessid)  for subj in subjects]
+        sids = [self.data.get_sid(subj.label, subj.sessid)  for subj in subjects]
+        return SIDList(sids)
 
     def sids2subjects(self, sids:SIDList=None) -> List[Subject]:
         """

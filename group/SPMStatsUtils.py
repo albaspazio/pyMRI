@@ -10,7 +10,6 @@ from myutility.images.Image import Image
 from myutility.matlab import call_matlab_function_noret, call_matlab_spmbatch
 from myutility.list import is_list_of
 from myutility.fileutilities import sed_inplace
-from subject.Subject import Subject
 
 
 class SPMStatsUtils:
@@ -281,7 +280,7 @@ class SPMStatsUtils:
     # when analysing subjects from different groups, we must avoid validating data.
     # Thus get_filtered_column must receive a Subject instances list, not a labels list  (16/1/2023)
     @staticmethod
-    def spm_replace_global_calculation(project:'Project', out_batch_job, method:str="", groups_instances:List[List[Subject]]=None, data:SubjectsData=None, idstep:int=1):
+    def spm_replace_global_calculation(project:'Project', out_batch_job, method:str="", groups_instances:List[List['Subject']]=None, data:SubjectsData=None, idstep:int=1):
         """
         This function replaces the global calculation settings in the given MATLAB script.
 
@@ -307,7 +306,9 @@ class SPMStatsUtils:
             subjs_instances = subjs_instances + subjs
         subjs_sids = project.subjects2sids(subjs_instances)
 
-        if data is not None:  # must be a column in the given data_file list of
+        if method == "":  # don't correct
+            gc_str = no_corr_str
+        elif data is not None:  # must be a column in the given data_file list of
             data = project.validate_data(data)
             if not data.exist_column(method):
                 raise DataFileException("spm_replace_global_calculation", "given data_file does not contain a column named= " + method )
@@ -331,10 +332,6 @@ class SPMStatsUtils:
             gc_str = user_corr_str1 + str_icvs + user_corr_str2
         elif method == "subj_tiv":  # read tiv file from each subject/mpr/cat folder
             # if not project.data.exist_filled_column("tiv", slabels):
-            #
-
-            gc_str = no_corr_str
-        elif method == "":  # don't correct
             gc_str = no_corr_str
 
         sed_inplace(out_batch_job, "<FACTDES_GLOBAL>", gc_str)

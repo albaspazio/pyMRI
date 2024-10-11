@@ -657,11 +657,12 @@ class SubjectsData:
     def get_subjects_column(self, sids: SIDList = None, colname: str = None, df: pandas.DataFrame = None, sort:bool=False, demean:bool=False, ndecim:int=4) -> List[Any]:
         """
         Returns a list of values from a given column.
+        Important, sids must be obtained by the same df used to extract values.
 
         Parameters
         ----------
         sids: SIDList, optional
-            A list of subjects to include. If None, all subjects will be included.
+            A list of subjects to include. If None, all subjects in the df will be included.
         colname: str, optional
             The name of the column to retrieve.
         df: pandas.DataFrame, optional
@@ -674,23 +675,22 @@ class SubjectsData:
 
         Raises
         ------
-        ValueError
+        DataFileException
             If the given column does not exist in the data frame.
         """
+        if colname is None:
+            raise DataFileException("Error in SubjectsData.get_subjects_column: colname is None")
+
         if df is None:
             df = self.df.copy()
 
-        if sids is None:
-            sids = SIDList([SID(row[self.first_col_name], row[self.second_col_name], index) for index, row in df.iterrows()])
-
-        if colname is None:
-            raise ValueError("Error in SubjectsData.get_subjects_column: colname is None")
-
         if colname not in df.columns.to_list():
-            raise ValueError(f"Error in SubjectsData.get_subjects_column: colname ({colname}) is not present in df")
+            raise DataFileException(f"Error in SubjectsData.get_subjects_column: colname ({colname}) is not present in df")
 
-        df      = self.select_rows_df(sids, df=df)
-        values  = list(df[colname])
+        if sids is not None:
+            df = self.select_rows_df(sids, df=df)
+
+        values = list(df[colname])
 
         if demean:
             values = demean_serie(values, ndecim)
@@ -728,86 +728,20 @@ class SubjectsData:
         DataFileException
             If the given column does not exist in the data frame.
         """
-        # Before selecting a subset of the data frame, make sure that the given columns contain both the "subj" and "session" keys.
-        if len(colnames) > 0:
-            if self.first_col_name not in colnames:
-                newcols = [self.first_col_name] + colnames
-            elif self.second_col_name not in colnames:
-                newcols = [self.second_col_name] + colnames
+        # Create a ncols x nsubj array of values.
+        values = [self.get_subjects_column(sids=sids, colname=colname) for colname in colnames]
+
+        if demean_flags is not None:
+            if len(colnames) != len(demean_flags):
+                msg = "Error in get_filtered_columns...lenght of colnames is different from demean_flags"
+                raise DataFileException(msg)
             else:
-                newcols = colnames
-        else:
-            newcols = colnames
-
-        df = self.select_df(sids, newcols)
-
-        try:
-            # Create a ncols x nsubj array of values.
-            values = [self.get_subjects_column(sids, colname, df) for colname in colnames]
-
-            if demean_flags is not None:
-                if len(colnames) != len(demean_flags):
-                    msg = "Error in get_filtered_columns...lenght of colnames is different from demean_flags"
-                    raise Exception(msg)
-                else:
-                    # Demean the requested columns.
-                    for idcol, dem_col in enumerate(demean_flags):
-                        if dem_col:
-                            values[idcol] = demean_serie(values[idcol], ndecim)
-
-        except KeyError as k:
-            raise DataFileException("SubjectsData.get_subjects_values_by_cols", "")
+                # Demean the requested columns.
+                for idcol, dem_col in enumerate(demean_flags):
+                    if dem_col:
+                        values[idcol] = demean_serie(values[idcol], ndecim)
 
         return values
-
-    #
-    # def get_filtered_column(self, sids: SIDList = None, colname:str=None, sort:bool=False, demean:bool=False, ndecim:int=4) -> List[Any]:
-    #     """
-    #     Returns a filtered column of values, their corresponding subject labels and ids.
-    #
-    #     Parameters
-    #     ----------
-    #     sids: SIDList, optional
-    #         A list of subjects to include. If None, all subjects will be included.
-    #     colname: str, optional
-    #         The name of the column to retrieve.
-    #     sort: bool, optional
-    #         Whether to sort the values in ascending order.
-    #     demean: bool, optional
-    #         Whether to demean the column.
-    #     ndecim: int, optional
-    #         The number of decimal places to use when demeaning.
-    #
-    #     Returns
-    #     -------
-    #     tuple
-    #         A tuple containing:
-    #         1. A list of values from the filtered column.
-    #         2. A list of subject labels corresponding to the filtered values.
-    #
-    #     Raises
-    #     ------
-    #     ValueError
-    #         If the given column does not exist in the data frame.
-    #     """
-    #     if colname is None:
-    #         raise ValueError("Error in SubjectsData.get_filtered_column: colname is None")
-    #
-    #     if sids is None:
-    #         sids = self.subjects
-    #
-    #     res = self.get_subjects_column(sids, colname)
-    #
-    #     if demean:
-    #         res = demean_serie(res, ndecim)
-    #
-    #     if sort:
-    #         sort_schema = _argsort(res)
-    #         res.sort()
-    #         lab = reorder_list(sids.labels, sort_schema)
-    #
-    #     return res
-    #endregion
 
     # ======================================================================================
     # region (SID/SIDS|validcol(s)) -> str | List[str]

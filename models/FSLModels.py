@@ -449,7 +449,7 @@ class FSLModels:
                 subjs_instances = subjs_instances + subjs
 
             nsubjs = len(subjs_instances)
-            if not same_elements(subjs_instances, whole_group_instances):
+            if nsubjs != len(whole_group_instances):
                 raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file, the list of subjects contained in the wholesubjects_groups_or_labels  does not coincide with the list of subjects specified in grlab_subjlabs_subjs")
 
             # ------------------------------------------------------------------------------------
