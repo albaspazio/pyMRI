@@ -823,7 +823,7 @@ class SubjectsData:
 
     # ======================================================================================
     # region (subj_label / subj_label|sess_id) -> sess_ids | id
-    def get_subjid_by_session(self, subj_lab:str, sess_id:int=1, error_if_empty:bool=True) -> pandas.Index:
+    def get_subjid_by_session(self, subj_lab:str, sess_id:int=1, error_if_empty:bool=True) -> int:
         """
         Returns the index of the subject with the given subject label and session, if it exists in the data frame.
 
@@ -839,8 +839,7 @@ class SubjectsData:
             DataFileException: If error_if_empty is True and no session is available for given subj_label.
         """
         if self.exist_subject_session(subj_lab, sess_id):
-            return self.df.index[(self.df[self.second_col_name] == sess_id) & (self.df[self.first_col_name] == subj_lab)]
-            # return int(self.df.index[(self.df[self.second_col_name] == sess_id) & (self.df[self.first_col_name] == subj_lab)].values[0])
+            return int(self.df.index[(self.df[self.second_col_name] == sess_id) & (self.df[self.first_col_name] == subj_lab)].values[0])
         else:
             if error_if_empty:
                 raise DataFileException("SubjectsData.get_subjid_by_session")

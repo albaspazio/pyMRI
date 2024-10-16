@@ -193,10 +193,6 @@ class BayesImporter:
         """
         Rounds the values of the specified columns to the specified number of decimal places.
 
-        Parameters:
-            sh (str): The name of the sheet.
-            col (dict): A dictionary with the column name as the key and the number of decimal places as the value.
-
         Returns:
             None
         """
@@ -214,10 +210,6 @@ class BayesImporter:
     def __format_dates(self):
         """
         Formats the dates in the specified sheets.
-
-        Parameters:
-            sh (str): The name of the sheet.
-            col (dict): A dictionary with the column name as the key and the id of the column to format as a date as the value.
 
         Returns:
             None
@@ -388,7 +380,8 @@ class BayesImporter:
     # presently unused
     def __set_sheet(self, scale_name: str):
         """
-        This function creates a new SubjectsData in each sheet
+        This function creates a new SubjectsData in each sheet.
+        Only the excel columns with a non empty string in the first row are inserted in the dataframe when imported
 
         Args:
             scale_name (str): The name of the scale.

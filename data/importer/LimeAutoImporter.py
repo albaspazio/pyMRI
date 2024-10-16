@@ -241,7 +241,7 @@ class LimeAutoImporter:
 
         subj_sd:SID       = SID(main["subj"], main["session"], -1)
 
-        bayesdb.get_sheet_sd("main").add_row(subj_sd, main)
+        bayesdb.get_sheet_sd("main", can_create=True).add_row(subj_sd, main)
 
         try:
             for scale_name in self.input_sheets_names:
@@ -267,7 +267,7 @@ class LimeAutoImporter:
 
                     sh[item] = nvalue
 
-                bayesdb.get_sheet_sd(scale_name).add_row(subj_sd, sh)
+                bayesdb.get_sheet_sd(scale_name, can_create=True).add_row(subj_sd, sh)
 
             return bayesdb
 

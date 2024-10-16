@@ -278,7 +278,7 @@ class MSHDB:
         # Return the sheets dictionary
         return self.sheets
 
-    def get_sheet_sd(self, name: str) -> SubjectsData:
+    def get_sheet_sd(self, name: str, can_create:bool=False) -> SubjectsData:
         """
         Returns the SubjectsData object for a specific sheet.
 
@@ -300,8 +300,11 @@ class MSHDB:
         if name not in self.schema_sheets_names:
             raise Exception("Error in MSHDB.get_sheet_sd: given sheet name (" + name + ") does not exist")
 
-        if not bool(self.sheets[name]):
-            raise Exception("Error in MSHDB.get_sheet_sd: given-sheet's SubjectsData does not exist")
+        if name not in self.sheets.keys():
+            if can_create is False:
+                raise Exception("Error in MSHDB.get_sheet_sd: given sheet (" + name + ")  does not exist")
+            else:
+                self.sheets[name] = SubjectsData()
 
         return self.sheets[name]
 
@@ -602,9 +605,6 @@ class MSHDB:
         duplicated_subjs:SIDList  = all_newsubjs.is_in(self.subjects, context_self=True)    # context self in order to may remove duplicated subjs from newdb
 
         if len(duplicated_subjs) > 0 and can_update is True:   # there are duplicates and I can update existing
-
-            raise Exception("MSHDB.add_new_subjects....this feature is buggy !!! cannot update existing subjects") # TODO: fix MSHDB.add_new_subjects
-
             print("The following subjects already exist in the DB: " + str(duplicated_subjs.labels))
             duplicated_db = newdb.filter_subjects(duplicated_subjs)   # deep copy
         else:
@@ -625,19 +625,33 @@ class MSHDB:
 
         # add new subjects
         if reallynew_db is not None:
-            for sh in reallynew_db.sheet_labels:
-                currdb.get_sheet_sd(sh).add_sd([reallynew_db.get_sheet_sd(sh)])
+            if not reallynew_db.is_empty:
+                for sh in reallynew_db.sheet_labels:
+                    currdb.get_sheet_sd(sh).add_sd([reallynew_db.get_sheet_sd(sh)])
 
         if duplicated_db is not None:
             # update existing subjects
-            for sh in duplicated_db.sheet_labels:
-                df:pandas.DataFrame = duplicated_db.get_sheet_sd(sh).df
-                for s in duplicated_subjs:
-                    original_id     = currdb.main.get_subjid_by_session(s.label, s.session)             # get the original index of the subject to be updated
-                    new_row         = df.loc[(df['subj'] == s.label) & (df['session'] == s.session)]    # extract the subject row from duplicated_db
-                    new_row.index   = [int(original_id[0])]                                          # update its index to make update working
+            for s in duplicated_subjs:
+                original_id     = currdb.main.get_subjid_by_session(s.label, s.session)             # get the original index of the subject to be updated
+                original_sid    = currdb.main.get_sid(s.label, s.session)             # get the original index of the subject to be updated
+                for sh in duplicated_db.sheet_labels:
+                    df:pandas.DataFrame = duplicated_db.get_sheet_sd(sh).df
+                    new_row             = df.loc[(df['subj'] == s.label) & (df['session'] == s.session)]    # extract the subject row from duplicated_db
+                    new_row.index       = [original_id]                                          # update its index to make update working
+                    try:
+                        sh_df = currdb.get_sheet_sd(sh).df
+                        sh_df.update(new_row),    # sh_df.loc[new_row.notna()] = new_row
 
-                    currdb.get_sheet_sd(sh).df.update(new_row)
+                        # for col in new_row.columns:
+                        #     value = new_row.iloc[0][col]
+                        #     if pd.notna(value):
+                        #         currdb.get_sheet_sd(sh).set_subj_session_value(original_sid, col, new_row.iloc[0][col])
+                        #         sh_df.at[original_id, col] = value                                                      # YES
+                        #         sh_df.loc[(sh_df['subj'] == s.label) & (sh_df['session'] == s.session), col] = value  # YES
+                        #         sh_df.loc[original_id, col] = value                                               # YES
+                        #         sh_df[(sh_df['subj'] == s.label) & (sh_df['session'] == s.session)][col] = value    # NO: A value is trying to be set on a copy of a slice from a DataFrame.  Try using .loc[row_indexer,col_indexer] = value instead
+                    except Exception as e:
+                        raise DataFileException("Error in MSHDB.add_new_subjects", str(e))
 
         if update is True:
             self = currdb
@@ -691,7 +705,7 @@ class MSHDB:
 
         return df
 
-    def save(self, outdata=None, sort=None):
+    def save(self, outdata=None, out_sheets:List[str]=None, sort=None):
         """
         Save the database to an Excel file or a Google Sheet.
 
@@ -706,7 +720,10 @@ class MSHDB:
         if outdata is None:
             outdata = self.data_source
 
-        for sh in self.schema_sheets_names:
+        if out_sheets is None:
+            out_sheets = self.schema_sheets_names
+
+        for sh in out_sheets:
             if sort is not None:
                 if isinstance(sort, list):
                     self.get_sheet_sd(sh).df.sort_values(by=sort, inplace=True)
@@ -716,7 +733,7 @@ class MSHDB:
         if isinstance(outdata, str):
             with pd.ExcelWriter(outdata, engine="xlsxwriter") as writer:
 
-                for sh in self.schema_sheets_names:
+                for sh in out_sheets:
                     self.get_sheet_sd(sh).df.to_excel(writer, sheet_name=sh, startrow=1, header=False, index=False)
 
                     # create a table
