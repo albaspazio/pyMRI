@@ -26,7 +26,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # PROCESSING
     # ======================================================================================================================
-    subjects = project.load_subjects("full", SESS_ID)
+    subjects = project.load_subjects("full", [SESS_ID])
     for subject in subjects:
         # subject.mpr2nifti(subject.t1_dir, 1)
         hdr = subject.t1_data.read_header()

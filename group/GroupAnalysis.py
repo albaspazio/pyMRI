@@ -22,7 +22,7 @@ from myutility.images.Image import Image
 from myutility.matlab import call_matlab_spmbatch
 from myutility.myfsl.utils.run import rrun
 from myutility.utilities import fillnumber2threedigits
-from myutility.list import listToString
+from myutility.list import listToString, first_contained_in_second
 from myutility.matlab import call_matlab_function_noret
 
 class GroupAnalysis:
@@ -302,7 +302,7 @@ class GroupAnalysis:
             print("ERROR in tbss_run_fa, given grlab_subjlabs_subjs params is neither a string nor a list")
             return
         else:
-            print("Starting tbss_run with " + str(nsubj) + " subjects")
+            print("Starting tbss_run with " + str(len(self.subjects_list)) + " subjects")
 
         root_analysis_folder = os.path.join(self.project.tbss_dir, odn)
 
@@ -403,14 +403,13 @@ class GroupAnalysis:
 
     # read a matrix file (not a classical subjects_data file) and add total ICV as last column
     # here it assumes [integer, integer, integer, integer, integer, float4]
-    def add_icv_2_data_matrix(self, grlab_subjlabs_subjs:str|List[str], input_data_file:str=None, sess_id:int=1):
+    def add_icv_2_data_matrix(self, subjects:List[Subject], input_data_file:str=None):
         """
         Add the intracranial volume (ICV) to a data matrix.
 
         Args:
-            grlab_subjlabs_subjs (str or List[str] or List[Subject]): The group label or a list of subjects' label/instances.
+            subjects:List[Subject]: The group label or a list of subjects' label/instances.
             input_data_file (str, optional): The input data file. If not given, the project's default data file will be used.
-            sess_id (int, optional): The session ID. If not given, the project's default session ID will be used.
 
         Returns:
             None
@@ -419,8 +418,7 @@ class GroupAnalysis:
             print("ERROR in add_icv_2_data_matrix, given data_file does not exist")
             return
 
-        subjects    = self.project.get_subjects_labels(grlab_subjlabs_subjs)
-        icvs        = self.project.get_subjects_icv(grlab_subjlabs_subjs, sess_id)
+        icvs        = self.project.get_subjects_icv(subjects)
 
         nsubj       = len(subjects)
         ndata       = len(icvs)
@@ -864,7 +862,7 @@ class GroupAnalysis:
         Args:
             src_folder (str): The path to the existing analysis folder.
             new_folder (str): The path to the new analysis folder.
-            vols2keep (List[int]): A list of volume indices to keep.
+            vols2remove (List[int]): A list of volume indices to remove.
             modalities (Optional[List[str]]): A list of modalities to copy. If not specified, all modalities will be copied.
 
         Returns:

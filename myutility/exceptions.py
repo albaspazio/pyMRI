@@ -14,6 +14,19 @@ class SubjectListException(Exception):
         self.msg = msg
         self.param = param
 
+class SubjectExistException(Exception):
+    """
+    Exception class raise when a requested subject session does not exist in the file system.
+
+    Attributes:
+        msg (str): Error message.
+        param (str): Parameter associated with the error.
+    """
+
+    def __init__(self, msg, param:Any=None):
+        self.msg = msg
+        self.param = param
+
 class DataFileException(Exception):
     """
     Exception class for Subject data access operations.

@@ -15,19 +15,19 @@ if __name__ == "__main__":
         # HEADER
         # ======================================================================================================================
         script_dir  = os.path.dirname(__file__)
-        project     = DataProject(script_dir, data="data.xlsx")
+        dproject     = DataProject(script_dir, data="data.xlsx")
         SESS_ID     = 1
         num_cpu     = 1
         group_label = "all"
 
-        test_labels = project.get_subjects_labels("test")
+        test_labels = dproject.get_subjects_labels("test")
         valid_cols  = ["age", "FS0"]
         # ==================================================================================================================
         # test getting filtered data columns
         data = SubjectsData(data=os.path.join(script_dir, "data.xlsx"))
 
         # SubjectsData has only one method (filter_subjects) that accept subj_labels, sessions and conditions.
-        test_sids       = project.data.filter_subjects(test_labels)
+        test_sids       = dproject.data.filter_subjects(test_labels)
 
         # with the returned SIDList user can call all its methods
         age             = data.get_subjects_column(colname="age")
@@ -42,8 +42,8 @@ if __name__ == "__main__":
         ages_adults     = data.get_subjects_column(adults, colname="age")
 
         # DataProject has methods that accept subj_labels, sessions and conditions
-        ages_adults2        = project.get_filtered_column("test", "age", select_conds=[FilterValues("age", "<>", 18, 60)])
-        ages_gender_adults  = project.get_subjects_values_by_cols("test", ["age", "gender"], select_conds=[FilterValues("age", "<>", 18, 60)])
+        ages_adults2        = dproject.get_filtered_column("test", "age", select_conds=[FilterValues("age", "<>", 18, 60)])
+        ages_gender_adults  = dproject.get_subjects_values_by_cols("test", ["age", "gender"], select_conds=[FilterValues("age", "<>", 18, 60)])
 
 
         age_str         = data.get_subjects_column_str(colname="age")

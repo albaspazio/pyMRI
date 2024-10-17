@@ -1,14 +1,9 @@
+import os
 import traceback
 
 from Global import Global
 from Project import Project
 from group.spm_utilities import FmriProcParams
-from subject.Subject import Subject
-from group.SPMStatsUtils import SPMStatsUtils
-
-import os
-
-from myutility.images.Image import Image
 
 # NECESSARY STEPS TO IMPORT AND PREPROCESS A NEW SUBJECT
 # 1) get data
@@ -63,7 +58,7 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        # subjects = project.load_subjects(group_label, SESS_ID, must_exist=False)
+        subjects = project.load_subjects(group_label, [SESS_ID], must_exist=False)
         # ---------------------------------------------------------------------------------------------------------------------
         # CREATE FILE SYSTEM
         # ---------------------------------------------------------------------------------------------------------------------
@@ -99,7 +94,7 @@ if __name__ == "__main__":
         # ---------------------------------------------------------------------------------------------------------------------
         # load subjects list (at this point, subjects must exist, I remove must_exist=False, default is True)
         # ---------------------------------------------------------------------------------------------------------------------
-        # subjects = project.load_subjects(group_label, SESS_ID)
+        # subjects = project.load_subjects(group_label, [SESS_ID])
 
         # ---------------------------------------------------------------------------------------------------------------------
         # PRINT HEADER
@@ -181,9 +176,9 @@ if __name__ == "__main__":
         #==================================================================================================================
         # CHECK ALL REGISTRATION
         #==================================================================================================================
-        # outdir      = os.path.join(project.group_analysis_dir, "registration_check_fmri_2_std")
-        # project.check_all_coregistration(outdir, project.get_subjects_labels(), _from=["rs", "fmri", "dti", "hr"], _to=["std"], num_cpu=num_cpu)
-        # project.check_all_coregistration(outdir, project.get_subjects_labels(), _from=["fmri"], _to=["std"], num_cpu=num_cpu)
+        outdir      = os.path.join(project.group_analysis_dir, "registration_check_fmri_2_std")
+        project.check_all_coregistration(outdir, subjects, _from=["rs", "fmri", "dti", "hr"], _to=["std"], num_cpu=num_cpu)
+        # project.check_all_coregistration(outdir, subjects, _from=["fmri"], _to=["std"], num_cpu=num_cpu)
 
         # ===========================================================================================
         # TRANSFORM IMAGES
@@ -232,7 +227,7 @@ if __name__ == "__main__":
         # kwparams = []
         # for p in range(len(subjects)):
         #     kwparams.append({"in_ap_img":subjects[p].rs_data, "in_pa_img":subjects[p].rs_pa_data, "acq_params": project.topup_rs_params, "ap_ref_vol":295})
-        #     project.run_subjects_methods("epi", "topup_correction", kwparams, project.get_subjects_labels(), nthread=num_cpu)
+        #     project.run_subjects_methods("epi", "topup_correction", kwparams, project.subjects, nthread=num_cpu)
 
         # SPMStatsUtils.batchrun_cat_surface_smooth(project, globaldata, subjects, nproc=15)
 
@@ -243,12 +238,12 @@ if __name__ == "__main__":
         # rename all ctrl subjects
         # ===========================================================================================
         # group_label = "test"
-        # subjects = project.load_subjects(group_label, SESS_ID)
+        # subjects = project.load_subjects(group_label, [SESS_ID])
         #
         # for subj in subjects:
         #     subj.rename("0" + subj.label)
 
-        # subjects    = project.load_subjects("ctrl", SESS_ID)
+        # subjects    = project.load_subjects("ctrl", [SESS_ID])
         # kwparams    = []
         # for s in subjects:
         #     kwparams.append({"new_label":"0" + s.label})
@@ -258,7 +253,7 @@ if __name__ == "__main__":
         # rename all SK subjects
         # ===========================================================================================
         # group_label = "sk"
-        # subjects = project.load_subjects(group_label, SESS_ID)
+        # subjects = project.load_subjects(group_label, [SESS_ID])
         #
         # for subj in subjects:
         #     subj.rename("1" + subj.label)
@@ -268,7 +263,7 @@ if __name__ == "__main__":
         # ===========================================================================================
         # a = ["0029_TD_Ferrari_Allegra", "0030_TD_Campodonico_Alessandra", "0031_TD_Bovio_Anna", "0032_TD_Russo_Antonio", "0033_TD_Proietti_Luca", "1023_SK_Milanti_Leonardo", "1024_SK_Esposito_Natashia", "1025_SK_Tergolina_Camilla", "1026_SK_Bebeci_Iridjon", "1027_SK_Firenze_Stefano", "2008_BD_Minasi_Riccardo", "2009_BD_Pitone_Giuseppe", "2010_BD_DeLongis_Simona", "2011_BD_Bruni_Manuela", "2012_BD_Pepe_Michele", "2013_BD_Orecchia_MariaLuisa"]
         # b = ["0029_td_Ferrari_Allegra", "0030_td_Campodonico_Alessandra", "0031_td_Bovio_Anna", "0032_td_Russo_Antonio", "0033_td_Proietti_Luca", "1023_sk_Milanti_Leonardo", "1024_sk_Esposito_Natashia", "1025_sk_Tergolina_Camilla", "1026_sk_Bebeci_Iridjon", "1027_sk_Firenze_Stefano", "2008_bd_Minasi_Riccardo", "2009_bd_Pitone_Giuseppe", "2010_bd_DeLongis_Simona", "2011_bd_Bruni_Manuela", "2012_bd_Pepe_Michele", "2013_bd_Orecchia_MariaLuisa"]
-        # subjects = project.load_subjects(a, SESS_ID)
+        # subjects = project.load_subjects(a, [SESS_ID])
         #
         # for id, subj in enumerate(subjects):
         #     subj.rename(b[id])

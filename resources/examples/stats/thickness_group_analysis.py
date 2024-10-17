@@ -38,7 +38,7 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        subjects = subjproject.load_subjects(group_label, SESS_ID, must_exist=False)
+        subjects = subjproject.load_subjects(group_label, [SESS_ID], must_exist=False)
 
         analysis            = GroupAnalysis(project)
         spm_analysis        = SPMModels(project)
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         # region MULTIPLE REGRESSIONS
         # ==================================================================================================================
         # DIS DUR IN BD
-        groups_instances = [project.get_subjects("g3", SESS_ID, must_exist=False)]
+        groups_instances = [project.get_subjects("g3", [SESS_ID], must_exist=False)]
         covs = [Nuisance("age"), Covariate("dis_dur")]
         anal_name = "multregr_bd_dis_dur"
 

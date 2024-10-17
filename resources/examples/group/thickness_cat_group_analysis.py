@@ -31,7 +31,7 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        subjects = project.load_subjects(group_label, SESS_ID, must_exist=False)
+        subjects = project.load_subjects(group_label, [SESS_ID], must_exist=False)
 
         analysis            = GroupAnalysis(project)
         spm_analysis        = SPMModels(project)
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         #                          covs=None, cov_interactions=None, cov_centering:bool=False, data_file=None,
         #                          glob_calc=None, expl_mask="icv", spm_template_name=None,
         #                          post_model=None, runit=True, mustExist=True):
-        groups_instances    = [project.get_subjects(group_label, SESS_ID, must_exist=False)]
+        groups_instances    = [project.get_subjects(group_label, [SESS_ID], must_exist=False)]
         covs                = [Nuisance("gender"), Nuisance("age")]
         anal_name           = "multregr_age_gender"
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
 
 
-        # groups_instances    = [project.get_subjects("bd_all_ct_disdur", SESS_ID)]
+        # groups_instances    = [project.get_subjects("bd_all_ct_disdur", [SESS_ID])]
         # covs                = [Nuisance("age"), Covariate("dis_dur")]
         # anal_name           = "multregr_disdur_x_age"
         # post_model          = PostModel(SPMConstants.MULTREGR, covs,

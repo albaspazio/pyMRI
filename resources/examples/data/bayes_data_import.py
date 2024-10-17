@@ -1,7 +1,6 @@
 import traceback
 
 from DataProject import DataProject
-from Global import Global
 from data.BayesDB import BayesDB
 from data.importer.BayesImporter import BayesImporter
 from data.utilities import *
@@ -37,7 +36,7 @@ if __name__ == "__main__":
         # ============================================================================================================
         #region URAS thesis
         subjects         = ["Arduino Gabriele", "Juan Kratzer", "Corsini Giovanni", "Levo Margherita", "Esposito Davide", "Priarone Ambra", "Bugliani Michele", "Risso Francesco ", "Cammalleri Michela", "Bruni Manuela", "Biggio Monica", "Nazzaro Roberto", "Barreto Cristina", "Vignone Severino", "Trabucco Alice", "Priolo Mario", "Bohlarova Darya", "Macchiavello Massimo", "Inuggi Alberto", "Iurilli Marisa", "Codou Fall", "Ghermakovsky Dumitru", "Gnaneswran Bavidran", "Pantalla Marco", "Cuccureddu Paolo", "Testa Emanuele ", "Tardito Samuele", "Espanet Giovanni", "Cevasco Maria Pia", "Bozomoala Elena Simona", "Bebeci Iridjon", "Galatini Matteo", "Cremonesi Vincenza", "Favilla Luca", "Lechiara Alessio", "Radi Ergesta", "Luciani Mariangela", "Longo Lucia ", "Sepe Francesco", "Rouissi Nejiba", "Paolini Giulio", "Pederzolli Daniela", "Repetto Marcello", "Colucci Laura", "Ubilla Julian", "Rzgar Saleh Sharif", "De noia Chiara", "Velo Alice", "Marino Margherita", "Marozzi Valentina", "Isola Fabrizio", "Da Conceicao Simona", "Bode Juxhin", "Dordolo Paola", "Paba Stefano", "Fornai Mattia", "D'Urso Agata", "Serrapica Ciro", "Cresta Sandra", "Ottonello Luca", "Serpetta Filippo ", "Marinescu Alexandro Marian", "Pullè Alberto", "Cacciatore Cinzia", "Cevasco Gina", "Sterlini Emilio", "Bacikova Lucia", "Ragni Maurizio", "Luminoso Thomas", "Meriggi Olga", "Lyakh Ruslan", "Oberti Alessandro", "Marsiglia Elisabetta", "Tasselli Rosanna", "De Lisi Giuseppe", "Roncarolo Giovanni", "Sgambato Gianluca", "Dotti Vilma", "Clavierez Cruz Sebastian", "Escelsior Andrea", "Versaggi Silvio", "Vai Eleonora", "Cattedra Simone", "Baldanzi Christian", "Esposito Natashia", "Milanti Leonardo", "Minasi Riccardo", "Pitone Giuseppe", "Ferrari Allegra", "Tergolina Camilla", "De Longis Simona", "Campodonico Alessandra", "Pepe Michele", "Bovio Anna", "Magnanini Camilla", "Firenze Stefano", "Orecchia Maria Luisa", "Russo Antonio", "Virga Brian", "Massa Sabrina", "Valerio Luca", "Gandini Alessio", "Marenco Giacomo", "Bruzzone Stefano", "Sartoris Giulia", "Villa veronica", "Gatto Marco", "Zerbi Laura", "Almondo Chiara", "Daturi Gabriele", "Pialorsi Simone", "Meinero Matteo", "Sapia Gabriele", "Iozzia Giorgia", "Cappello Chiara", "Sassarini Paolo", "Mecca Elisa", "Noli Simone", "Vigilanti Luca", "Barbera Maurizio", "Pio Stefano", "Lanino Edoardo", "Zanardi Sabrina", "Pukli Marta", "Briasco Giancarla", "Ravizza Massimiliano", "Cucalon Micheal", "Calcagno Dorotea", "Loi Andrea", "Cavazza Angela", "Rubino Davide", "Parodi Marco", "De Paoli Giampiero", "Talimani Luca", "Scevola Pamela Angela", "Lumetti Flavio", "Torres Paola Andrea", "Cristaldi Damiano", "Puglisi Luca"]
-        nk_subjects      = bayes_db.sheet_sd("BLOOD").filter_subjects(conditions=[FilterValues("immfen_code", "exist", 1)])
+        nk_subjects      = bayes_db.get_sheet_sd("BLOOD").filter_subjects(conditions=[FilterValues("immfen_code", "exist", 1)])
 
         out_uras_outfile  = os.path.join(project.output_data_dir, "uras_db.xlsx")
         bayes_uras_data  = {"BLOOD"    :["immfen_code"],
@@ -88,7 +87,7 @@ if __name__ == "__main__":
         # region add a columns to each sheet
         new_bayes_db_file   = os.path.join(project.input_data_dir, "BAYES-PSIC_test.xlsx")
         new_db              = bayes_db.add_column("test", [1], None, 1)
-        new_db.save_excel(new_bayes_db_file)
+        new_db.save(new_bayes_db_file)
         #endregion
 
         # ============================================================================================================
@@ -104,8 +103,8 @@ if __name__ == "__main__":
         input_etero = os.path.join(project.input_data_dir, "ABC_etero.xlsx")
         etero_db = BayesImporter(input_etero)
 
-        etero_bayes = etero_db.export_bayes()
-        final_db    = bayes_db.add_new_subjects(etero_bayes)
+        # etero_bayes = etero_db.export_bayes()
+        # final_db    = bayes_db.add_new_subjects(etero_bayes)
         #endregion
 
         a=1

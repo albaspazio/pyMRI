@@ -85,28 +85,33 @@ class SIDList(list):
                     res.append(s)
             return SIDList(res)
 
-    def is_in(self, subj_list: 'SIDList') -> 'SIDList':
+    def is_in(self, sids: 'SIDList', context_self:bool=False) -> 'SIDList':
         """
         Checks if a list of SID objects is present in the current list.
+        ID of the returned SID may be in the context of self or sids according to context_self value.
 
         Args:
             subj_list (SIDList): The list of SID objects.
-
+            context_self (bool): define whether ids of the returned SID elements are in the context of self or sids
         Returns:
-            SIDList: The list of SID objects that are present in the current list.
+            SIDList: The list of SID objects that are present in the current list. in the context of either self or sids.
+
         """
         res = []
         if len(self) == 0:
             return SIDList([])
 
-        for s in subj_list:
+        for sid in sids:
             doexist = False
             for ss in self:
-                if s.is_equal(ss):
+                if sid.is_equal(ss):
                     doexist = True
                     break
             if doexist:
-                res.append(s)
+                if context_self is True:
+                    res.append(ss)
+                else:
+                    res.append(sid)
 
         return SIDList(res)
 

@@ -289,7 +289,7 @@ class SPMStatsUtils:
             out_batch_job (str): The path to the MATLAB script file.
             method (str, optional): The method for global calculation. Can be "subj_icv", "subj_tiv", "", or a column name of the given data_file. Defaults to "".
             groups_instances (List[List[Subject]], optional): A list of subject groups. Required if method is not "". Defaults to None.
-            data (str, optional): The path to the data file. Required if method is a column name of the given data_file. Defaults to None.
+            data (SubjectsData, optional): A SubjectsData instance. Required if method is a column name of the given data_file. Defaults to None.
             idstep (int, optional): The ID of the current step. Defaults to 1.
 
         Returns:
@@ -300,47 +300,39 @@ class SPMStatsUtils:
         user_corr_str2  = "];\n matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;\n matlabbatch{" + str(idstep) + "}.spm.stats.factorial_design.globalm.glonorm = 2;"
         gc_str          = ""
 
-        slabels         = []
+        # create a list with all Subject instances
         subjs_instances = []
         for subjs in groups_instances:
-            slabels         = slabels + project.get_subjects_labels(subjs)
             subjs_instances = subjs_instances + subjs
+        subjs_sids = project.subjects2sids(subjs_instances)
 
-        if method == "subj_icv":  # read icv file from each subject/mpr/spm folder
+        if method == "":  # don't correct
+            gc_str = no_corr_str
+        elif data is not None:  # must be a column in the given data_file list of
+            data = project.validate_data(data)
+            if not data.exist_column(method):
+                raise DataFileException("spm_replace_global_calculation", "given data_file does not contain a column named= " + method )
 
-            if data is None:
-                data = project.data
-            else:
-                data = project.validate_data(data)
+            if not data.exist_filled_column(method, subjs_sids):
+                raise DataFileException("spm_replace_global_calculation", "given data_file does not contain valid values for all subjects within a column named " + method)
 
-            if data.exist_filled_column("icv", slabels):
-                str_icvs = list2spm_text_column(project.get_filtered_column(subjs_instances, "icv")[0])
+            str_icvs = list2spm_text_column(data.get_subjects_column(subjs_sids, method))
+            gc_str = user_corr_str1 + str_icvs + user_corr_str2  # list2spm_text_column ends with a "\n"
+
+        elif method == "subj_icv":  # read icv file from each subject/mpr/spm folder
+
+            if project.data.exist_filled_column("icv", subjs_sids):
+                str_icvs = list2spm_text_column(data.get_subjects_column(subjs_sids, "icv"))
                 # raise DataFileException("spm_replace_global_calculation", "given data_file does not contain the column icv")
             else:
                 icvs = []
                 for subjs in groups_instances:
-                    icvs = icvs + project.get_subjects_icv(subjs)
+                    icvs = icvs + project.get_subjects_icv(subjs)   # read it from icv subjects' files
                 str_icvs = list2spm_text_column(icvs)
             gc_str = user_corr_str1 + str_icvs + user_corr_str2
         elif method == "subj_tiv":  # read tiv file from each subject/mpr/cat folder
             # if not project.data.exist_filled_column("tiv", slabels):
-            #
-
             gc_str = no_corr_str
-        elif method == "":  # don't correct
-            gc_str = no_corr_str
-
-        elif isinstance(method, str) and data is not None:  # must be a column in the given data_file list of
-
-            if not os.path.exists(data):
-                raise DataFileException("spm_replace_global_calculation", "given data_file does not exist")
-            data:SubjectsData = SubjectsData(data)
-
-            if not data.exist_filled_column(method, slabels):
-                raise DataFileException("spm_replace_global_calculation", "given data_file does not contain a valid value of column " + method + " for all subjects")
-
-            str_icvs = list2spm_text_column(data.get_subjects_column(slabels, method))
-            gc_str = user_corr_str1 + str_icvs + user_corr_str2  # list2spm_text_column ends with a "\n"
 
         sed_inplace(out_batch_job, "<FACTDES_GLOBAL>", gc_str)
     # endregion

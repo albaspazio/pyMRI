@@ -28,10 +28,10 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        all_grp = project.load_subjects("all", SESS_ID, must_exist=False)
-        group1  = project.load_subjects("g1", SESS_ID, must_exist=False)
-        group2  = project.load_subjects("g2", SESS_ID, must_exist=False)
-        group3  = project.load_subjects("g3", SESS_ID, must_exist=False)
+        all_grp = project.get_subjects("all", [SESS_ID], must_exist=False)
+        group1  = project.get_subjects("g1", [SESS_ID], must_exist=False)
+        group2  = project.get_subjects("g2", [SESS_ID], must_exist=False)
+        group3  = project.get_subjects("g3", [SESS_ID], must_exist=False)
 
         # ONE GROUP
 

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import collections
 import io
-import os
 import json
+import os
+from datetime import datetime
 from typing import List
-from datetime import date, datetime
 
 import gspread
 import msoffcrypto
@@ -13,9 +13,9 @@ import pandas
 import pandas as pd
 
 from data.GDriveSheet import GDriveSheet
-from data.Sheets import Sheets
 from data.SID import SID
 from data.SIDList import SIDList
+from data.Sheets import Sheets
 from data.SubjectsData import SubjectsData
 from myutility.exceptions import DataFileException
 
@@ -31,8 +31,6 @@ class MSHDB:
     ----------
     data : str, Sheets, or GDriveSheet
         The data source for the database. This can be a path to an Excel file, a Google Sheet, or a Python dictionary containing the data.
-    sheetnames : list of str
-        A list of the names of the sheets in the database. If not provided, the sheet names will be inferred from the data source.
     main_id : int
         The index of the main sheet in the sheetnames list.
     suppress_nosubj : bool
@@ -280,7 +278,7 @@ class MSHDB:
         # Return the sheets dictionary
         return self.sheets
 
-    def get_sheet_sd(self, name: str) -> SubjectsData:
+    def get_sheet_sd(self, name: str, can_create:bool=False) -> SubjectsData:
         """
         Returns the SubjectsData object for a specific sheet.
 
@@ -302,8 +300,11 @@ class MSHDB:
         if name not in self.schema_sheets_names:
             raise Exception("Error in MSHDB.get_sheet_sd: given sheet name (" + name + ") does not exist")
 
-        if not bool(self.sheets[name]):
-            raise Exception("Error in MSHDB.get_sheet_sd: given-sheet's SubjectsData does not exist")
+        if name not in self.sheets.keys():
+            if can_create is False:
+                raise Exception("Error in MSHDB.get_sheet_sd: given sheet (" + name + ")  does not exist")
+            else:
+                self.sheets[name] = SubjectsData()
 
         return self.sheets[name]
 
@@ -601,7 +602,7 @@ class MSHDB:
         # divide in a) brandnew subjects (to make consistent and append)
         #           b) existing one (eventually to update some sheets)
         all_newsubjs:SIDList      = newdb.sheets.all_subjects  # union (no rep) of all subjects-sessions included in all new sheets
-        duplicated_subjs:SIDList  = all_newsubjs.is_in(self.subjects)
+        duplicated_subjs:SIDList  = all_newsubjs.is_in(self.subjects, context_self=True)    # context self in order to may remove duplicated subjs from newdb
 
         if len(duplicated_subjs) > 0 and can_update is True:   # there are duplicates and I can update existing
             print("The following subjects already exist in the DB: " + str(duplicated_subjs.labels))
@@ -616,7 +617,7 @@ class MSHDB:
                                                                                     # in this way MSHDB.remove_subjects return an instance of BayesDB when called from
             if not reallynew_db.is_empty:
                 # make really new subjects db consistent
-                reallynew_db.make_consistent2(self)
+                reallynew_db.make_consistent_to(self)
                 reallynew_subjs = reallynew_db.sheets.all_subjects
 
         # -------------------------------------------------------
@@ -624,19 +625,33 @@ class MSHDB:
 
         # add new subjects
         if reallynew_db is not None:
-            for sh in reallynew_db.sheet_labels:
-                currdb.get_sheet_sd(sh).add_sd([reallynew_db.get_sheet_sd(sh)])
+            if not reallynew_db.is_empty:
+                for sh in reallynew_db.sheet_labels:
+                    currdb.get_sheet_sd(sh).add_sd([reallynew_db.get_sheet_sd(sh)])
 
         if duplicated_db is not None:
             # update existing subjects
-            for sh in duplicated_db.sheet_labels:
-                df:pandas.DataFrame = duplicated_db.get_sheet_sd(sh).df
-                for s in duplicated_subjs:
-                    original_id     = currdb.main.get_subjid_by_session(s.label, s.session)             # get the original index of the subject to be updated
-                    new_row         = df.loc[(df['subj'] == s.label) & (df['session'] == s.session)]    # extract the subject row from duplicated_db
-                    new_row.index   = [int(original_id[0])]                                             # update its index to make update working
+            for s in duplicated_subjs:
+                original_id     = currdb.main.get_subjid_by_session(s.label, s.session)             # get the original index of the subject to be updated
+                original_sid    = currdb.main.get_sid(s.label, s.session)             # get the original index of the subject to be updated
+                for sh in duplicated_db.sheet_labels:
+                    df:pandas.DataFrame = duplicated_db.get_sheet_sd(sh).df
+                    new_row             = df.loc[(df['subj'] == s.label) & (df['session'] == s.session)]    # extract the subject row from duplicated_db
+                    new_row.index       = [original_id]                                          # update its index to make update working
+                    try:
+                        sh_df = currdb.get_sheet_sd(sh).df
+                        sh_df.update(new_row),    # sh_df.loc[new_row.notna()] = new_row
 
-                    currdb.get_sheet_sd(sh).df.update(new_row)
+                        # for col in new_row.columns:
+                        #     value = new_row.iloc[0][col]
+                        #     if pd.notna(value):
+                        #         currdb.get_sheet_sd(sh).set_subj_session_value(original_sid, col, new_row.iloc[0][col])
+                        #         sh_df.at[original_id, col] = value                                                      # YES
+                        #         sh_df.loc[(sh_df['subj'] == s.label) & (sh_df['session'] == s.session), col] = value  # YES
+                        #         sh_df.loc[original_id, col] = value                                               # YES
+                        #         sh_df[(sh_df['subj'] == s.label) & (sh_df['session'] == s.session)][col] = value    # NO: A value is trying to be set on a copy of a slice from a DataFrame.  Try using .loc[row_indexer,col_indexer] = value instead
+                    except Exception as e:
+                        raise DataFileException("Error in MSHDB.add_new_subjects", str(e))
 
         if update is True:
             self = currdb
@@ -690,7 +705,7 @@ class MSHDB:
 
         return df
 
-    def save(self, outdata=None, sort=None):
+    def save(self, outdata=None, out_sheets:List[str]=None, sort=None):
         """
         Save the database to an Excel file or a Google Sheet.
 
@@ -705,7 +720,10 @@ class MSHDB:
         if outdata is None:
             outdata = self.data_source
 
-        for sh in self.schema_sheets_names:
+        if out_sheets is None:
+            out_sheets = self.schema_sheets_names
+
+        for sh in out_sheets:
             if sort is not None:
                 if isinstance(sort, list):
                     self.get_sheet_sd(sh).df.sort_values(by=sort, inplace=True)
@@ -715,7 +733,7 @@ class MSHDB:
         if isinstance(outdata, str):
             with pd.ExcelWriter(outdata, engine="xlsxwriter") as writer:
 
-                for sh in self.schema_sheets_names:
+                for sh in out_sheets:
                     self.get_sheet_sd(sh).df.to_excel(writer, sheet_name=sh, startrow=1, header=False, index=False)
 
                     # create a table
@@ -897,7 +915,7 @@ class MSHDB:
             else:
                 return True
 
-    def make_consistent2(self, mainDB:MSHDB, copy_previous_sess=None):
+    def make_consistent_to(self, mainDB:MSHDB, copy_previous_sess=None):
         """
         make db consistent to a given one:
         # start cycling through given db sheets and do the following:
@@ -926,7 +944,7 @@ class MSHDB:
                     # in case new subjects has session=1, decide whether copying data from such session or create a default row
                     df = pandas.DataFrame()
                     sd: SubjectsData = mainDB.get_sheet_sd(sh)
-                    for s in all_newsubjs:
+                    for s in sd.subjects:
                         if s.session > 1:
                             subj_session1:SID = sd.get_sid(s.label, 1)
                             if subj_session1 is None:
