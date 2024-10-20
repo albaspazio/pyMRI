@@ -6,6 +6,7 @@ from typing import List, Any, Tuple
 import numpy as np
 import pandas
 import pandas as pd
+from pandas import DataFrame
 
 from data.SID import SID
 from data.SIDList import SIDList
@@ -19,10 +20,11 @@ from myutility.list import same_elements, reorder_list, _argsort
 # =====================================================================================
 # assumes that the first column represents subjects' labels, and the second their session.
 # The combination of these two columns must be unique and represent the KEY to obtain subject's rows within the db
-# the class creates an internal property df:DataFrame filled with either an excel or a csv (by default tabbed) text file
+# the class creates an internal property df:DataFrame filled with either an excel or a csv (by default tabbed) text file.
+# @ init, data are always sorted by the first two columns in ascending order
 
 # there is a property (subjects) which contains a list of SID instances (SIDList), SID is a class specifying the three main information (id, label, session) of a session
-# id is the index within the dataframe. Methods accepting SID(List) do not deal with sessions, as it is already included in the SID information
+# id is the index within the dataframe. Almost all methods accept a SID(List) that link label, session and a specific row in the df
 
 # there are only two methods that do not deal with SID/SIDS:
 #  1) filter_subjects: accept as input a list of subject labels their sessions and list of conditions over other columns values and return a SIDList
@@ -174,6 +176,9 @@ class SubjectsData:
                                         "asked to convert columns. but one given entry of cols2num (" +
                                         list(c.values())[0] + ") does not indicate a valid data type")
                     self.df.astype(c)
+
+        # sort by first two columns
+        self.df.sort_values([self.first_col_name, self.second_col_name], ascending=[True, True], inplace=True)
 
         return self.df
 
@@ -338,7 +343,7 @@ class SubjectsData:
         if subj_labels is None:
             subj_labels = self.subjects.labels
 
-        sids:SIDList = SIDList([])
+        sids:SIDList = SIDList()
 
         for slab in subj_labels:
             if sess_ids is None:
@@ -654,7 +659,7 @@ class SubjectsData:
             return value
 
     # return a list of values from a given column
-    def get_subjects_column(self, sids: SIDList = None, colname: str = None, df: pandas.DataFrame = None, sort:bool=False, demean:bool=False, ndecim:int=4) -> List[Any]:
+    def get_subjects_column(self, sids: SIDList = None, colname: str = None, sort:bool=False, demean:bool=False, ndecim:int=4) -> List[Any]:
         """
         Returns a list of values from a given column.
         Important, sids must be obtained by the same df used to extract values.
@@ -681,14 +686,13 @@ class SubjectsData:
         if colname is None:
             raise DataFileException("Error in SubjectsData.get_subjects_column: colname is None")
 
-        if df is None:
-            df = self.df.copy()
-
-        if colname not in df.columns.to_list():
+        if colname not in self.header:
             raise DataFileException(f"Error in SubjectsData.get_subjects_column: colname ({colname}) is not present in df")
 
-        if sids is not None:
-            df = self.select_rows_df(sids, df=df)
+        if sids is None:
+            sids = self.subjects
+
+        df = self.select_rows_df(sids)
 
         values = list(df[colname])
 
@@ -1039,7 +1043,7 @@ class SubjectsData:
         if df is not None:
             self.save_data(df)
 
-    def update_column(self, sids:SIDList, col_label, values, df=None):
+    def update_column(self, sids:SIDList, col_label, values, df=None) -> None:
         """
         Update the value of a column for a given list of subjects.
 
@@ -1069,7 +1073,7 @@ class SubjectsData:
             self.save_data(df)
 
     # if row is None adds only a subj col
-    def add_row(self, sid: SID, row=None):
+    def add_row(self, sid: SID, row=None) -> None:
         """
         Adds a new row to the SubjectsData object.
 
@@ -1097,7 +1101,7 @@ class SubjectsData:
         self.df.loc[len(self.df)] = row
 
     # assoc_dict is a dictionary where key is current name and value is the new one
-    def rename_subjects(self, assoc_dict):
+    def rename_subjects(self, assoc_dict) -> None:
         """
         Rename subjects in the data frame according to a given dictionary.
 
@@ -1118,7 +1122,7 @@ class SubjectsData:
                 self.df.loc[subj_id, self.first_col_name] = v_newlab
 
     # REMOVE SUBJ DATA
-    def remove_subjects(self, subjects2remove: SIDList, df: pandas.DataFrame = None, update=False):
+    def remove_subjects(self, subjects2remove: SIDList, df: pandas.DataFrame = None, update=False) -> SubjectsData:
         """
         Remove subjects from the data frame.
 
@@ -1155,7 +1159,7 @@ class SubjectsData:
 
         return sd
 
-    def remove_columns(self, cols2remove:List[str], df:pandas.DataFrame=None, update=False):
+    def remove_columns(self, cols2remove:List[str], df:pandas.DataFrame=None, update=False) -> DataFrame:
         """
         Remove columns from the data frame.
 
@@ -1276,7 +1280,7 @@ class SubjectsData:
             raise DataFileException("validate_covs", "the following header are NOT present in the given datafile: " + missing_covs)
 
     # save some columns of a subset of the subjects in given file
-    def save_data(self, outdata_file=None, sids:SIDList=None, incolnames=None, outcolnames=None, separator:str= "\t"):
+    def save_data(self, outdata_file=None, sids:SIDList=None, incolnames=None, outcolnames=None, separator:str= "\t") -> None:
         """
         Save the data of a subset of the subjects in a file.
 

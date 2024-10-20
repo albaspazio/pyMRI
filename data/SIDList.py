@@ -4,6 +4,7 @@ import copy
 import numpy as np
 
 from data.SID import SID
+from myutility.exceptions import DataFileException
 
 
 class SIDList(list):
@@ -21,13 +22,15 @@ class SIDList(list):
         contains: Checks if a SID object is present in the current list.
     """
 
-    def __init__(self, subjects: List[SID]):
+    def __init__(self, subjects: List[SID]=None):
         """
         Initializes the SIDList.
 
         Args:
             subjects (List[SID]): A list of SID objects.
         """
+        if subjects is None:
+            subjects = []
         super().__init__(item for item in subjects)
 
     @property
@@ -99,7 +102,7 @@ class SIDList(list):
         """
         res = []
         if len(self) == 0:
-            return SIDList([])
+            return SIDList()
 
         for sid in sids:
             doexist = False
@@ -115,9 +118,9 @@ class SIDList(list):
 
         return SIDList(res)
 
-    def union_norep(self, subj_list: 'SIDList') -> 'SIDList':
+    def append_novel(self, subj_list: 'SIDList') -> 'SIDList':
         """
-        Unions two lists of SID objects, removing duplicates.
+        Append self only with novel elements of given list SIDList.
 
         Args:
             subj_list (SIDList): The list of SID objects to be unioned.
@@ -135,6 +138,7 @@ class SIDList(list):
     def are_equal(self, subj_list: 'SIDList') -> bool:
         """
         Checks if two lists of SID objects are equal.
+        check whether all elems of subj_list are present in self and then the reverse
 
         Args:
             subj_list (SIDList): The list of SID objects to be compared.
@@ -142,7 +146,9 @@ class SIDList(list):
         Returns:
             bool: True if the two lists are equal, False otherwise.
         """
-        exist = False
+        if subj_list is None or not isinstance(subj_list, SIDList):
+            raise DataFileException("Error in SIDList.are_equal: given subj_list (" + str(subj_list) +  ") is not a SIDList")
+
         for s in subj_list:
             exist = False
             for ss in self:
@@ -152,7 +158,18 @@ class SIDList(list):
             if not exist:
                 return False
 
-        return exist
+        # at this point, all elements of subj_list exist in self. check the contrary (element of self that does not exist in subj_list)
+        for ss in self:
+            exist = False
+            for s in subj_list:
+                if s.is_equal(ss):
+                    exist = True
+                    break
+            if not exist:
+                return False
+
+        return True
+
 
     def contains(self, subj: SID) -> bool:
         """

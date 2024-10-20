@@ -99,9 +99,9 @@ class MSHDB:
         Check the labels in a sheet against the main sheet.
     """
 
-    valid_dtypes    = ['Int8', 'Int16', 'Int32', 'Int64', 'UInt8', 'UInt16', 'UInt32', 'UInt64', 'float64', 'float32']
+    valid_dtypes        = ['Int8', 'Int16', 'Int32', 'Int64', 'UInt8', 'UInt16', 'UInt32', 'UInt64', 'float64', 'float32']
 
-    sheets:Sheets       = None
+    sheets:Sheets          = None
     unique_columns      = ["subj"]
     main_id             = 0
     schema_sheets_names = []
@@ -155,11 +155,11 @@ class MSHDB:
         return self.get_sheet_sd(self.main_name)
 
     @property
-    def len(self):
+    def len(self) -> int:
         return len(self.subjects)
 
     @property
-    def is_empty(self):
+    def is_empty(self) -> bool:
         return (self.len == 0)
 
     # returns all unique subjects labels across all sessions
@@ -170,7 +170,7 @@ class MSHDB:
             SIDList: A list of all the subjects in the database.
         """
         if self.main_name not in self.sheets:
-            return SIDList([])
+            return SIDList()
         else:
             return self.main.subjects
 
@@ -442,7 +442,7 @@ class MSHDB:
 
         return hdr
 
-    def add_default_rows(self, subjs: SIDList = None) -> pandas.DataFrame:
+    def get_default_columns(self, subjs: SIDList = None) -> pandas.DataFrame:
         """
         Add default rows to the database.
 
@@ -462,7 +462,7 @@ class MSHDB:
 
         return df
 
-    def add_default_row(self, subj: SID) -> dict:
+    def get_default_row(self, subj: SID) -> dict:
         """
         Add a default row to the database for a specific subject.
 
@@ -571,7 +571,6 @@ class MSHDB:
     #       in the first sheet add s3 and in the second s2.
     # Moreover must create also all those sheets not present in new data with a row for each subject with just a subj column
     # if "copy_previous_sess" is not None and subjects have a previous session: it tries to copy previous data of the sheet contained in the given list
-    #
     #
     # parse all sheets and determine the list of all subjects contained across all given sheets
     # if it finds a new subj that already existed -> ignore that subject and add remaining
@@ -705,7 +704,7 @@ class MSHDB:
 
         return df
 
-    def save(self, outdata=None, out_sheets:List[str]=None, sort=None):
+    def save(self, outdata=None, out_sheets:List[str]=None, sort=None) -> None:
         """
         Save the database to an Excel file or a Google Sheet.
 
@@ -751,7 +750,7 @@ class MSHDB:
             outdata.update_file(self.sheets, backuptitle="bayesdb_" + datetime.now().strftime("%d%m%Y_%H%M%S"))
             print("Saved Google Sheet: ")
 
-    def decrypt_excel(self, fpath, pwd):
+    def decrypt_excel(self, fpath, pwd) -> io.BytesIO:
         """
         Decrypt an Excel file.
 
@@ -777,7 +776,7 @@ class MSHDB:
 
         return unlocked_file
 
-    def __format_dates(self):
+    def __format_dates(self) -> None:
         """
         Format date columns in the database.
 
@@ -809,7 +808,7 @@ class MSHDB:
                         raise Exception(
                             "Error in MSHDB.__format_dates: value (" + str(date_values) + ") in column " + col + " of sheet " + sh + " cannot be formatted as desired")
 
-    def __round_columns(self):
+    def __round_columns(self) -> None:
         """
         Round numeric columns in the database.
 
@@ -915,7 +914,7 @@ class MSHDB:
             else:
                 return True
 
-    def make_consistent_to(self, mainDB:MSHDB, copy_previous_sess=None):
+    def make_consistent_to(self, mainDB:MSHDB, copy_previous_sess=None) -> None:
         """
         make db consistent to a given one:
         # start cycling through given db sheets and do the following:
@@ -939,7 +938,7 @@ class MSHDB:
                 # I don't want to copy a previous session, or I don't want to copy data of this specific sheet
                 if copy_previous_sess is None or sh not in copy_previous_sess:
                     # create a new sheet sd with new subjects default info (subj or subj - session - group)
-                    df = self.add_default_rows(self.sheets.all_subjects)
+                    df = self.get_default_columns(self.sheets.all_subjects)
                 else:
                     # in case new subjects has session=1, decide whether copying data from such session or create a default row
                     df = pandas.DataFrame()
@@ -959,7 +958,7 @@ class MSHDB:
                                     df.loc[len(df)] = subj_row
                         else:
                             # doesn't have a session=1, add default row
-                            df.loc[len(df)] = self.add_default_row(s)
+                            df.loc[len(df)] = self.get_default_row(s)
 
                 self.sheets[sh] = SubjectsData(df)
 
@@ -971,7 +970,7 @@ class MSHDB:
                     if not sd.subjects.contains(subj):
                         # this subj exist in some other new sheets, but not here -> add it
                         # P.S. could have passed row=None and let SubjectsData manage it, but calling a MSHDB subclass method I'm sure it is more complete
-                        sd.add_row(subj, self.add_default_row(subj))
+                        sd.add_row(subj, self.get_default_row(subj))
 
     def filter_subjects(self, sids: SIDList) -> MSHDB:
 

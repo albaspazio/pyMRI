@@ -11,6 +11,8 @@ from data.SID import SID
 from data.SIDList import SIDList
 from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
+from myutility.exceptions import DataFileException, SubjectExistException
+from myutility.list import is_list_of, same_elements
 
 
 class BayesDB(MSHDB):
@@ -90,18 +92,48 @@ class BayesDB(MSHDB):
                         data: str | Sheets | GDriveSheet = None,
                         password: str = "",
                         calc_flags: bool = True,
-                        sortonload: bool = True):
+                        sortonload: bool = True,
+                        check_consistency:bool=True):
         """
         Initialize the class.
         """
 
         super().__init__(file_schema, data, True, password=password, sortonload=sortonload)
+
+        if data is not None:
+            if check_consistency:
+                if not self.is_consistent:
+                    raise Exception("Error in BayesDB init: source " + str(data) + " is not consistent")
+
         if calc_flags:
             self.calc_flags()
 
+
+    @property
+    def is_consistent(self) -> bool:
+
+        # get subjects consistency
+        subjs_cons:bool = self.sheets.is_consistent
+
+        if subjs_cons is False:
+            print("BayesDB.is_consistent found different subjects")
+
+        # check groups consistencies
+        groups = self.main.get_subjects_column(colname=self.extra_columns[0])
+        for sh in self.sheets:
+            try:
+                if not same_elements(groups, self.get_sheet_sd(sh).get_subjects_column(colname=self.extra_columns[0])):
+                    groups_cons = False
+                    print("BayesDB.is_consistent found different groups across sheets")
+                    break
+            except Exception as e:
+                raise Exception("Error in BayesDB.is_consistent: groups list of sheet " + sh + " has some issues")
+        groups_cons = True
+        return subjs_cons and groups_cons
+
     # ======================================================================================
     # region OVERRIDE
-    def add_default_columns(self, subjs:SIDList, df:pandas.DataFrame):
+    def add_default_columns(self, subjs:SIDList, df:pandas.DataFrame) -> pandas.DataFrame:
         """
         Add the default columns (subj, session, group) to the given DataFrame.
 
@@ -121,7 +153,7 @@ class BayesDB(MSHDB):
         df[self.unique_columns[1]] = subjs.sessions
         return df
 
-    def add_default_rows(self, subjs:SIDList=None):
+    def get_default_columns(self, sids:SIDList, groups:List[str]=None) -> pandas.DataFrame:
         """
         Add the default rows (subj, session, group) to the given DataFrame.
 
@@ -136,13 +168,23 @@ class BayesDB(MSHDB):
             The DataFrame with the default rows added.
         """
         df                          = pandas.DataFrame()
-        df[self.unique_columns[0]]  = subjs.labels
-        df[self.unique_columns[1]]  = subjs.sessions
-        df[self.extra_columns[0]]   = self.get_groups(subjs)
+        df[self.unique_columns[0]]  = sids.labels
+        df[self.unique_columns[1]]  = sids.sessions
 
-        return df
+        if groups is None:
+            df[self.extra_columns[0]] = self.get_groups(subjs)
+            return df
+        else:
+            if groups == []:
+                return df
+            else:
+                if not is_list_of(groups, str):
+                    raise DataFileException("Error in BayesDB,add_default_rows: given groups (" + str(groups) + ") is not a list of str")
 
-    def add_default_row(self, subj:SID) -> dict:
+                df[self.extra_columns[0]]   = groups
+                return df
+
+    def get_default_row(self, subj:SID) -> dict:
         """
         Add the default row for the given subject.
 
@@ -463,3 +505,47 @@ class BayesDB(MSHDB):
             self.get_sheet_sd(sh).df = self.get_sheet_sd(sh).df.sort_values(by=by_items, ascending=ascending, ignore_index=True)
 
         return self
+
+    def compare_db(self, db2compare:BayesDB, diff_out_db:str, must_be_consistent:bool=False, sheets2compare:List[str]=None):
+
+        if sheets2compare is None:
+            sheets2compare = self.schema_sheets_names
+
+        if must_be_consistent:
+            if not db2compare.is_consistent:
+                raise DataFileException("Error in MSHDB.compare_db: given db is not consistent...skipping comparison")
+
+        try:
+            if self.len != db2compare.len:
+                raise DataFileException("LENGTH", db2compare.len)
+
+            if not self.subjects.are_equal(db2compare.subjects):
+                raise DataFileException("SUBJECTS")
+
+            # can create a new MSHDB
+            diff_db:BayesDB = BayesDB(self.schema_file)
+            default_df      = self.get_default_columns(self.subjects, [])   # don't add groups info
+            sheets2save     = []
+            for sh in sheets2compare:
+                are_equal = True
+                # create a copy of self with only the first two columns filled and the other nan
+                cols                = self.get_sheet_sd(sh).header[2:]
+                df                  = pandas.DataFrame(columns=cols)
+                diff_db.sheets[sh]  = SubjectsData(pandas.concat([default_df, df]))
+
+                for col in cols:
+                    for sid in self.subjects:
+                        curr_value  = self.get_sheet_sd(sh).get_subject_col_value(sid, col)
+                        other_value = db2compare.get_sheet_sd(sh).get_subject_col_value(sid, col)
+
+                        if curr_value != other_value:
+                            diff_db.get_sheet_sd(sh).set_subj_session_value(sid, col, other_value)
+                            are_equal = False
+
+                if are_equal is False:
+                    sheets2save.append(sh)
+
+            diff_db.save(diff_out_db, sheets2save)
+
+        except Exception as e:
+            raise Exception("Error in BayesDB.compare_db: sheet " + sh + " | " + e.msg)

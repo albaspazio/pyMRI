@@ -110,22 +110,19 @@ class Sheets(dict):
 
         Returns
         -------
-        SIDList
-            A list of all subjects from all sheets as a SIDList object
+            SIDList.
+                A list of all subjects from all sheets as a SIDList object
 
         """
         try:
-            all_subjs = SIDList(self.main.subjects.copy())
-
+            all_subjs = SIDList()
             for sh in self:
-                if sh == self.schema_sheets_names[self.main_id]:  # skip main
-                    continue
                 subjs = self[sh].subjects
-                all_subjs.union_norep(subjs)
+                all_subjs.append_novel(subjs)
 
             return all_subjs
-        except:
-            return []
+        except Exception as e:
+            return SIDList()
 
     @property
     def is_consistent(self) -> bool:
@@ -183,6 +180,14 @@ class Sheets(dict):
                     report = report + "\n data in sheet " + sh + " is different"
             else:
                 report = report + "\nsheet " + sh + " is missing in compared db"
+
+        for sh in sheets:
+            if bool(self[sh]):
+                if not sheet[sh].is_equal(self[sh]):
+                    report = report + "\n data in sheet " + sh + " is different"
+            else:
+                report = report + "\nsheet " + sh + " is present in compared db but missing in self"
+
         if report != "":
             print("Sheets.is_equal show the following differences")
             return False
