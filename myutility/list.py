@@ -139,8 +139,11 @@ def same_elements(lst1: list, lst2: list) -> bool:
         True if the two lists have the same elements, False otherwise.
 
     """
-    return sorted(collections.Counter(lst1)) == sorted(collections.Counter(lst2))
 
+    try:
+        return sorted(collections.Counter(lst1)) == sorted(collections.Counter(lst2))
+    except Exception as e:
+        raise e
 
 def first_contained_in_second(lst1: list, lst2: list) -> bool:
     """
