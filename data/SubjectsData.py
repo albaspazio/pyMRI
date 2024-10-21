@@ -175,6 +175,9 @@ class SubjectsData:
                         raise DataFileException("SubjectsData.load", "asked to convert columns. but one given entry of cols2num (" + list(c.values())[0] + ") does not indicate a valid data type")
                     self.df.astype(c)
 
+        # sort by first two columns
+        self.df.sort_values([self.first_col_name, self.second_col_name], ascending=[True, True], inplace=True)
+
         return self.df
 
     # =========================================================================================================
