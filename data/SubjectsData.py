@@ -145,13 +145,6 @@ class SubjectsData:
         else:
             raise Exception("Error in SubjectData.load: unknown data format, not a str, not a pandas.DataFrame")
 
-        # Verify that the data contains the required columns and then sort
-        if check_data:
-            if self.df.columns[0] != self.first_col_name or self.df.columns[1] != self.second_col_name:
-                raise Exception("Error in SubjectData.load: first column is not called subj")
-            # sort by first two columns
-            self.df.sort_values([self.first_col_name, self.second_col_name], ascending=[True, True], inplace=True)
-
         # Check for unnamed columns and remove them
         for col in self.header:
             if "unnamed" in col.lower():
@@ -175,8 +168,18 @@ class SubjectsData:
                         raise DataFileException("SubjectsData.load", "asked to convert columns. but one given entry of cols2num (" + list(c.values())[0] + ") does not indicate a valid data type")
                     self.df.astype(c)
 
+        # Verify that the data contains the required columns and then sort
+        if check_data:
+            if self.df.columns[0] != self.first_col_name or self.df.columns[1] != self.second_col_name:
+                raise Exception("Error in SubjectData.load: first column is not called subj")
+
+            # sort by first two columns
+            self.df.sort_values([self.first_col_name, self.second_col_name], ascending=[True, True], inplace=True)
+
+
+
         # sort by first two columns
-        self.df.sort_values([self.first_col_name, self.second_col_name], ascending=[True, True], inplace=True)
+        # self.df.sort_values([self.first_col_name, self.second_col_name], ascending=[True, True], inplace=True)
 
         return self.df
 

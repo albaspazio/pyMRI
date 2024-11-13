@@ -5,16 +5,18 @@ from typing import List
 
 from Global import Global
 from Project import Project
-from data.SubjectsData import SubjectsData
-from group.SPMCovariates    import SPMCovariates
-from group.SPMPostModel import SPMPostModel, PostModel
-from group.SPMStatsUtils    import SPMStatsUtils
-from group.spm_utilities import GrpInImages, Regressor
 from subject.Subject import Subject
+from data.SubjectsData import SubjectsData
+
+from group.SPMCovariates    import SPMCovariates
+from group.SPMPostModel     import SPMPostModel, PostModel
+from group.SPMStatsUtils    import SPMStatsUtils
+from group.SPMConstants     import SPMConstants
+from group.spm_utilities    import GrpInImages, Regressor, Contrast
+
 from myutility.matlab         import call_matlab_spmbatch
 from myutility.fileutilities  import sed_inplace
-from group.SPMConstants     import SPMConstants
-
+from myutility.list import is_list_of
 
 # create factorial designs, multiple regressions, t-test
 class SPMModels:
@@ -101,6 +103,10 @@ class SPMModels:
 
         if anal_type not in SPMConstants.analysis_types:
             raise Exception("Error in batchrun_group_stats: unrecognized analysis type: " + str(anal_type))
+
+        if bool(post_model):
+            if not os.path.exists(post_model.template_name + ".m") and post_model.type != SPMConstants.MULTREGR and not is_list_of(post_model.contrasts, Contrast):
+                raise Exception("Error in SPMModels.batchrun_group_stats, a post model template is not given and contrasts list is not of type Contrast")
 
         # ---------------------------------------------------------------------------------------------------------------------------------
         statsdir        = ""

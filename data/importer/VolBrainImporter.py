@@ -34,7 +34,7 @@ class VolBrainImporter:
         Parse the input folder and return a SubjectsData object containing the data.
     """
 
-    def __init__(self, schema_file:str, inputfolder, outfile=None):
+    def __init__(self, schema_file:str, inputfolder:str, outfile=None, out_short:bool=True):
         """
         Initialize the CeresImporter class.
 
@@ -53,16 +53,18 @@ class VolBrainImporter:
         with open(schema_file) as json_file:
             self.schema = json.load(json_file)
 
-        self.valid_columns              = self.schema["valid_columns"]
-        self.valid_columns_short        = self.schema["valid_columns_short"]
-        self.out_valid_columns          = self.schema["out_valid_columns"]
-        self.out_valid_columns_shorts   = self.schema["out_valid_columns_shorts"]
+        if out_short is True:
+            self.valid_columns          = self.schema["valid_columns_short"]
+            self.out_valid_columns      = self.schema["out_valid_columns_short"]
+        else:
+            self.valid_columns_short    = self.schema["valid_columns"]
+            self.out_valid_columns      = self.schema["out_valid_columns"]
 
-        self.subs_data = self.parseFolder(self.valid_columns_short)
+        self.subs_data = self.parseFolder(self.valid_columns)
 
         if outfile is not None:
             if isinstance(outfile, str):
-                self.subs_data.save_data(outfile, outcolnames=self.out_valid_columns_shorts)
+                self.subs_data.save_data(outfile, outcolnames=self.out_valid_columns)
             else:
                 raise Exception("Error in CeresImporter: given outfile is not a string")
 
@@ -88,7 +90,7 @@ class VolBrainImporter:
                 subj_name = f.split("-")[0]
 
                 subj_data                   = SubjectsData(data=full_name, validcols=valid_columns, delimiter=";", check_data=False)  # automatically rename Patient_ID -> subj
-                subj_data.df                = subj_data.df.rename(columns={self.valid_columns[0]: self.out_valid_columns_shorts[0]})
+                subj_data.df                = subj_data.df.rename(columns={self.valid_columns[0]: self.out_valid_columns[0]})
                 subj_data.df.at[0, "subj"]  = subj_name
                 subj_data.df.insert(1, "session", [0], True)
                 subjs.append(subj_data)
