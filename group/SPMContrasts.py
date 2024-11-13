@@ -70,7 +70,7 @@ class SPMContrasts:
     @staticmethod
     def replace_contrasts(out_batch_job:str, spmmath:str, post_model:PostModel, deleteexisting:bool=True, batch_id:int=1):
         """
-        This function creates the standard (as-is) contrasts in the batch job file.
+        This function creates the contrasts, defined in post_model, in the batch job file.
 
         Parameters
         ----------
