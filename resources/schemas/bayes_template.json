@@ -1,7 +1,7 @@
 {
   "unique_columns": ["subj", "session"],
   "main_id": 0,
-  "schema_sheets_names" : [ "main", "SA", "CLINIC", "BLOOD", "PHARLOAD", "AASP", "ASI", "CCAS", "HAM", "MATRICS", "MEQ", "MW", "BISA", "PANSS", "PAS", "PSQI", "SANS", "SAPS", "SPQ", "STQ", "TATE", "TEMPS", "TLC", "YMRS", "ZTPI", "AGE", "CERES", "HIPS", "VOL2BRAIN"],
+  "schema_sheets_names" : [ "main", "SA", "CLINIC", "BLOOD", "PHARLOAD", "AASP", "ASI", "CCAS", "HAM", "MATRICS", "MEQ", "MW", "BISA", "PANSS", "PAS", "PSQI", "SANS", "SAPS", "SPQ", "STQ", "TATE", "TEMPS", "TLC", "YMRS", "ZTPI", "AGE", "CERES", "HIPS", "DEEPTHALAMUS", "VOL2BRAIN"],
   "date_format":"%d-%b-%Y" ,
   "dates":{"main":["birth_date", "recruitment_date"], "MATRICS":["MATRICS_date"]},
   "to_be_rounded":{"main":["age"]},
