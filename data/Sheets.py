@@ -183,7 +183,7 @@ class Sheets(dict):
 
         for sh in sheets:
             if bool(self[sh]):
-                if not sheet[sh].is_equal(self[sh]):
+                if not sheets[sh].is_equal(self[sh]):
                     report = report + "\n data in sheet " + sh + " is different"
             else:
                 report = report + "\nsheet " + sh + " is present in compared db but missing in self"

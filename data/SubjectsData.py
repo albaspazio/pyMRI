@@ -1147,12 +1147,14 @@ class SubjectsData:
 
         labels = list(df[self.first_col_name])
 
-        for sid in subjects2remove:
-            # ids = labels.index(subjlab)
-            id = df.index[(df[self.first_col_name] == sid.label) & (df['session'] == sid.session)].tolist()[0]
-            df.drop(id, inplace=True)
-            df.reset_index(drop=True, inplace=True)
-
+        try:
+            for sid in subjects2remove:
+                # ids = labels.index(subjlab)
+                id = df.index[(df[self.first_col_name] == sid.label) & (df['session'] == sid.session)].tolist()[0]
+                df.drop(id, inplace=True)
+                df.reset_index(drop=True, inplace=True)
+        except Exception:
+            a=1
         sd = SubjectsData(df)
 
         if update:

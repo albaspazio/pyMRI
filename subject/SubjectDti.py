@@ -219,7 +219,7 @@ class SubjectDti:
         if not Image(self.subject.dti_ec_data + "_L23").exist:
             rrun("fslmaths " + self.subject.dti_fit_data + "_L2" + " -add " + self.subject.dti_fit_data + "_L3" + " -div 2 " + self.subject.dti_fit_data + "_L23", logFile=logFile)
 
-    def bedpostx(self, out_dir_name="bedpostx", use_gpu:bool=False, logFile=None):
+    def bedpostx(self, bedpostx_dirname:str|None="bedpostx", use_gpu:bool=False, logFile=None):
         """
         This function performs bedpostx.
 
@@ -235,8 +235,13 @@ class SubjectDti:
             IOError: If the eddy-corrected diffusion tensor image is missing.
 
         """
-        bp_dir      = os.path.join(self.subject.dti_dir, out_dir_name)
-        bp_out_dir  = os.path.join(self.subject.dti_dir, out_dir_name + ".bedpostX")
+
+        if bedpostx_dirname is None:
+            bp_dir      = self.subject.dti_bedpostX_dir
+            bp_out_dir  = bp_dir + ".bedpostX"
+        else:
+            bp_dir      = os.path.join(self.subject.dti_dir, bedpostx_dirname)
+            bp_out_dir  = os.path.join(self.subject.dti_dir, bedpostx_dirname + ".bedpostX")
 
         os.makedirs(bp_dir, exist_ok=True)
 
@@ -272,7 +277,7 @@ class SubjectDti:
     def probtrackx(self):
         pass
 
-    def xtract(self, outdir_name="xtract", bedpostx_dirname="bedpostx", refspace="native", use_gpu:bool=False, species="HUMAN", logFile=None):
+    def xtract(self, xtractdir_name:str|None=None, bedpostx_dirname:str|None=None, refspace="native", use_gpu:bool=False, species="HUMAN", logFile=None):
         """
         This function performs xtract.
 
@@ -288,8 +293,16 @@ class SubjectDti:
             str: The output directory path.
 
         """
-        bp_dir  = os.path.join(self.subject.dti_dir, bedpostx_dirname)
-        out_dir = os.path.join(self.subject.dti_dir, outdir_name)
+
+        if xtractdir_name is None:
+            out_dir = self.subject.dti_xtract_dir
+        else:
+            out_dir = os.path.join(self.subject.dti_dir, xtractdir_name)
+
+        if bedpostx_dirname is None:
+            bp_dir = self.subject.dti_bedpostX_dir
+        else:
+            bp_dir = os.path.join(self.subject.dti_dir, bedpostx_dirname)
 
         if refspace == "native":
             refspace_str = " -native -stdwarp " + self.subject.transform.std2dti_warp + " " + self.subject.transform.dti2std_warp + " "
@@ -307,7 +320,7 @@ class SubjectDti:
         self.xtract_check(out_dir)
         return out_dir
 
-    def xtract_check(self, in_dir="xtract"):
+    def xtract_check(self, xtractdir_name:str|None=None):
         """
         This function checks the xtract output.
 
@@ -318,12 +331,10 @@ class SubjectDti:
             None.
 
         """
-        if in_dir == "xtract":
-            in_dir = os.path.join(self.subject.dti_dir, in_dir)
+        if xtractdir_name is None:
+            in_dir = self.subject.dti_xtract_dir
         else:
-            if not os.path.isdir(in_dir):
-                print("ERROR in xtract_check: given folder (" + in_dir + ") is missing....exiting")
-                return
+            in_dir = os.path.join(self.subject.dti_dir, xtractdir_name)
 
         all_ok = True
         tracts = self._global.dti_xtract_labels
@@ -334,7 +345,7 @@ class SubjectDti:
         if all_ok:
             print("  ============>  check_xtracts of SUBJ " + self.subject.label + ", is ok!")
 
-    def xtract_viewer(self, xtract_dir="xtract", structures:str="", species="HUMAN"):
+    def xtract_viewer(self, xtractdir_name:str|None=None, structures:str="", species="HUMAN"):
         """
         This function launches the xtract viewer.
 
@@ -347,14 +358,17 @@ class SubjectDti:
             None.
 
         """
-        xdir = os.path.join(self.subject.dti_dir, xtract_dir)
+        if xtractdir_name is None:
+            xdir = self.subject.dti_xtract_dir
+        else:
+            xdir = os.path.join(self.subject.dti_dir, xtractdir_name)
 
         if structures != "":
             structures = " -str " + structures + " "
 
         rrun("xtract_viewer -dir " + xdir + " -species " + species + "" + structures)
 
-    def xtract_stats(self, xtract_dir="xtract", refspace="native", meas="vol,prob,length,FA,MD,L1", structures:str="", logFile=None):
+    def xtract_stats(self, xtractdir_name:str|None=None, refspace="native", meas="vol,prob,length,FA,MD,L1", structures:str="", logFile=None):
         """
         This function performs xtract_stats.
 
@@ -373,7 +387,10 @@ class SubjectDti:
             IOError: If refspace is not a valid transform image.
 
         """
-        xdir = os.path.join(self.subject.dti_dir, xtract_dir)
+        if xtractdir_name is None:
+            in_dir = self.subject.dti_xtract_dir
+        else:
+            in_dir = os.path.join(self.subject.dti_dir, xtractdir_name)
 
         if refspace == "native":
             rspace = " -w native "
@@ -389,7 +406,7 @@ class SubjectDti:
         if structures != "":
             structures = " -str " + structures + " "
 
-        rrun("xtract_stats " + " -xtract " + xdir + rspace + root_dir + " -meas " + meas + "" + structures, logFile=logFile)
+        rrun("xtract_stats " + " -xtract " + in_dir + rspace + root_dir + " -meas " + meas + " " + structures, logFile=logFile)
 
     # read its own xtract_stats output file and return a dictionary = { "tractX":{"val1":XX,"val2":YY, ...}, .. }
     def xtract_read_file(self, tracts=None, values=None, ifn="stats.csv"):
@@ -446,6 +463,31 @@ class SubjectDti:
                 _str += datas[tract][v] + "\t"
 
         return _str, datas
+
+    def xtract_blueprint(self, outdir_name:str|None=None, bedpostx_dirname:str|None=None, res:int = 3, use_gpu:bool=False):
+
+        if outdir_name is None:
+            out_dir = self.subject.dti_xtract_dir
+        else:
+            out_dir = os.path.join(self.subject.dti_dir, outdir_name)
+
+        if bedpostx_dirname is None:
+            bp_dir = self.subject.dti_bedpostX_dir
+        else:
+            bp_dir = os.path.join(self.subject.dti_dir, bedpostx_dirname)
+
+        gpu_str = ""
+        if use_gpu:
+            gpu_str = " -gpu "
+
+        lwhitegii = "lwhite"
+        rwhitegii = "rwhite"
+
+        rrun("xtract_blueprint -bpx " + self.subject.dti_bedpostX_dir + " -out " + self.subject.dti_blueprint_dir + " -xtract " + self.subject.dti_xtract_dir +
+            " -seeds " + lwhitegii + "," + rwhitegii + " -warps " + self.subject.std_img +
+            " " + self.subject.transform.std2dti_warp + " " + self.subject.transform.dti2std_warp + " -nsamples " + str(50) + " -res " + str(res) + gpu_str)
+
+
 
     def conn_matrix(self, atlas_path="freesurfer", nroi=0):
         pass
