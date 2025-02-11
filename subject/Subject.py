@@ -268,8 +268,8 @@ class Subject:
         self.dti_fit_label      = self.dti_image_label + "_fit"
 
         self.dti_dir            = os.path.join(self.dir, "dti")
-        self.dti_bedpostX_dir      = os.path.join(self.dti_dir, "bedpostx")
-        self.probtrackx_dir     = os.path.join(self.dti_dir, "probtrackx")
+        self.dti_bedpostX_dir   = os.path.join(self.dti_dir, "bedpostx")
+        self.dti_probtrackx_dir = os.path.join(self.dti_dir, "probtrackx")
         self.trackvis_dir       = os.path.join(self.dti_dir, "trackvis")
         self.tv_matrices_dir    = os.path.join(self.dti_dir, "tv_matrices")
         self.dti_xtract_dir     = os.path.join(self.dti_dir, "xtract")

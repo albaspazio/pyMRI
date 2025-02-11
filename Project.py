@@ -265,6 +265,10 @@ class Project:
                     subjects.append(subj)
         return subjects
 
+    def get_subject(self, subjlabel:str, sess_id:int=1, must_exist:bool=False) -> Subject:
+        return self.get_subjects([subjlabel], [sess_id], must_exist)[0]
+
+
     # IN:   GROUP_LABEL | SUBLABELS LIST | SUBJINSTANCES LIST
     # OUT:  [VALID SUBLABELS LIST]
     def get_subjects_labels(self, grlab_subjlabs_subjs: str | List[str]=None) -> List[str]:
@@ -988,7 +992,7 @@ class Project:
             for process in threads:
                 process.join()
 
-            print("completed block " + str(bl) + " with processes: " + subj_labels)
+            print("completed block " + str(bl) + " with processes: " + str(subj_labels))
 
     #endregion
 

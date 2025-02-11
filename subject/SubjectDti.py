@@ -1,9 +1,10 @@
 import csv
 import os
 from shutil import copyfile
+from typing import List
 
 from Global import Global
-from myutility.fileutilities import write_text_file
+from myutility.fileutilities import write_text_file, read_value_from_file
 from myutility.images.Image import Image
 from myutility.myfsl.utils.run import rrun
 
@@ -274,8 +275,94 @@ class SubjectDti:
             print("ERROR in bedpostx_gpu....something went wrong in bedpostx")
             return
 
-    def probtrackx(self):
-        pass
+    def probtrackx(self, out_dir_name:str, out_tractofile_name:str,
+                   seed:str|List[str]|List[int], # list of images or point coordinates
+                   avoid:str|None=None,
+                   wayp:List[str]|None=None,
+                   stop:str|None = None,
+                   bedpost_dirname:str|None=None, pd:bool=False, use_gpu:bool=False, nsamples:int=5000,
+                   default_pbt_params:str = " -V 1 --loopcheck --forcedir --opd --ompl",
+                   other_pbt_params:str = " --sampvox=1 --randfib=1 --onewaycondition"):
+
+        if use_gpu is True:
+            cmd_str = "probtrackx2_gpu "
+        else:
+            cmd_str = "probtrackx2 "
+
+        if bedpost_dirname is None:
+            bp_dir = self.subject.dti_bedpostX_dir
+        else:
+            bp_dir = os.path.join(self.subject.dti_dir, bedpost_dirname)
+
+        out_dir = os.path.join(self.subject.dti_probtrackx_dir, out_dir_name)
+
+        os.makedirs(out_dir, exist_ok=True)
+
+        # EXTRA PARAMS ---------------------------------------------------------------------------
+        param_str = " --nsamples=" + str(nsamples) + other_pbt_params
+
+        if pd is True:
+            params_str = param_str + " --pd "
+
+        # SEED ---------------------------------------------------------------------------
+        if isinstance(seed , str):
+            seed_str = " -x " + seed
+        elif isinstance(seed, list):
+            if isinstance(seed[0], str):
+                seed_file = os.path.join(out_dir, "seed_file.txt")
+                with open(seed_file, "w") as f:
+                    str_seed = ""
+                    for s in seed:
+                        str_seed = str_seed + s + "\n"
+                    f.write(str_seed)
+                seed_str = " -x " + seed_file
+            elif isinstance(seed[0], int):
+                seed_file = os.path.join(out_dir, "seed_file.txt")
+                with open(seed_file, "w") as f:
+                    str_seed = str(seed[0]) + "," + str(seed[1]) + "," + str(seed[2])
+                    f.write(str_seed)
+                seed_str = " -x " + seed_file + " --simple"
+            else:
+                print("Seed parameters is a list but not of the expected types....exiting")
+                return
+        else:
+            print("Seed parameters type is not recognized....exiting")
+            return
+
+        # WAYPOINTS ---------------------------------------------------------------------------
+        if len(wayp) > 0:
+            wp_file = os.path.join(out_dir, "wp_file.txt")
+            with open(wp_file, "w") as f:
+                str_wp = ""
+                for wp in wayp:
+                    str_wp = str_wp + wp + "\n"
+                f.write(str_wp)
+            wp_str = " --waypoints=" + wp_file
+        else:
+            wp_str = ""
+
+        # STOP & AVOID ---------------------------------------------------------------------------
+        if stop is not None:
+            stop_mask = Image(stop, must_exist=True, msg="Stop mask is not valid")
+            stop_str = " --stop=" + stop_mask
+        else:
+            stop_str = ""
+
+        if avoid is not None:
+            avoid_mask = Image(avoid, must_exist=True, msg="Avoid mask is not valid")
+            avoid_str = " --avoid=" + avoid_mask
+        else:
+            avoid_str = ""
+
+        # START ---------------------------------------------------------------------------
+        print("STARTING probtrackx " + out_dir_name + " | " + out_tractofile_name + " on subject " + self.subject.label)
+        rrun(cmd_str + "-o " + out_tractofile_name + " --dir=" + out_dir + " -s " + os.path.join(bp_dir, "merged") + " -m " + os.path.join(self.subject.roi_dti_dir, "nodif_brain_mask") + param_str + wp_str + seed_str + stop_str + avoid_str + param_str + default_pbt_params)
+
+        waytotal = read_value_from_file(os.path.join(out_dir, "waytotal"))
+
+        rrun("fslmaths " + os.path.join(out_dir, out_tractofile_name) + " -div " + waytotal + os.path.join(out_dir, out_tractofile_name + "Norm"))
+        print("FINISHED probtrackx " + out_dir_name + " on subject " + self.subject.label)
+
 
     def xtract(self, xtractdir_name:str|None=None, bedpostx_dirname:str|None=None, refspace="native", use_gpu:bool=False, species="HUMAN", logFile=None):
         """
@@ -295,6 +382,7 @@ class SubjectDti:
         """
 
         if xtractdir_name is None:
+            xtractdir_name = "xtract"
             out_dir = self.subject.dti_xtract_dir
         else:
             out_dir = os.path.join(self.subject.dti_dir, xtractdir_name)
@@ -317,7 +405,7 @@ class SubjectDti:
         print("STARTING xtract on subject " + self.subject.label)
         rrun("xtract -bpx " + bp_dir + " -out " + out_dir + gpu_str + refspace_str + " -species " + species, stop_on_error=False, logFile=logFile)
 
-        self.xtract_check(out_dir)
+        self.xtract_check(xtractdir_name)
         return out_dir
 
     def xtract_check(self, xtractdir_name:str|None=None):
@@ -332,6 +420,7 @@ class SubjectDti:
 
         """
         if xtractdir_name is None:
+            xtractdir_name = "xtract"
             in_dir = self.subject.dti_xtract_dir
         else:
             in_dir = os.path.join(self.subject.dti_dir, xtractdir_name)
@@ -359,6 +448,7 @@ class SubjectDti:
 
         """
         if xtractdir_name is None:
+            xtractdir_name = "xtract"
             xdir = self.subject.dti_xtract_dir
         else:
             xdir = os.path.join(self.subject.dti_dir, xtractdir_name)
@@ -486,8 +576,6 @@ class SubjectDti:
         rrun("xtract_blueprint -bpx " + self.subject.dti_bedpostX_dir + " -out " + self.subject.dti_blueprint_dir + " -xtract " + self.subject.dti_xtract_dir +
             " -seeds " + lwhitegii + "," + rwhitegii + " -warps " + self.subject.std_img +
             " " + self.subject.transform.std2dti_warp + " " + self.subject.transform.dti2std_warp + " -nsamples " + str(50) + " -res " + str(res) + gpu_str)
-
-
 
     def conn_matrix(self, atlas_path="freesurfer", nroi=0):
         pass

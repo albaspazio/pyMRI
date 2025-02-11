@@ -552,9 +552,6 @@ class GroupAnalysis:
         eng = call_matlab_function_noret("create_conn_matrix_from_files", [self._global.spm_functions_dir], "'" + matrices_dir + "'" + ", " + str(nnodes) + ", 1", endengine=False, eng=eng)
 
 
-
-
-
     # endregion =================================================================================================================================================
 
     # ---------------------------------------------------
@@ -883,4 +880,11 @@ class GroupAnalysis:
 
     #endregion
 
+    # ---------------------------------------------------
+    def extract_values_from_image(self, ):
+
+        """
+        given a group analysis result image
+        """
+        pass
     # ====================================================================================================

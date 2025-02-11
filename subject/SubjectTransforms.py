@@ -1077,6 +1077,7 @@ class SubjectTransforms:
         from_space = regtype.split("TO")[0]
         to_space = regtype.split("TO")[1]
         # ===========================================================
+        return_paths = []
         print("registration_type " + regtype + ", do_linear = " + str(islin))
 
         for roi in rois:
@@ -1089,7 +1090,7 @@ class SubjectTransforms:
             if pathtype == "abs":
                 input_roi = roi
             elif pathtype == "rel":
-                input_roi = os.path.join(self.subject.dir, roi) # roi contains also the relative path (e.g.  rs/melodic/dr/templ_a/popul_b/results/standard4/roixx
+                input_roi = os.path.join(self.subject.dir, roi)  # roi contains also the relative path (e.g.  rs/melodic/dr/templ_a/popul_b/results/standard4/roixx
             else:
                 # is a roi name
                 if from_space == "hr":
@@ -1176,7 +1177,9 @@ class SubjectTransforms:
                         else:
                             print("subj: " + self.subject.label + "\t\t, roi: " + roi_name + " nvoxels = " + str(v1) + ", thr: " + str(thresh), file=text_file)  # TODO: print to file
 
-            return output_roi
+            return_paths.append(output_roi)
+
+        return return_paths
 
     # ==================================================================================================================
     # the following methods return the mat/warp of the given transformation and the reference image

@@ -349,3 +349,14 @@ def read_keys_values_from_file(srcfile: str, separator: str = "\t", mustbeunique
             except:
                 pass
     return res
+
+def read_value_from_file(srcfile:str) -> str:
+
+    if not os.path.exists(srcfile):
+        raise ValueError("File does not exist: {}".format(srcfile))
+
+    try:
+        with open(srcfile, 'r') as f:
+            return f.readline()
+    except:
+        raise ValueError("Failed to read file: {}".format(srcfile))
