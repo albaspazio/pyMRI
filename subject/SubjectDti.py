@@ -305,11 +305,11 @@ class SubjectDti:
             params_str = param_str + " --pd "
 
         # SEED ---------------------------------------------------------------------------
+        seed_file = os.path.join(out_dir, "seed_file_" + out_tractofile_name + ".txt")
         if isinstance(seed , str):
             seed_str = " -x " + seed
         elif isinstance(seed, list):
             if isinstance(seed[0], str):
-                seed_file = os.path.join(out_dir, "seed_file.txt")
                 with open(seed_file, "w") as f:
                     str_seed = ""
                     for s in seed:
@@ -317,7 +317,6 @@ class SubjectDti:
                     f.write(str_seed)
                 seed_str = " -x " + seed_file
             elif isinstance(seed[0], int):
-                seed_file = os.path.join(out_dir, "seed_file.txt")
                 with open(seed_file, "w") as f:
                     str_seed = str(seed[0]) + "," + str(seed[1]) + "," + str(seed[2])
                     f.write(str_seed)
@@ -331,7 +330,7 @@ class SubjectDti:
 
         # WAYPOINTS ---------------------------------------------------------------------------
         if len(wayp) > 0:
-            wp_file = os.path.join(out_dir, "wp_file.txt")
+            wp_file = os.path.join(out_dir, "wp_file_" + out_tractofile_name + ".txt")
             with open(wp_file, "w") as f:
                 str_wp = ""
                 for wp in wayp:
@@ -361,6 +360,9 @@ class SubjectDti:
         waytotal = read_value_from_file(os.path.join(out_dir, "waytotal"))
 
         rrun("fslmaths " + os.path.join(out_dir, out_tractofile_name) + " -div " + waytotal + os.path.join(out_dir, out_tractofile_name + "Norm"))
+
+        os.rename(os.path.join(out_dir, "waytotal"), os.path.join(out_dir, "waytotal_" + out_tractofile_name))
+
         print("FINISHED probtrackx " + out_dir_name + " on subject " + self.subject.label)
 
 

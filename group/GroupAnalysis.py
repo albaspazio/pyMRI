@@ -637,7 +637,7 @@ class GroupAnalysis:
     #endregion
 
     # ---------------------------------------------------
-    # region TBSS
+    # region TBSS / xtrack
     # ====================================================================================================================================================
     # run tbss for FA
     # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
@@ -878,6 +878,20 @@ class GroupAnalysis:
 
         GroupAnalysis.create_analysis_folder_from_existing_keep(src_folder, new_folder, all_ids, modalities)
 
+    def xtract_group_qc(self, subjects:List[Subject], out_dir:str, xtractdir_name:str|None=None, thr:float=0.001, n_std:int=2):
+
+        xtracts_file = os.path.join(out_dir, "xtracts_file.txt")
+        with open(xtracts_file, "w") as f:
+            str_xtr = ""
+            for subj in subjects:
+                if xtractdir_name is None:
+                    xtrdir = subj.dti_xtract_dir
+                else:
+                    xtrdir = os.path.join(subj.dti_dir, xtractdir_name)
+                str_xtr = str_xtr + xtrdir + "\n"
+            f.write(str_xtr)
+
+        rrun("xtract_qc -subject_list "+ xtracts_file + " -out " + out_dir + " -thr " + str(thr) + " -n_std " + str(n_std))
     #endregion
 
     # ---------------------------------------------------
