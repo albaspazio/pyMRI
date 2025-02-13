@@ -1,16 +1,18 @@
 from typing import List
 
+import pandas
+
 from data.SubjectsData import SubjectsData
-from data.SubjectSDList import SubjectSDList
+from data.SIDList import SIDList
 
 
 class Sheets(dict):
     """
-    A class to store data from multiple sheets in a consistent format.
+    A class to store SubjectsData from multiple sheets in a consistent format.
 
     Parameters
     ----------
-    sh_name : List[str], optional
+    sh_names : List[str], optional
         A list of sheet names, by default None
     main_id : int, optional
         The index of the main sheet, by default 0
@@ -33,13 +35,13 @@ class Sheets(dict):
     is_equal
     """
 
-    def __new__(cls, sh_name: List[str] = None, main_id: int = 0):
+    def __new__(cls, data:dict=None, sh_names: List[str] = None, main_id: int = 0, init: bool = False):
         """
         The __new__ method is a special method that is called when a new instance of the Sheets class is created.
 
         Parameters
         ----------
-        sh_name : List[str], optional
+        sh_names : List[str], optional
             A list of sheet names, by default None
         main_id : int, optional
             The index of the main sheet, by default 0
@@ -48,30 +50,37 @@ class Sheets(dict):
         -------
         Sheets
             A new instance of the Sheets class
+            :param init:
 
         """
         return super(Sheets, cls).__new__(cls, None)
 
-    def __init__(self, sh_name: List[str] = None, main_id: int = 0):
+    def __init__(self, data:dict=None, sh_names: List[str] = None, main_id: int = 0, init: bool = False):
         """
         The __init__ method is a special method that is called when an instance of the Sheets class is initialized.
 
         Parameters
         ----------
-        sh_name : List[str], optional
+        sh_names : List[str], optional
             A list of sheet names, by default None
         main_id : int, optional
             The index of the main sheet, by default 0
-
+        init: bool, optional
+            indicates whether init the dict with empty SubjectsData instances
         Returns
         -------
         None
 
         """
         super().__init__()
-        self.schema_sheets_names = sh_name
+        self.schema_sheets_names = sh_names
         self.main_id = main_id
 
+        if init is True:
+            for sh in sh_names:
+                self[sh] = SubjectsData()
+
+    @property
     def main(self) -> SubjectsData:
         """
         Returns the main sheet as a SubjectsData object.
@@ -87,26 +96,35 @@ class Sheets(dict):
         except:
             return SubjectsData()
 
-    def all_subjects(self) -> SubjectSDList:
+
+    def sheet(self, sh_name:str) -> SubjectsData:
+        return self[sh_name]
+
+    def sheet_df(self, sh_name:str) -> pandas.DataFrame:
+        return self.sheet(sh_name).df
+
+    @property
+    def all_subjects(self) -> SIDList:
         """
-        Returns a list of all subjects from all sheets as a SubjectSDList object.
+        Returns a list of all subjects from all sheets as a SIDList object.
 
         Returns
         -------
-        SubjectSDList
-            A list of all subjects from all sheets as a SubjectSDList object
+            SIDList.
+                A list of all subjects from all sheets as a SIDList object
 
         """
-        all_subjs = SubjectSDList(self.main.subjects.copy())
+        try:
+            all_subjs = SIDList()
+            for sh in self:
+                subjs = self[sh].subjects
+                all_subjs.append_novel(subjs)
 
-        for sh in self:
-            if sh == self.schema_sheets_names[self.main_id]:  # skip main
-                continue
-            subjs = self[sh].subjects
-            all_subjs.union_norep(subjs)
+            return all_subjs
+        except Exception as e:
+            return SIDList()
 
-        return all_subjs
-
+    @property
     def is_consistent(self) -> bool:
         """
         Returns True if all sheets contain the same list of subjects, False otherwise.
@@ -117,7 +135,7 @@ class Sheets(dict):
             True if all sheets contain the same list of subjects, False otherwise
 
         """
-        all_subjs:SubjectSDList = self.all_subjects
+        all_subjs:SIDList = self.all_subjects
         for sh in self:
             if not all_subjs.are_equal(self[sh].subjects):
                 return False
@@ -134,7 +152,7 @@ class Sheets(dict):
             A copy of the Sheets object
 
         """
-        sheets = Sheets(self.schema_sheets_names, self.main_id)
+        sheets = Sheets(sh_names=self.schema_sheets_names, main_id=self.main_id)
         for sh in self:
             sheets[sh] = self[sh]
 
@@ -162,6 +180,17 @@ class Sheets(dict):
                     report = report + "\n data in sheet " + sh + " is different"
             else:
                 report = report + "\nsheet " + sh + " is missing in compared db"
+
+        for sh in sheets:
+            if bool(self[sh]):
+                if not sheets[sh].is_equal(self[sh]):
+                    report = report + "\n data in sheet " + sh + " is different"
+            else:
+                report = report + "\nsheet " + sh + " is present in compared db but missing in self"
+
         if report != "":
             print("Sheets.is_equal show the following differences")
             return False
+
+    def remove_sheet(self, sh:str):
+        del self[sh]

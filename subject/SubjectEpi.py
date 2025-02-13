@@ -10,14 +10,14 @@ from group.spm_utilities import SubjCondition
 from group.SPMContrasts import SPMContrasts
 from group.SPMResults import SPMResults
 
-from utility.images.Image import Image
-from utility.images.Images import Images
-from utility.images.transform_images import flirt
-from utility.images.images import mid_0based
-from utility.myfsl.utils.run import rrun
-from utility.matlab import call_matlab_spmbatch, call_matlab_function
-from utility.fileutilities import sed_inplace, copytree, get_filename
-from utility.utilities import is_list_of
+from myutility.images.Image import Image
+from myutility.images.Images import Images
+from myutility.images.transform_images import flirt
+from myutility.images.utilities import mid_0based
+from myutility.myfsl.utils.run import rrun
+from myutility.matlab import call_matlab_spmbatch, call_matlab_function
+from myutility.fileutilities import sed_inplace, copytree, get_filename
+from myutility.list import is_list_of
 
 
 class SubjectEpi:
@@ -216,8 +216,7 @@ class SubjectEpi:
             # merge the 2 ref volumes into one (add "_ref")
             rrun("fslmerge -t " + ap_pa_ref + " " + ap_ref + " " + pa_ref, stop_on_error=False)
 
-            # 4 run topup using ref, acq params; used_templates: "_topup"
-            # —assumes merged epi volumes appear in the same order as acqparams.txt (--datain)
+            # 4 run topup using ref, acq params; used_templates: "_topup". assumes merged epi volumes appear in the same order as acqparams.txt (--datain)
             rrun("topup --imain=" + ap_pa_ref + " --datain=" + acq_params + " --config=" + config + " --out=" + ap_pa_ref_topup, logFile=logFile) # + " --iout=" + self.subject.fmri_data + "_PE_ref_topup_corrected")
 
             # 5 realign all volumes of all images to the closest_vol to PA (or given one)
@@ -228,8 +227,7 @@ class SubjectEpi:
                 in_ap_img.cpath.rm()    # remove old with-motion SUBJ-fmri.nii.gz
                 Image(os.path.join(input_dir, "r" + in_ap_img.name)).compress(in_ap_img, replace=True)  # zip rSUBJ-fmri.nii => SUBJ-fmri.nii.gz
 
-            # 6 applytopup to input images
-            # again, these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
+            # 6 applytopup to input images , these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
             rrun("applytopup --imain=" + in_ap_img + " --topup=" + ap_pa_ref_topup + " --datain=" + acq_params + " --inindex=1 --method=jac --interp=spline --out=" + in_ap_img, logFile=logFile)
 
         # clean up?

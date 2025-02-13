@@ -15,14 +15,15 @@ from Project import Project
 from subject.Subject import Subject
 from models.FSLModels import FSLModels
 from group.SPMModels import SPMModels
-from utility.exceptions import NotExistingImageException
-from utility.fileutilities import get_dirname, write_text_file
-from utility.fileutilities import sed_inplace
-from utility.images.Image import Image
-from utility.matlab import call_matlab_spmbatch
-from utility.myfsl.utils.run import rrun
-from utility.utilities import listToString, fillnumber2threedigits
-from utility.matlab import call_matlab_function_noret
+from myutility.exceptions import NotExistingImageException
+from myutility.fileutilities import get_dirname, write_text_file
+from myutility.fileutilities import sed_inplace
+from myutility.images.Image import Image
+from myutility.matlab import call_matlab_spmbatch
+from myutility.myfsl.utils.run import rrun
+from myutility.utilities import fillnumber2threedigits
+from myutility.list import listToString, first_contained_in_second
+from myutility.matlab import call_matlab_function_noret
 
 class GroupAnalysis:
     """
@@ -100,6 +101,9 @@ class GroupAnalysis:
                     p = subprocess.Popen(["randomise", "-i", input_image, "-m", input_mask, "-o", os.path.join(final_dir, out_image_name), "-d", model_noext + ".mat", "-t", model_noext + ".con", "-n", str(perm), "--T2", "-V"])
                     rrun("sleep " + str(delay))
                     return p
+                else:
+                    print("model: " + model_noext + " on " + input_image + " is ok")
+                    return
             else:
                 contrast_file   = FSLModels.read_fsl_contrasts_file(model_con)
                 numcpu          = min(contrast_file.ncontrasts, numcpu)
@@ -146,7 +150,9 @@ class GroupAnalysis:
                             rrun("sleep " + str(delay))
                         except Exception as e:
                             print(e)
-
+                    else:
+                        print("model: " + model_noext + " on " + input_image + " is ok")
+                        return
                 for process in subprocesses:
                     process.wait()
 
@@ -295,6 +301,8 @@ class GroupAnalysis:
         if len(self.subjects_list) == 0:
             print("ERROR in tbss_run_fa, given grlab_subjlabs_subjs params is neither a string nor a list")
             return
+        else:
+            print("Starting tbss_run with " + str(len(self.subjects_list)) + " subjects")
 
         root_analysis_folder = os.path.join(self.project.tbss_dir, odn)
 
@@ -395,14 +403,13 @@ class GroupAnalysis:
 
     # read a matrix file (not a classical subjects_data file) and add total ICV as last column
     # here it assumes [integer, integer, integer, integer, integer, float4]
-    def add_icv_2_data_matrix(self, grlab_subjlabs_subjs:str|List[str], input_data_file:str=None, sess_id:int=1):
+    def add_icv_2_data_matrix(self, subjects:List[Subject], input_data_file:str=None):
         """
         Add the intracranial volume (ICV) to a data matrix.
 
         Args:
-            grlab_subjlabs_subjs (str or List[str] or List[Subject]): The group label or a list of subjects' label/instances.
+            subjects:List[Subject]: The group label or a list of subjects' label/instances.
             input_data_file (str, optional): The input data file. If not given, the project's default data file will be used.
-            sess_id (int, optional): The session ID. If not given, the project's default session ID will be used.
 
         Returns:
             None
@@ -411,8 +418,7 @@ class GroupAnalysis:
             print("ERROR in add_icv_2_data_matrix, given data_file does not exist")
             return
 
-        subjects    = self.project.get_subjects_labels(grlab_subjlabs_subjs)
-        icvs        = self.project.get_subjects_icv(grlab_subjlabs_subjs, sess_id)
+        icvs        = self.project.get_subjects_icv(subjects)
 
         nsubj       = len(subjects)
         ndata       = len(icvs)
@@ -462,13 +468,13 @@ class GroupAnalysis:
         with open(ofp, 'w', encoding='utf-8') as f:
             f.write(file_str)
 
-    def prepare_structconn_groupanalysis_dsi2nbs(self, subjects_list:List[Subject], ofp:str, nnodes:int, fisher2r:bool=False, input_postfix:str= "-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.Brainnectome.count.pass.connectivity.mat"):
+    def prepare_structconn_groupanalysis_dsi2nbs(self, subjects_list:List[Subject], ofp:str, nnodes:int, fisher2r:bool=False, input_postfix:str|None=None):
         """
         Prepare a group structural connectivity analysis for the given subjects list.
         Args:
             subjects_list (List[Subject]): The list of Subject objects to analyze.
             ofp (str): The path to the output file.
-            input_postfix (str, optional): The postfix of the input files. Defaults to "-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.Brainnectome.count.pass.connectivity.mat".
+            input_postfix (str, optional): The postfix of the input files. Defaults to "-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.bn274.count.pass.connectivity.mat".
         Raises:
             ValueError: If the output directory already exists.
         Returns:
@@ -480,6 +486,9 @@ class GroupAnalysis:
         Note: This function assumes that the input matrices are in a specific format and that the Matlab function will be able to process them correctly.
         It also assumes that the output directory does not already exist, as it will raise a ValueError if it does.
         """
+
+        if input_postfix is None:
+            input_postfix =  "-dti.src.gz." + self._global.def_dsi_rec + ".fib.gz.tt.gz." + self._global.def_dsi_conntempl + ".count.pass.connectivity.mat"
 
         # if os.path.exists(ofp):
         #     os.removedirs(ofp)
@@ -541,9 +550,6 @@ class GroupAnalysis:
                 raise IOError("ERROR in prepare_funcconn_groupanalysis_conn2nbs, input mat of subject " + str(i) + " does not exist")
 
         eng = call_matlab_function_noret("create_conn_matrix_from_files", [self._global.spm_functions_dir], "'" + matrices_dir + "'" + ", " + str(nnodes) + ", 1", endengine=False, eng=eng)
-
-
-
 
 
     # endregion =================================================================================================================================================
@@ -631,7 +637,7 @@ class GroupAnalysis:
     #endregion
 
     # ---------------------------------------------------
-    # region TBSS
+    # region TBSS / xtrack
     # ====================================================================================================================================================
     # run tbss for FA
     # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
@@ -809,12 +815,12 @@ class GroupAnalysis:
 
         return res_file
 
-    # create a new tbss analysis folder (only stats one), filtering an existing analysis folder
+    # create a new tbss analysis folder (only stats one), filtering an existing analysis folder (specifying what to keep)
     # vols2keep: 0-based list of indices to keep
     @staticmethod
-    def create_analysis_folder_from_existing(src_folder, new_folder, vols2keep, modalities=None):
+    def create_analysis_folder_from_existing_keep(src_folder, new_folder, vols2keep, modalities=None):
         """
-        Creates a new analysis folder from an existing one, by copying the necessary files and filtering the volumes.
+        Creates a new analysis folder from an existing one, by copying the necessary files and keeping the given volumes.
 
         Args:
             src_folder (str): The path to the existing analysis folder.
@@ -833,16 +839,67 @@ class GroupAnalysis:
         os.makedirs(new_stats_folder, exist_ok=True)
 
         for mod in modalities:
-            orig_image      = Image(os.path.join(src_folder, "stats", "all_" + mod + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing")
-            dest_image      = os.path.join(new_folder, "stats", "all_" + mod + "_skeletonised")
+            orig_image      = Image(os.path.join(src_folder, "stats", "all_" + mod + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
+            dest_image      = Image(os.path.join(new_stats_folder, "all_" + mod + "_skeletonised"))
 
-            orig_mean_image = Image(os.path.join(src_folder, "stats", "mean_" + mod + "_skeleton_mask"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing")
-            dest_mean_image = os.path.join(new_folder, "stats", "mean_" + mod + "_skeleton_mask")
+            orig_mean_image = Image(os.path.join(src_folder, "stats", "mean_" + mod + "_skeleton_mask"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
+            dest_mean_image = Image(os.path.join(new_stats_folder, "mean_" + mod + "_skeleton_mask"))
 
             orig_image.filter_volumes(vols2keep, dest_image)
 
             orig_mean_image.cp(dest_mean_image)
 
+    # create a new tbss analysis folder (only stats one), filtering an existing analysis folder (specifying what to remove)
+    # vols2remove: 0-based list of indices to remove
+    @staticmethod
+    def create_analysis_folder_from_existing_remove(src_folder:str, new_folder:str, vols2remove:List[int], modalities:List[str] | None=None):
+        """
+        Creates a new analysis folder from an existing one, by copying the necessary files and removing the given volumes.
+
+        Args:
+            src_folder (str): The path to the existing analysis folder.
+            new_folder (str): The path to the new analysis folder.
+            vols2remove (List[int]): A list of volume indices to remove.
+            modalities (Optional[List[str]]): A list of modalities to copy. If not specified, all modalities will be copied.
+
+        Returns:
+            None
+        """
+        if modalities is None:
+            modalities = ["FA", "MD", "L1", "L23"]
+
+        # get number of subjects (assumes all modalities contains the same number of volumes)
+        orig_image = Image(os.path.join(src_folder, "stats", "all_" + modalities[0] + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
+
+        nvols = orig_image.getnvol()
+        all_ids = [i for i in range(nvols)]
+        for i in vols2remove:
+            all_ids.remove(i)
+
+        GroupAnalysis.create_analysis_folder_from_existing_keep(src_folder, new_folder, all_ids, modalities)
+
+    def xtract_group_qc(self, subjects:List[Subject], out_dir:str, xtractdir_name:str|None=None, thr:float=0.001, n_std:int=2):
+
+        xtracts_file = os.path.join(out_dir, "xtracts_file.txt")
+        os.makedirs(out_dir, exist_ok=True)
+        with open(xtracts_file, "w") as f:
+            str_xtr = ""
+            for subj in subjects:
+                if xtractdir_name is None:
+                    xtrdir = subj.dti_xtract_dir
+                else:
+                    xtrdir = os.path.join(subj.dti_dir, xtractdir_name)
+                str_xtr = str_xtr + xtrdir + "\n"
+            f.write(str_xtr)
+
+        rrun("xtract_qc -subject_list "+ xtracts_file + " -out " + out_dir + " -thr " + str(thr) + " -n_std " + str(n_std))
     #endregion
 
+    # ---------------------------------------------------
+    def extract_values_from_image(self, ):
+
+        """
+        given a group analysis result image
+        """
+        pass
     # ====================================================================================================

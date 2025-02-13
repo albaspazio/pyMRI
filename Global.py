@@ -2,8 +2,8 @@ import inspect
 import os
 
 from data.utilities import read_varlist_file
-from utility.images.Image import Image
-from utility.myfsl import fsl_switcher
+from myutility.images.Image import Image
+from myutility.myfsl import fsl_switcher
 
 
 class Global:
@@ -12,7 +12,7 @@ class Global:
     CLEANUP_LVL_MED = 1
     CLEANUP_LVL_HI  = 1
 
-    def __init__(self, fsl_ver:str, ignore_warnings:bool=True):
+    def __init__(self, fsl_ver:str, full_check:bool=True, ignore_warnings:bool=True):
         """
         Initialize the Global class.
 
@@ -23,14 +23,14 @@ class Global:
         Raises:
             Exception: If the local.settings file is not present.
         """
-        fslswitch = fsl_switcher.FslSwitcher()
-        print(fslswitch.activate_fsl_version(fsl_ver))
 
         self.ignore_warnings = ignore_warnings
+
         # --------------------------------------------------------------------------------------------------------
         # determine framework folder
         filename            = inspect.getframeinfo(inspect.currentframe()).filename
         self.framework_dir  = os.path.dirname(os.path.abspath(filename))
+
         # --------------------------------------------------------------------------------------------------------
         # READ local.settings and fill corresponding variables
         local_settings      = os.path.join(self.framework_dir, "local.settings")
@@ -53,22 +53,39 @@ class Global:
         self.trackvis_bin           = local_settings_data["trackvis_bin"]
         self.autoptx_script_dir     = local_settings_data["autoptx_script_dir"]
         self.eddy_gpu_exe_name      = local_settings_data["eddy_gpu_exe_name"]
+        self.def_dsi_rec            = local_settings_data["def_dsi_rec"]
+        self.def_dsi_conntempl      = local_settings_data["def_dsi_conntempl"]
+        self.local_schemas          = local_settings_data["local_schemas"]
 
         self.cat_foldername         = self.cat_version.split('.')[0]
         self.cat_dir                = os.path.join(self.spm_dir, "toolbox", self.cat_foldername)
 
-        self.check_paths()
+        # mandatory check
+        if len(self.project_scripts_dir) > 0:
+            if os.path.isdir(self.project_scripts_dir) is False:
+                raise Exception("Error: Scripts folder is not present")
+        else:
+            raise Exception("Error: Scripts folder (e.g. /data/MRI/projects/SCRIPT) is not specified")
+
         # --------------------------------------------------------------------------------------------------------
 
-        self.data_templates_dir     = os.path.join(self.framework_dir, "templates")
-        self.spm_templates_dir      = os.path.join(self.framework_dir, "templates", "spm")
-        self.spm_functions_dir      = os.path.join(self.framework_dir, "external", "matlab")
-        self.ica_aroma_script       = os.path.join(self.framework_dir, "external", "ica_aroma", "ICA_AROMA.py")
+        self.data_templates_dir     = os.path.join(self.framework_dir, "resources", "templates")
+        self.spm_templates_dir      = os.path.join(self.framework_dir, "resources", "templates", "spm")
+        self.spm_functions_dir      = os.path.join(self.framework_dir, "resources", "external", "matlab")
+        self.ica_aroma_script       = os.path.join(self.framework_dir, "resources", "external", "ica_aroma", "ICA_AROMA.py")
+
+        # ==============================================================================================================
+        # MRI SECTION
+        # ==============================================================================================================
+        fslswitch = fsl_switcher.FslSwitcher()
+        print(fslswitch.activate_fsl_version(fsl_ver))
 
         self.fsl_dir = os.getenv('FSLDIR')
         if self.fsl_dir is None:
-            print("FSLDIR is undefined")
-            return
+            print("WARNING: FSLDIR is undefined")
+
+        if full_check is True:
+            self.check_paths()
 
         if self.cat_version.startswith("cat12.7"):
             # cat 12.7
@@ -97,11 +114,11 @@ class Global:
         self.fsl_std_mni_2mm_cnf            = os.path.join(self.fsl_dir, "etc", "flirtsch", "T1_2_MNI152_2mm.cnf")
 
         # useful for melodic analysis
-        self.fsl_std_mni_4mm_head           = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
-        self.fsl_std_mni_4mm_brain          = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
-        self.fsl_std_mni_4mm_brain_mask     = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain_mask"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
-        self.fsl_std_mni_4mm_brain_mask_dil = Image(os.path.join(self.framework_dir, "templates", "images", "MNI152_T1_4mm_brain_mask_dil"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
-        self.fsl_std_mni_4mm_cnf            = os.path.join(self.framework_dir, "templates", "images", "T1_2_MNI152_4mm.cnf")
+        self.fsl_std_mni_4mm_head           = Image(os.path.join(self.framework_dir, "resources","templates", "images", "MNI152_T1_4mm"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
+        self.fsl_std_mni_4mm_brain          = Image(os.path.join(self.framework_dir, "resources","templates", "images", "MNI152_T1_4mm_brain"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
+        self.fsl_std_mni_4mm_brain_mask     = Image(os.path.join(self.framework_dir, "resources","templates", "images", "MNI152_T1_4mm_brain_mask"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
+        self.fsl_std_mni_4mm_brain_mask_dil = Image(os.path.join(self.framework_dir, "resources","templates", "images", "MNI152_T1_4mm_brain_mask_dil"), must_exist=True, msg="pyMRI 4mm Standard Images not present")
+        self.fsl_std_mni_4mm_cnf            = os.path.join(self.framework_dir, "resources","templates", "images", "T1_2_MNI152_4mm.cnf")
 
         self.fsl_std_mean_skeleton          = Image(os.path.join(self.fsl_data_std_dir, "FMRIB58_FA-skeleton_1mm"), must_exist=True, msg="FSL's Standard Images not present")
 
@@ -112,7 +129,7 @@ class Global:
                                               "ilf_l", "ilf_r", "ifo_l", "ifo_r", "mcp", "mdlf_l", "mdlf_r", "or_l", "or_r",
                                               "str_l", "str_r", "slf1_l", "slf1_r", "slf2_l", "slf2_r", "slf3_l", "slf3_r", "ac",
                                               "uf_l", "uf_r", "vof_l", "vof_r", "cc"]
-        self.dti_xtract_dir                 = os.path.join(self.framework_dir, "templates", "images", "xtract", "mean_skeleton")
+        self.dti_xtract_dir                 = os.path.join(self.framework_dir, "resources", "templates", "images", "xtract", "mean_skeleton")
 
     @staticmethod
     def get_spm_template_dir():
@@ -122,7 +139,7 @@ class Global:
             str: The path to the SPM templates directory.
         """
         filename            = inspect.getframeinfo(inspect.currentframe()).filename
-        return os.path.join(os.path.dirname(os.path.abspath(filename)), "templates", "spm")
+        return os.path.join(os.path.dirname(os.path.abspath(filename)), "resources", "templates", "spm")
 
     def check_paths(self):
         """
@@ -134,11 +151,7 @@ class Global:
         Args:
             self (Global): The Global object.
         """
-        if len(self.project_scripts_dir) > 0:
-            if os.path.isdir(self.project_scripts_dir) is False:
-                raise Exception("Error: Scripts folder is not present")
-        else:
-            raise Exception("Error: Scripts folder (e.g. /data/MRI/projects/SCRIPT) is not specified")
+
 
         if len(self.spm_dir) > 0:
             if not os.path.isdir(self.spm_dir):

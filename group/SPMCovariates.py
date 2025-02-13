@@ -7,7 +7,7 @@ from data.SubjectsData import SubjectsData
 from data.utilities import list2spm_text_column
 from group.spm_utilities import Covariate, Regressor
 from subject.Subject import Subject
-from utility.fileutilities import sed_inplace
+from myutility.fileutilities import sed_inplace
 
 
 # class used to replace covariates strings in SPM batch
@@ -76,7 +76,7 @@ class SPMCovariates:
                 cov = []
                 cov_name    = covs[cov_id].name
                 for subjs in groups_instances:
-                    cov = cov + project.get_subjects_values_by_cols(subjs, [cov_name], data)[0]
+                    cov = cov + project.get_filtered_column(subjs, cov_name, data=data)[0]
                 str_cov = "\n" + list2spm_text_column(cov)  # ends with a "\n"
 
                 cov_string = cov_string + "matlabbatch{" + str(batch_id) + "}.spm.stats.factorial_design.cov(" + str(cov_id + 1) + ").c = "
@@ -88,7 +88,7 @@ class SPMCovariates:
             sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
 
     @staticmethod
-    def spm_replace_stats_add_1cov_manygroups(out_batch_job: str, groups_labels: List[List[Any]], project: Project,
+    def spm_replace_stats_add_1cov_manygroups(out_batch_job: str, groups_instances: List[List[Subject]], project: Project,
                                               cov:str|Covariate, batch_id: int = 1, cov_interaction:List[int]=None, data:str|SubjectsData=None, centering:bool=False) -> None:
         """
         This function adds a single covariate to an SPM batch file, where the covariate is defined across multiple groups.
@@ -109,8 +109,8 @@ class SPMCovariates:
             icc = 5
 
         cov_values = []
-        for grp in groups_labels:
-            cov_values = cov_values + project.get_subjects_values_by_cols(grp, [cov.name], data)[0]
+        for grp in groups_instances:
+            cov_values = cov_values + project.get_filtered_column(grp, cov.name, data=data)[0]
         str_cov = "\n" + list2spm_text_column(cov_values)  # ends with a "\n"
 
         cov_string =              "matlabbatch{" + str(batch_id) + "}.spm.stats.factorial_design.cov.c = "

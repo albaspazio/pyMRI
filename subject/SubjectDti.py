@@ -1,11 +1,12 @@
 import csv
 import os
 from shutil import copyfile
+from typing import List
 
 from Global import Global
-from utility.fileutilities import write_text_file
-from utility.images.Image import Image
-from utility.myfsl.utils.run import rrun
+from myutility.fileutilities import write_text_file, read_value_from_file
+from myutility.images.Image import Image
+from myutility.myfsl.utils.run import rrun
 
 
 class SubjectDti:
@@ -219,7 +220,7 @@ class SubjectDti:
         if not Image(self.subject.dti_ec_data + "_L23").exist:
             rrun("fslmaths " + self.subject.dti_fit_data + "_L2" + " -add " + self.subject.dti_fit_data + "_L3" + " -div 2 " + self.subject.dti_fit_data + "_L23", logFile=logFile)
 
-    def bedpostx(self, out_dir_name="bedpostx", use_gpu:bool=False, logFile=None):
+    def bedpostx(self, bedpostx_dirname:str|None="bedpostx", use_gpu:bool=False, logFile=None):
         """
         This function performs bedpostx.
 
@@ -235,8 +236,13 @@ class SubjectDti:
             IOError: If the eddy-corrected diffusion tensor image is missing.
 
         """
-        bp_dir      = os.path.join(self.subject.dti_dir, out_dir_name)
-        bp_out_dir  = os.path.join(self.subject.dti_dir, out_dir_name + ".bedpostX")
+
+        if bedpostx_dirname is None:
+            bp_dir      = self.subject.dti_bedpostX_dir
+            bp_out_dir  = bp_dir + ".bedpostX"
+        else:
+            bp_dir      = os.path.join(self.subject.dti_dir, bedpostx_dirname)
+            bp_out_dir  = os.path.join(self.subject.dti_dir, bedpostx_dirname + ".bedpostX")
 
         os.makedirs(bp_dir, exist_ok=True)
 
@@ -269,10 +275,98 @@ class SubjectDti:
             print("ERROR in bedpostx_gpu....something went wrong in bedpostx")
             return
 
-    def probtrackx(self):
-        pass
+    def probtrackx(self, out_dir_name:str, out_tractofile_name:str,
+                   seed:str|List[str]|List[int], # list of images or point coordinates
+                   avoid:str|None=None,
+                   wayp:List[str]|None=None,
+                   stop:str|None = None,
+                   bedpost_dirname:str|None=None, pd:bool=False, use_gpu:bool=False, nsamples:int=5000,
+                   default_pbt_params:str = " -V 1 --loopcheck --forcedir --opd --ompl",
+                   other_pbt_params:str = " --sampvox=1 --randfib=1 --onewaycondition"):
 
-    def xtract(self, outdir_name="xtract", bedpostx_dirname="bedpostx", refspace="native", use_gpu:bool=False, species="HUMAN", logFile=None):
+        if use_gpu is True:
+            cmd_str = "probtrackx2_gpu "
+        else:
+            cmd_str = "probtrackx2 "
+
+        if bedpost_dirname is None:
+            bp_dir = self.subject.dti_bedpostX_dir
+        else:
+            bp_dir = os.path.join(self.subject.dti_dir, bedpost_dirname)
+
+        out_dir = os.path.join(self.subject.dti_probtrackx_dir, out_dir_name)
+
+        os.makedirs(out_dir, exist_ok=True)
+
+        # EXTRA PARAMS ---------------------------------------------------------------------------
+        param_str = " --nsamples=" + str(nsamples) + other_pbt_params
+
+        if pd is True:
+            params_str = param_str + " --pd "
+
+        # SEED ---------------------------------------------------------------------------
+        seed_file = os.path.join(out_dir, "seed_file_" + out_tractofile_name + ".txt")
+        if isinstance(seed , str):
+            seed_str = " -x " + seed
+        elif isinstance(seed, list):
+            if isinstance(seed[0], str):
+                with open(seed_file, "w") as f:
+                    str_seed = ""
+                    for s in seed:
+                        str_seed = str_seed + s + "\n"
+                    f.write(str_seed)
+                seed_str = " -x " + seed_file
+            elif isinstance(seed[0], int):
+                with open(seed_file, "w") as f:
+                    str_seed = str(seed[0]) + "," + str(seed[1]) + "," + str(seed[2])
+                    f.write(str_seed)
+                seed_str = " -x " + seed_file + " --simple"
+            else:
+                print("Seed parameters is a list but not of the expected types....exiting")
+                return
+        else:
+            print("Seed parameters type is not recognized....exiting")
+            return
+
+        # WAYPOINTS ---------------------------------------------------------------------------
+        if len(wayp) > 0:
+            wp_file = os.path.join(out_dir, "wp_file_" + out_tractofile_name + ".txt")
+            with open(wp_file, "w") as f:
+                str_wp = ""
+                for wp in wayp:
+                    str_wp = str_wp + wp + "\n"
+                f.write(str_wp)
+            wp_str = " --waypoints=" + wp_file
+        else:
+            wp_str = ""
+
+        # STOP & AVOID ---------------------------------------------------------------------------
+        if stop is not None:
+            stop_mask = Image(stop, must_exist=True, msg="Stop mask is not valid")
+            stop_str = " --stop=" + stop_mask
+        else:
+            stop_str = ""
+
+        if avoid is not None:
+            avoid_mask = Image(avoid, must_exist=True, msg="Avoid mask is not valid")
+            avoid_str = " --avoid=" + avoid_mask
+        else:
+            avoid_str = ""
+
+        # START ---------------------------------------------------------------------------
+        print("STARTING probtrackx " + out_dir_name + " | " + out_tractofile_name + " on subject " + self.subject.label)
+        rrun(cmd_str + "-o " + out_tractofile_name + " --dir=" + out_dir + " -s " + os.path.join(bp_dir, "merged") + " -m " + os.path.join(self.subject.roi_dti_dir, "nodif_brain_mask") + param_str + wp_str + seed_str + stop_str + avoid_str + param_str + default_pbt_params)
+
+        waytotal = read_value_from_file(os.path.join(out_dir, "waytotal"))
+
+        rrun("fslmaths " + os.path.join(out_dir, out_tractofile_name) + " -div " + waytotal + os.path.join(out_dir, out_tractofile_name + "Norm"))
+
+        os.rename(os.path.join(out_dir, "waytotal"), os.path.join(out_dir, "waytotal_" + out_tractofile_name))
+
+        print("FINISHED probtrackx " + out_dir_name + " on subject " + self.subject.label)
+
+
+    def xtract(self, xtractdir_name:str|None=None, bedpostx_dirname:str|None=None, refspace="native", use_gpu:bool=False, species="HUMAN", logFile=None):
         """
         This function performs xtract.
 
@@ -288,8 +382,17 @@ class SubjectDti:
             str: The output directory path.
 
         """
-        bp_dir  = os.path.join(self.subject.dti_dir, bedpostx_dirname)
-        out_dir = os.path.join(self.subject.dti_dir, outdir_name)
+
+        if xtractdir_name is None:
+            xtractdir_name = "xtract"
+            out_dir = self.subject.dti_xtract_dir
+        else:
+            out_dir = os.path.join(self.subject.dti_dir, xtractdir_name)
+
+        if bedpostx_dirname is None:
+            bp_dir = self.subject.dti_bedpostX_dir
+        else:
+            bp_dir = os.path.join(self.subject.dti_dir, bedpostx_dirname)
 
         if refspace == "native":
             refspace_str = " -native -stdwarp " + self.subject.transform.std2dti_warp + " " + self.subject.transform.dti2std_warp + " "
@@ -304,10 +407,10 @@ class SubjectDti:
         print("STARTING xtract on subject " + self.subject.label)
         rrun("xtract -bpx " + bp_dir + " -out " + out_dir + gpu_str + refspace_str + " -species " + species, stop_on_error=False, logFile=logFile)
 
-        self.xtract_check(out_dir)
+        self.xtract_check(xtractdir_name)
         return out_dir
 
-    def xtract_check(self, in_dir="xtract"):
+    def xtract_check(self, xtractdir_name:str|None=None):
         """
         This function checks the xtract output.
 
@@ -318,12 +421,11 @@ class SubjectDti:
             None.
 
         """
-        if in_dir == "xtract":
-            in_dir = os.path.join(self.subject.dti_dir, in_dir)
+        if xtractdir_name is None:
+            xtractdir_name = "xtract"
+            in_dir = self.subject.dti_xtract_dir
         else:
-            if not os.path.isdir(in_dir):
-                print("ERROR in xtract_check: given folder (" + in_dir + ") is missing....exiting")
-                return
+            in_dir = os.path.join(self.subject.dti_dir, xtractdir_name)
 
         all_ok = True
         tracts = self._global.dti_xtract_labels
@@ -334,7 +436,7 @@ class SubjectDti:
         if all_ok:
             print("  ============>  check_xtracts of SUBJ " + self.subject.label + ", is ok!")
 
-    def xtract_viewer(self, xtract_dir="xtract", structures:str="", species="HUMAN"):
+    def xtract_viewer(self, xtractdir_name:str|None=None, structures:str="", species="HUMAN"):
         """
         This function launches the xtract viewer.
 
@@ -347,14 +449,18 @@ class SubjectDti:
             None.
 
         """
-        xdir = os.path.join(self.subject.dti_dir, xtract_dir)
+        if xtractdir_name is None:
+            xtractdir_name = "xtract"
+            xdir = self.subject.dti_xtract_dir
+        else:
+            xdir = os.path.join(self.subject.dti_dir, xtractdir_name)
 
         if structures != "":
             structures = " -str " + structures + " "
 
         rrun("xtract_viewer -dir " + xdir + " -species " + species + "" + structures)
 
-    def xtract_stats(self, xtract_dir="xtract", refspace="native", meas="vol,prob,length,FA,MD,L1", structures:str="", logFile=None):
+    def xtract_stats(self, xtractdir_name:str|None=None, refspace="native", meas="vol,prob,length,FA,MD,L1", structures:str="", logFile=None):
         """
         This function performs xtract_stats.
 
@@ -373,7 +479,10 @@ class SubjectDti:
             IOError: If refspace is not a valid transform image.
 
         """
-        xdir = os.path.join(self.subject.dti_dir, xtract_dir)
+        if xtractdir_name is None:
+            in_dir = self.subject.dti_xtract_dir
+        else:
+            in_dir = os.path.join(self.subject.dti_dir, xtractdir_name)
 
         if refspace == "native":
             rspace = " -w native "
@@ -389,7 +498,7 @@ class SubjectDti:
         if structures != "":
             structures = " -str " + structures + " "
 
-        rrun("xtract_stats " + " -xtract " + xdir + rspace + root_dir + " -meas " + meas + "" + structures, logFile=logFile)
+        rrun("xtract_stats " + " -xtract " + in_dir + rspace + root_dir + " -meas " + meas + " " + structures, logFile=logFile)
 
     # read its own xtract_stats output file and return a dictionary = { "tractX":{"val1":XX,"val2":YY, ...}, .. }
     def xtract_read_file(self, tracts=None, values=None, ifn="stats.csv"):
@@ -446,6 +555,29 @@ class SubjectDti:
                 _str += datas[tract][v] + "\t"
 
         return _str, datas
+
+    def xtract_blueprint(self, outdir_name:str|None=None, bedpostx_dirname:str|None=None, res:int = 3, use_gpu:bool=False):
+
+        if outdir_name is None:
+            out_dir = self.subject.dti_xtract_dir
+        else:
+            out_dir = os.path.join(self.subject.dti_dir, outdir_name)
+
+        if bedpostx_dirname is None:
+            bp_dir = self.subject.dti_bedpostX_dir
+        else:
+            bp_dir = os.path.join(self.subject.dti_dir, bedpostx_dirname)
+
+        gpu_str = ""
+        if use_gpu:
+            gpu_str = " -gpu "
+
+        lwhitegii = "lwhite"
+        rwhitegii = "rwhite"
+
+        rrun("xtract_blueprint -bpx " + self.subject.dti_bedpostX_dir + " -out " + self.subject.dti_blueprint_dir + " -xtract " + self.subject.dti_xtract_dir +
+            " -seeds " + lwhitegii + "," + rwhitegii + " -warps " + self.subject.std_img +
+            " " + self.subject.transform.std2dti_warp + " " + self.subject.transform.dti2std_warp + " -nsamples " + str(50) + " -res " + str(res) + gpu_str)
 
     def conn_matrix(self, atlas_path="freesurfer", nroi=0):
         pass

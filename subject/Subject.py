@@ -11,15 +11,15 @@ from typing import List, Tuple
 from Global import Global
 from group.SPMConstants import SPMConstants
 from group.spm_utilities import FmriProcParams, GrpInImages
-from utility.images.Image import Image
-from utility.images.Images import Images
-from utility.myfsl.utils.run import rrun
+from myutility.images.Image import Image
+from myutility.images.Images import Images
+from myutility.myfsl.utils.run import rrun
 from subject.SubjectDti import SubjectDti
 from subject.SubjectEpi import SubjectEpi
 from subject.SubjectMpr import SubjectMpr
 from subject.SubjectTransforms import SubjectTransforms
-from utility.myfsl.fslfun import runsystem
-from utility.fileutilities import extractall_zip, sed_inplace
+from myutility.myfsl.fslfun import runsystem
+from myutility.fileutilities import extractall_zip, sed_inplace
 
 
 class Subject:
@@ -67,6 +67,10 @@ class Subject:
         self.mpr:SubjectMpr                 = SubjectMpr(self, self._global)
         self.dti:SubjectDti                 = SubjectDti(self, self._global)
         self.epi:SubjectEpi                 = SubjectEpi(self, self._global)
+
+    @property
+    def exist(self):
+        return os.path.exists(self.dir)
 
     def hasSeq(self, _type:str, images_labels:List[str]=None):
         """
@@ -131,6 +135,26 @@ class Subject:
         """
         return self.t2_data.exist
 
+    @property
+    def hasWB(self):
+        """
+        Check if a white matter image exists for this subject.
+
+        Returns:
+            bool: True if a white matter image exists, False otherwise.
+        """
+        return self.wb_data.exist
+
+    @property
+    def hasCT(self):
+        """
+        Check if a white matter image exists for this subject.
+
+        Returns:
+            bool: True if a white matter image exists, False otherwise.
+        """
+        return self.t1_cat_resampled_surface.gexist
+
     def hasFMRI(self, images_labels:List[str]=None):
         """
         Check if a specific fMRI image exists for this subject.
@@ -147,16 +171,6 @@ class Subject:
             imgs = [os.path.join(self.fmri_dir, self.label + ilab) for ilab in images_labels]
             return Images(imgs).exist
 
-    @property
-    def hasWB(self):
-        """
-        Check if a white matter image exists for this subject.
-
-        Returns:
-            bool: True if a white matter image exists, False otherwise.
-        """
-        return self.wb_data.exist
-
     def get_properties(self, sess:int=1):
         """
         Get the properties for a specific session.
@@ -169,12 +183,12 @@ class Subject:
         """
         return self.set_properties(sess, True)
 
-    # this method has 2 usages:
-    # 1) DEFAULT : to create filesystem names at startup    => returns : self  (DOUBT !! alternatively may always return a deepcopy)
-    # 2) to get a copy with names of another session        => returns : deepcopy(self)
     def set_properties(self, sess:int=1, rollback:bool=False):
         """
         Set the properties for a specific session.
+        it has two usages:
+        1) rollback=False (DEFAULT) : to create filesystem names at startup         => returns : self  (TODO: doubt, alternatively may always return a deepcopy)
+        2) rollback=True            : to get a copy with names of another session   => returns : deepcopy(self)
 
         Args:
             sess (int): The session ID.
@@ -254,11 +268,12 @@ class Subject:
         self.dti_fit_label      = self.dti_image_label + "_fit"
 
         self.dti_dir            = os.path.join(self.dir, "dti")
-        self.bedpost_X_dir      = os.path.join(self.dti_dir, "bedpostx")
-        self.probtrackx_dir     = os.path.join(self.dti_dir, "probtrackx")
+        self.dti_bedpostX_dir   = os.path.join(self.dti_dir, "bedpostx")
+        self.dti_probtrackx_dir = os.path.join(self.dti_dir, "probtrackx")
         self.trackvis_dir       = os.path.join(self.dti_dir, "trackvis")
         self.tv_matrices_dir    = os.path.join(self.dti_dir, "tv_matrices")
         self.dti_xtract_dir     = os.path.join(self.dti_dir, "xtract")
+        self.dti_blueprint_dir  = os.path.join(self.dti_dir, "blueprint")
 
         self.dti_bval           = os.path.join(self.dti_dir, self.label + "-dti.bval")
         self.dti_bvec           = os.path.join(self.dti_dir, self.label + "-dti.bvec")
@@ -392,11 +407,11 @@ class Subject:
 
         # ------------------------------------------------------------------------------------------------------------------------
         if rollback:
-            self_copy = deepcopy(self)
-            self.set_properties(self.sessid, False)
-            return self_copy
+            self_copy = deepcopy(self)                      # get a deep copy of self with given sessid
+            self.set_properties(self.sessid, False) # restore previous self.sessid
+            return self_copy                                # returns deepcopy of instance with given sessid
         else:
-            self.sessid = sess
+            self.sessid = sess                              # returns reference of new instance
             return self
 
     def set_templates(self, stdimg:str=""):
@@ -455,8 +470,12 @@ class Subject:
     # ==================================================================================================
     # GENERAL
     # ==================================================================================================
-    def exist(self):
-        return os.path.exists(self.dir)
+
+    def is_in(self, subjects:List[Subject]) -> bool:
+        for subj in subjects:
+            if subj.label == self.label and subj.sessid == self.sessid:
+                return True
+        return False
 
     def create_file_system(self):
         """
@@ -1609,8 +1628,22 @@ class Subject:
                     continue
                 if not os.path.exists(os.path.join(rootdir, tract)):
                     return False
-
             return True
+
+        elif analysis_type == "dsi_group":
+            # "XXXX-dti.src.gz.odf.gqi.1.25.fib.gz"
+            if analysis_params is None:
+                analysis_params = self._global.def_dsi_rec
+            name = os.path.join(self.dti_dsi_dir, self.label + "-dti.src.gz." + analysis_params + ".fib.gz")
+
+            return os.path.exists(name)
+
+        elif analysis_type == "dsi_conn_group":
+            # "XXXX-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.bn274.count.pass.connectivity.mat"
+            if analysis_params is None:
+                analysis_params = [self._global.def_dsi_rec, self._global.def_dsi_conntempl]
+            name = os.path.join(self.dti_dsi_dir, self.label + "-dti.src.gz." + analysis_params[0] + ".fib.gz.tt.gz." + analysis_params[1] + ".count.pass.connectivity.mat")
+            return os.path.exists(name)
 
         # RESTING
         elif analysis_type == "melodic":

@@ -3,14 +3,14 @@ import os
 import traceback
 
 from Global import Global
-from utility.images.Image import Image
-from utility.images.Images import Images
-from utility.images.images import mass_images_move
-from utility.matlab import call_matlab_spmbatch, call_matlab_function_noret
-from utility.myfsl.fslfun import run
-from utility.myfsl.fslfun import run_notexisting_img, runpipe, run_move_notexisting_img
-from utility.myfsl.utils.run import rrun
-from utility.fileutilities import sed_inplace, write_text_file
+from myutility.images.Image import Image
+from myutility.images.Images import Images
+from myutility.images.utilities import mass_images_move
+from myutility.matlab import call_matlab_spmbatch, call_matlab_function_noret
+from myutility.myfsl.fslfun import run
+from myutility.myfsl.fslfun import run_notexisting_img, runpipe, run_move_notexisting_img
+from myutility.myfsl.utils.run import rrun
+from myutility.fileutilities import sed_inplace, write_text_file
 
 
 # ==================================================================================================================================================

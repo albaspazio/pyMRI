@@ -3,9 +3,9 @@ import os
 
 from Global import Global
 from group.spm_utilities import CatConvResultsParams, Peak, Cluster, ResultsParams
-from utility.matlab import call_matlab_spmbatch
-from utility.utilities import fillnumber2fourdigits
-from utility.fileutilities import write_text_file
+from myutility.matlab import call_matlab_spmbatch
+from myutility.utilities import fillnumber2fourdigits
+from myutility.fileutilities import write_text_file
 
 
 class SPMResults:
