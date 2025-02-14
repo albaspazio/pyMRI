@@ -224,11 +224,6 @@ class Image(str):
         parts = self.split_ext()
         return [ntpath.dirname(parts[0]), ntpath.basename(parts[0]), parts[1]]
 
-    # return imgname_noext
-    def imgname(self):
-        namepath = self.split_ext()[0]
-        return ntpath.basename(namepath)
-
     def imgdir(self):
         namepath = self.split_ext()[0]
         return ntpath.dirname(namepath)

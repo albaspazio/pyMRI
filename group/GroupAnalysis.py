@@ -43,8 +43,6 @@ class GroupAnalysis:
 
         self.spm:SPMModels      = SPMModels(proj)
 
-
-
     def start_tbss_randomize(self, pop_dir_name:str, dti_image_type:str, analysis_name:str, corr_string:str, models_dir_name:str="", delay:int=20, numcpu:int=1, perm:int=5000, ignore_errors:bool=False, runit:bool=True):
         """
         Start a TBSS randomization analysis.
@@ -637,7 +635,7 @@ class GroupAnalysis:
     #endregion
 
     # ---------------------------------------------------
-    # region TBSS / xtrack
+    # region TBSS / xtrack / probtrack
     # ====================================================================================================================================================
     # run tbss for FA
     # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
@@ -878,6 +876,7 @@ class GroupAnalysis:
 
         GroupAnalysis.create_analysis_folder_from_existing_keep(src_folder, new_folder, all_ids, modalities)
 
+    @staticmethod
     def xtract_group_qc(self, subjects:List[Subject], out_dir:str, xtractdir_name:str|None=None, thr:float=0.001, n_std:int=2):
 
         xtracts_file = os.path.join(out_dir, "xtracts_file.txt")
@@ -895,7 +894,23 @@ class GroupAnalysis:
         rrun("xtract_qc -subject_list "+ xtracts_file + " -out " + out_dir + " -thr " + str(thr) + " -n_std " + str(n_std))
     #endregion
 
-    # ---------------------------------------------------
+    # # takes N individual tracts for each subject in the list, create a merged tract (union) names as the subject, project to template and display in a single fsleyes
+    # def show_group_probtracks(self, subjects:List[Subject], tracts_names:List[str], tracts_dir_name:str):
+    #     tracts_list = ""
+    #
+    #     ntracts = len(tracts_names)
+    #     for s in subjects:
+    #
+    #         first_tract = os.path.join(s.dti_probtrackx_dir, tracts_dir_name, track_names[0])
+    #         merged_str = "fslmaths " + first_tract
+    #         for n in range(1, ntracts):
+    #             nth_tract = os.path.join(s.dti_probtrackx_dir, tracts_dir_name, track_names[n])
+    #             merged_str = merged_str + " -add " + nth_tract
+    #         merged_str = merged_str + s.label + tracts
+    #
+    #
+    #         # ---------------------------------------------------
+
     def extract_values_from_image(self, ):
 
         """
