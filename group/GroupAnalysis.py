@@ -678,15 +678,15 @@ class GroupAnalysis:
             name            = tbss_result_image.name
             thr_input       = Image(os.path.join(out_folder, name))
             rrun(f"fslmaths {tbss_result_image} -thr {thr} -bin {thr_input}")
-            original_voxels = thr_input.get_nvoxels()
+            original_voxels = thr_input.nvoxels
 
             for tract in tracts_labels:
                 tr_img              = Image(os.path.join(tracts_dir, "FMRIB58_FA-skeleton_1mm_" + tract + "_mask"))
-                ntotvox_x_tract.append(tr_img.get_nvoxels())
+                ntotvox_x_tract.append(tr_img.nvoxels)
                 out_img             = Image(os.path.join(out_folder, "sk_" + tract))
                 rrun(f"fslmaths {thr_input} -mas {tr_img} {out_img}")
 
-                res = out_img.get_nvoxels()
+                res = out_img.nvoxels
                 nsignvox_x_tract.append(res)
                 if res > 0:
                     classified_tracts.append(out_img)
@@ -707,7 +707,7 @@ class GroupAnalysis:
                 cmd_str = f"{cmd_str} -sub {img} -bin "
             cmd_str = cmd_str + unclass_img
             rrun(cmd_str)
-            unclass_vox = unclass_img.get_nvoxels()
+            unclass_vox = unclass_img.nvoxels
 
             # ----------------------------------------------------------------------------------------------------------
             # write log file
@@ -869,7 +869,7 @@ class GroupAnalysis:
         # get number of subjects (assumes all modalities contains the same number of volumes)
         orig_image = Image(os.path.join(src_folder, "stats", "all_" + modalities[0] + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
 
-        nvols = orig_image.getnvol()
+        nvols = orig_image.nvols
         all_ids = [i for i in range(nvols)]
         for i in vols2remove:
             all_ids.remove(i)

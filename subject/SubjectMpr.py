@@ -125,7 +125,7 @@ class SubjectMpr:
 
             # they are created
             lesionmask      = Image(os.path.join(anatdir, "lesionmask"))
-            lesionmaskinv   = Image(lesionmask + "inv")
+            lesionmaskinv   = Image(f"{lesionmask}inv")
 
             # ==================================================================================================================================================================
             # now the real work
@@ -149,7 +149,7 @@ class SubjectMpr:
             #### REORIENTATION 2 STANDARD
             # required input: {T1}
             # output: {T1} (modified) [ and {T1}_orig and .mat ]
-            if not os.path.isfile(T1 + "_orig2std.mat") or do_overwrite:
+            if not os.path.isfile(f"{T1}_orig2std.mat") or do_overwrite:
                 if do_reorient:
                     print("# " + self.subject.label + " :Reorienting to standard orientation")
                     rrun(f"fslmaths {T1} {T1}_orig", logFile=log)
@@ -161,12 +161,12 @@ class SubjectMpr:
             #### AUTOMATIC CROPPING
             # required input: {T1}
             # output: {T1} (modified) [ and {T1}_fullfov plus various .mats ]
-            fullfov = Image(T1 + "_fullfov")
+            fullfov = Image(f"{T1}_fullfov")
             if not fullfov.exist or do_overwrite:
                 if do_crop:
                     print("# " + self.subject.label + " :Automatically cropping the image")
                     T1.mv(fullfov)
-                    run(os.path.join(os.path.join(os.getenv('FSLDIR'), "bin"), "robustfov -i " + fullfov + " -r {T1} -m {T1}_roi2nonroi.mat | grep [0-9] | tail -1 > {T1}_roi.log"), logFile=log)
+                    run(os.path.join(os.path.join(os.getenv('FSLDIR'), "bin"), f"robustfov -i {fullfov} -r {T1} -m {T1}_roi2nonroi.mat | grep [0-9] | tail -1 > {T1}_roi.log"), logFile=log)
                     # combine this mat file and the one above (if generated)
                     if do_reorient:
                         rrun(f"convert_xfm -omat {T1}_nonroi2roi.mat -inverse {T1}_roi2nonroi.mat", logFile=log)
@@ -179,10 +179,10 @@ class SubjectMpr:
             if not lesionmask.exist or do_overwrite:
                 # make appropriate (reoreinted and cropped) lesion mask (or a default blank mask to simplify the code later on)
                 if use_lesionmask:
-                    if not os.path.isfile(T1 + "_orig2std.mat"):
-                        transform = T1 + "_orig2std.mat"
-                    if not os.path.isfile(T1 + "_orig2roi.mat"):
-                        transform = T1 + "_orig2roi.mat"
+                    if not os.path.isfile(f"{T1}_orig2std.mat"):
+                        transform = f"{T1}_orig2std.mat"
+                    if not os.path.isfile(f"{T1}_orig2roi.mat"):
+                        transform = f"{T1}_orig2roi.mat"
                     if transform != "":
                         rrun(f"fslmaths {lesionmask} {lesionmask}_orig", logFile=log)
                         rrun(f"flirt -in {lesionmask}_orig -ref {T1} -applyxfm -interp nearestneighbour -init {transform} -out {lesionmask}", logFile=log)
@@ -195,12 +195,13 @@ class SubjectMpr:
             #### BIAS FIELD CORRECTION (main work, although also refined later on if segmentation is run)
             # required input: {T1}
             # output: {T1}_biascorr  [ other intermediates to be cleaned up ]
-            T1_biascorr = Image(T1 + "_biascorr")
+            T1_biascorr = Image(f"{T1}_biascorr")
+
             if not T1_biascorr.exist or do_overwrite:
                 if biascorr_type > self.BIAS_TYPE_NO:
                     if biascorr_type == self.BIAS_TYPE_STRONG:
-                        print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-                        print("# " + self.subject.label + " :Estimating and removing field (stage 1 -large-scale fields)")
+                        print(f"Current date and time : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                        print(f"# {self.subject.label}:Estimating and removing field (stage 1 -large-scale fields)")
                         # for the first step (very gross bias field) don't worry about the lesionmask
                         # the following is a replacement for : run $FSLDIR/bin/fslmaths {T1} -s 20 {T1}_s20
                         T1.quick_smooth(f"{T1}_s20", logFile=log)
@@ -229,7 +230,7 @@ class SubjectMpr:
                         med1 = rrun(f"fslstats {T1} -k {T1}_hpf2_brain -k {T1_hpf_bm} -P 50", logFile=log)
                         rrun(f"fslmaths {T1}_hpf2_brain -div {med1} -mul {med0} {T1}_hpf2_brain", logFile=log)
 
-                        print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                        print(f"Current date and time : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                         print("# " + self.subject.label + " :Estimating and removing bias field (stage 2 - detailed fields)")
                         rrun(f"fslmaths {T1}_hpf2_brain -mas {lesionmaskinv} {T1}_hpf2_maskedbrain", logFile=log)
                         rrun(f"fast -o {T1}_initfast -l {smooth} -b -B -t {imgtype} --iter={niter} --nopve --fixed=0 -v {T1}_hpf2_maskedbrain", logFile=log)
@@ -250,8 +251,8 @@ class SubjectMpr:
                     # redo fast again to try and improve bias field
                     rrun(f"fslmaths {T1}_initfast2_restore -mas {lesionmaskinv} {T1}_initfast2_maskedrestore", logFile=log)
                     rrun(f"fast -o {T1}_fast -l {smooth} -b -B -t {imgtype} --iter={niter} --nopve --fixed=0 -v {T1}_initfast2_maskedrestore", logFile=log)
-                    print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-                    print(self.subject.label + " :Extrapolating bias field from central region")
+                    print(f"Current date and time : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    print(f"{self.subject.label} :Extrapolating bias field from central region")
                     # use the latest fast output
                     rrun(f"fslmaths {T1} -div {T1}_fast_restore -mas {T1}_initfast2_brain_mask {T1}_fast_totbias", logFile=log)
                     rrun(f"fslmaths {T1}_initfast2_brain_mask -ero -ero -ero -ero -mas {lesionmaskinv} {T1}_initfast2_brain_mask2", logFile=log)
@@ -267,7 +268,7 @@ class SubjectMpr:
 
         except Exception as e:
             traceback.print_exc()
-            print(self.subject.label + "  " + os.getcwd())
+            print(f"{self.subject.label} {os.getcwd()}")
             log.close()
             print(e)
 
@@ -378,10 +379,10 @@ class SubjectMpr:
             if not T1_biascorr_brain.exist or do_overwrite:
                 if do_reg:
                     if not do_bet:
-                        print(self.subject.label + " :Skipping registration, as it requires a non-brain-extracted input image")
+                        print(f"{self.subject.label} :Skipping registration, as it requires a non-brain-extracted input image")
                     else:
-                        print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-                        print(self.subject.label + " :Registering to standard space (linear)")
+                        print(f"Current date and time : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                        print(f"{self.subject.label} :Registering to standard space (linear)")
 
                         if use_lesionmask:
                             flirtargs = flirtargs + " -inweight " + lesionmaskinv
@@ -392,15 +393,15 @@ class SubjectMpr:
                             # nnlin co-reg T1 to standard
                             # inv warp of T1standard_mask => mask T1.
                             # mask T1 with above img
-                            print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                            print(f"Current date and time : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                             print("Registering to standard space (non-linear)")
                             refmask = os.path.join(anatdir, "MNI152_T1_2mm_brain_mask_dil1")
 
                             rrun(f"fslmaths {self._global.fsl_std_mni_2mm_brain_mask} -fillh -dilF {refmask}", logFile=log)
                             rrun(f"fnirt --in={T1}_biascorr --ref={self._global.fsl_std_mni_2mm_head} --aff={T1}_to_MNI_lin.mat --refmask={refmask} --fout={T1}_to_MNI_nonlin_field --jout={T1}_to_MNI_nonlin_jac --iout={T1}_to_MNI_nonlin --logout={T1}_to_MNI_nonlin.txt --cout={T1}_to_MNI_nonlin_coeff --config={self._global.fsl_std_mni_2mm_cnf} {fnirtargs}", logFile=log)
 
-                            print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-                            print(self.subject.label + " :Performing brain extraction (using FNIRT)")
+                            print(f"Current date and time : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                            print(f"{self.subject.label} :Performing brain extraction (using FNIRT)")
                             rrun(f"invwarp --ref={T1}_biascorr -w {T1}_to_MNI_nonlin_coeff -o {os.path.join(anatdir, 'MNI_to_T1_nonlin_field')}", logFile=log)
                             rrun(f"applywarp --interp=nn --in={self._global.fsl_std_mni_2mm_brain_mask} --ref={T1}_biascorr -w {os.path.join(anatdir, 'MNI_to_T1_nonlin_field')} -o {T1}_biascorr_brain_mask", logFile=log)
                             rrun(f"fslmaths {T1}_biascorr_brain_mask -fillh {T1}_biascorr_brain_mask", logFile=log)
@@ -411,8 +412,8 @@ class SubjectMpr:
                             for i in range(len(list_bet_fparams)):
                                 betopts = bettypeparam + " -f " + str(list_bet_fparams[i])
                                 fp = "_" + str(list_bet_fparams[i]).replace(".", "")
-                                print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-                                print(self.subject.label + " :Performing brain extraction (using BET)")
+                                print(f"Current date and time : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                                print(f"{self.subject.label} :Performing brain extraction (using BET)")
                                 rrun(f"bet {T1}_biascorr {T1}_biascorr_brain {fp} -m {betopts}", logFile=log)  ## results sensitive to the f parameter
 
                             Image(f"{T1}_biascorr_brain{fp}").cp(T1_biascorr_brain)
@@ -424,7 +425,7 @@ class SubjectMpr:
                         for i in range(len(list_bet_fparams)):
                             betopts = bettypeparam + " -f " + str(list_bet_fparams[i])
                             fp = "_" + str(list_bet_fparams[i]).replace(".", "")
-                            print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                            print(f"Current date and time : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                             print(self.subject.label + " :Performing brain extraction (using BET)")
                             rrun(f"bet {T1}_biascorr {T1}_biascorr_brain{fp} -m {betopts}", logFile=log)  ## results sensitive to the f parameter
 
@@ -1179,12 +1180,12 @@ class SubjectMpr:
                     rrun(f"pairreg {os.path.join(self.subject.fsl_data_std_dir, 'MNI152_T1_2mm_brain')} {T1}_biascorr_bet {os.path.join(self.subject.fsl_data_std_dir, 'MNI152_T1_2mm_skull')} {T1}_biascorr_bet_skull {T1}2std_skullcon.mat", logFile=log)
 
                     if use_lesionmask:
-                        rrun(f"fslmaths {lesionmask} -max {T1}_fast_pve_2 {T1}_fast_pve_2_plusmask -odt float",logFile=log)
+                        rrun(f"fslmaths {lesionmask} -max {T1}_fast_pve_2 {T1}_fast_pve_2_plusmask -odt float", logFile=log)
                         # ${FSLDIR}/bin/fslmaths lesionmask -bin -mul 3 -max {T1}_fast_seg {T1}_fast_seg_plusmask -odt int
 
-                    vscale  = float(runpipe("avscale {T1}2std_skullcon.mat | grep Determinant | awk '{ print $3 }'",logFile=log)[0].decode("utf-8").split("\n")[0])
-                    ugrey   = float(runpipe("fslstats {T1}_fast_pve_1 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
-                    uwhite  = float(runpipe("fslstats {T1}_fast_pve_2 -m -v | awk '{ print $1 * $3 }'", logFile=log)[0].decode("utf-8").split("\n")[0])
+                    vscale  = float(runpipe(f"avscale {T1}2std_skullcon.mat | grep Determinant | awk '{{ print $3 }}'", logFile=log)[0].decode("utf-8").split("\n")[0])
+                    ugrey   = float(runpipe(f"fslstats {T1}_fast_pve_1 -m -v | awk '{{ print $1 * $3 }}'", logFile=log)[0].decode("utf-8").split("\n")[0])
+                    uwhite  = float(runpipe(f"fslstats {T1}_fast_pve_2 -m -v | awk '{{ print $1 * $3 }}'", logFile=log)[0].decode("utf-8").split("\n")[0])
 
                     ngrey   = ugrey * vscale
                     nwhite  = uwhite * vscale
@@ -1228,9 +1229,9 @@ class SubjectMpr:
             print("******************************************************************", file=log)
 
             run_notexisting_img(self.subject.t1_data + "_orig", "immv " + self.subject.t1_data + " " + self.subject.t1_data + "_orig", logFile=log)
-            run_notexisting_img(self.subject.t1_data, "imcp {T1}_biascorr " + self.subject.t1_data, logFile=log)
-            run_notexisting_img(self.subject.t1_brain_data, "imcp {T1}_biascorr_brain " + self.subject.t1_brain_data, logFile=log)
-            run_notexisting_img(self.subject.t1_brain_data + "_mask", "imcp {T1}_biascorr_brain_mask " + self.subject.t1_brain_data + "_mask", logFile=log)
+            run_notexisting_img(self.subject.t1_data, f"imcp {T1}_biascorr {self.subject.t1_data}", logFile=log)
+            run_notexisting_img(self.subject.t1_brain_data, f"imcp {T1}_biascorr_brain {self.subject.t1_brain_data}", logFile=log)
+            run_notexisting_img(self.subject.t1_brain_data + "_mask", f"imcp {T1}_biascorr_brain_mask {self.subject.t1_brain_data}_mask", logFile=log)
 
             os.makedirs(self.subject.fast_dir, exist_ok=True)
 
