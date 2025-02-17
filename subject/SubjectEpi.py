@@ -201,7 +201,7 @@ class SubjectEpi:
             central_vol_pa  = mid_0based(nvols_pe)  # odd values:   returns the middle volume in a zero-based context,      3//2 -> 1 which is the middle volume in 0,(1),2 context
         else:                                       # even values:  returns second middle volume in a zero-based context,   4//2 -> 2, 0,1,(2),3
             central_vol_pa = pa_ref_vol
-        rrun("fslselectvols -i " + in_pa_img + " -o " + pa_ref + " --vols=" + str(central_vol_pa), logFile=logFile)
+        rrun(f"fslselectvols -i {in_pa_img} -o {pa_ref} --vols={central_vol_pa}", logFile=logFile)
 
         for in_ap_img in in_ap_images:
 
@@ -211,13 +211,13 @@ class SubjectEpi:
             else:
                 closest_vol = ap_ref_vol
             closest_vols.append(closest_vol)
-            rrun("fslselectvols -i " + in_ap_img + " -o " + ap_ref + " --vols=" + str(closest_vol), logFile=logFile)
+            rrun(f"fslselectvols -i {in_ap_img} -o {ap_ref} --vols={closest_vol}", logFile=logFile)
 
             # merge the 2 ref volumes into one (add "_ref")
-            rrun("fslmerge -t " + ap_pa_ref + " " + ap_ref + " " + pa_ref, stop_on_error=False)
+            rrun(f"fslmerge -t {ap_pa_ref} {ap_ref} {pa_ref}", stop_on_error=False)
 
             # 4 run topup using ref, acq params; used_templates: "_topup". assumes merged epi volumes appear in the same order as acqparams.txt (--datain)
-            rrun("topup --imain=" + ap_pa_ref + " --datain=" + acq_params + " --config=" + config + " --out=" + ap_pa_ref_topup, logFile=logFile) # + " --iout=" + self.subject.fmri_data + "_PE_ref_topup_corrected")
+            rrun(f"topup --imain={ap_pa_ref} --datain={acq_params} --config={config} --out={ap_pa_ref_topup}", logFile=logFile) # + " --iout=" + self.subject.fmri_data + "_PE_ref_topup_corrected")
 
             # 5 realign all volumes of all images to the closest_vol to PA (or given one)
             if motion_corr:
@@ -228,13 +228,13 @@ class SubjectEpi:
                 Image(os.path.join(input_dir, "r" + in_ap_img.name)).compress(in_ap_img, replace=True)  # zip rSUBJ-fmri.nii => SUBJ-fmri.nii.gz
 
             # 6 applytopup to input images , these must be in the same order as --datain/acqparams.txt // "inindex=" values reference the images-to-correct corresponding row in --datain and --topup
-            rrun("applytopup --imain=" + in_ap_img + " --topup=" + ap_pa_ref_topup + " --datain=" + acq_params + " --inindex=1 --method=jac --interp=spline --out=" + in_ap_img, logFile=logFile)
+            rrun(f"applytopup --imain={in_ap_img} --topup={ap_pa_ref_topup} --datain={acq_params} --inindex=1 --method=jac --interp=spline --out={in_ap_img}", logFile=logFile)
 
         # clean up?
         if cleanup:
-            os.system("rm " + input_dir + "/" + "ap_*")
-            os.system("rm " + input_dir + "/" + "pa_*")
-            os.system("rm " + input_dir + "/" + "*mat")
+            os.system(f"rm {input_dir}/ap_*")
+            os.system(f"rm {input_dir}/pa_*")
+            os.system(f"rm {input_dir}/*mat")
 
         print("topup correction of subj: " + self.subject.label + " finished. closest volume is: " + str(closest_vol))
         return closest_vols
@@ -422,21 +422,21 @@ class SubjectEpi:
             # regtype, pathtype="standard", mask="", orf="", thresh=0.2, islin=True, std_img="", rois=[]):
             self.subject.transform.transform_roi("hrTOrs", "abs", rois=[self.subject.t1_segment_csf_ero_path])
 
-        rrun("fslmeants -i " + in_img + " -o " + series_wm + " -m " + self.subject.rs_mask_t1_wmseg4nuis + " --no_bin")
-        rrun("fslmeants -i " + in_img + " -o " + series_csf + " -m " + self.subject.rs_mask_t1_csfseg4nuis + " --no_bin")
+        rrun(f"fslmeants -i {in_img} -o {series_wm} -m {self.subject.rs_mask_t1_wmseg4nuis} --no_bin")
+        rrun(f"fslmeants -i {in_img} -o {series_csf} -m {self.subject.rs_mask_t1_csfseg4nuis} --no_bin")
 
         if os.path.isfile(series_csf) and os.path.isfile(series_wm):
-            os.system("paste " + series_wm + " " + series_csf + " > " + output_series)
+            os.system(f"paste {series_wm} {series_csf} > {output_series}")
             # rrun("paste " + series_wm + " " + series_csf + " > " + output_series) # ISSUE: doesn't work. don't know why
 
         tempMean = Image(os.path.join(self.subject.rs_dir, "tempMean.nii.gz"))
         residual = Image(os.path.join(self.subject.rs_dir, "residual.nii.gz"))
 
-        rrun("fslmaths " + in_img + " -Tmean " + tempMean)
-        rrun("fsl_glm -i " + in_img + " -d " + output_series + " --demean --out_res=" + residual)
+        rrun(f"fslmaths {in_img} -Tmean {tempMean}")
+        rrun(f"fsl_glm -i {in_img} -d {output_series} --demean --out_res={residual}")
 
-        rrun("fslcpgeom " + in_img + ".nii.gz " + residual)  # solves a bug in fsl_glm which writes TR=1 in residual.
-        rrun("fslmaths " + residual + " -bptf " + str(hpf_sigma) + " -1 -add " + tempMean + " " + out_img)
+        rrun(f"fslcpgeom {in_img}.nii.gz {residual}")  # solves a bug in fsl_glm which writes TR=1 in residual.
+        rrun(f"fslmaths {residual} -bptf {hpf_sigma} -1 -add {tempMean} {out_img}")
 
         residual.rm()
         tempMean.rm()
@@ -896,8 +896,8 @@ class SubjectEpi:
             roi = Image(roi, must_exist=True, msg="Error in sbfc_several_1roi_feat, given roi " + roi_name + ", does not exist...exiting")
 
             # extract roi time-serie
-            output_serie    = os.path.join(self.subject.rs_series_dir, roi_name + "_ts" + ser_pfname + ".txt")
-            rrun("fslmeants -i " + in_image + " -o " + output_serie + " -m " + roi)    # <<<<<<<<<<<<<<<<<<--------------------
+            output_serie    = os.path.join(self.subject.rs_series_dir, f"{roi_name}_ts{ser_pfname}.txt")
+            rrun(f"fslmeants -i {in_image} -o {output_serie} -m {roi}")    # <<<<<<<<<<<<<<<<<<--------------------
 
             # create output model dir and file
             in_model_path   = os.path.join(self.subject.project.glm_template_dir, in_model)
@@ -1081,11 +1081,11 @@ class SubjectEpi:
 
         # CHECK FILE EXISTENCE #.feat
         if not os.path.isdir(input_dir):
-            print("error in epi_aroma for subject: " + self.subject.label + ": you specified an incorrect folder name (" + input_dir + ")......exiting")
+            print(f"error in epi_aroma for subject: {self.subject.label} : you specified an incorrect folder name ({input_dir})......exiting")
             return
 
         print("running AROMA for subject " + self.subject.label)
-        rrun("python2.7 " + self._global.ica_aroma_script + " -feat " + input_dir + " -out " + aroma_dir, logFile=logFile)
+        rrun(f"python2.7 {self._global.ica_aroma_script} -feat {input_dir} -out {aroma_dir}", logFile=logFile)
 
         if upsampling > 0:
             os.makedirs(regstd_aroma_dir, exist_ok=True)
@@ -1095,13 +1095,10 @@ class SubjectEpi:
             rrun(os.path.join(self._global.fsl_bin, "featregapply") + " " + aroma_dir, logFile=logFile)
 
             # upsampling of standard
-            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(input_dir, "reg","standard") + " -in " + os.path.join(input_dir, "reg", "standard")
-                    + " -out " + os.path.join(regstd_aroma_dir, "standard") + " -applyisoxfm " + str(upsampling), logFile=logFile)
-            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join(input_dir, "reg", "highres")
-                    + " -out " + os.path.join(regstd_aroma_dir,"bg_image") + " -applyxfm -init " + os.path.join(input_dir, "reg", "highres2standard.mat") + " -interp sinc -datatype float", logFile=logFile)
-            rrun(os.path.join(self._global.fsl_bin, "flirt") + " -ref " + os.path.join(regstd_aroma_dir, "standard") + " -in " + os.path.join(aroma_dir, "denoised_func_data_nonaggr")
-                    + " -out " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -applyxfm -init " + os.path.join(input_dir, "reg", "example_func2standard.mat") + " -interp trilinear -datatype float", logFile=logFile)
-            rrun(os.path.join(self._global.fsl_bin, "fslmaths") + " " + os.path.join(regstd_aroma_dir, "filtered_func_data") + " -Tstd -bin " + os.path.join(regstd_aroma_dir, "mask") + " -odt char", logFile=logFile)
+            rrun(f"{os.path.join(self._global.fsl_bin, 'flirt')} -ref {os.path.join(input_dir, 'reg', 'standard')} -in {os.path.join(input_dir, 'reg', 'standard')} -out {os.path.join(regstd_aroma_dir, 'standard')} -applyisoxfm {upsampling}", logFile=logFile)
+            rrun(f"{os.path.join(self._global.fsl_bin, 'flirt')} -ref {os.path.join(regstd_aroma_dir, 'standard')} -in {os.path.join(input_dir, 'reg', 'highres')} -out {os.path.join(regstd_aroma_dir, 'bg_image')} -applyxfm -init {os.path.join(input_dir, 'reg', 'highres2standard.mat')} -interp sinc -datatype float", logFile=logFile)
+            rrun(f"{os.path.join(self._global.fsl_bin, 'flirt')} -ref {os.path.join(regstd_aroma_dir, 'standard')} -in {os.path.join(aroma_dir, 'denoised_func_data_nonaggr')} -out {os.path.join(regstd_aroma_dir, 'filtered_func_data')} -applyxfm -init {os.path.join(input_dir, 'reg', 'example_func2standard.mat')} -interp trilinear -datatype float", logFile=logFile)
+            rrun(f"{os.path.join(self._global.fsl_bin, 'fslmaths')} {os.path.join(regstd_aroma_dir, 'filtered_func_data')} -Tstd -bin {os.path.join(regstd_aroma_dir, 'mask')} -odt char", logFile=logFile)
 
     def ica_fix(self, epi_label):
         """
@@ -1246,16 +1243,16 @@ class SubjectEpi:
         if lvl == Global.CLEANUP_LVL_MED:
             # copy melodic report i
             os.makedirs(self.subject.rs_melic_dir)
-            rrun("mv " + self.subject.rs_default_mel_dir + "/filtered_func_data_ica.ica/report" + " " + self.subject.rs_melic_dir)
+            rrun(f"mv {os.path.join(self.subject.rs_default_mel_dir, 'filtered_func_data_ica.ica', 'report')} {self.subject.rs_melic_dir}")
 
-            rrun("rm -rf " + self.subject.rs_default_mel_dir)
+            rrun(f"rm -rf {self.subject.rs_default_mel_dir}")
             os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_melodic_image_label))
 
         elif lvl == Global.CLEANUP_LVL_HI:
 
             os.removedirs(self.subject.rs_melic_dir)
 
-            rrun("rm -rf " + self.subject.rs_default_mel_dir)
+            rrun(f"rm -rf {self.subject.rs_default_mel_dir}")
             os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_melodic_image_label))
 
     # take a preproc step in the individual space (epi), convert to std4 and copy to resting/reg_std folder
@@ -1408,20 +1405,20 @@ class SubjectEpi:
         trg_mask       = target.add_postfix2name("_sv_mask")
 
         if img2transform is None:
-            cout = " "                          # don't want to use warp for further coreg, only interested in trg coreg
+            cout = ""                          # don't want to use warp for further coreg, only interested in trg coreg
         else:
-            cout = " --cout=" + owarp + " "     # want to use warp for further coregs
+            cout = "--cout=" + owarp + " "     # want to use warp for further coregs
 
         ref.get_nth_volume(single_ref_vol, ref_mask, volnum=ref_vol, logFile=None)     # it creates ref_mask
         target.get_nth_volume(single_trg_vol, trg_mask, volnum=ref_vol, logFile=None)  # it creates trg_mask
 
-        rrun("flirt  -in "  + single_trg_vol + "  -ref " + single_ref_vol + "  -omat " + omat + " -out " + otrg_lin)
-        rrun("fnirt --in="  + single_trg_vol + " --ref=" + single_ref_vol + " --aff="  + omat + " --refmask=" + ref_mask + cout + " --iout=" + otrg)
+        rrun(f"flirt  -in {single_trg_vol} -ref {single_ref_vol} -omat {omat} -out {otrg_lin}")
+        rrun(f"fnirt --in={single_trg_vol} --ref={single_ref_vol} --aff={omat} --refmask={ref_mask} {cout} --iout={otrg}")
 
         if img2transform is not None:
             for img in img2transform:
-                oimg     = Image(img).add_postfix2name(trgpostfix)
-                rrun("applywarp -i " + img + " -w " + owarp + " -r " + single_ref_vol + " -o " + oimg + " --interp=spline")
+                oimg = Image(img).add_postfix2name(trgpostfix)
+                rrun(f"applywarp -i {img} -w {owarp} -r {single_ref_vol} -o {oimg} --interp=spline")
 
         ref_mask.rm()
         trg_mask.rm()
@@ -1459,8 +1456,8 @@ class SubjectEpi:
         flirt(omat, epi_sv, self.subject.t1_brain_data, params, logFile=logFile)
 
         if self.subject.transform.hr2std_warp.exist:
-            rrun("convertwarp --ref=" + self.subject.std_img + " --premat=" + omat + " --warp1=" + self.subject.transform.hr2std_warp + " --out=" + owarp, logFile=logFile)
-            rrun("applywarp -i " + inimg + " -r " + self.subject.std_img + " -o " + norm_input + " --warp=" + owarp, logFile=logFile)
+            rrun(f"convertwarp --ref={self.subject.std_img} --premat={omat} --warp1={self.subject.transform.hr2std_warp} --out={owarp}", logFile=logFile)
+            rrun(f"applywarp -i {inimg} -r {self.subject.std_img} -o {norm_input} --warp={owarp}", logFile=logFile)
 
         epi_sv.rm()
 

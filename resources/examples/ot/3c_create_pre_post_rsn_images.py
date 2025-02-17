@@ -89,7 +89,7 @@ if __name__ == "__main__":
             os.makedirs(rsn_tempdir, exist_ok=True)
             copyfile(os.path.join(rsndir, input_rsn_image), os.path.join(rsn_tempdir, input_rsn_image))
             os.chdir(rsn_tempdir)
-            rrun("fslsplit " + input_rsn_image)
+            rrun(f"fslsplit {input_rsn_image}")
 
             rsn_tempdirpre = os.path.join(rsn_tempdir, "pre")
             rsn_tempdirpost = os.path.join(rsn_tempdir, "post")

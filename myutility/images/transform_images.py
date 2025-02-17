@@ -34,7 +34,7 @@ def flirt(omat, inimg, ref,
     if not os.path.isdir(outdir):
         raise Exception("ERROR in flirt, output dir (" + outdir + ") does not exist")
 
-    rrun("flirt -in " + inimg + " -ref " + ref + " -omat " + omat + " " + params, logFile=logFile)
+    rrun(f"flirt -in {inimg} -ref {ref} -omat {omat} {params}", logFile=logFile)
 
 
 def check_flirt(omat, inimg, ref, params="-cost corratio -dof 12 -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -interp trilinear",
@@ -65,7 +65,7 @@ def check_flirt(omat, inimg, ref, params="-cost corratio -dof 12 -searchrx -90 9
         if not os.path.isdir(outdir):
             raise Exception("ERROR in flirt, output dir (" + outdir + ") does not exist")
 
-        rrun("flirt -in " + inimg + " -ref " + ref + " -omat " + omat + " " + params, logFile=logFile)
+        rrun(f"flirt -in {inimg} -ref {ref} -omat {omat} {params}", logFile=logFile)
 
 
 def check_invert_mat(omat: str, imat: str, overwrite: bool = False, logFile: str = None) -> None:
@@ -93,7 +93,7 @@ def check_invert_mat(omat: str, imat: str, overwrite: bool = False, logFile: str
             if not os.path.isdir(outdir):
                 raise Exception("ERROR in flirt, output dir (" + outdir + ") does not exist")
 
-            rrun("convert_xfm -inverse -omat " + omat + " " + imat, logFile=logFile)
+            rrun(f"convert_xfm -inverse -omat {omat} {imat}", logFile=logFile)
 
 
 def check_concat_mat(omat, imat1, imat2, overwrite=False, logFile=None):
@@ -122,7 +122,7 @@ def check_concat_mat(omat, imat1, imat2, overwrite=False, logFile=None):
             if not os.path.isdir(outdir):
                 raise Exception("ERROR in flirt, output dir (" + outdir + ") does not exist")
 
-            rrun("convert_xfm -omat " + omat + " -concat " + imat1 + " " + imat2, logFile=logFile)
+            rrun(f"convert_xfm -omat {omat} -concat {imat1} {imat2}", logFile=logFile)
 
 
 def check_apply_mat(oimg, iimg, mat, ref, overwrite=False, logFile=None):
@@ -148,7 +148,7 @@ def check_apply_mat(oimg, iimg, mat, ref, overwrite=False, logFile=None):
         if not Image(iimg).exist or not os.path.exists(mat):
             raise Exception("ERROR in chech_apply_mat, input inmage (" + iimg + ") or mat (" + mat + ") or ref img (" + ref + ") does not exist")
         else:
-            rrun("flirt -in " + iimg + " -ref " + ref + " -applyxfm -init " + mat + " -out " + oimg, logFile=logFile)
+            rrun(f"flirt -in {iimg} -ref {ref} -applyxfm -init {mat} -out {oimg}", logFile=logFile)
 
 
 # ======================================================================================================================
@@ -176,7 +176,7 @@ def check_invert_warp(owarp, iwarp, ref, overwrite=False, logFile=None):
         if not Image(iwarp).exist or not Image(ref).exist:
             raise Exception("ERROR in check_invert_warp, input warp (" + iwarp + ") or ref img (" + ref + ") does not exist")
         else:
-            rrun("invwarp -r " + ref + " -w " + iwarp + " -o " + owarp, logFile=logFile)
+            rrun(f"invwarp -r {ref} -w {iwarp} -o {owarp}", logFile=logFile)
 
 
 # initial warp + midmat + final warp
@@ -203,7 +203,7 @@ def check_convert_warp_wmw(owarp, iwarp1, mat, iwarp2, ref, overwrite=False, log
         if not Image(iwarp1).exist or not Image(iwarp2).exist or not os.path.exists(mat) or not Image(ref).exist:
             raise Exception("ERROR in check_convert_warp_wmw, input warp1 (" + iwarp1 + ") or input warp2 (" + iwarp2 + ") or mid mat (" + mat + ") or ref (" + ref + ") does not exist")
         else:
-            rrun("convertwarp --ref=" + ref + " --warp1=" + iwarp1 + " --midmat=" + mat + " --warp2=" + iwarp2 + " --out=" + owarp, logFile=logFile)
+            rrun(f"convertwarp --ref={ref} --warp1={iwarp1} --midmat={mat} --warp2={iwarp2} --out={owarp}", logFile=logFile)
 
 
 # initial warp + final warp
@@ -230,7 +230,7 @@ def check_convert_warp_ww(owarp: str, iwarp1: str, iwarp2: str, ref: str, overwr
         if not Image(iwarp1).exist or not Image(iwarp2).exist or not Image(ref).exist:
             raise Exception("ERROR in check_convert_warp_wmw, input warp1 (" + iwarp1 + ") or input warp2 (" + iwarp2 + ") or ref (" + ref + ") does not exist")
         else:
-            rrun("convertwarp --ref=" + ref + " --warp1=" + iwarp1 + " --warp2=" + iwarp2 + " --out=" + owarp, logFile=logFile)
+            rrun(f"convertwarp --ref={ref} --warp1={iwarp1} --warp2={iwarp2} --out={owarp}", logFile=logFile)
 
 
 # initial mat + warp
@@ -257,7 +257,7 @@ def check_convert_warp_mw(owarp, premat, iwarp, ref, overwrite=False, logFile=No
         if not Image(iwarp).exist or not os.path.exists(premat) or not Image(ref).exist:
             raise Exception("ERROR in check_convert_warp_mw, input warp (" + iwarp + ") or pre mat (" + premat + ") or ref (" + ref + ") does not exist")
         else:
-            rrun("convertwarp --ref=" + ref + " --premat=" + premat + " --warp1=" + iwarp + " --out=" + owarp, logFile=logFile)
+            rrun(f"convertwarp --ref={ref} --premat={premat} --warp1={iwarp} --out={owarp}", logFile=logFile)
 
 
 def check_apply_warp(oimg, iimg, warp, ref, overwrite=False, logFile=None):
@@ -283,6 +283,6 @@ def check_apply_warp(oimg, iimg, warp, ref, overwrite=False, logFile=None):
         if not Image(iimg).exist or not Image(warp).exist or not Image(ref).exist:
             raise Exception("ERROR in check_apply_warp, input image (" + iimg + ") or warp (" + warp + ") or ref img (" + ref + ") does not exist")
         else:
-            rrun("applywarp -i " + iimg + " -r " + ref + " -o " + oimg + " --warp=" + warp, logFile=logFile)
+            rrun(f"applywarp -i {iimg} -r {ref} -o {oimg} --warp={warp}", logFile=logFile)
 
 # ======================================================================================================================

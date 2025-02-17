@@ -26,6 +26,7 @@ class Images(list):
             value = [value]
 
         missing_images = []
+
         for v in value:
             try:
                 self.append(Image(v, must_exist, msg))

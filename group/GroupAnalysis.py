@@ -97,7 +97,7 @@ class GroupAnalysis:
                 if runit:
                     print("RANDOMIZE STARTED: model: " + model_noext + " on " + input_image)
                     p = subprocess.Popen(["randomise", "-i", input_image, "-m", input_mask, "-o", os.path.join(final_dir, out_image_name), "-d", model_noext + ".mat", "-t", model_noext + ".con", "-n", str(perm), "--T2", "-V"])
-                    rrun("sleep " + str(delay))
+                    rrun(f"sleep {delay}")
                     return p
                 else:
                     print("model: " + model_noext + " on " + input_image + " is ok")
@@ -145,7 +145,7 @@ class GroupAnalysis:
                             print("RANDOMIZE STARTED: model: " + model_noext + " on " + input_image)
                             p = subprocess.Popen(["randomise","-i", input_image, "-m", input_mask, "-o", os.path.join(final_dir, random_folders[idcpu], out_image_name), "-d", mat_file, "-t", con_file, "-n", str(perm), "--T2", "-V"])
                             subprocesses.append(p)
-                            rrun("sleep " + str(delay))
+                            rrun(f"sleep {delay}")
                         except Exception as e:
                             print(e)
                     else:
@@ -265,7 +265,7 @@ class GroupAnalysis:
 
         for subj in self.subjects_list:
             Image(os.path.join(smw_folder, "smwc1T1_biascorr_" + subj.label)).cp(os.path.join(struct_dir, "smwc1T1_biascorr_" + subj.label))
-            rrun("fslmaths " + os.path.join(struct_dir, "smwc1T1_biascorr_" + subj.label) + " -thr 0.1 " + os.path.join(struct_dir, "smwc1T1_biascorr_" + subj.label))
+            rrun(f"fslmaths {os.path.join(struct_dir, 'smwc1T1_biascorr_' + subj.label)} -thr 0.1 {os.path.join(struct_dir, 'smwc1T1_biascorr_' + subj.label)}")
 
         # create merged image
         # cur_dir = os.getcwd()
@@ -274,8 +274,8 @@ class GroupAnalysis:
         # trick...since there are nii and nii.gz. by adding ".gz" in the check I consider only the nii
         images = [os.path.join(struct_dir, f) for f in os.listdir(struct_dir) if os.path.isfile(os.path.join(struct_dir, f + ".gz"))]
 
-        rrun("fslmerge -t GM_merg" + " " + " ".join(images))
-        rrun("fslmaths GM_merg" + " -Tmean -thr 0.05 -bin GM_mask -odt char")
+        rrun(f"fslmerge -t GM_merg {' '.join(images)}")
+        rrun("fslmaths GM_merg -Tmean -thr 0.05 -bin GM_mask -odt char")
 
         shutil.rmtree(struct_dir)
 
@@ -325,8 +325,8 @@ class GroupAnalysis:
             print("co-registrating images to MNI template")
             rrun("tbss_2_reg -T")
             print("postreg")
-            rrun("tbss_3_postreg -" + postreg)
-            rrun("tbss_4_prestats " + str(prestat_thr))
+            rrun(f"tbss_3_postreg -{postreg}")
+            rrun(f"tbss_4_prestats {prestat_thr}")
 
             os.chdir(curr_dir)
 
@@ -389,7 +389,7 @@ class GroupAnalysis:
 
             for mod in modalities:
                 print("preprocessing dtifit_" + mod + " images")
-                rrun("tbss_non_FA " + mod)
+                rrun(f"tbss_non_FA {mod}")
 
             os.chdir(curr_dir)
 
@@ -596,7 +596,7 @@ class GroupAnalysis:
 
         print("creating merged background image")
 
-        rrun("fslmerge -t " + os.path.join(out_dir_name, "bg_image") + " " + bgimages)
+        rrun(f"fslmerge -t {os.path.join(out_dir_name, 'bg_image')} {bgimages}")
 
         # echo "merging background image"
         # $FSLDIR/bin/fslmerge -t $OUTPUT_DIR/bg_image $bglist
@@ -677,14 +677,14 @@ class GroupAnalysis:
             # threshold tbss input, copy to out_folder, get number of voxels
             name            = tbss_result_image.name
             thr_input       = Image(os.path.join(out_folder, name))
-            rrun("fslmaths " + tbss_result_image + " -thr " + str(thr) + " -bin " + thr_input)
+            rrun(f"fslmaths {tbss_result_image} -thr {thr} -bin {thr_input}")
             original_voxels = thr_input.get_nvoxels()
 
             for tract in tracts_labels:
                 tr_img              = Image(os.path.join(tracts_dir, "FMRIB58_FA-skeleton_1mm_" + tract + "_mask"))
                 ntotvox_x_tract.append(tr_img.get_nvoxels())
                 out_img             = Image(os.path.join(out_folder, "sk_" + tract))
-                rrun("fslmaths " + thr_input + " -mas " + tr_img + " " + out_img)
+                rrun(f"fslmaths {thr_input} -mas {tr_img} {out_img}")
 
                 res = out_img.get_nvoxels()
                 nsignvox_x_tract.append(res)
@@ -697,23 +697,23 @@ class GroupAnalysis:
 
             out_str = "tract\tsignvx\ttotvx\ttr_perc\ttot_perc\n"
             for id, tract in enumerate(tracts_labels):
-                    out_str = out_str + tract + "\t" + str(nsignvox_x_tract[id]) + "\t" + str(ntotvox_x_tract[id]) + "\t" + str(round((nsignvox_x_tract[id] * 100) / ntotvox_x_tract[id], 2)) + "\t" + str(round((nsignvox_x_tract[id] * 100) / tot_voxels, 2)) + "\n"
+                    out_str = f"{out_str}{tract}\t{nsignvox_x_tract[id]}\t{ntotvox_x_tract[id]}\t{round((nsignvox_x_tract[id] * 100) / ntotvox_x_tract[id], 2)}\t{round((nsignvox_x_tract[id] * 100) / tot_voxels, 2)}\n"
 
             # ------------------------------------------------
             # create unclassified image
             unclass_img = Image(os.path.join(out_folder, "unclass_" + os.path.basename(out_folder)))
             cmd_str = "fslmaths " + thr_input
             for img in classified_tracts:
-                cmd_str = cmd_str + " -sub " + img + " -bin "
+                cmd_str = f"{cmd_str} -sub {img} -bin "
             cmd_str = cmd_str + unclass_img
             rrun(cmd_str)
             unclass_vox = unclass_img.get_nvoxels()
 
             # ----------------------------------------------------------------------------------------------------------
             # write log file
-            out_str = out_str + "\n" + "tot_rec_voxels\ttot_voxels\tperc\n"
-            out_str = out_str + str(tot_voxels) + "\t" + str(original_voxels) + "\t" + str(round((tot_voxels * 100) / original_voxels, 2)) + "\n"
-            out_str = out_str + "unclassified image has " + str(unclass_vox) + " voxels"
+            out_str = f"{out_str}\ntot_rec_voxels\ttot_voxels\tperc\n"
+            out_str = f"{out_str}{tot_voxels}\t{original_voxels}\t{round((tot_voxels * 100) / original_voxels, 2)}\n"
+            out_str = f"{out_str}unclassified image has {unclass_vox} voxels"
             with open(log, 'w', encoding='utf-8') as f:
                 f.write(out_str)
 
@@ -888,10 +888,10 @@ class GroupAnalysis:
                     xtrdir = subj.dti_xtract_dir
                 else:
                     xtrdir = os.path.join(subj.dti_dir, xtractdir_name)
-                str_xtr = str_xtr + xtrdir + "\n"
+                str_xtr = f"{str_xtr}{xtrdir}\n"
             f.write(str_xtr)
 
-        rrun("xtract_qc -subject_list "+ xtracts_file + " -out " + out_dir + " -thr " + str(thr) + " -n_std " + str(n_std))
+        rrun(f"xtract_qc -subject_list {xtracts_file} -out {out_dir} -thr {thr} -n_std {n_std}")
     #endregion
 
     # # takes N individual tracts for each subject in the list, create a merged tract (union) names as the subject, project to template and display in a single fsleyes

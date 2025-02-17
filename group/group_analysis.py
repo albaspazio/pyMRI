@@ -57,7 +57,7 @@ def convert_melodic_rois_to_individual(project:Project, templ_name:str, popul_na
         input_roi = Image(os.path.join(roi4_folder, roi))
         output_roi = Image(os.path.join(roi2_folder, roi))
 
-        # rrun("flirt -in " + input_roi + " -ref " + mni_2mm_brain + " -out " + output_roi + " -applyisoxfm 2")      # ${FSLDIR}/bin/flirt -in $roi_folder4/$roi -ref $ref_img -out $roi_folder2/$roi -applyisoxfm
+        # rrun(f"flirt -in {input_roi} -ref {mni_2mm_brain} -out {output_roi} -applyisoxfm 2")      # ${FSLDIR}/bin/flirt -in $roi_folder4/$roi -ref $ref_img -out $roi_folder2/$roi -applyisoxfm
 
         for subjs_insts in arr_subjs_insts:
             proj = subjs_insts[0].project
@@ -76,13 +76,7 @@ def convert_melodic_rois_to_individual(project:Project, templ_name:str, popul_na
 def extract_meanvalue_from_tbssresults(project:Project, rois:Images, subjects:List[Subject], metric:str="FA"):
 
     """
-    This function takes melodic RSN's labels created with fsleyes, parse it and
-    - extract valid and non-valid IC and returns them as lists
-    - writes in bash melodic templates (for dual regression): str_pruning_ic_id, str_arr_IC_labels, arr_IC_labels, arr_pruning_ic_id fields
-    - writes in matlab melodic templates (for fslnets):
-        templates(1)=struct('name', 'controls59', 'imagepath' , '/data/MRI/pymri/templates/images/MNI152_T1_4mm_brain', 'rsn_labels', [], 'good_nodes', []);
-        templates(1).rsn_labels={'aDMN','LAT_OCCIP','pDMN','RATN','FP','PRIM_VIS','LATN','FP2','pTemp','pSM','EXEC','SM','BG','BFP','CEREB','SM2','aTemp','LAT_OCCIP2','SAL','LAT_OCCIP3','X','SAL2'};
-        templates(1).good_nodes=[1 2 3 5 6 7 8 9 11 12 13 14 15 16 17 20 23 24 27 29 34 47];
+    This function takes
 
     Args:
         project (Project): The project object.
@@ -113,8 +107,7 @@ def extract_meanvalue_from_tbssresults(project:Project, rois:Images, subjects:Li
         subj_img_postfix = "_FA_to_target_" + metric
 
     for roi in rois:
-        roi_img = os.path.join(roi_root_dir, roi)
-        rrun("fslmaths " + roi_img + " -thr 0.95 -bin " + roi_img + "_mask")
+        rrun(f"fslmaths {roi} -thr 0.95 -bin {roi.split_ext()[0]}_mask")
     out_folder = os.path.join(project.tbss_dir, "results_sp_sts_htc_fmrib58")
 
     results = []
@@ -126,8 +119,8 @@ def extract_meanvalue_from_tbssresults(project:Project, rois:Images, subjects:Li
             subj_img = os.path.join(subjects_images, subj.dti_fit_label + subj_img_postfix)
             subj_img_masked = os.path.join(subjects_images, subj.dti_fit_label + subj_img_postfix + "_masked")
 
-            rrun("fslmaths " + subj_img + " -mas " + roi_mask_img + " " + subj_img_masked)
-            val = float(rrun("fslstats " + subj_img_masked + " -M").strip())
+            rrun(f"fslmaths {subj_img} -mas {roi_mask_img} {subj_img_masked}")
+            val = float(rrun(f"fslstats  {subj_img_masked} -M").strip())
             imrm([subj_img_masked])
             roi_row.append(val)
 

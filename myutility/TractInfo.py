@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from typing import List
 
 from myutility.images.Image import Image
