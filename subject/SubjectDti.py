@@ -36,10 +36,10 @@ class SubjectDti:
             None.
         """
         if not self.subject.dti_nodiff_data.exist:
-            rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1", logFile=logFile)
+            rrun(f"fslroi {os.path.join(self.subject.dti_data)} {self.subject.dti_nodiff_data} 0 1", logFile=logFile)
 
         if not self.subject.dti_nodiff_brain_data.exist:
-            rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
+            rrun(f"bet {self.subject.dti_nodiff_data} {self.subject.dti_nodiff_brain_data} -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
 
     # eddy correction when PA sequence is not available
     def eddy_correct(self, overwrite:bool=False, logFile=None):
@@ -57,14 +57,14 @@ class SubjectDti:
             print("WARNING in dti eddy_correct of subject: " + self.subject.label + ",dti image is missing...skipping subject")
             return
 
-        rrun("fslroi " + self.subject.dti_data + " " + self.subject.dti_nodiff_data + " 0 1", logFile=logFile)
-        rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
+        rrun(f"fslroi {self.subject.dti_data} {self.subject.dti_nodiff_data} 0 1", logFile=logFile)
+        rrun(f"bet {self.subject.dti_nodiff_data} {self.subject.dti_nodiff_brain_data} -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
 
         if not self.subject.dti_ec_data.exist or overwrite:
             print("starting eddy_correct on " + self.subject.label)
-            rrun("eddy_correct " + self.subject.dti_data + " " + self.subject.dti_ec_data + " 0", logFile=logFile)
+            rrun(f"eddy_correct {self.subject.dti_data} {self.subject.dti_ec_data} 0", logFile=logFile)
 
-            os.system("bash fdt_rotate_bvecs " + self.subject.dti_bvec + " " + self.subject.dti_rotated_bvec + " " + self.subject.dti_ec_data + ".ecclog")
+            os.system(f"bash fdt_rotate_bvecs {self.subject.dti_bvec} {self.subject.dti_rotated_bvec} {self.subject.dti_ec_data}.ecclog")
 
     # perform eddy correction, finally writes  .._ec.nii.gz &  .._-dti_rotated.bvec
     def eddy(self, exe_ver:str="eddy_openmp", acq_params=None, config:str="b02b0_1.cnf", estmove=True, slice2vol=6, rep_out:str="both", json=None, logFile=None):
@@ -115,24 +115,24 @@ class SubjectDti:
         # parameters
         # ----------------------------------------------------------------
         if estmove:
-            str_estmove = " --estimate_move_by_susceptibility"
+            str_estmove = "--estimate_move_by_susceptibility"
         else:
             str_estmove = ""
 
         if json == "":
             str_json = ""
         else:
-            str_json = " --json=" + json
+            str_json = "--json=" + json
 
         if rep_out == "":
             str_rep_out = ""
         else:
-            str_rep_out = " --repol --ol_type=" + rep_out
+            str_rep_out = "--repol --ol_type=" + rep_out
 
         if slice2vol == 0:
             str_slice2vol = ""
         else:
-            str_slice2vol = " --mporder=" + str(slice2vol) + " "
+            str_slice2vol = "--mporder=" + str(slice2vol) + " "
 
         # -----------------------------------------------------------------
         # check whether requested eddy version exist (to use cuda versions of other FSL releases, I can pass also a full file path)
@@ -157,15 +157,15 @@ class SubjectDti:
         topup_results       = os.path.join(self.subject.dti_dir, "topup_results")
 
         # create an image with the 2 b0s with opposite directions
-        rrun("fslroi " + self.subject.dti_data + " " + a2p_bo + " 0 1", logFile=logFile)
-        rrun("fslroi " + self.subject.dti_pa_data + " " + p2a_bo + " 0 1", logFile=logFile)
-        rrun("fslmerge -t " + a2p_p2a_bo + " " + a2p_bo + " " + p2a_bo, stop_on_error=False)
+        rrun(f"fslroi {self.subject.dti_data} {a2p_bo} 0 1", logFile=logFile)
+        rrun(f"fslroi {self.subject.dti_pa_data} {p2a_bo} 0 1", logFile=logFile)
+        rrun(f"fslmerge -t {a2p_p2a_bo} {a2p_bo} {p2a_bo}", stop_on_error=False)
 
         if not Image(os.path.join(self.subject.dti_dir, "topup_results_fieldcoef.nii.gz")).exist:
-            rrun("topup --imain=" + a2p_p2a_bo + " --datain=" + acq_params + " --config=" + config + " --out=" +  topup_results  + " --iout=" +  hifi_b0, logFile=logFile)
+            rrun(f"topup --imain={a2p_p2a_bo} --datain={acq_params} --config={config} --out={topup_results} --iout={hifi_b0}", logFile=logFile)
 
-        rrun("fslmaths " + hifi_b0 + " -Tmean " + hifi_b0, logFile=logFile)
-        rrun("bet " + hifi_b0 + " " + hifi_b0 + "_brain -m", logFile=logFile)
+        rrun(f"fslmaths {hifi_b0} -Tmean {hifi_b0}", logFile=logFile)
+        rrun(f"bet {hifi_b0} {hifi_b0}_brain -m", logFile=logFile)
 
         nvols_dti = self.subject.dti_data.getnvol()
         indx=""
@@ -177,14 +177,13 @@ class SubjectDti:
         # if "cuda" in exe_ver:
         #     exe_ver = "/usr/local/fsl-6.0.5/bin/eddy_cuda10.2"
 
-        rrun(exe_ver + " --imain=" +  self.subject.dti_data + " --mask=" + hifi_b0 + "_brain_mask --acqp=" + acq_params + " --index=" + index_file + " --bvecs=" + self.subject.dti_bvec + " --bvals=" + self.subject.dti_bval +
-                       " --topup=" + topup_results + " --out=" + eddy_corrected_data + str_estmove + str_slice2vol + str_json + str_rep_out, logFile=logFile)
+        rrun(f"{exe_ver} --imain={self.subject.dti_data} --mask={hifi_b0}_brain_mask --acqp={acq_params} --index={index_file} --bvecs={self.subject.dti_bvec} --bvals={self.subject.dti_bval} --topup={topup_results} --out={eddy_corrected_data} {str_estmove} {str_slice2vol} {str_json} {str_rep_out}", logFile=logFile)
 
         os.rename(self.subject.dti_eddyrotated_bvec, self.subject.dti_rotated_bvec)
 
-        os.system("rm " + self.subject.dti_dir + "/" + "a2p_*")
-        os.system("rm " + self.subject.dti_dir + "/" + "p2a_*")
-        os.system("rm " + self.subject.dti_dir + "/" + "hifi_*")
+        os.system(f"rm {self.subject.dti_dir}/a2p_*")
+        os.system(f"rm {self.subject.dti_dir}/p2a_*")
+        os.system(f"rm {self.subject.dti_dir}/hifi_*")
 
     # use_ec = True: eddycorrect, False: eddy
     def fit(self, logFile=None):
@@ -210,15 +209,15 @@ class SubjectDti:
             print("ERROR in dti fit of subject: " + self.subject.label + ",rotated bvec file is not available..did you run either eddy_correct or eddy?...skipping subject")
             return
 
-        rrun("fslroi " + os.path.join(self.subject.dti_data) + " " + self.subject.dti_nodiff_data + " 0 1", logFile=logFile)
-        rrun("bet " + self.subject.dti_nodiff_data + " " + self.subject.dti_nodiff_brain_data + " -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
+        rrun(f"fslroi {os.path.join(self.subject.dti_data)} {self.subject.dti_nodiff_data} 0 1", logFile=logFile)
+        rrun(f"bet {self.subject.dti_nodiff_data} {self.subject.dti_nodiff_brain_data} -m -f 0.3", logFile=logFile)  # also creates dti_nodiff_brain_mask_data
 
         if not self.subject.dti_fit_data.exist:
             print("starting DTI fit on " + self.subject.label)
-            rrun("dtifit --sse -k " + self.subject.dti_ec_data + " -o " + self.subject.dti_fit_data + " -m " + self.subject.dti_nodiff_brainmask_data + " -r " + self.subject.dti_rotated_bvec + " -b " + self.subject.dti_bval, logFile=logFile)
+            rrun(f"dtifit --sse -k {self.subject.dti_ec_data} -o {self.subject.dti_fit_data} -m {self.subject.dti_nodiff_brainmask_data} -r {self.subject.dti_rotated_bvec} -b {self.subject.dti_bval}", logFile=logFile)
 
         if not Image(self.subject.dti_ec_data + "_L23").exist:
-            rrun("fslmaths " + self.subject.dti_fit_data + "_L2" + " -add " + self.subject.dti_fit_data + "_L3" + " -div 2 " + self.subject.dti_fit_data + "_L23", logFile=logFile)
+            rrun(f"fslmaths {self.subject.dti_fit_data}_L2 -add {self.subject.dti_fit_data}_L3 -div 2 {self.subject.dti_fit_data}_L23", logFile=logFile)
 
     def bedpostx(self, bedpostx_dirname:str|None="bedpostx", use_gpu:bool=False, logFile=None):
         """
@@ -257,7 +256,7 @@ class SubjectDti:
         copyfile(self.subject.dti_bval, os.path.join(bp_dir, "bvals"))
         copyfile(self.subject.dti_rotated_bvec, os.path.join(bp_dir, "bvecs"))
 
-        res = rrun("bedpostx_datacheck " + bp_dir, logFile=logFile)
+        res = rrun(f"bedpostx_datacheck {bp_dir}", logFile=logFile)
 
         # if res > 0:
         #     print("ERROR in bedpostx (" +  bp_dir + " ....exiting")
@@ -266,7 +265,7 @@ class SubjectDti:
         if use_gpu:
             rrun(os.path.join(self._global.fsl_dir, "bin", "bedpostx_gpu") + " " + bp_dir + " -n 3 -w 1 -b 1000", logFile=logFile)
         else:
-            rrun("bedpostx " + bp_dir + " -n 3 -w 1 -b 1000", logFile=logFile)
+            rrun(f"bedpostx {bp_dir} -n 3 -w 1 -b 1000", logFile=logFile)
 
         if Image(os.path.join(bp_out_dir, self.subject.dti_bedpostx_mean_S0_label)).exist:
             os.rename(bp_dir, os.path.join(self.subject.dti_dir, "bedpostx_"))
@@ -307,20 +306,20 @@ class SubjectDti:
         # SEED ---------------------------------------------------------------------------
         seed_file = os.path.join(out_dir, "seed_file_" + out_tractofile_name + ".txt")
         if isinstance(seed , str):
-            seed_str = " -x " + seed
+            seed_str = "-x " + seed
         elif isinstance(seed, list):
             if isinstance(seed[0], str):
                 with open(seed_file, "w") as f:
                     str_seed = ""
                     for s in seed:
-                        str_seed = str_seed + s + "\n"
+                        str_seed = f"{str_seed}{s}\n"
                     f.write(str_seed)
-                seed_str = " -x " + seed_file
+                seed_str = "-x " + seed_file
             elif isinstance(seed[0], int):
                 with open(seed_file, "w") as f:
-                    str_seed = str(seed[0]) + "," + str(seed[1]) + "," + str(seed[2])
+                    str_seed = f"{seed[0]},{seed[1]},{seed[2]}"
                     f.write(str_seed)
-                seed_str = " -x " + seed_file + " --simple"
+                seed_str = f"-x {seed_file} --simple"
             else:
                 print("Seed parameters is a list but not of the expected types....exiting")
                 return
@@ -336,34 +335,34 @@ class SubjectDti:
                 for wp in wayp:
                     str_wp = str_wp + wp + "\n"
                 f.write(str_wp)
-            wp_str = " --waypoints=" + wp_file
+            wp_str = "--waypoints=" + wp_file
         else:
             wp_str = ""
 
         # STOP & AVOID ---------------------------------------------------------------------------
         if stop is not None:
             stop_mask = Image(stop, must_exist=True, msg="Stop mask is not valid")
-            stop_str = " --stop=" + stop_mask
+            stop_str = "--stop=" + stop_mask
         else:
             stop_str = ""
 
         if avoid is not None:
             avoid_mask = Image(avoid, must_exist=True, msg="Avoid mask is not valid")
-            avoid_str = " --avoid=" + avoid_mask
+            avoid_str = "--avoid=" + avoid_mask
         else:
             avoid_str = ""
 
         # START ---------------------------------------------------------------------------
-        print("STARTING probtrackx " + out_dir_name + " | " + out_tractofile_name + " on subject " + self.subject.label)
-        rrun(cmd_str + "-o " + out_tractofile_name + " --dir=" + out_dir + " -s " + os.path.join(bp_dir, "merged") + " -m " + os.path.join(self.subject.roi_dti_dir, "nodif_brain_mask") + param_str + wp_str + seed_str + stop_str + avoid_str + param_str + default_pbt_params)
+        print(f"STARTING probtrackx {out_dir_name} | {out_tractofile_name} on subject {self.subject.label}")
+        rrun(f"{cmd_str} -o {out_tractofile_name} --dir={out_dir} -s {os.path.join(bp_dir, 'merged')} -m {os.path.join(self.subject.roi_dti_dir, 'nodif_brain_mask')} {param_str} {wp_str} {seed_str} {stop_str} {avoid_str} {param_str} {default_pbt_params}")
 
         waytotal = read_value_from_file(os.path.join(out_dir, "waytotal"))
 
-        rrun("fslmaths " + os.path.join(out_dir, out_tractofile_name) + " -div " + waytotal + os.path.join(out_dir, out_tractofile_name + "Norm"))
+        rrun(f"fslmaths {os.path.join(out_dir, out_tractofile_name)} -div {waytotal} {os.path.join(out_dir, out_tractofile_name + 'Norm')}")
 
         os.rename(os.path.join(out_dir, "waytotal"), os.path.join(out_dir, "waytotal_" + out_tractofile_name))
 
-        print("FINISHED probtrackx " + out_dir_name + " on subject " + self.subject.label)
+        print(f"FINISHED probtrackx {out_dir_name} on subject {self.subject.label}")
 
 
     def xtract(self, xtractdir_name:str|None=None, bedpostx_dirname:str|None=None, refspace="native", use_gpu:bool=False, species="HUMAN", logFile=None):
@@ -395,17 +394,17 @@ class SubjectDti:
             bp_dir = os.path.join(self.subject.dti_dir, bedpostx_dirname)
 
         if refspace == "native":
-            refspace_str = " -native -stdwarp " + self.subject.transform.std2dti_warp + " " + self.subject.transform.dti2std_warp + " "
+            refspace_str = "-native -stdwarp " + self.subject.transform.std2dti_warp + " " + self.subject.transform.dti2std_warp + " "
         else:
             # TODO: split refspace by space, check if the two elements are valid files
-            refspace_str = " -ref " + refspace + " "
+            refspace_str = "-ref " + refspace + " "
 
         gpu_str = ""
         if use_gpu:
-            gpu_str = " -gpu "
+            gpu_str = "-gpu "
 
         print("STARTING xtract on subject " + self.subject.label)
-        rrun("xtract -bpx " + bp_dir + " -out " + out_dir + gpu_str + refspace_str + " -species " + species, stop_on_error=False, logFile=logFile)
+        rrun(f"xtract -bpx {bp_dir} -out {out_dir} {gpu_str} {refspace_str} -species {species}", stop_on_error=False, logFile=logFile)
 
         self.xtract_check(xtractdir_name)
         return out_dir
@@ -458,7 +457,7 @@ class SubjectDti:
         if structures != "":
             structures = " -str " + structures + " "
 
-        rrun("xtract_viewer -dir " + xdir + " -species " + species + "" + structures)
+        rrun(f"xtract_viewer -dir {xdir} -species {species} {structures}")
 
     def xtract_stats(self, xtractdir_name:str|None=None, refspace="native", meas="vol,prob,length,FA,MD,L1", structures:str="", logFile=None):
         """
@@ -485,20 +484,20 @@ class SubjectDti:
             in_dir = os.path.join(self.subject.dti_dir, xtractdir_name)
 
         if refspace == "native":
-            rspace = " -w native "
+            rspace = "-w native "
         elif refspace == "":
             raise IOError("SubjectDti.xtract_stats given refspace param is empty")
 
         else:
             refspace = Image(refspace, must_exist=True, msg="SubjectDti.xtract_stats given refspace param is not a transform image")
-            rspace = " -w " + refspace + " "
+            rspace = "-w " + refspace + " "
 
-        root_dir = " -d " + os.path.join(self.subject.dti_dir, self.subject.dti_fit_label + "_") + " "
+        root_dir = f" -d {os.path.join(self.subject.dti_dir, self.subject.dti_fit_label + '_')} "
 
         if structures != "":
-            structures = " -str " + structures + " "
+            structures = f"-str {structures} "
 
-        rrun("xtract_stats " + " -xtract " + in_dir + rspace + root_dir + " -meas " + meas + " " + structures, logFile=logFile)
+        rrun(f"xtract_stats -xtract {in_dir} {rspace} {root_dir} -meas {meas} {structures}", logFile=logFile)
 
     # read its own xtract_stats output file and return a dictionary = { "tractX":{"val1":XX,"val2":YY, ...}, .. }
     def xtract_read_file(self, tracts=None, values=None, ifn="stats.csv"):
@@ -575,9 +574,7 @@ class SubjectDti:
         lwhitegii = "lwhite"
         rwhitegii = "rwhite"
 
-        rrun("xtract_blueprint -bpx " + self.subject.dti_bedpostX_dir + " -out " + self.subject.dti_blueprint_dir + " -xtract " + self.subject.dti_xtract_dir +
-            " -seeds " + lwhitegii + "," + rwhitegii + " -warps " + self.subject.std_img +
-            " " + self.subject.transform.std2dti_warp + " " + self.subject.transform.dti2std_warp + " -nsamples " + str(50) + " -res " + str(res) + gpu_str)
+        rrun(f"xtract_blueprint -bpx {self.subject.dti_bedpostX_dir} -out {self.subject.dti_blueprint_dir} -xtract {self.subject.dti_xtract_dir} -seeds {lwhitegii} ,{rwhitegii} -warps {self.subject.std_img} {self.subject.transform.std2dti_warp} {self.subject.transform.dti2std_warp} -nsamples 50 -res {res} {gpu_str}")
 
     def conn_matrix(self, atlas_path="freesurfer", nroi=0):
         pass
@@ -610,7 +607,7 @@ class SubjectDti:
                 print("SubjectDti.convert2dsi given input image (" + inputimg + ") does not exist...skipping conversion")
                 return
 
-        rrun("dsi_studio --action=src --source=" + inputimg + ".nii.gz" + " --bval=" + bval + " --bvec=" + bvec + " --output=" + os.path.join(self.subject.dti_dsi_dir, self.subject.dti_image_label))
+        rrun(f"dsi_studio --action=src --source={inputimg}.nii.gz --bval={bval} --bvec={bvec} --output={os.path.join(self.subject.dti_dsi_dir, self.subject.dti_image_label)}")
 
     def dsi_recon(self, in_img:Image=None, method:str="GQI", param0:float=1.25, connectometry:int=1, output:str=None, thread_count:int=1):
         """
@@ -641,12 +638,12 @@ class SubjectDti:
         if  output is None:
             output_str = ""
         else:
-            output_str = " --output=" + output
+            output_str = "--output=" + output
 
         if not in_img.exist:
             raise IOError("SubjectDti.dsi_recon given input image does not exist: " + in_img)
 
-        rrun("dsi_studio --action=rec --source=" + in_img + " --method=" + rec_method + " --param0=" + str(param0) + " --record_odf=" + str(connectometry) + output_str + " --thread_count=" + str(thread_count))
+        rrun(f"dsi_studio --action=rec --source={in_img} --method={rec_method} --param0={param0} --record_odf={connectometry} {output_str} --thread_count={thread_count}")
 
     def dsi_connectivity(self, fib_file=None, fib_type:str=".src.gz.odf.gqi.1.25", threshold:int=0.001, fib_cnt:int=1000000, conn_atlas:str="Brainnectome", conn_values:str="count,qa,trk"):
         """

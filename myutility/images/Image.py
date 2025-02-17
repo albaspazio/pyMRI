@@ -52,7 +52,7 @@ class Image(str):
             self.dir = parts[0]
             self.name = parts[1]  # name NO EXTENSION !!!!!!
             self.ext = parts[2]
-            self.fpathnoext = os.path.join(self.dir, self.name)
+            self.fpathnoext = str(os.path.join(self.dir, self.name))
             self.is_dir = os.path.isdir(self)
 
             if must_exist and not self.exist:
@@ -501,7 +501,7 @@ class Image(str):
             int: The number of volumes.
 
         """
-        return int(rrun("fslnvols " + self).split('\n')[0])
+        return int(rrun(f"fslnvols {self}").split('\n')[0])
 
     def get_nvoxels(self):
         """
@@ -511,7 +511,7 @@ class Image(str):
             int: The number of voxels.
 
         """
-        return int(rrun("fslstats " + self + " -V").strip().split(" ")[0])
+        return int(rrun(f"fslstats {self} -V").strip().split(" ")[0])
 
     def getnslices(self):
         """
@@ -521,7 +521,7 @@ class Image(str):
             int: The number of slices.
 
         """
-        return int(rrun("fslval " + self + " dim3"))
+        return int(rrun(f"fslval {self} dim3"))
 
     def get_image_volume(self):
         """
@@ -531,9 +531,9 @@ class Image(str):
             int: The volume of the image.
 
         """
-        return int(rrun("fslstats " + self + " -V").strip().split(" ")[1])
+        return int(rrun(f"fslstats {self} -V").strip().split(" ")[1])
 
-    def get_image_mean(self):
+    def get_image_mean(self, includezeros:bool=False):
         """
         Get the mean of the image.
 
@@ -541,7 +541,11 @@ class Image(str):
             float: The mean of the image.
 
         """
-        return float(rrun("fslstats " + self + " -M").strip())
+        if includezeros:
+            str_mean = " -m"
+        else:
+            str_mean = " -M"
+        return float(rrun(f"fslstats {self} {str_mean}").strip())
 
     def mask_image(self, mask, out):
         """
@@ -552,7 +556,17 @@ class Image(str):
             out (Image): The output image.
 
         """
-        rrun("fslmaths " + self + " -mas " + mask + " " + out)
+        rrun(f"fslmaths {self} -mas {mask} {out}")
+
+    def get_mask_mean(self, mask:str, includezeros:bool=False) -> float:
+
+        mask = Image(mask, must_exist=True, msg="Given mask in get_mask_mean is not valid")
+        if includezeros:
+            str_mean = " -m"
+        else:
+            str_mean = " -M"
+
+        return float(rrun(f"fslstats {self} -k {mask} {str_mean}").strip())
 
     def imsplit(self, templabel=None, subdirmame:str="") -> tuple[str, str]:
         """
@@ -575,7 +589,7 @@ class Image(str):
         outdir  = os.path.join(self.dir, subdirmame)
         os.makedirs(outdir, exist_ok=True)
         os.chdir(outdir)
-        rrun('fslsplit ' + self + " " + label + " -t")
+        rrun(f"fslsplit {self} {label} -t")
         os.chdir(currdir)
         return outdir, label
 
@@ -597,8 +611,8 @@ class Image(str):
         currpath    = os.path.dirname(self)
         vol16       = Image(os.path.join(currpath, "vol16"))
 
-        rrun("fslmaths " + self + " -subsamp2 -subsamp2 -subsamp2 -subsamp2 " + vol16, logFile=logFile)
-        rrun("flirt -in " + vol16 + " -ref " + self + " -out " + outimg + " -noresampblur -applyxfm -paddingsize 16", logFile=logFile)
+        rrun(f"fslmaths {self} -subsamp2 -subsamp2 -subsamp2 -subsamp2 {vol16}", logFile=logFile)
+        rrun(f"flirt -in {vol16} -ref {self} -out {outimg} -noresampblur -applyxfm -paddingsize 16", logFile=logFile)
         # possibly do a tiny extra smooth to $out here?
         vol16.rm()
 
@@ -677,7 +691,7 @@ class Image(str):
         Returns:
             float: The repetition time.
         """
-        return float(rrun('fslval ' + self + ' pixdim4'))
+        return float(rrun(f"fslval {self} pixdim4"))
 
     # extract header in xml format and returns it as a (possibly filtered by list_field) dictionary
     def read_header(self, list_field=None):
@@ -691,7 +705,7 @@ class Image(str):
             dict: A dictionary containing the header fields.
 
         """
-        res = rrun("fslhd -x " + self)
+        res = rrun(f"fslhd -x {self}")
         root = ET.fromstring(res)
         attribs_dict = root.attrib
 
@@ -720,17 +734,17 @@ class Image(str):
             ValueError: If the given remove_dimension is not "axial" or "sagittal".
 
         """
-        nslices = int(rrun("fslval " + self + " dim3"))
+        nslices = int(rrun(f"fslval {self} dim3"))
         if remove_dimension == "axial":
             if whichslices2remove == "updown":
-                dim_str = " 0 -1 0 -1 " + str(numslice2remove) + " " + str(nslices - 2*numslice2remove)
+                dim_str = "0 -1 0 -1 " + str(numslice2remove) + " " + str(nslices - 2*numslice2remove)
             else:
                 raise ValueError("ERROR in remove_slices, presently it removes only in the axial (z) dimension")
         else:
             raise ValueError("ERROR in remove_slices, presently it removes only in the axial (z) dimension")
 
         self.cp(self.fpathnoext + "_full")
-        rrun('fslroi ' + self + " " + self + dim_str)
+        rrun(f"fslroi {self} {self} {dim_str}")
 
     def compress(self, dest=None, replace:bool=True):
         """
@@ -836,10 +850,10 @@ class Image(str):
 
         prefilt_func_data = Image(self.add_postfix2name("_prefiltered_func_data"))
 
-        rrun("fslmaths "    + self.fpathnoext + " " + prefilt_func_data + " -odt float", logFile=logFile)
-        rrun("fslroi "      + prefilt_func_data + " " + out_img + " " + str(volnum) + " 1", logFile=logFile)
-        rrun("bet2 "        + out_img + " " + out_img + " -f 0.3", logFile=logFile)
-        rrun("fslmaths "    + out_img + " -bin " + out_mask_img,  logFile=logFile)  # create example_function mask (a -thr 0.01/0.1 could have been used to further reduce it)
+        rrun(f"fslmaths {self.fpathnoext} {prefilt_func_data} -odt float", logFile=logFile)
+        rrun(f"fslroi {prefilt_func_data} {out_img} {volnum}  1", logFile=logFile)
+        rrun(f"bet2 {out_img} {out_img} -f 0.3", logFile=logFile)
+        rrun(f"fslmaths {out_img} -bin {out_mask_img}",  logFile=logFile)  # create example_function mask (a -thr 0.01/0.1 could have been used to further reduce it)
         prefilt_func_data.rm(logFile=logFile)
 
         return out_img

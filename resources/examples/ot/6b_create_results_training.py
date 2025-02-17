@@ -119,9 +119,8 @@ if __name__ == "__main__":
                 dest_res_file = Image(os.path.join(TEMPL_STATS_DIR, arr_rsn_labels[cnt]))
 
                 if not dest_res_file.exist:
-                    rrun(
-                        "flirt - in " + src_res_file + " -ref " + std_MNI_2mm_brain + " -applyxfm -init " + templ2std_mat + " -out " + dest_res_file)
-                    rrun("fslmaths " + dest_res_file + " -thr 2.7 " + dest_res_file)
+                    rrun(f"flirt - in {src_res_file} -ref {std_MNI_2mm_brain} -applyxfm -init {templ2std_mat} -out {dest_res_file}")
+                    rrun(f"fslmaths {dest_res_file} -thr 2.7 {dest_res_file}")
 
                 cnt = cnt + 1
 
@@ -142,7 +141,7 @@ if __name__ == "__main__":
                     print(inputmat + " is missing !!")
                     exit(1)
 
-                rrun("flirt -in " + src_res_file + " -ref " + std_MNI_2mm_brain + " -applyxfm -init " + templ2std_mat + " -out " + dest_res_file)
+                rrun(f"flirt -in {src_res_file} -ref {std_MNI_2mm_brain} -applyxfm -init {templ2std_mat} -out {dest_res_file}")
                 # $FSLDIR/bin/fslmaths $dest_res_file -thr $PTHRESH $dest_res_file
 
         # -----------------------------------------------------
@@ -155,26 +154,18 @@ if __name__ == "__main__":
                 maskpath = Image(os.path.join(RESULTS4_OUT_DIR, roi["roi"]), must_exist=True, msg="ROI mask is missing")
 
                 maskname = os.path.basename(roi["roi"])
-                raw_res_file_name = os.path.join(RESULTS4_OUT_DIR,
-                                                 melodic_template["template_name"] + "_" + maskname + "_raw.txt")
-                res_file_name = os.path.join(RESULTS4_OUT_DIR,
-                                             melodic_template["template_name"] + "_" + maskname + ".txt")
+                raw_res_file_name = os.path.join(RESULTS4_OUT_DIR, melodic_template["template_name"] + "_" + maskname + "_raw.txt")
+                res_file_name = os.path.join(RESULTS4_OUT_DIR, melodic_template["template_name"] + "_" + maskname + ".txt")
                 print(maskname)
-                rrun("fslmeants -i " + ic_image + " -o " + raw_res_file_name + " -m " + maskpath)
+                rrun(f"fslmeants -i {ic_image} -o {raw_res_file_name} -m {maskpath}")
                 # str_lists = process_results2tp(raw_res_file_name, subjects, res_file_name)
                 str_lists = process_results(raw_res_file_name, subjects, res_file_name)
 
                 # plot_data.histogram_plot_2groups(str_lists, os.path.join(RESULTS4_OUT_DIR, "fig_" + roi["roi"] + "_" + roi["rsn"] + ".png"), "4", 1)
 
                 data = [float(d) * (-1) for d in subjects_data.get_subjects_column(colname="T2NoGo")]  # NoGo are errors: I want hits..since data are demeaned I can just invert the sign
-                plot_data.scatter_plot_2groups(str_lists, data, os.path.join(RESULTS4_OUT_DIR,
-                                                                             "fig_" + roi["roi"] + "_" + roi[
-                                                                                 "rsn"] + ".png"), "4", 1,
-                                               colors=("white", "green"))
-                plot_data.scatter_plot_2groups(str_lists, data, os.path.join(RESULTS4_OUT_DIR,
-                                                                             "fig_" + roi["roi"] + "_" + roi[
-                                                                                 "rsn"] + ".png"), "4", 1,
-                                               colors=("red", "white"))
+                plot_data.scatter_plot_2groups(str_lists, data, os.path.join(RESULTS4_OUT_DIR, "fig_" + roi["roi"] + "_" + roi["rsn"] + ".png"), "4", 1, colors=("white", "green"))
+                plot_data.scatter_plot_2groups(str_lists, data, os.path.join(RESULTS4_OUT_DIR, "fig_" + roi["roi"] + "_" + roi["rsn"] + ".png"), "4", 1, colors=("red", "white"))
 
         # -----------------------------------------------------
         # extracting PE from 2nd level SBFC analysis
@@ -182,28 +173,22 @@ if __name__ == "__main__":
         if DO_SBFC_RES:
 
             res_mask = sbfc_3rd_level_RES_img + "_mask"
-            rrun("fslmaths " + sbfc_3rd_level_RES_img + " -thr 2.3 -bin " + res_mask)
+            rrun(f"fslmaths {sbfc_3rd_level_RES_img} -thr 2.3 -bin {res_mask}")
             sbfc_pe_ctrl = []
             sbfc_pe_train = []
             for s in range(24):
                 img = os.path.join(sbfc_2nd_level_PE_dir, "pe" + str(s + 1) + ".nii.gz")
-                pe = rrun("fslstats " + img + " -m -k " + res_mask)
+                pe = rrun(f"fslstats {img} -m -k {res_mask}")
                 sbfc_pe_ctrl.append(float(pe))
 
             for s in range(24, NUM_SUBJ):
                 img = os.path.join(sbfc_2nd_level_PE_dir, "pe" + str(s + 1) + ".nii.gz")
-                pe = rrun("fslstats " + img + " -m -k " + res_mask)
+                pe = rrun(f"fslstats {img} -m -k {res_mask}")
                 sbfc_pe_train.append(float(pe))
 
             data = [float(d) * (-1) for d in subjects_data.get_subjects_column(colname="T1NoGo")]  # NoGo are errors: I want hits..since data are demeaned I can just invert the sign
-            plot_data.scatter_plot_dataserie(sbfc_pe_train, data[24:],
-                                             os.path.join(RESULTS_SBFC_OUT_DIR, "fig_T1NoGo" + ".png"), "green",
-                                             "training")
-            plot_data.scatter_plot_dataserie(sbfc_pe_ctrl, data[0:24],
-                                             os.path.join(RESULTS_SBFC_OUT_DIR, "fig_T1NoGo" + ".png"), "red",
-                                             "controls")
-
-
+            plot_data.scatter_plot_dataserie(sbfc_pe_train, data[24:], os.path.join(RESULTS_SBFC_OUT_DIR, "fig_T1NoGo" + ".png"), "green","training")
+            plot_data.scatter_plot_dataserie(sbfc_pe_ctrl, data[0:24], os.path.join(RESULTS_SBFC_OUT_DIR, "fig_T1NoGo" + ".png"), "red", "controls")
 
     except Exception as e:
         traceback.print_exc()

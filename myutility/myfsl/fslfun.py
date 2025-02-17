@@ -51,9 +51,9 @@ def run(cmd, logFile=None, is_fsl=True):
 
         if e.output is not None:
             errors = e.output.decode('ascii').split('\n')
-            errstring = "ERROR in run with cmd: " + cmdstr + ", errors: " + "\n" + "\n".join(errors)
+            errstring = f"ERROR in run with cmd: {cmdstr}, errors: \n\n".join(errors)
         else:
-            errstring = "ERROR in run with cmd: " + cmdstr
+            errstring = f"ERROR in run with cmd: {cmdstr}"
 
         if logFile is not None:
             print(errstring, file=logFile)
@@ -82,7 +82,7 @@ def runpipe(cmd, logFile=None, is_fsl=True):
 
     except subprocess.CalledProcessError as e:
         errors = e.output.decode('ascii').split('\n')
-        errstring = "ERROR in runpipe with cmd: " + cmdstr + ", errors: " + "\n" + "\n".join(errors)
+        errstring = f"ERROR in runpipe with cmd: {cmdstr}, errors: \n\n".join(errors)
         if logFile is not None:
             print(errstring, file=logFile)
         raise Exception(errstring)

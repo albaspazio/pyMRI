@@ -31,4 +31,4 @@ if __name__ == "__main__":
         # subject.mpr2nifti(subject.t1_dir, 1)
         hdr = subject.t1_data.read_header()
         print(str(subject.t1_data.get_image_dimension()))
-        rrun("fsleyes " + subject.t1_data + " " + subject.t1_brain_data)
+        rrun(f"fsleyes {subject.t1_data} {subject.t1_brain_data}")

@@ -642,7 +642,7 @@ class Subject:
         """
         if direction == "sag->axial":
             bckfilename = self.t1_image_label + "_sag"
-            conversion_str = " -z -x y "
+            conversion_str = "-z -x y "
         else:
             print("invalid conversion")
             return
@@ -652,7 +652,7 @@ class Subject:
             return
 
         self.t1_data.cp(bckfilepath)  # create backup copy
-        rrun("fslswapdim " + self.t1_data + conversion_str + self.t1_data)  # run reslicing
+        rrun(f"fslswapdim {self.t1_data} {conversion_str} {self.t1_data}")  # run reslicing
 
     # ==================================================================================================================================================
     # WELCOME
@@ -920,7 +920,7 @@ class Subject:
 
             if do_sienax:
                 print(self.label + " : sienax with " + bet_sienax_param_string)
-                rrun("sienax " + self.t1_data + " -B " + bet_sienax_param_string + " -r")
+                rrun(f"sienax {self.t1_data} -B {bet_sienax_param_string} -r")
 
             if do_first:
                 if not self.first_all_fast_origsegs.exist and not self.first_all_none_origsegs.exist:
@@ -933,7 +933,7 @@ class Subject:
             if self.wb_data.exist:
                 if not self.wb_brain_data.exist:
                     print(self.label + " : bet on WB")
-                    rrun("bet " + self.wb_data + " " + self.wb_brain_data + " -f " + BET_F_VALUE_T2 + " -g 0 -m")
+                    rrun(f"bet {self.wb_data} {self.wb_brain_data} -f {BET_F_VALUE_T2} -g 0 -m")
 
         # ==============================================================================================================================================================
         # RS data
@@ -956,14 +956,14 @@ class Subject:
                 # ------------------------------------------------------------------------------------------------------
                 if do_epirm2vol > 0:
                     # check if I have to remove the first (TOT_VOL-DO_RMVOL_TO_NUM) volumes
-                    tot_vol_num = int(rrun("fslnvols " + self.rs_data, logFile=log).split('\n')[0])
+                    tot_vol_num = int(rrun(f"fslnvols {self.rs_data}", logFile=log).split('\n')[0])
 
                     vol2remove = tot_vol_num - do_epirm2vol
 
                     if vol2remove > 0:
                         try:
                             self.rs_data.mv(self.rs_data.fpathnoext + "_fullvol", logFile=log)
-                            rrun("fslroi " + self.rs_data + "_fullvol " + self.rs_data + " " + str(vol2remove) + " -1", logFile=log)
+                            rrun(f"fslroi {self.rs_data}_fullvol {self.rs_data} {vol2remove} -1", logFile=log)
                         except Exception as e:
                             print("UNRECOVERABLE ERROR: " + str(e))
                             Image(self.rs_data.fpathnoext + "_fullvol").mv(self.rs_data, logFile=log)
@@ -1159,7 +1159,7 @@ class Subject:
 
             if not self.t2_brain_data:
                 print(self.label + " : bet on t2")
-                rrun("bet " + self.t2_data + " " + self.t2_brain_data + " -f " + BET_F_VALUE_T2 + " -g 0.2 -m")
+                rrun(f"bet {self.t2_data} {self.t2_brain_data} -f {BET_F_VALUE_T2} -g 0.2 -m")
 
         # ==============================================================================================================================================================
         # DTI data
@@ -1188,7 +1188,8 @@ class Subject:
                 self.dti.fit(log)
 
                 # create L23 image
-                rrun("fslmaths " + os.path.join(self.dti_dir, self.dti_fit_label) + "_L2 -add " + os.path.join(self.dti_dir, self.dti_fit_label + "_L3") + " -div 2 " + os.path.join(self.dti_dir,self.dti_fit_label + "_L23"),logFile=log)
+                # rrun("fslmaths " + os.path.join(self.dti_dir, self.dti_fit_label) + "_L2 -add " + os.path.join(self.dti_dir, self.dti_fit_label + "_L3") + " -div 2 " + os.path.join(self.dti_dir,self.dti_fit_label + "_L23"),logFile=log)
+                rrun(f"fslmaths {os.path.join(self.dti_dir, self.dti_fit_label)}_L2 -add {os.path.join(self.dti_dir, self.dti_fit_label + '_L3')} -div 2 {os.path.join(self.dti_dir, self.dti_fit_label + '_L23')}", logFile=log)
 
             os.makedirs(self.roi_dti_dir, exist_ok=True)
 
@@ -1291,7 +1292,7 @@ class Subject:
                 return
 
             if convert:
-                rrun("dcm2niix " + options + extpath)  # it returns :. usefs coXXXXXX, oXXXXXXX and XXXXXXX images
+                rrun(f"dcm2niix {options}{extpath}")  # it returns :. usefs coXXXXXX, oXXXXXXX and XXXXXXX images
 
             if not rename:
                 return
@@ -1435,7 +1436,7 @@ class Subject:
         cur_dir = os.path.curdir
         os.chdir(folder)
 
-        rrun("fslmerge " + dimension + " " + outputname + " " + " ".join(input_files))
+        rrun(f"fslmerge {dimension} {outputname} {' '.join(input_files)}")
         os.chdir(cur_dir)
 
     def unzip_data(self, src_zip:str, dest_dir:str, replace:bool=True):
