@@ -1,13 +1,17 @@
 from __future__ import annotations
 from typing import List
+
 from myutility.images.Image import Image
 
 
 class TractInfo:
+
     def __init__(self, _path:str, _fa:float|None=None, _md:float|None=None, _ad:float|None=None, _rd:float|None=None):
+
         self.path       = Image(_path)
         self.name       = self.path.name
         self.nvoxels    = self.path.get_nvoxels()
+
         self.fa = _fa
         self.md = _md
         self.ad = _ad

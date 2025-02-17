@@ -6,6 +6,8 @@ from typing import List
 from Global import Global
 from myutility.fileutilities import write_text_file, read_value_from_file
 from myutility.images.Image import Image
+from myutility.images.Images import Images
+from myutility.TractInfo import TractInfo
 from myutility.myfsl.utils.run import rrun
 from myutility.images.Images import Images
 from myutility.TractInfo import TractInfo
@@ -366,9 +368,11 @@ class SubjectDti:
         print(f"FINISHED probtrackx {out_dir_name} on subject {self.subject.label}")
 
     def get_tbss_metric_from_masks(self, masks:List[str], meas:List[str]|None=None, must_exist:bool=True):
-        if meas is None:
+
+      if meas is None:
             meas = ["FA","MD","L1","L23"]
         masks = Images(masks, must_exist=must_exist, msg="get_tbss_metric_from_masks: one or more Input masks images are not valid")
+
         tracts = []
         for mask in masks:
             tract = TractInfo(mask)
@@ -376,7 +380,9 @@ class SubjectDti:
                 meas_image = Image(os.path.join(self.subject.dti_dir, self.subject.dti_fit_label + "_" + m))
                 val = float(rrun("fslstats " + meas_image + " -m -k " + mask).strip())
                 tract.set_metric(m, val)
+
             tracts.append(tract)
+
         return tracts
 
     def xtract(self, xtractdir_name:str|None=None, bedpostx_dirname:str|None=None, refspace="native", use_gpu:bool=False, species="HUMAN", logFile=None):

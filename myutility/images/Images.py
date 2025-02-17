@@ -26,16 +26,16 @@ class Images(list):
             value = [value]
 
         missing_images = []
+
         for v in value:
             try:
                 self.append(Image(v, must_exist, msg))
             except NotExistingImageException as e:
                 missing_images.append(e.image)
+
         if len(missing_images) > 0:
             raise NotExistingImageException(msg, str(missing_images))
 
-        for v in value:
-            self.append(Image(v, must_exist, msg))
 
     @property
     def exist(self):
