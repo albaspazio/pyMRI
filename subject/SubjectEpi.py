@@ -1,23 +1,23 @@
 import os
 import sys
 from shutil import copyfile, rmtree
+
 from numpy import arange, concatenate, array
 
 from Global import Global
 from data.utilities import list2spm_text_column
-from group.SPMStatsUtils import SPMStatsUtils
-from group.spm_utilities import SubjCondition
 from group.SPMContrasts import SPMContrasts
 from group.SPMResults import SPMResults
-
+from group.SPMStatsUtils import SPMStatsUtils
+from group.spm_utilities import SubjCondition
+from myutility.fileutilities import sed_inplace, copytree, get_filename
 from myutility.images.Image import Image
 from myutility.images.Images import Images
 from myutility.images.transform_images import flirt
 from myutility.images.utilities import mid_0based
-from myutility.myfsl.utils.run import rrun
-from myutility.matlab import call_matlab_spmbatch, call_matlab_function
-from myutility.fileutilities import sed_inplace, copytree, get_filename
 from myutility.list import is_list_of
+from myutility.matlab import call_matlab_spmbatch, call_matlab_function
+from myutility.myfsl.utils.run import rrun
 
 
 class SubjectEpi:
@@ -68,7 +68,7 @@ class SubjectEpi:
             m_exfun = data.add_postfix2name("_example_func_mask")
 
         if vol_num is None:
-            vol_num = round(data.getnvol()/2)
+            vol_num = round(data.nvols/2)
 
         if not exfun.exist or overwrite:
             data.get_nth_volume(exfun, m_exfun, vol_num, logFile)
@@ -118,7 +118,7 @@ class SubjectEpi:
 
         # substitute for all the volumes + rest of params
         epi_image.check_if_uncompress()
-        epi_nvols = epi_image.upath.getnvol()
+        epi_nvols = epi_image.upath.nvols
 
         epi_all_volumes = ''
         for i in range(1, epi_nvols + 1):
@@ -197,7 +197,7 @@ class SubjectEpi:
 
         # 1: get number of volumes of epi_PA image in opposite phase-encoding direction and extract middle volume (add "_ref")
         if pa_ref_vol == -1:
-            nvols_pe        = in_pa_img.getnvol()
+            nvols_pe        = in_pa_img.nvols
             central_vol_pa  = mid_0based(nvols_pe)  # odd values:   returns the middle volume in a zero-based context,      3//2 -> 1 which is the middle volume in 0,(1),2 context
         else:                                       # even values:  returns second middle volume in a zero-based context,   4//2 -> 2, 0,1,(2),3
             central_vol_pa = pa_ref_vol
@@ -297,7 +297,7 @@ class SubjectEpi:
         epi_all_volumes                += ref_volume      # reference volume must be inserted as first volume
 
         first_image                     = Image(images2correct.pop(0))
-        epi_nvols                       = first_image.upath.getnvol()
+        epi_nvols                       = first_image.upath.nvols
         for i in range(1, epi_nvols + 1):
             if i == ref_vol and skip_ref:
                 continue    # skip ref_vol if it belongs to the input image
@@ -307,7 +307,7 @@ class SubjectEpi:
 
         # all other sessions
         for img in images2correct:
-            epi_nvols = img.upath.getnvol()
+            epi_nvols = img.upath.nvols
             img.check_if_uncompress()
 
             epi_all_volumes += '{'
@@ -367,7 +367,7 @@ class SubjectEpi:
                 ref_image.unzip(temp_epi_ref.upath, replace=False)
 
         if ref_volume == -1:
-            ref_volume = mid_0based(ref_image.upath.getnvol())    # odd values:   returns the middle volume in a zero-based context       3//2 -> 1 which is the middle volume in 0,(1),2 context
+            ref_volume = mid_0based(ref_image.upath.nvols)    # odd values:   returns the middle volume in a zero-based context       3//2 -> 1 which is the middle volume in 0,(1),2 context
                                                             # even values:  returns second middle volume in a zero-based context    4//2 -> 2, 0,1,(2),3
         # estimate BUT NOT reslice
         self.spm_motion_correction([temp_epi], temp_epi_ref, ref_volume, reslice=False)
@@ -525,7 +525,7 @@ class SubjectEpi:
             for img in valid_images:
 
                 img.check_if_uncompress()
-                epi_nvols = img.upath.getnvol()
+                epi_nvols = img.upath.nvols
 
                 epi_all_volumes += '{'
                 for i in range(1, epi_nvols + 1):
@@ -552,7 +552,7 @@ class SubjectEpi:
                 epi_session_volumes     = '{\n'
                 img                     = valid_images[i]
                 img.check_if_uncompress()
-                epi_nvols               = img.upath.getnvol()
+                epi_nvols               = img.upath.nvols
 
                 for v in range(1, epi_nvols + 1):
                     epi_session_volumes += ("'" + img.upath + ',' + str(v) + "'\n")
@@ -633,7 +633,7 @@ class SubjectEpi:
             out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
 
             img.check_if_uncompress()
-            epi_nvols = img.upath.getnvol()
+            epi_nvols = img.upath.nvols
 
             epi_volumes = ""
             for v in range(1, epi_nvols + 1):
@@ -823,7 +823,7 @@ class SubjectEpi:
             image = Image(input_images[s])
 
             # substitute for all the volumes
-            epi_nvols       = image.upath.getnvol()
+            epi_nvols       = image.upath.nvols
             epi_all_volumes = ""
             for i in range(1, epi_nvols + 1):
                 epi_volume       = "'" + image.upath + ',' + str(i) + "'"
@@ -884,7 +884,7 @@ class SubjectEpi:
 
         in_image    = os.path.join(epi_dir, in_file_name)
         in_image    = Image(in_image, must_exist=True, msg="Error in sbfc_several_1roi_feat, given input image " + in_image + ", does not exist...exiting")
-        tot_vol_num = in_image.getnvol()
+        tot_vol_num = in_image.nvols
 
         for roi_name in rois_list:
 
@@ -996,7 +996,7 @@ class SubjectEpi:
 
         # -----------------------------------------------------
         print(self.subject.label + ": FEAT with model: " + model)
-        TOT_VOL_NUM = epi_image.getnvol()
+        TOT_VOL_NUM = epi_image.nvols
 
         os.makedirs(os.path.join(epi_dir, "model"), exist_ok=True)
 

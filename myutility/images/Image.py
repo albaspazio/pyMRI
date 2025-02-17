@@ -158,7 +158,7 @@ class Image(str):
             int: The number of slices.
 
         """
-        return self.getnslices()
+        return int(rrun(f"fslval {self} dim3"))
 
     @property
     def nvols(self):
@@ -169,7 +169,16 @@ class Image(str):
             int: The number of volumes.
 
         """
-        return self.getnvol()
+        return int(rrun(f"fslnvols {self}").split('\n')[0])
+
+    @property
+    def nvoxels(self):
+        """
+        Get the number of voxels in the image.
+        Returns:
+            int: The number of voxels.
+        """
+        return int(rrun(f"fslstats {self} -V").strip().split(" ")[0])
 
     @property
     def TR(self):
@@ -180,7 +189,7 @@ class Image(str):
             float: The repetition time.
 
         """
-        return self.get_tr()
+        return float(rrun(f"fslval {self} pixdim4"))
 
     # ===============================================================================================================================
     # FOLDERS, NAME, EXTENSIONS,
@@ -488,36 +497,6 @@ class Image(str):
     # ===============================================================================================================================
     # utilities
     # ===============================================================================================================================
-    def getnvol(self):
-        """
-        Get the number of volumes in the image.
-
-        Returns:
-            int: The number of volumes.
-
-        """
-        return int(rrun(f"fslnvols {self}").split('\n')[0])
-
-    def get_nvoxels(self):
-        """
-        Get the number of voxels in the image.
-
-        Returns:
-            int: The number of voxels.
-
-        """
-        return int(rrun(f"fslstats {self} -V").strip().split(" ")[0])
-
-    def getnslices(self):
-        """
-        Get the number of slices in the image.
-
-        Returns:
-            int: The number of slices.
-
-        """
-        return int(rrun(f"fslval {self} dim3"))
-
     def get_image_volume(self):
         """
         Get the volume of the image.
@@ -679,15 +658,6 @@ class Image(str):
         hdr = self.read_header()
         return int(hdr["nx"]) * int(hdr["ny"]) * int(hdr["nz"]) * float(hdr["dx"]) * float(hdr["dy"]) * float(hdr["dz"])
 
-    def get_tr(self):
-        """
-        Get the repetition time of the image.
-
-        Returns:
-            float: The repetition time.
-        """
-        return float(rrun(f"fslval {self} pixdim4"))
-
     # extract header in xml format and returns it as a (possibly filtered by list_field) dictionary
     def read_header(self, list_field=None):
         """
@@ -806,7 +776,7 @@ class Image(str):
 
         """
         tempdir, outprefix  = self.imsplit("temp_", "tempXXX") # split image in the subfolder tempXXX
-        nvols               = self.getnvol()
+        nvols               = self.nvols
 
         outdir              = filtered_image.dir
         outtempdir          = os.path.join(outdir, "tempXXX")
@@ -864,7 +834,6 @@ class Image(str):
             Image: The image with the added postfix.
         """
         return Image(self.fpathnoext + postfix + self.ext)
-
 
     def add_prefix2name(self, prefix: str) -> 'Image':
         """

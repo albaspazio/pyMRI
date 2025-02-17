@@ -4,13 +4,12 @@ from shutil import copyfile
 from typing import List
 
 from Global import Global
+from myutility.SubjectTracts import SubjectTracts
 from myutility.fileutilities import write_text_file, read_value_from_file
 from myutility.images.Image import Image
-from myutility.images.Images import Images
-from myutility.TractInfo import TractInfo
 from myutility.myfsl.utils.run import rrun
 from myutility.images.Images import Images
-from myutility.TractInfo import TractInfo
+from myutility.Tract import Tract
 
 class SubjectDti:
     """
@@ -170,7 +169,7 @@ class SubjectDti:
         rrun(f"fslmaths {hifi_b0} -Tmean {hifi_b0}", logFile=logFile)
         rrun(f"bet {hifi_b0} {hifi_b0}_brain -m", logFile=logFile)
 
-        nvols_dti = self.subject.dti_data.getnvol()
+        nvols_dti = self.subject.dti_data.nvols
         indx=""
         for i in range(0, nvols_dti):
             indx=indx + "1 "
@@ -367,15 +366,16 @@ class SubjectDti:
 
         print(f"FINISHED probtrackx {out_dir_name} on subject {self.subject.label}")
 
-    def get_tbss_metric_from_masks(self, masks:List[str], meas:List[str]|None=None, must_exist:bool=True):
+    def get_tbss_metric_from_masks(self, masks:List[str], meas:List[str]|None=None, must_exist:bool=True) -> SubjectTracts:
 
-      if meas is None:
-            meas = ["FA","MD","L1","L23"]
         masks = Images(masks, must_exist=must_exist, msg="get_tbss_metric_from_masks: one or more Input masks images are not valid")
 
-        tracts = []
+        if meas is None:
+            meas = ["FA","MD","L1","L23"]
+
+        tracts:SubjectTracts = SubjectTracts(self.subject.label)
         for mask in masks:
-            tract = TractInfo(mask)
+            tract = Tract(mask)
             for m in meas:
                 meas_image = Image(os.path.join(self.subject.dti_dir, self.subject.dti_fit_label + "_" + m))
                 val = float(rrun("fslstats " + meas_image + " -m -k " + mask).strip())

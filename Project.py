@@ -261,7 +261,7 @@ class Project:
                 subj = Subject(subj_lab, self, sess_id)
                 if not subj.exist and must_exist is True:
                     raise SubjectExistException("Error in Project.get_subjects: requested subject (" + subj_lab + " | " + str(sess_id) + " ) does not exist")
-                elif subj.exist:
+                elif subj.exist or (subj.exist is False and must_exist is False):
                     subjects.append(subj)
         return subjects
 
