@@ -85,13 +85,13 @@ if __name__ == "__main__":
             plot_folder         = os.path.join(out_folder, "plots")
 
             # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
-            # analysis.tbss_clusterize_results_by_atlas(res_img, out_folder, tracts_labels=globaldata.dti_xtract_labels, tracts_dir=globaldata.dti_xtract_dir)  #, log_file=measure+"_tbss_segm_on_xtract.txt")
+            analysis.tbss_cluster_results_by_xtract(res_img, out_folder, tracts_labels=globaldata.dti_xtract_labels, tracts_dir=globaldata.dti_xtract_dir)  #, log_file=measure+"_tbss_segm_on_xtract.txt")
 
             # extract values FROM CLUSTERIZED TBSS RESULTS (from a significant tbss image, get mean dti values calculated with given tracts)
-            # res_file = analysis.tbss_summarize_clusterized_folder(out_folder, age_spsts_splr_bist, ["age", "sp_sts", "sp_lr", "bis_t"], tbss_folder, subj_img_postfix="_FA_to_target_" + measure)    # for other modalities
+            res_file = analysis.tbss_summarize_clustered_folder(out_folder, age_spsts_splr_bist, ["age", "sp_sts", "sp_lr", "bis_t"], tbss_folder, subj_img_postfix="_FA_to_target_" + measure)    # for other modalities
             # res_file = "/data/MRI/projects/past_controls/group_analysis/tbss/controls57_FMRIB58/results/scatter_tracts_tbss_FA_ctrl57_sp_sts_sp_lr_bis_t_x_age_gender_tfce_corrp_tstat1_age_sp_sts_sp_lr_bis_t.dat"
 
-            data                = SubjectsData(res_file)
+            data                = SubjectsData(res_file[0])
             valid_tract_labels  = remove_items_from_list(data.header, data_labels + ["subj"])  # in data.header we have subj and the data column
             if doplot:
                 os.makedirs(plot_folder, exist_ok=True)

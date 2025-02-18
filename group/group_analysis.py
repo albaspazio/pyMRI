@@ -96,9 +96,7 @@ def extract_meanvalue_from_tbssresults(project:Project, rois:Images, subjects:Li
         print("Error in extract_meanvalue_from_tbssresults, given metric (" + str(metric) + ") is not valid")
         return
 
-    if not rois.exist:
-        print("Error in extract_meanvalue_from_tbssresults, one or more roi image is not valid (" + str(rois) + ")")
-        return
+    rois = Images(rois, must_exist=True, msg="Error in extract_meanvalue_from_tbssresults, one or more roi image is not valid (" + str(rois) + ")")
 
     # ----------------------------------------------------------------------
     if metric == "FA":

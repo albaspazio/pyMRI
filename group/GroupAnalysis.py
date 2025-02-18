@@ -43,142 +43,6 @@ class GroupAnalysis:
 
         self.spm:SPMModels      = SPMModels(proj)
 
-    def start_tbss_randomize(self, pop_dir_name:str, dti_image_type:str, analysis_name:str, corr_string:str, models_dir_name:str="", delay:int=20, numcpu:int=1, perm:int=5000, ignore_errors:bool=False, runit:bool=True):
-        """
-        Start a TBSS randomization analysis.
-
-        can split contrasts in different processes. if one process is used -> is not blocking, if more than one process is used -> waits for all of them.
-
-        does the following checks:
-
-        - input 4D image and mask, input fsf file exists.
-        - number of volumes (subjects) of input image coincides with number of points into the model
-        Args:
-            pop_dir_name (str): The name of the population directory.
-            dti_image_type (str): The DTI image type (e.g., FA).
-            analysis_name (str): The name of the analysis.
-            corr_string (str): The correlation string.
-            models_dir_name (str, optional): The name of the directory containing the GLM models.
-            delay (int, optional): The number of seconds to wait between each analysis.
-            numcpu (int, optional): The number of CPUs to use for the analysis.
-            perm (int, optional): The number of permutations to use for the analysis.
-            ignore_errors (bool, optional): Whether to ignore errors or raise exceptions.
-            runit (bool, optional): Whether to actually run the analysis or just return a subprocess.
-
-        Returns:
-            subprocess.Popen: A subprocess object if runit is True, otherwise None.
-        """
-        try:
-            main_analysis_folder    = os.path.join(self.project.tbss_dir, pop_dir_name)     # /data/MRI/projects/past_controls/group_analysis/tbss/controls57
-            out_stats_folder        = os.path.join(main_analysis_folder, "stats")           # /data/MRI/projects/past_controls/group_analysis/tbss/controls57/stats
-
-            # /data/MRI/projects/past_controls/group_analysis/tbss/controls57/stats/all_FA_skeletonised --- mean_FA_skeleton_mask
-            input_image     = Image(os.path.join(out_stats_folder, "all_" + dti_image_type + "_skeletonised"), must_exist=True, msg="skeletonised image not present")
-            input_mask      = Image(os.path.join(out_stats_folder, "mean_" + dti_image_type + "_skeleton_mask"), must_exist=True, msg="skeleton mask image not present")
-            out_image_name  = "tbss_" + dti_image_type + "_" + analysis_name + "_x_" + corr_string  # tbss_FA_groups&factors_x_age
-            final_dir       = os.path.join(out_stats_folder, dti_image_type, corr_string)   # /data/MRI/projects/past_controls/group_analysis/tbss/population/stats/FA/age_gender
-
-            os.makedirs(final_dir, exist_ok=True)
-
-            model_noext = os.path.join(self.project.group_glm_dir, models_dir_name, analysis_name + "_x_" + corr_string) # /data/MRI/projects/past_controls/group_analysis/glm_models/XXX/groups&factors_x_nuisances
-            model_con   = model_noext + ".con"
-            model_mat   = model_noext + ".mat"
-
-            if not os.path.exists(model_con) or not os.path.exists(model_con):
-                raise Exception("model files are missing: "+ model_con + " | " + model_mat + "...analysis aborted")
-
-            nvols   = input_image.nvols
-            npoints = FSLModels.get_numpoints_from_fsl_model(model_mat)
-
-            if nvols != npoints:
-                raise Exception("number of data points in input image (" + input_image + ") and given model (" + model_noext + ") does not coincide...analysis aborted")
-
-            if numcpu == 1:
-                if runit:
-                    print("RANDOMIZE STARTED: model: " + model_noext + " on " + input_image)
-                    p = subprocess.Popen(["randomise", "-i", input_image, "-m", input_mask, "-o", os.path.join(final_dir, out_image_name), "-d", model_noext + ".mat", "-t", model_noext + ".con", "-n", str(perm), "--T2", "-V"])
-                    rrun(f"sleep {delay}")
-                    return p
-                else:
-                    print("model: " + model_noext + " on " + input_image + " is ok")
-                    return
-            else:
-                contrast_file   = FSLModels.read_fsl_contrasts_file(model_con)
-                numcpu          = min(contrast_file.ncontrasts, numcpu)
-
-                # create a temp directory for each splitted analysis
-
-                random_folders = [ "temp_" + out_image_name + "_" + str(i) + "_" + str(randrange(10000, 100000)) for i in range(numcpu)]
-
-                for rf in random_folders:
-                    os.makedirs(os.path.join(final_dir, rf), exist_ok=True)
-
-                # assign contrasts id to each available cpu
-                conids_x_cpu    = []
-                contrasts       = contrast_file.matrix.copy()
-
-                ncpu = numcpu               # 3cpu, 4 contr
-                con_id = 0
-                for c in range(numcpu):
-                    ratio = ceil(len(contrasts) * 1.0 / ncpu)
-                    cpu_conids = []
-                    for cc in range(ratio):
-                        cpu_conids.append(con_id)
-                        contrasts.pop(0)
-                        con_id += 1
-                    ncpu -= 1
-                    conids_x_cpu.append(cpu_conids)
-
-                # create the numcpu mat / con files & start randomize
-                subprocesses = []
-                for idcpu in range(numcpu):
-                    con_txt  = contrast_file.get_subset_text(conids_x_cpu[idcpu])
-                    con_file = os.path.join(final_dir, random_folders[idcpu], analysis_name + "_x_" + corr_string + ".con")
-                    write_text_file(con_file, con_txt)
-
-                    mat_file = os.path.join(final_dir, random_folders[idcpu], analysis_name + "_x_" + corr_string + ".mat")
-                    shutil.copyfile(model_mat, mat_file)
-
-                    if runit:
-
-                        try:
-                            print("RANDOMIZE STARTED: model: " + model_noext + " on " + input_image)
-                            p = subprocess.Popen(["randomise","-i", input_image, "-m", input_mask, "-o", os.path.join(final_dir, random_folders[idcpu], out_image_name), "-d", mat_file, "-t", con_file, "-n", str(perm), "--T2", "-V"])
-                            subprocesses.append(p)
-                            rrun(f"sleep {delay}")
-                        except Exception as e:
-                            print(e)
-                    else:
-                        print("model: " + model_noext + " on " + input_image + " is ok")
-                        return
-                for process in subprocesses:
-                    process.wait()
-
-                # move all the temp files to the final directory
-                for f in range(numcpu):
-                    temp_folder     = os.path.join(final_dir, random_folders[f])
-                    num_contrasts   = len(conids_x_cpu[f])
-                    for c in range(num_contrasts):
-                        shutil.move(os.path.join(temp_folder, out_image_name + "_tfce_corrp_tstat" + str(c+1) + ".nii.gz"), os.path.join(final_dir, out_image_name + "_tfce_corrp_tstat" + str(conids_x_cpu[f][c]+1) + ".nii.gz"))
-                        shutil.move(os.path.join(temp_folder, out_image_name + "_tstat" + str(c+1) + ".nii.gz")           , os.path.join(final_dir, out_image_name + "_tstat" + str(conids_x_cpu[f][c]+1) + ".nii.gz"))
-
-                print("completed randomize: model: " + model_noext + " on " + input_image)
-
-        except NotExistingImageException as e:
-            msg = e.msg + " (" + e.image.fpathnoext + ")"
-            if ignore_errors:
-                print(msg)
-                return
-            else:
-                raise Exception(msg)
-        except Exception as e:
-            msg = "Error in start_randomize: " + str(e)
-            if ignore_errors:
-                print(msg)
-                return
-            else:
-                raise Exception(msg)
-
     # ---------------------------------------------------
     # region DATA PREPARATION
     # ====================================================================================================================================================
@@ -278,126 +142,6 @@ class GroupAnalysis:
         rrun("fslmaths GM_merg -Tmean -thr 0.05 -bin GM_mask -odt char")
 
         shutil.rmtree(struct_dir)
-
-    def tbss_run_fa(self, subjects_list:List[Subject], odn:str, prepare:bool=True, proc:bool=True, postreg:str="S", prestat_thr:float=0.2, cleanup:bool=True):
-        """
-        Run a TBSS analysis on the given subjects list for the given output directory name.
-
-        Args:
-            subjects_list (List[Subject]): The list of Subject objects to analyze.
-            odn (str): The name of the output directory.
-            prepare (bool, optional): Whether to prepare the analysis by copying the necessary files. Defaults to True.
-            proc (bool, optional): Whether to process the analysis. Defaults to True.
-            postreg (str, optional): The post-registration method. Defaults to "S".
-            prestat_thr (float, optional): The threshold for pre-statistics. Defaults to 0.2.
-            cleanup (bool, optional): Whether to cleanup the analysis directory after running. Defaults to True.
-
-        Returns:
-            str: The path to the root analysis folder.
-        """
-        self.subjects_list  = subjects_list
-        if len(self.subjects_list) == 0:
-            print("ERROR in tbss_run_fa, given grlab_subjlabs_subjs params is neither a string nor a list")
-            return
-        else:
-            print("Starting tbss_run with " + str(len(self.subjects_list)) + " subjects")
-
-        root_analysis_folder = os.path.join(self.project.tbss_dir, odn)
-
-        os.makedirs(root_analysis_folder, exist_ok=True)
-        os.makedirs(os.path.join(root_analysis_folder, "design"), exist_ok=True)
-
-        # copy DTIFIT IMAGES to MAIN_ANALYSIS_FOLDER
-        if prepare:
-
-            print("copy subjects' corresponding dtifit_FA images to analysis folder")
-            for subj in self.subjects_list:
-                src_img     = Image(os.path.join(subj.dti_dir, subj.dti_fit_label + "_FA"))
-                dest_img    = os.path.join(root_analysis_folder, subj.dti_fit_label + "_FA")
-                src_img.cp(dest_img)
-
-        if proc:
-            curr_dir = os.getcwd()
-            os.chdir(root_analysis_folder)
-
-            print("preprocessing dtifit_FA images")
-            rrun("tbss_1_preproc *.nii.gz")
-            print("co-registrating images to MNI template")
-            rrun("tbss_2_reg -T")
-            print("postreg")
-            rrun(f"tbss_3_postreg -{postreg}")
-            rrun(f"tbss_4_prestats {prestat_thr}")
-
-            os.chdir(curr_dir)
-
-        if cleanup:
-            # shutil.rmtree(os.path.join(root_analysis_folder, "FA"))
-            shutil.rmtree(os.path.join(root_analysis_folder, "origdata"))
-            shutil.rmtree(os.path.join(root_analysis_folder, "design"))
-
-        return root_analysis_folder
-
-    # run tbss for other modalities = ["MD", "L1", ....]
-    # you first must have done run_tbss_fa
-    def tbss_run_alternatives(self, subjects_list:List[Subject], input_folder:str, modalities:List[str], prepare:bool=True, proc:bool=True, cleanup:bool=True):
-        """
-        Runs a TBSS analysis on the given subjects list for the given output directory name for the given modalities.
-
-        Args:
-            subjects_list (List[Subject]): The list of Subject objects to analyze.
-            input_folder (str): The path to the root analysis folder.
-            modalities (List[str]): The list of modalities to analyze.
-            prepare (bool, optional): Whether to prepare the analysis by copying the necessary files. Defaults to True.
-            proc (bool, optional): Whether to process the analysis. Defaults to True.
-            cleanup (bool, optional): Whether to cleanup the analysis directory after running. Defaults to True.
-
-        Returns:
-            None
-        """
-        self.subjects_list  = subjects_list
-        if len(self.subjects_list) == 0:
-            print("ERROR in tbss_run_alternatives, given grlab_subjlabs_subjs params is neither a string nor a list")
-            return
-
-        input_stats = os.path.join(input_folder, "stats")
-
-        # copy DTIFIT IMAGES to MAIN_ANALYSIS_FOLDER
-        if prepare:
-
-            print("copy subjects' corresponding dtifit_XX images to analysis folder")
-            for subj in self.subjects_list:
-
-                for mod in modalities:
-                    alternative_folder = os.path.join(input_folder, mod)  # /group_analysis/tbss/population/MD
-                    os.makedirs(alternative_folder, exist_ok=True)
-
-                    src_img     = Image(os.path.join(subj.dti_dir, subj.dti_fit_label + "_" + mod), must_exist=True, msg="GroupAnalysis.tbss_run_alternatives")
-                    dest_img    = os.path.join(alternative_folder, subj.dti_fit_label + "_" + mod)
-                    src_img.cp(dest_img)
-
-                    src_img     = Image(os.path.join(alternative_folder, subj.dti_fit_label + "_" + mod), must_exist=True, msg="GroupAnalysis.tbss_run_alternatives")
-                    dest_img    = os.path.join(alternative_folder, subj.dti_fit_label + "_FA")
-                    src_img.mv(dest_img)
-
-                    Image(os.path.join(input_stats, "mean_FA_skeleton_mask_dst")).cp(os.path.join(input_stats, "mean_" + mod + "_skeleton_mask_dst"))
-                    Image(os.path.join(input_stats, "mean_FA_skeleton_mask")).cp(os.path.join(input_stats, "mean_" + mod + "_skeleton_mask"))
-                    Image(os.path.join(input_stats, "mean_FA_skeleton")).cp(os.path.join(input_stats, "mean_" + mod + "_skeleton_mask"))
-
-        if proc:
-            curr_dir = os.getcwd()
-            os.chdir(input_folder)
-
-            for mod in modalities:
-                print("preprocessing dtifit_" + mod + " images")
-                rrun(f"tbss_non_FA {mod}")
-
-            os.chdir(curr_dir)
-
-        if cleanup:
-            # shutil.rmtree(os.path.join(input_folder, "FA")) #
-            shutil.rmtree(os.path.join(input_folder, "L1"))
-            shutil.rmtree(os.path.join(input_folder, "L23"))
-            shutil.rmtree(os.path.join(input_folder, "MD"))
 
     # read a matrix file (not a classical subjects_data file) and add total ICV as last column
     # here it assumes [integer, integer, integer, integer, integer, float4]
@@ -638,10 +382,333 @@ class GroupAnalysis:
     # region TBSS / xtrack / probtrack
     # ====================================================================================================================================================
     # run tbss for FA
-    # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
-    def tbss_clusterize_results_by_atlas(self, tbss_result_image:str, out_folder:str, log_file:str="overlap.txt", tracts_labels:List[str]=None, tracts_dir:str=None, thr:float=0.95):
+    def tbss_run_fa(self, subjects_list:List[Subject], odn:str, prepare:bool=True, proc:bool=True, postreg:str="S", prestat_thr:float=0.2, cleanup:bool=True):
         """
-        This function clusters the TBSS results by atlases.
+        Run a TBSS analysis on the given subjects list for the given output directory name.
+
+        Args:
+            subjects_list (List[Subject]): The list of Subject objects to analyze.
+            odn (str): The name of the output directory.
+            prepare (bool, optional): Whether to prepare the analysis by copying the necessary files. Defaults to True.
+            proc (bool, optional): Whether to process the analysis. Defaults to True.
+            postreg (str, optional): The post-registration method. Defaults to "S".
+            prestat_thr (float, optional): The threshold for pre-statistics. Defaults to 0.2.
+            cleanup (bool, optional): Whether to cleanup the analysis directory after running. Defaults to True.
+
+        Returns:
+            str: The path to the root analysis folder.
+        """
+        self.subjects_list  = subjects_list
+        if len(self.subjects_list) == 0:
+            print("ERROR in tbss_run_fa, given grlab_subjlabs_subjs params is neither a string nor a list")
+            return
+        else:
+            print("Starting tbss_run with " + str(len(self.subjects_list)) + " subjects")
+
+        root_analysis_folder = os.path.join(self.project.tbss_dir, odn)
+
+        os.makedirs(root_analysis_folder, exist_ok=True)
+        os.makedirs(os.path.join(root_analysis_folder, "design"), exist_ok=True)
+
+        # copy DTIFIT IMAGES to MAIN_ANALYSIS_FOLDER
+        if prepare:
+
+            print("copy subjects' corresponding dtifit_FA images to analysis folder")
+            for subj in self.subjects_list:
+                src_img     = Image(os.path.join(subj.dti_dir, subj.dti_fit_label + "_FA"))
+                dest_img    = os.path.join(root_analysis_folder, subj.dti_fit_label + "_FA")
+                src_img.cp(dest_img)
+
+        if proc:
+            curr_dir = os.getcwd()
+            os.chdir(root_analysis_folder)
+
+            print("preprocessing dtifit_FA images")
+            rrun("tbss_1_preproc *.nii.gz")
+            print("co-registrating images to MNI template")
+            rrun("tbss_2_reg -T")
+            print("postreg")
+            rrun(f"tbss_3_postreg -{postreg}")
+            rrun(f"tbss_4_prestats {prestat_thr}")
+
+            os.chdir(curr_dir)
+
+        if cleanup:
+            # shutil.rmtree(os.path.join(root_analysis_folder, "FA"))
+            shutil.rmtree(os.path.join(root_analysis_folder, "origdata"))
+            shutil.rmtree(os.path.join(root_analysis_folder, "design"))
+
+        return root_analysis_folder
+
+    # run tbss for other modalities = ["MD", "L1", ....]
+    # you first must have done run_tbss_fa
+    def tbss_run_alternatives(self, subjects_list:List[Subject], input_folder:str, modalities:List[str], prepare:bool=True, proc:bool=True, cleanup:bool=True):
+        """
+        Runs a TBSS analysis on the given subjects list for the given output directory name for the given modalities.
+
+        Args:
+            subjects_list (List[Subject]): The list of Subject objects to analyze.
+            input_folder (str): The path to the root analysis folder.
+            modalities (List[str]): The list of modalities to analyze.
+            prepare (bool, optional): Whether to prepare the analysis by copying the necessary files. Defaults to True.
+            proc (bool, optional): Whether to process the analysis. Defaults to True.
+            cleanup (bool, optional): Whether to cleanup the analysis directory after running. Defaults to True.
+
+        Returns:
+            None
+        """
+        self.subjects_list  = subjects_list
+        if len(self.subjects_list) == 0:
+            print("ERROR in tbss_run_alternatives, given grlab_subjlabs_subjs params is neither a string nor a list")
+            return
+
+        input_stats = os.path.join(input_folder, "stats")
+
+        # copy DTIFIT IMAGES to MAIN_ANALYSIS_FOLDER
+        if prepare:
+
+            print("copy subjects' corresponding dtifit_XX images to analysis folder")
+            for subj in self.subjects_list:
+
+                for mod in modalities:
+                    alternative_folder = os.path.join(input_folder, mod)  # /group_analysis/tbss/population/MD
+                    os.makedirs(alternative_folder, exist_ok=True)
+
+                    src_img     = Image(os.path.join(subj.dti_dir, subj.dti_fit_label + "_" + mod), must_exist=True, msg="GroupAnalysis.tbss_run_alternatives")
+                    dest_img    = os.path.join(alternative_folder, subj.dti_fit_label + "_" + mod)
+                    src_img.cp(dest_img)
+
+                    src_img     = Image(os.path.join(alternative_folder, subj.dti_fit_label + "_" + mod), must_exist=True, msg="GroupAnalysis.tbss_run_alternatives")
+                    dest_img    = os.path.join(alternative_folder, subj.dti_fit_label + "_FA")
+                    src_img.mv(dest_img)
+
+                    Image(os.path.join(input_stats, "mean_FA_skeleton_mask_dst")).cp(os.path.join(input_stats, "mean_" + mod + "_skeleton_mask_dst"))
+                    Image(os.path.join(input_stats, "mean_FA_skeleton_mask")).cp(os.path.join(input_stats, "mean_" + mod + "_skeleton_mask"))
+                    Image(os.path.join(input_stats, "mean_FA_skeleton")).cp(os.path.join(input_stats, "mean_" + mod + "_skeleton_mask"))
+
+        if proc:
+            curr_dir = os.getcwd()
+            os.chdir(input_folder)
+
+            for mod in modalities:
+                print("preprocessing dtifit_" + mod + " images")
+                rrun(f"tbss_non_FA {mod}")
+
+            os.chdir(curr_dir)
+
+        if cleanup:
+            # shutil.rmtree(os.path.join(input_folder, "FA")) #
+            shutil.rmtree(os.path.join(input_folder, "L1"))
+            shutil.rmtree(os.path.join(input_folder, "L23"))
+            shutil.rmtree(os.path.join(input_folder, "MD"))
+
+    # create a new tbss analysis folder (only stats one), filtering an existing analysis folder (specifying what to keep)
+    # vols2keep: 0-based list of indices to keep
+    @staticmethod
+    def create_analysis_folder_from_existing_keep(src_folder, new_folder, vols2keep, modalities=None):
+        """
+        Creates a new analysis folder from an existing one, by copying the necessary files and keeping the given volumes.
+
+        Args:
+            src_folder (str): The path to the existing analysis folder.
+            new_folder (str): The path to the new analysis folder.
+            vols2keep (List[int]): A list of volume indices to keep.
+            modalities (Optional[List[str]]): A list of modalities to copy. If not specified, all modalities will be copied.
+
+        Returns:
+            None
+        """
+        if modalities is None:
+            modalities = ["FA", "MD", "L1", "L23"]
+
+        # create new folder
+        new_stats_folder = os.path.join(new_folder, "stats")
+        os.makedirs(new_stats_folder, exist_ok=True)
+
+        for mod in modalities:
+            orig_image = Image(os.path.join(src_folder, "stats", "all_" + mod + "_skeletonised"), must_exist=True,
+                               msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
+            dest_image = Image(os.path.join(new_stats_folder, "all_" + mod + "_skeletonised"))
+
+            orig_mean_image = Image(os.path.join(src_folder, "stats", "mean_" + mod + "_skeleton_mask"),
+                                    must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
+            dest_mean_image = Image(os.path.join(new_stats_folder, "mean_" + mod + "_skeleton_mask"))
+
+            orig_image.filter_volumes(vols2keep, dest_image)
+
+            orig_mean_image.cp(dest_mean_image)
+
+    # create a new tbss analysis folder (only stats one), filtering an existing analysis folder (specifying what to remove)
+    # vols2remove: 0-based list of indices to remove
+    @staticmethod
+    def create_analysis_folder_from_existing_remove(src_folder: str, new_folder: str, vols2remove: List[int],
+                                                    modalities: List[str] | None = None):
+        """
+        Creates a new analysis folder from an existing one, by copying the necessary files and removing the given volumes.
+
+        Args:
+            src_folder (str): The path to the existing analysis folder.
+            new_folder (str): The path to the new analysis folder.
+            vols2remove (List[int]): A list of volume indices to remove.
+            modalities (Optional[List[str]]): A list of modalities to copy. If not specified, all modalities will be copied.
+
+        Returns:
+            None
+        """
+        if modalities is None:
+            modalities = ["FA", "MD", "L1", "L23"]
+
+        # get number of subjects (assumes all modalities contains the same number of volumes)
+        orig_image = Image(os.path.join(src_folder, "stats", "all_" + modalities[0] + "_skeletonised"), must_exist=True,
+                           msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
+
+        nvols = orig_image.nvols
+        all_ids = [i for i in range(nvols)]
+        for i in vols2remove:
+            all_ids.remove(i)
+
+        GroupAnalysis.create_analysis_folder_from_existing_keep(src_folder, new_folder, all_ids, modalities)
+
+    def start_tbss_randomize(self, pop_dir_name:str, dti_image_type:str, analysis_name:str, corr_string:str, models_dir_name:str="", delay:int=20, numcpu:int=1, perm:int=5000, ignore_errors:bool=False, runit:bool=True):
+        """
+        Start a TBSS randomization analysis.
+
+        can split contrasts in different processes. if one process is used -> is not blocking, if more than one process is used -> waits for all of them.
+
+        does the following checks:
+
+        - input 4D image and mask, input fsf file exists.
+        - number of volumes (subjects) of input image coincides with number of points into the model
+        Args:
+            pop_dir_name (str): The name of the population directory.
+            dti_image_type (str): The DTI image type (e.g., FA).
+            analysis_name (str): The name of the analysis.
+            corr_string (str): The correlation string.
+            models_dir_name (str, optional): The name of the directory containing the GLM models.
+            delay (int, optional): The number of seconds to wait between each analysis.
+            numcpu (int, optional): The number of CPUs to use for the analysis.
+            perm (int, optional): The number of permutations to use for the analysis.
+            ignore_errors (bool, optional): Whether to ignore errors or raise exceptions.
+            runit (bool, optional): Whether to actually run the analysis or just return a subprocess.
+
+        Returns:
+            subprocess.Popen: A subprocess object if runit is True, otherwise None.
+        """
+        try:
+            main_analysis_folder    = os.path.join(self.project.tbss_dir, pop_dir_name)     # /data/MRI/projects/past_controls/group_analysis/tbss/controls57
+            out_stats_folder        = os.path.join(main_analysis_folder, "stats")           # /data/MRI/projects/past_controls/group_analysis/tbss/controls57/stats
+
+            # /data/MRI/projects/past_controls/group_analysis/tbss/controls57/stats/all_FA_skeletonised --- mean_FA_skeleton_mask
+            input_image     = Image(os.path.join(out_stats_folder, "all_" + dti_image_type + "_skeletonised"), must_exist=True, msg="skeletonised image not present")
+            input_mask      = Image(os.path.join(out_stats_folder, "mean_" + dti_image_type + "_skeleton_mask"), must_exist=True, msg="skeleton mask image not present")
+            out_image_name  = "tbss_" + dti_image_type + "_" + analysis_name + "_x_" + corr_string  # tbss_FA_groups&factors_x_age
+            final_dir       = os.path.join(out_stats_folder, dti_image_type, corr_string)   # /data/MRI/projects/past_controls/group_analysis/tbss/population/stats/FA/age_gender
+
+            os.makedirs(final_dir, exist_ok=True)
+
+            model_noext = os.path.join(self.project.group_glm_dir, models_dir_name, analysis_name + "_x_" + corr_string) # /data/MRI/projects/past_controls/group_analysis/glm_models/XXX/groups&factors_x_nuisances
+            model_con   = model_noext + ".con"
+            model_mat   = model_noext + ".mat"
+
+            if not os.path.exists(model_con) or not os.path.exists(model_con):
+                raise Exception("model files are missing: "+ model_con + " | " + model_mat + "...analysis aborted")
+
+            nvols   = input_image.nvols
+            npoints = FSLModels.get_numpoints_from_fsl_model(model_mat)
+
+            if nvols != npoints:
+                raise Exception("number of data points in input image (" + input_image + ") and given model (" + model_noext + ") does not coincide...analysis aborted")
+
+            if numcpu == 1:
+                if runit:
+                    print("RANDOMIZE STARTED: model: " + model_noext + " on " + input_image)
+                    p = subprocess.Popen(["randomise", "-i", input_image, "-m", input_mask, "-o", os.path.join(final_dir, out_image_name), "-d", model_noext + ".mat", "-t", model_noext + ".con", "-n", str(perm), "--T2", "-V"])
+                    rrun(f"sleep {delay}")
+                    return p
+                else:
+                    print("model: " + model_noext + " on " + input_image + " is ok")
+                    return
+            else:
+                contrast_file   = FSLModels.read_fsl_contrasts_file(model_con)
+                numcpu          = min(contrast_file.ncontrasts, numcpu)
+
+                # create a temp directory for each splitted analysis
+
+                random_folders = [ "temp_" + out_image_name + "_" + str(i) + "_" + str(randrange(10000, 100000)) for i in range(numcpu)]
+
+                for rf in random_folders:
+                    os.makedirs(os.path.join(final_dir, rf), exist_ok=True)
+
+                # assign contrasts id to each available cpu
+                conids_x_cpu    = []
+                contrasts       = contrast_file.matrix.copy()
+
+                ncpu = numcpu               # 3cpu, 4 contr
+                con_id = 0
+                for c in range(numcpu):
+                    ratio = ceil(len(contrasts) * 1.0 / ncpu)
+                    cpu_conids = []
+                    for cc in range(ratio):
+                        cpu_conids.append(con_id)
+                        contrasts.pop(0)
+                        con_id += 1
+                    ncpu -= 1
+                    conids_x_cpu.append(cpu_conids)
+
+                # create the numcpu mat / con files & start randomize
+                subprocesses = []
+                for idcpu in range(numcpu):
+                    con_txt  = contrast_file.get_subset_text(conids_x_cpu[idcpu])
+                    con_file = os.path.join(final_dir, random_folders[idcpu], analysis_name + "_x_" + corr_string + ".con")
+                    write_text_file(con_file, con_txt)
+
+                    mat_file = os.path.join(final_dir, random_folders[idcpu], analysis_name + "_x_" + corr_string + ".mat")
+                    shutil.copyfile(model_mat, mat_file)
+
+                    if runit:
+
+                        try:
+                            print("RANDOMIZE STARTED: model: " + model_noext + " on " + input_image)
+                            p = subprocess.Popen(["randomise","-i", input_image, "-m", input_mask, "-o", os.path.join(final_dir, random_folders[idcpu], out_image_name), "-d", mat_file, "-t", con_file, "-n", str(perm), "--T2", "-V"])
+                            subprocesses.append(p)
+                            rrun(f"sleep {delay}")
+                        except Exception as e:
+                            print(e)
+                    else:
+                        print("model: " + model_noext + " on " + input_image + " is ok")
+                        return
+                for process in subprocesses:
+                    process.wait()
+
+                # move all the temp files to the final directory
+                for f in range(numcpu):
+                    temp_folder     = os.path.join(final_dir, random_folders[f])
+                    num_contrasts   = len(conids_x_cpu[f])
+                    for c in range(num_contrasts):
+                        shutil.move(os.path.join(temp_folder, out_image_name + "_tfce_corrp_tstat" + str(c+1) + ".nii.gz"), os.path.join(final_dir, out_image_name + "_tfce_corrp_tstat" + str(conids_x_cpu[f][c]+1) + ".nii.gz"))
+                        shutil.move(os.path.join(temp_folder, out_image_name + "_tstat" + str(c+1) + ".nii.gz")           , os.path.join(final_dir, out_image_name + "_tstat" + str(conids_x_cpu[f][c]+1) + ".nii.gz"))
+
+                print("completed randomize: model: " + model_noext + " on " + input_image)
+
+        except NotExistingImageException as e:
+            msg = e.msg + " (" + e.image.fpathnoext + ")"
+            if ignore_errors:
+                print(msg)
+                return
+            else:
+                raise Exception(msg)
+        except Exception as e:
+            msg = "Error in start_randomize: " + str(e)
+            if ignore_errors:
+                print(msg)
+                return
+            else:
+                raise Exception(msg)
+
+    # clusterize a tbss output using the union between template FA_skeleton and xtract's main tracts
+    def tbss_cluster_results_by_xtract(self, tbss_result_image:str, out_folder:str, log_file:str= "overlap.txt", tracts_labels:List[str]=None, tracts_dir:str=None, thr:float=0.95):
+        """
+        This function clusters the TBSS results by xtract's main tracts.
 
         Args:
             tbss_result_image (str): The path to the TBSS result image.
@@ -725,8 +792,8 @@ class GroupAnalysis:
     # sessions are flattened. tbss output folder divide subjects by labels only, thus session is eventually appended to the subject labels
     # returns tracts_data
     @staticmethod
-    def tbss_summarize_clusterized_folder(subj_labels:List[str], in_clust_res_dir, tbss_folder, modality:str="FA", subj_img_postfix="_FA_FA_to_target",
-                                          data:pandas.DataFrame=None, ofn="scatter_tracts_") -> tuple:
+    def tbss_summarize_clustered_folder(subj_labels:List[str], in_clust_res_dir, tbss_folder, modality:str= "FA", subj_img_postfix="_FA_FA_to_target",
+                                        data:pandas.DataFrame=None, ofn="scatter_tracts_") -> tuple:
         """
         This function takes the output of a TBSS clustering and possibly a DataFrame and extract dti metrics values within these fraction of tracts
         summarizes the results in a tab-separated file.
@@ -813,68 +880,6 @@ class GroupAnalysis:
 
         return res_file
 
-    # create a new tbss analysis folder (only stats one), filtering an existing analysis folder (specifying what to keep)
-    # vols2keep: 0-based list of indices to keep
-    @staticmethod
-    def create_analysis_folder_from_existing_keep(src_folder, new_folder, vols2keep, modalities=None):
-        """
-        Creates a new analysis folder from an existing one, by copying the necessary files and keeping the given volumes.
-
-        Args:
-            src_folder (str): The path to the existing analysis folder.
-            new_folder (str): The path to the new analysis folder.
-            vols2keep (List[int]): A list of volume indices to keep.
-            modalities (Optional[List[str]]): A list of modalities to copy. If not specified, all modalities will be copied.
-
-        Returns:
-            None
-        """
-        if modalities is None:
-            modalities = ["FA", "MD", "L1", "L23"]
-
-        # create new folder
-        new_stats_folder = os.path.join(new_folder, "stats")
-        os.makedirs(new_stats_folder, exist_ok=True)
-
-        for mod in modalities:
-            orig_image      = Image(os.path.join(src_folder, "stats", "all_" + mod + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
-            dest_image      = Image(os.path.join(new_stats_folder, "all_" + mod + "_skeletonised"))
-
-            orig_mean_image = Image(os.path.join(src_folder, "stats", "mean_" + mod + "_skeleton_mask"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
-            dest_mean_image = Image(os.path.join(new_stats_folder, "mean_" + mod + "_skeleton_mask"))
-
-            orig_image.filter_volumes(vols2keep, dest_image)
-
-            orig_mean_image.cp(dest_mean_image)
-
-    # create a new tbss analysis folder (only stats one), filtering an existing analysis folder (specifying what to remove)
-    # vols2remove: 0-based list of indices to remove
-    @staticmethod
-    def create_analysis_folder_from_existing_remove(src_folder:str, new_folder:str, vols2remove:List[int], modalities:List[str] | None=None):
-        """
-        Creates a new analysis folder from an existing one, by copying the necessary files and removing the given volumes.
-
-        Args:
-            src_folder (str): The path to the existing analysis folder.
-            new_folder (str): The path to the new analysis folder.
-            vols2remove (List[int]): A list of volume indices to remove.
-            modalities (Optional[List[str]]): A list of modalities to copy. If not specified, all modalities will be copied.
-
-        Returns:
-            None
-        """
-        if modalities is None:
-            modalities = ["FA", "MD", "L1", "L23"]
-
-        # get number of subjects (assumes all modalities contains the same number of volumes)
-        orig_image = Image(os.path.join(src_folder, "stats", "all_" + modalities[0] + "_skeletonised"), must_exist=True, msg="GroupAnalysis.create_analysis_folder_from_existing_keep")
-
-        nvols = orig_image.nvols
-        all_ids = [i for i in range(nvols)]
-        for i in vols2remove:
-            all_ids.remove(i)
-
-        GroupAnalysis.create_analysis_folder_from_existing_keep(src_folder, new_folder, all_ids, modalities)
 
     @staticmethod
     def xtract_group_qc(self, subjects:List[Subject], out_dir:str, xtractdir_name:str|None=None, thr:float=0.001, n_std:int=2):
