@@ -6,6 +6,10 @@ from myutility.images.Image import Image
 
 class Tract(Image):
 
+
+    def __new__(cls,  _path:str, _fa:float|None=None, _md:float|None=None, _ad:float|None=None, _rd:float|None=None):
+        return super(Tract, cls).__new__(cls, _path)
+
     def __init__(self, _path:str, _fa:float|None=None, _md:float|None=None, _ad:float|None=None, _rd:float|None=None):
 
         super().__init__(_path, must_exist=True)

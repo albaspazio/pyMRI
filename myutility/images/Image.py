@@ -567,6 +567,17 @@ class Image(str):
         os.chdir(currdir)
         return outdir, label
 
+    def thr(self, thr:int, out_img:str=None):
+
+        if out_img is None:
+            out_img = self
+        else:
+            out_img = Image(out_img)
+
+        rrun(f"fslmaths {self} -thr {thr} {out_img}")
+
+        return out_img
+
     def quick_smooth(self, outimg=None, logFile=None):
         """
         Perform a quick smoothing of the image using FSL.

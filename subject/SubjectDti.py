@@ -366,7 +366,7 @@ class SubjectDti:
 
         print(f"FINISHED probtrackx {out_dir_name} on subject {self.subject.label}")
 
-    def get_tbss_metric_from_masks(self, masks:List[str], meas:List[str]|None=None, must_exist:bool=True) -> SubjectTracts:
+    def get_dtifit_metrics_from_masks(self, masks:List[str], meas: List[str] | None=None, must_exist:bool=True, thr:int=20) -> SubjectTracts:
 
         masks = Images(masks, must_exist=must_exist, msg="get_tbss_metric_from_masks: one or more Input masks images are not valid")
 
@@ -374,14 +374,27 @@ class SubjectDti:
             meas = ["FA","MD","L1","L23"]
 
         tracts:SubjectTracts = SubjectTracts(self.subject.label)
-        for mask in masks:
-            tract = Tract(mask)
-            for m in meas:
-                meas_image = Image(os.path.join(self.subject.dti_dir, self.subject.dti_fit_label + "_" + m))
-                val = float(rrun("fslstats " + meas_image + " -m -k " + mask).strip())
-                tract.set_metric(m, val)
 
-            tracts.append(tract)
+        try:
+            for mask in masks:
+                tract       = Tract(mask)
+                temp_image  = Image(os.path.join(Image(mask).dir, "temp"))
+
+                if tract.nvoxels > thr:
+                    for m in meas:
+                        # TODO making  fslstats *fit* -k mask -m sometimes it crashed saying that -k mask produced an empty image
+                        # using two steps solved the problema
+                        meas_image  = Image(os.path.join(self.subject.dti_dir, self.subject.dti_fit_label + "_" + m))
+                        rrun(f"fslmaths {meas_image} -mas {mask} {temp_image}", stop_on_error=False)
+                        val         = float(rrun(f"fslstats {temp_image} -m").strip())
+                        tract.set_metric(m, val)
+
+                if temp_image.exist:
+                    rrun(f"rm {temp_image}.nii.gz")
+
+                tracts.append(tract)
+        except Exception as e:
+            raise Exception(f"error with image: {mask}")
 
         return tracts
 
