@@ -13,7 +13,7 @@ import pandas
 from Global import Global
 from Project import Project
 from subject.Subject import Subject
-from models.FSLModels import FSLModels
+from models.FSLModels_ import FSLModels
 from group.SPMModels import SPMModels
 from myutility.exceptions import NotExistingImageException
 from myutility.fileutilities import get_dirname, write_text_file
@@ -569,7 +569,7 @@ class GroupAnalysis:
 
         GroupAnalysis.create_analysis_folder_from_existing_keep(src_folder, new_folder, all_ids, modalities)
 
-    def start_tbss_randomize(self, pop_dir_name:str, dti_image_type:str, analysis_name:str, corr_string:str, models_dir_name:str="", delay:int=20, numcpu:int=1, perm:int=5000, ignore_errors:bool=False, runit:bool=True):
+    def start_tbss_randomize(self, pop_dir_name:str, dti_image_type:str, analysis_name:str, corr_string:str, models_dir_name:str="", postfix_dti_image:str="", delay:int=20, numcpu:int=1, perm:int=5000, ignore_errors:bool=False, runit:bool=True):
         """
         Start a TBSS randomization analysis.
 
@@ -599,7 +599,7 @@ class GroupAnalysis:
             out_stats_folder        = os.path.join(main_analysis_folder, "stats")           # /data/MRI/projects/past_controls/group_analysis/tbss/controls57/stats
 
             # /data/MRI/projects/past_controls/group_analysis/tbss/controls57/stats/all_FA_skeletonised --- mean_FA_skeleton_mask
-            input_image     = Image(os.path.join(out_stats_folder, "all_" + dti_image_type + "_skeletonised"), must_exist=True, msg="skeletonised image not present")
+            input_image     = Image(os.path.join(out_stats_folder, "all_" + dti_image_type + "_skeletonised" + postfix_dti_image), must_exist=True, msg="skeletonised image not present")
             input_mask      = Image(os.path.join(out_stats_folder, "mean_" + dti_image_type + "_skeleton_mask"), must_exist=True, msg="skeleton mask image not present")
             out_image_name  = "tbss_" + dti_image_type + "_" + analysis_name + "_x_" + corr_string  # tbss_FA_groups&factors_x_age
             final_dir       = os.path.join(out_stats_folder, dti_image_type, corr_string)   # /data/MRI/projects/past_controls/group_analysis/tbss/population/stats/FA/age_gender

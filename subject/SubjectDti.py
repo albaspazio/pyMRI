@@ -385,8 +385,8 @@ class SubjectDti:
                         # TODO making  fslstats *fit* -k mask -m sometimes it crashed saying that -k mask produced an empty image
                         # using two steps solved the problema
                         meas_image  = Image(os.path.join(self.subject.dti_dir, self.subject.dti_fit_label + "_" + m))
-                        rrun(f"fslmaths {meas_image} -mas {mask} {temp_image}", stop_on_error=False)
-                        val         = float(rrun(f"fslstats {temp_image} -m").strip())
+                        rrun(f"fslmaths {meas_image} -mas {tract} {temp_image}", stop_on_error=False)
+                        val         = temp_image.get_image_mean()
                         tract.set_metric(m, val)
 
                 if temp_image.exist:

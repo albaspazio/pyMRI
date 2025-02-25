@@ -567,7 +567,7 @@ class Image(str):
         os.chdir(currdir)
         return outdir, label
 
-    def thr(self, thr:int, out_img:str=None):
+    def thr(self, thr:float, out_img:str|None=None):
 
         if out_img is None:
             out_img = self
@@ -577,6 +577,16 @@ class Image(str):
         rrun(f"fslmaths {self} -thr {thr} {out_img}")
 
         return out_img
+
+    def bin(self, out_img:str|None=None):
+        if out_img is None:
+            out_img = self
+        else:
+            out_img = Image(out_img)
+        rrun(f"fslmaths {self} -bin {out_img}")
+
+        return out_img
+
 
     def quick_smooth(self, outimg=None, logFile=None):
         """

@@ -3,7 +3,7 @@ import traceback
 
 from Global import Global
 from Project import Project
-from models.FSLModels import FSLModels
+from models.FSLModels_ import FSLModels
 from group.spm_utilities import Covariate, Nuisance
 
 if __name__ == "__main__":
