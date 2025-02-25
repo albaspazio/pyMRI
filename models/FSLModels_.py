@@ -38,7 +38,7 @@ class FSLModels:
     # ---------------------------------------------------
     def create_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], groups_instances:List[List[Subject]],
                                                ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True, group_mean_contrasts: int = 1,
-                                               cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "", subj_must_exist: bool = False):
+                                               cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "", demean_vars:List[bool]|None = None, subj_must_exist: bool = False):
         """
         This function creates a FSL GLM file starting from a template. Manage multiple groups, with covariates and nuisance regressors.
         - N covariates
@@ -123,6 +123,9 @@ class FSLModels:
             else:
                 data = None
 
+            if data is not None and demean_vars is None:
+                demean_vars = [True for _ in regressors]
+
             ngroups = len(groups_instances)  # number of groups in the design. each group will have its regressor (EV).
             if ngroups > 3:
                 raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, no more than three groups are supported")
@@ -138,11 +141,16 @@ class FSLModels:
             # divide regressors in covariates and nuisances
             covs_label = []
             nuis_label = []
-            for regr in regressors:
+            covs_demean = []
+            nuis_demean = []
+            for id, regr in enumerate(regressors):
                 if isinstance(regr, Covariate):
                     covs_label.append(regr.name)
+                    covs_demean.append(demean_vars[id])
                 elif isinstance(regr, Nuisance):
                     nuis_label.append(regr.name)
+                    nuis_demean.append(demean_vars[id])
+
             ncovs = len(covs_label)
             nnuis = len(nuis_label)
 
@@ -150,8 +158,8 @@ class FSLModels:
             if ngroups == 1 and ncovs == 0 and group_mean_contrasts == 0:
                 raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, when one group is investigated, either cov_mean_contrasts or group_mean_contrasts must be > 0....exiting")
 
-            covs_values = self.project.get_subjects_values_by_cols(subjs_instances, covs_label)[0]
-            nuis_values = self.project.get_subjects_values_by_cols(subjs_instances, nuis_label)[0]
+            covs_values = self.project.get_subjects_values_by_cols(subjs_instances, covs_label, demean_flags=covs_demean)[0]
+            nuis_values = self.project.get_subjects_values_by_cols(subjs_instances, nuis_label, demean_flags=nuis_demean)[0]
 
             for id, val in enumerate(covs_values):
                 if len(val) != nsubjs:
@@ -214,7 +222,7 @@ class FSLModels:
             print("ARR_COV= " + str(covs_label))
             print("ARR_NUIS= " + str(nuis_label))
             print("NUM_GROUPS=" + str(ngroups))
-            print(f"NUM_CONTRASTS={tot_cont}")
+            print("NUM_CONTRASTS=" + str(tot_cont))
             # ---------------------------------------------------
             # overridding GLM file
             # ---------------------------------------------------
@@ -229,53 +237,53 @@ class FSLModels:
             self.__addline2string("# ====== START OVERRIDE ============================================")
             self.__addline2string("# ==================================================================")
             self.__addline2string("")
-            self.__addline2string("subjects included")
+            self.__addline2string("# subjects included")
             for subj in subjs_instances:
-                self.__addline2string(subj.label)
-            self.__addline2string("-------------------------------------------------------------------")
+                self.__addline2string("# " + subj.label)
+            self.__addline2string("# -------------------------------------------------------------------")
 
             # Number of subjects
-            self.__addline2string("set fmri(npts) {nsubjs}")
-            self.__addline2string("set fmri(multiple) {nsubjs}")
+            self.__addline2string("set fmri(npts) "     + str(nsubjs))
+            self.__addline2string("set fmri(multiple) " + str(nsubjs))
 
             # Number of EVs
-            self.__addline2string("set fmri(evs_orig) {tot_EV}")
-            self.__addline2string("set fmri(evs_real) {tot_EV}")
+            self.__addline2string("set fmri(evs_orig) " + str(tot_EV))
+            self.__addline2string("set fmri(evs_real) " + str(tot_EV))
 
             # Number of contrasts
-            self.__addline2string("set fmri(ncon_orig) {tot_cont}")
-            self.__addline2string("set fmri(ncon_real) {tot_cont}")
+            self.__addline2string("set fmri(ncon_orig) " + str(tot_cont))
+            self.__addline2string("set fmri(ncon_real) " + str(tot_cont))
 
             self.__addline2string("#====================== init EV data")
             for ev in range(1, tot_EV+1):
-                self.__addline2string(f"set fmri(shape{ev}) 2")
-                self.__addline2string(f"set fmri(convolve{ev}) 0")
-                self.__addline2string(f"set fmri(convolve_phase{ev}) 0")
-                self.__addline2string(f"set fmri(tempfilt_yn{ev}) 0")
-                self.__addline2string(f"set fmri(deriv_yn{ev}) 0")
-                self.__addline2string(f"set fmri(custom{ev}) dummy")
+                self.__addline2string("set fmri(shape" + str(ev) + ") 2")
+                self.__addline2string("set fmri(convolve" + str(ev) + ") 0")
+                self.__addline2string("set fmri(convolve_phase" + str(ev) + ") 0")
+                self.__addline2string("set fmri(tempfilt_yn" + str(ev) + ") 0")
+                self.__addline2string("set fmri(deriv_yn" + str(ev) + ") 0")
+                self.__addline2string("set fmri(custom" + str(ev) + ") dummy")
 
                 for ev2 in range(0, tot_EV+1):
-                    self.__addline2string(f"set fmri(ortho{ev}.{ev2}) 0")
+                    self.__addline2string("set fmri(ortho" + str(ev) + "." + str(ev2) + ") 0")
 
             # ---------------------------------------------------
             # GROUPS
             self.__addline2string("#====================== init to 0 groups' means")
             for s in range(1, nsubjs+1):
-                self.__addline2string(f"set fmri(groupmem.{s}) 1")
+                self.__addline2string("set fmri(groupmem." + str(s) + ") 1")
                 for gr in range(1, ngroups+1):
-                    self.__addline2string(f"set fmri(evg{s}.{gr}) 0")
+                    self.__addline2string("set fmri(evg" + str(s) + "." + str(gr) + ") 0")
 
             self.__addline2string("#====================== set groups' means to actual values")
             subjid = 1
             for gr in range(1, ngroups+1):
                 for _ in groups_instances[gr - 1]:
-                    self.__addline2string(f"set fmri(evg{subjid}.{gr}) 1")
+                    self.__addline2string("set fmri(evg" + str(subjid) + "." + str(gr) + ") 1")
                     subjid += 1
 
             self.__addline2string("#====================== set groups' evtitle")
             for gr in range(1, ngroups + 1):
-                self.__addline2string(f"set fmri(evtitle{gr}) \"grp{gr}\"")
+                self.__addline2string("set fmri(evtitle" + str(gr) + ") \"grp" + str(gr) + "\"")
 
             # =================================================================================================
             #region N U I S A N C E
@@ -301,14 +309,14 @@ class FSLModels:
             for cov in covs_label:
                 for gr in range(1, ngroups+1):
                     evid = (ev+1)*ngroups + nnuis + gr
-                    self.__addline2string(f"set fmri(evtitle{evid}) \"{cov} group{gr}\"")
+                    self.__addline2string("set fmri(evtitle" + str(evid) + ") \"" + cov + " group" + str(gr) + "\"")
                 ev += 1
 
             self.__addline2string("#====================== init to 0 covariates EV")
             startEVid = ngroups + 1 + nnuis
             for s in range(1, nsubjs+1):
                 for evid in range(startEVid, tot_EV+1):
-                    self.__addline2string(f"set fmri(evg{s}.{evid}) 0")
+                    self.__addline2string("set fmri(evg" + str(s) + "." + str(evid) + ") 0")
 
             self.__addline2string("#====================== set covariates values")
 
@@ -329,7 +337,7 @@ class FSLModels:
             # create model
             model_noext = remove_ext(output_glm_fsf)
             if create_model:
-                rrun(f"feat_model {model_noext}")
+                rrun("feat_model " + model_noext)
 
             # if $? -gt 0:
             #     print("===> KO: Error in feat_model")
@@ -536,7 +544,7 @@ class FSLModels:
             print("ARR_COV= " + str(covs_label))
             print("ARR_NUIS= " + str(nuis_label))
             print("NUM_GROUPS=" + str(ngroups))
-            print(f"NUM_CONTRASTS={tot_cont}")
+            print("NUM_CONTRASTS=" + str(tot_cont))
             # ---------------------------------------------------
             # overridding GLM file
             # ---------------------------------------------------
@@ -557,36 +565,36 @@ class FSLModels:
             self.__addline2string("-------------------------------------------------------------------")
 
             # Number of subjects
-            self.__addline2string(f"set fmri(npts) {nsubjs}")
-            self.__addline2string(f"set fmri(multiple) {nsubjs}")
+            self.__addline2string("set fmri(npts) "     + str(nsubjs))
+            self.__addline2string("set fmri(multiple) " + str(nsubjs))
 
             # Number of EVs
-            self.__addline2string(f"set fmri(evs_orig) {tot_EV}")
-            self.__addline2string(f"set fmri(evs_real) {tot_EV}")
+            self.__addline2string("set fmri(evs_orig) " + str(tot_EV))
+            self.__addline2string("set fmri(evs_real) " + str(tot_EV))
 
             # Number of contrasts
-            self.__addline2string(f"set fmri(ncon_orig) {tot_cont}")
-            self.__addline2string(f"set fmri(ncon_real) {tot_cont}")
+            self.__addline2string("set fmri(ncon_orig) " + str(tot_cont))
+            self.__addline2string("set fmri(ncon_real) " + str(tot_cont))
 
             self.__addline2string("#====================== init EV data")
             for ev in range(1, tot_EV+1):
-                self.__addline2string(f"set fmri(shape{ev}) 2")
-                self.__addline2string(f"set fmri(convolve{ev}) 0")
-                self.__addline2string(f"set fmri(convolve_phase{ev}) 0")
-                self.__addline2string(f"set fmri(tempfilt_yn{ev}) 0")
-                self.__addline2string(f"set fmri(deriv_yn{ev}) 0")
-                self.__addline2string(f"set fmri(custom{ev}) dummy")
+                self.__addline2string("set fmri(shape" + str(ev) + ") 2")
+                self.__addline2string("set fmri(convolve" + str(ev) + ") 0")
+                self.__addline2string("set fmri(convolve_phase" + str(ev) + ") 0")
+                self.__addline2string("set fmri(tempfilt_yn" + str(ev) + ") 0")
+                self.__addline2string("set fmri(deriv_yn" + str(ev) + ") 0")
+                self.__addline2string("set fmri(custom" + str(ev) + ") dummy")
 
                 for ev2 in range(0, tot_EV+1):
-                    self.__addline2string(f"set fmri(ortho{ev}.{ev2}) 0")
+                    self.__addline2string("set fmri(ortho" + str(ev) + "." + str(ev2) + ") 0")
 
             # ---------------------------------------------------
             # GROUPS
             self.__addline2string("#====================== init to 0 groups' means")
             for s in range(1, nsubjs+1):
-                self.__addline2string(f"set fmri(groupmem.{s}) 1")
+                self.__addline2string("set fmri(groupmem." + str(s) + ") 1")
                 for gr in range(1, ngroups+1):
-                    self.__addline2string(f"set fmri(evg{s}.{gr}) 0")
+                    self.__addline2string("set fmri(evg" + str(s) + "." + str(gr) + ") 0")
 
             self.__addline2string("#====================== set groups' means to actual values")
             # here I must respect the order defined in the 4D file, so I cycle through the whole list and for each subject I retrieve the groups it belongs to
@@ -603,12 +611,12 @@ class FSLModels:
                 if group_id == -1:
                     raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file: ")
                 else:
-                    self.__addline2string(f"set fmri(evg{subjid}.{group_id}) 1")
+                    self.__addline2string("set fmri(evg" + str(subjid) + "." + str(group_id) + ") 1")
                     subjid += 1
 
             self.__addline2string("#====================== set groups' evtitle")
             for gr in range(1, ngroups + 1):
-                self.__addline2string(f"set fmri(evtitle{gr}) \"grp{gr}\"")
+                self.__addline2string("set fmri(evtitle" + str(gr) + ") \"grp" + str(gr) + "\"")
 
             # =================================================================================================
             #region N U I S A N C E
@@ -616,7 +624,7 @@ class FSLModels:
             self.__addline2string("#====================== set nuisance event titles (event [1:$NUM_GROUPS] are the means and are not overwritten)")
             for nuis in nuis_label:
                 cnt = col_id + 1 + ngroups
-                self.__addline2string(f"set fmri(evtitle{cnt}) \"{nuis}\"")
+                self.__addline2string("set fmri(evtitle" + str(cnt) + ") \"" + nuis + "\"")
                 col_id += 1
 
             self.__addline2string("#====================== set nuisance values")
@@ -625,7 +633,7 @@ class FSLModels:
                 for col_id in range(nnuis):
                     cnt  = col_id + 1 + ngroups
                     # cnt2 = (s-1)*nnuis + id
-                    self.__addline2string(f"set fmri(evg{id + 1}.{cnt}) {nuis_values[col_id][id]}")
+                    self.__addline2string("set fmri(evg" + str(id+1) + "." + str(cnt) + ") " + str(nuis_values[col_id][id]) )
 
             #endregion
             # =================================================================================================
@@ -635,14 +643,14 @@ class FSLModels:
             for cov in covs_label:
                 for gr in range(1, ngroups+1):
                     evid = (ev+1)*ngroups + nnuis + gr
-                    self.__addline2string(f"set fmri(evtitle{evid}) \"{cov} group{gr}\"")
+                    self.__addline2string("set fmri(evtitle" + str(evid) + ") \"" + cov + " group" + str(gr) + "\"")
                 ev += 1
 
             self.__addline2string("#====================== init to 0 covariates EV")
             startEVid = ngroups + 1 + nnuis
             for s in range(1, nsubjs+1):
                 for evid in range(startEVid, tot_EV+1):
-                    self.__addline2string(f"set fmri(evg{s}.{evid}) 0")
+                    self.__addline2string("set fmri(evg" + str(s) + "." + str(evid) + ") 0")
 
             self.__addline2string("#====================== set covariates values")
             # here I must respect the order defined in the 4D file, so I cycle through the whole list and for each subject I retrieve its nuisance values
@@ -661,7 +669,7 @@ class FSLModels:
                         raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file: ")
                     else:
                         evid = startEVid + covid * ngroups + group_id
-                        self.__addline2string(f"set fmri(evg{subjid}.{evid}) {covs_values[covid][subjid - 1]}")
+                        self.__addline2string("set fmri(evg" + str(subjid) + "." + str(evid) + ") " + str(covs_values[covid][subjid-1]))
                         subjid += 1
             #endregion
 
@@ -671,7 +679,7 @@ class FSLModels:
             # -----------------------------------------------------------------------------------------------
             # create model
             if create_model:
-                rrun(f"feat_model {model_noext}")
+                rrun("feat_model " + model_noext)
 
             # if $? -gt 0:
             #     print("===> KO: Error in feat_model")
@@ -695,7 +703,7 @@ class FSLModels:
         self.__addline2string("#====================== reset contrast values")
         for evid in range(1, tot_EV+1):
             for conid in range(1, tot_cont+1):
-                self.__addline2string(f"set fmri(con_real{conid}.{evid}) 0")
+                self.__addline2string("set fmri(con_real" + str(conid) + "." + str(evid) + ") 0")
 
         self.__addline2string("#====================== set contrasts")
         contrid = 0 # contrasts' row
@@ -705,31 +713,31 @@ class FSLModels:
             # 1) group mean contrasts if present
             if group_mean_contrasts > 0:
                 contrid += 1
-                self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                self.__addline2string(f"set fmri(conname_real.{contrid}) \"group pos\"" )
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid}) 1" )
+                self.__addline2string("set fmri(conpic_real."         + str(contrid) + ") 1")
+                self.__addline2string("set fmri(conname_real."        + str(contrid) + ") \"group pos\"" )
+                self.__addline2string("set fmri(con_real"             + str(contrid) + "." + str(evid) + ") 1" )
 
                 if group_mean_contrasts == 2:
                     contrid += 1
-                    self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                    self.__addline2string(f"set fmri(conname_real.{contrid}) \"group neg\"")
-                    self.__addline2string(f"set fmri(con_real{contrid}.{evid}) -1")
+                    self.__addline2string("set fmri(conpic_real."     + str(contrid) + ") 1")
+                    self.__addline2string("set fmri(conname_real."    + str(contrid) + ") \"group neg\"")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + "." + str(evid) + ") -1")
 
             # 2) pos|neg cov contrasts if present
             evid += (nnuis + 1)
             for cov in covs_label:
                 # ===== POS CONTRAST
                 contrid += 1
-                self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                self.__addline2string(f"set fmri(conname_real.{contrid}) \"{cov} pos\"")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid}) 1")
+                self.__addline2string("set fmri(conpic_real."         + str(contrid) + ") 1")
+                self.__addline2string("set fmri(conname_real."        + str(contrid) + ") \"" + cov + " pos" + "\"")
+                self.__addline2string("set fmri(con_real"             + str(contrid) + "." + str(evid) + ") 1")
 
                 if cov_mean_contrasts == 2:
                     # ===== NEG CONTRAST
                     contrid += 1
-                    self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                    self.__addline2string(f"set fmri(conname_real.{contrid}) \"{cov} neg\"")
-                    self.__addline2string(f"set fmri(con_real{contrid}.{evid}) -1")
+                    self.__addline2string("set fmri(conpic_real."     + str(contrid) + ") 1")
+                    self.__addline2string("set fmri(conname_real."    + str(contrid) + ") \"" + cov + " neg" + "\"")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + "." + str(evid) + ") -1")
 
                 evid += 1
 
@@ -737,55 +745,55 @@ class FSLModels:
             if between_cov_contrasts == 2:
                 evid = 1 + nnuis + 1
                 contrid += 1
-                self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                self.__addline2string(f"set fmri(conname_real.{contrid}) \"{covs_label[0]} > {covs_label[1]}\"")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid}) 1")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid+1}) -1")
+                self.__addline2string("set fmri(conpic_real." + str(contrid) + ") 1")
+                self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + covs_label[0] + " > " + covs_label[1] + "\"")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid) + ") 1")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid+1) + ") -1")
 
                 contrid += 1
-                self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                self.__addline2string(f"set fmri(conname_real.{contrid}) \"{covs_label[1]} > {covs_label[0]}\"")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid}) -1")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid+1}) 1")
+                self.__addline2string("set fmri(conpic_real." + str(contrid) + ") 1")
+                self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + covs_label[1] + " > " + covs_label[0] + "\"")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid) + ") -1")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid+1) + ") 1")
 
             elif between_cov_contrasts == 6:
                 evid = 1 + nnuis + 1
 
                 contrid += 1
-                self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                self.__addline2string(f"set fmri(conname_real.{contrid}) \"{covs_label[0]} > {covs_label[1]}\"")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid}) 1")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid+1}) -1")
+                self.__addline2string("set fmri(conpic_real." + str(contrid) + ") 1")
+                self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + covs_label[0] + " > " + covs_label[1] + "\"")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid) + ") 1")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid+1) + ") -1")
 
                 contrid += 1
-                self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                self.__addline2string(f"set fmri(conname_real.{contrid}) \"{covs_label[1]} > {covs_label[0]}\"")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid}) -1")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid+1}) 1")
+                self.__addline2string("set fmri(conpic_real." + str(contrid) + ") 1")
+                self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + covs_label[1] + " > " + covs_label[0] + "\"")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid) + ") -1")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid+1) + ") 1")
 
                 contrid += 1
-                self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                self.__addline2string(f"set fmri(conname_real.{contrid}) \"{covs_label[0]} > {covs_label[2]}\"")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid}) 1")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid+2}) -1")
+                self.__addline2string("set fmri(conpic_real." + str(contrid) + ") 1")
+                self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + covs_label[0] + " > " + covs_label[2] + "\"")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid) + ") 1")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid+2) + ") -1")
 
                 contrid += 1
-                self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                self.__addline2string(f"set fmri(conname_real.{contrid}) \" {covs_label[2]} > {covs_label[0]} \"")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid}) -1")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid+2}) 1")
+                self.__addline2string("set fmri(conpic_real." + str(contrid) + ") 1")
+                self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + covs_label[2] + " > " + covs_label[0] + "\"")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid) + ") -1")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid+2) + ") 1")
 
                 contrid += 1
-                self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                self.__addline2string(f"set fmri(conname_real.{contrid}) \"{covs_label[1]} > {covs_label[2]} \"")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid+1}) 1")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid+2}) -1")
+                self.__addline2string("set fmri(conpic_real." + str(contrid) + ") 1")
+                self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + covs_label[1] + " > " + covs_label[2] + "\"")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid+1) + ") 1")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid+2) + ") -1")
 
                 contrid += 1
-                self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                self.__addline2string(f"set fmri(conname_real.{contrid}) \"{covs_label[2]} > {covs_label[1]} \"")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid+1}) -1")
-                self.__addline2string(f"set fmri(con_real{contrid}.{evid+2}) 1")
+                self.__addline2string("set fmri(conpic_real." + str(contrid) + ") 1")
+                self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + covs_label[2] + " > " + covs_label[1] + "\"")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid+1) + ") -1")
+                self.__addline2string("set fmri(con_real" + str(contrid) + "." + str(evid+2) + ") 1")
 
         else:   # ngroups > 1
 
@@ -793,15 +801,15 @@ class FSLModels:
             if group_mean_contrasts > 0:
                 for evid in range(1, ngroups + 1):
                     contrid += 1
-                    self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                    self.__addline2string(f"set fmri(conname_real.{contrid}) \"group{evid} pos\"" )
-                    self.__addline2string(f"set fmri(con_real{contrid}.{evid}) 1" )
+                    self.__addline2string("set fmri(conpic_real."     + str(contrid) + ") 1")
+                    self.__addline2string("set fmri(conname_real."    + str(contrid) + ") \"group"+ str(evid) + " pos\"" )
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + "." + str(evid) + ") 1" )
 
                     if group_mean_contrasts == 2:
                         contrid += 1
-                        self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                        self.__addline2string(f"set fmri(conname_real.{contrid}) \"group{evid} neg\"")
-                        self.__addline2string(f"set fmri(con_real{contrid}.{evid}) -1")
+                        self.__addline2string("set fmri(conpic_real." + str(contrid) + ") 1")
+                        self.__addline2string("set fmri(conname_real."+ str(contrid) + ") \"group"+ str(evid) + " neg\"")
+                        self.__addline2string("set fmri(con_real"     + str(contrid) + "." + str(evid) + ") -1")
 
             if ncovs == 0:   # $ncovs = 0, MEAN_CONTRASTS = 1 or 2
 
@@ -809,40 +817,40 @@ class FSLModels:
                 if ngroups >= 2:
 
                     contrid += 1
-                    self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                    self.__addline2string(f"set fmri(conname_real.{contrid}) \"group1 > group2\"")
-                    self.__addline2string(f"set fmri(con_real{contrid}.1) 1")
-                    self.__addline2string(f"set fmri(con_real{contrid}.2) -1")
+                    self.__addline2string("set fmri(conpic_real."     + str(contrid) + ") 1")
+                    self.__addline2string("set fmri(conname_real."    + str(contrid) + ") \"group1 > group2\"")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".1) 1")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".2) -1")
 
                     contrid += 1
-                    self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                    self.__addline2string(f"set fmri(conname_real.{contrid}) \"group2 > group1\"")
-                    self.__addline2string(f"set fmri(con_real{contrid}.1) -1")
-                    self.__addline2string(f"set fmri(con_real{contrid}.2) 1")
+                    self.__addline2string("set fmri(conpic_real."     + str(contrid) + ") 1")
+                    self.__addline2string("set fmri(conname_real."    + str(contrid) + ") \"group2 > group1\"")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".1) -1")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".2) 1")
 
                 if ngroups == 3:
 
                     contrid += 1
-                    self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                    self.__addline2string(f"set fmri(conname_real.{contrid}) \"group1 > group3\"")
-                    self.__addline2string(f"set fmri(con_real{contrid}.1) 1")
-                    self.__addline2string(f"set fmri(con_real{contrid}.3) -1")
+                    self.__addline2string("set fmri(conpic_real."     + str(contrid) + ") 1")
+                    self.__addline2string("set fmri(conname_real."    + str(contrid) + ") \"group1 > group3\"")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".1) 1")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".3) -1")
                     contrid += 1
-                    self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                    self.__addline2string(f"set fmri(conname_real.{contrid}) \"group3 > group1\"")
-                    self.__addline2string(f"set fmri(con_real{contrid}.1) -1")
-                    self.__addline2string(f"set fmri(con_real{contrid}.3) 1")
+                    self.__addline2string("set fmri(conpic_real."     + str(contrid) + ") 1")
+                    self.__addline2string("set fmri(conname_real."    + str(contrid) + ") \"group3 > group1\"")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".1) -1")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".3) 1")
 
                     contrid += 1
-                    self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                    self.__addline2string(f"set fmri(conname_real.{contrid}) \"group2 > group3\"")
-                    self.__addline2string(f"set fmri(con_real{contrid}.2) 1")
-                    self.__addline2string(f"set fmri(con_real{contrid}.3) -1")
+                    self.__addline2string("set fmri(conpic_real."     + str(contrid) + ") 1")
+                    self.__addline2string("set fmri(conname_real."    + str(contrid) + ") \"group2 > group3\"")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".2) 1")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".3) -1")
                     contrid += 1
-                    self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                    self.__addline2string(f"set fmri(conname_real.{contrid}) \"group3 > group2\"")
-                    self.__addline2string(f"set fmri(con_real{contrid}.2) -1")
-                    self.__addline2string(f"set fmri(con_real{contrid}.3) 1")
+                    self.__addline2string("set fmri(conpic_real."     + str(contrid) + ") 1")
+                    self.__addline2string("set fmri(conname_real."    + str(contrid) + ") \"group3 > group2\"")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".2) -1")
+                    self.__addline2string("set fmri(con_real"         + str(contrid) + ".3) 1")
 
             else:   # ngroups > 1, ncovs > 0
 
@@ -856,16 +864,16 @@ class FSLModels:
 
                             # ===== POS CONTRAST
                             contrid += 1
-                            self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                            self.__addline2string(f"set fmri(conname_real.{contrid}) \"{cov_name} group{gr} pos\"")
-                            self.__addline2string(f"set fmri(con_real{contrid}.{evid}) 1")
+                            self.__addline2string("set fmri(conpic_real."     + str(contrid) + ") 1")
+                            self.__addline2string("set fmri(conname_real."    + str(contrid) + ") \"" + cov_name + " group" + str(gr) + " pos\"")
+                            self.__addline2string("set fmri(con_real"         + str(contrid) + "." + str(evid) + ") 1")
 
                             if cov_mean_contrasts == 2:
                                 # ===== NEG CONTRAST
                                 contrid += 1
-                                self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                                self.__addline2string(f"set fmri(conname_real.{contrid}) \"{cov_name} group{gr} neg\"")
-                                self.__addline2string(f"set fmri(con_real{contrid}.{evid}) -1")
+                                self.__addline2string("set fmri(conpic_real."  + str(contrid) + ") 1")
+                                self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + cov_name + " group" + str(gr) + " neg\"")
+                                self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid) + ") -1")
 
 
                     # 3) test correlations differences between groups
@@ -876,39 +884,39 @@ class FSLModels:
                     if ngroups >= 2:
 
                         contrid += 1
-                        self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                        self.__addline2string(f"set fmri(conname_real.{contrid}) \"{cov_name}: group1 > group2\"")
-                        self.__addline2string(f"set fmri(con_real{contrid}.{evid}) 1")
-                        self.__addline2string(f"set fmri(con_real{contrid}.{evid_plus1}) -1")
+                        self.__addline2string("set fmri(conpic_real."  + str(contrid) + ") 1")
+                        self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + cov_name + ": group1 > group2\"")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid) + ") 1")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid_plus1) + ") -1")
                         contrid += 1
-                        self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                        self.__addline2string(f"set fmri(conname_real.{contrid}) \"{cov_name}: group2 > group1\"")
-                        self.__addline2string(f"set fmri(con_real{contrid}.{evid}) -1")
-                        self.__addline2string(f"set fmri(con_real{contrid}.{evid_plus1}) 1")
+                        self.__addline2string("set fmri(conpic_real."  + str(contrid) + ") 1")
+                        self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + cov_name +  ": group2 > group1\"")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid) + ") -1")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid_plus1) + ") 1")
 
                     if ngroups == 3:
 
                         contrid += 1
-                        self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                        self.__addline2string(f"set fmri(conname_real.{contrid}) \"{cov_name}: group1 > group3\"")
-                        self.__addline2string(f"set fmri(con_real{contrid}.{evid}) 1")
-                        self.__addline2string(f"set fmri(con_real{contrid}.{evid_plus2}) -1")
+                        self.__addline2string("set fmri(conpic_real."  + str(contrid) + ") 1")
+                        self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + cov_name + ": group1 > group3\"")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid) + ") 1")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid_plus2) + ") -1")
                         contrid += 1
-                        self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                        self.__addline2string(f"set fmri(conname_real.{contrid}) \"{cov_name}: group3 > group1\"")
-                        self.__addline2string(f"set fmri(con_real{contrid}.{evid}) -1")
-                        self.__addline2string(f"set fmri(con_real{contrid}.{evid_plus2}) 1")
+                        self.__addline2string("set fmri(conpic_real."  + str(contrid) + ") 1")
+                        self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + cov_name + ": group3 > group1\"")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid) + ") -1")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid_plus2) + ") 1")
 
                         contrid += 1
-                        self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
-                        self.__addline2string(f"set fmri(conname_real.{contrid}) \"{cov_name}: group2 > group3\"")
-                        self.__addline2string(f"set fmri(con_real{contrid}.{evid_plus1}) 1")
-                        self.__addline2string(f"set fmri(con_real{contrid}.{evid_plus2}) -1")
+                        self.__addline2string("set fmri(conpic_real."  + str(contrid) + ") 1")
+                        self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + cov_name + ": group2 > group3\"")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid_plus1) + ") 1")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid_plus2) + ") -1")
                         contrid += 1
-                        self.__addline2string(f"fset fmri(conpic_real.{contrid}) 1")
-                        self.__addline2string(f"fset fmri(conname_real.{contrid}) \"{cov_name}: group3 > group2\"")
-                        self.__addline2string(f"fset fmri(con_real{contrid}.{evid_plus1}) -1")
-                        self.__addline2string(f"fset fmri(con_real{contrid}.{evid_plus2}) 1")
+                        self.__addline2string("set fmri(conpic_real."  + str(contrid) + ") 1")
+                        self.__addline2string("set fmri(conname_real." + str(contrid) + ") \"" + cov_name + ": group3 > group2\"")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid_plus1) + ") -1")
+                        self.__addline2string("set fmri(con_real"      + str(contrid) + "." + str(evid_plus2) + ") 1")
 
     def __addline2string(self, line: str) -> None:
         """
