@@ -5,6 +5,7 @@ from typing import List
 
 from Global import Global
 from myutility.SubjectTracts import SubjectTracts
+from myutility.exceptions import NotExistingImageException
 from myutility.fileutilities import write_text_file, read_value_from_file
 from myutility.images.Image import Image
 from myutility.myfsl.utils.run import rrun
@@ -283,8 +284,31 @@ class SubjectDti:
                    stop:str|None = None,
                    bedpost_dirname:str|None=None, pd:bool=False, use_gpu:bool=False, nsamples:int=5000,
                    default_pbt_params:str = " -V 1 --loopcheck --forcedir --opd --ompl",
-                   other_pbt_params:str = " --sampvox=1 --randfib=1 --onewaycondition"):
+                   other_pbt_params:str = " --sampvox=1 --randfib=1 --onewaycondition") -> bool:
+        """
+        Executes the probtrackx2 command for probabilistic tractography on a subject's DTI data.
 
+        This method constructs and runs a probtrackx2 command, optionally using GPU acceleration,
+        to perform tractography based on specified seed points, waypoints, stop, and avoid masks.
+        The results are saved in the specified output directory and file names.
+
+        Args:
+            out_dir_name (str): Name of the output directory for storing results.
+            out_tractofile_name (str): Name of the output tractography file.
+            seed (str | List[str] | List[int]): Seed points or images for tractography.
+            avoid (str | None): Optional mask to avoid during tractography.
+            wayp (List[str] | None): Optional list of waypoint masks.
+            stop (str | None): Optional stop mask for tractography.
+            bedpost_dirname (str | None): Directory name for bedpostX data.
+            pd (bool): Whether to use partial volume data.
+            use_gpu (bool): Whether to use GPU acceleration.
+            nsamples (int): Number of samples for tractography.
+            default_pbt_params (str): Default parameters for probtrackx2.
+            other_pbt_params (str): Additional parameters for probtrackx2.
+
+        Returns:
+            None
+        """
         if use_gpu is True:
             cmd_str = "probtrackx2_gpu "
         else:
@@ -308,7 +332,18 @@ class SubjectDti:
         # SEED ---------------------------------------------------------------------------
         seed_file = os.path.join(out_dir, "seed_file_" + out_tractofile_name + ".txt")
         if isinstance(seed , str):
+
+            try:
+                seed = Image(seed, must_exist=True)
+                if seed.nvoxels == 0:
+                    print(f"probtrackx of subject {self.subject.label} has the seed mask {seed} empty")
+                    return False
+            except NotExistingImageException as e:
+                print(f"probtrackx of subject {self.subject.label} has the seed mask {seed} not valid")
+                return False
             seed_str = "-x " + seed
+            # TODO: complete cheks
+
         elif isinstance(seed, list):
             if isinstance(seed[0], str):
                 with open(seed_file, "w") as f:
@@ -324,10 +359,10 @@ class SubjectDti:
                 seed_str = f"-x {seed_file} --simple"
             else:
                 print("Seed parameters is a list but not of the expected types....exiting")
-                return
+                return False
         else:
             print("Seed parameters type is not recognized....exiting")
-            return
+            return False
 
         # WAYPOINTS ---------------------------------------------------------------------------
         if len(wayp) > 0:
@@ -336,6 +371,16 @@ class SubjectDti:
                 str_wp = ""
                 for wp in wayp:
                     str_wp = str_wp + wp + "\n"
+                    try:
+                        wp = Image(wp, must_exist=True)
+                        if wp.nvoxels == 0:
+                            print(f"probtrackx of subject {self.subject.label} has the waypoint {wp} empty")
+                            return False
+
+                    except NotExistingImageException as e:
+                        print(f"probtrackx of subject {self.subject.label} has the waypoint {wp} not valid")
+                        return False
+
                 f.write(str_wp)
             wp_str = "--waypoints=" + wp_file
         else:
@@ -343,31 +388,66 @@ class SubjectDti:
 
         # STOP & AVOID ---------------------------------------------------------------------------
         if stop is not None:
-            stop_mask = Image(stop, must_exist=True, msg="Stop mask is not valid")
+            try:
+                stop_mask = Image(stop, must_exist=True, msg="Stop mask is not valid")
+                if stop_mask.nvoxels == 0:
+                    print(f"probtrackx of subject {self.subject.label} has the stop mask {stop_mask} empty")
+                    return False
+            except NotExistingImageException as e:
+                print(f"probtrackx of subject {self.subject.label} has the stop mask {stop_mask} not valid")
+                return False
             stop_str = "--stop=" + stop_mask
         else:
             stop_str = ""
 
         if avoid is not None:
-            avoid_mask = Image(avoid, must_exist=True, msg="Avoid mask is not valid")
+            try:
+                avoid_mask = Image(avoid, must_exist=True, msg="Avoid mask is not valid")
+                if avoid_mask.nvoxels == 0:
+                    print(f"probtrackx of subject {self.subject.label} has the avoid mask {avoid_mask} empty")
+                    return False
+            except NotExistingImageException as e:
+                print(f"probtrackx of subject {self.subject.label} has the avoid mask {avoid_mask} not valid")
+                return False
             avoid_str = "--avoid=" + avoid_mask
         else:
             avoid_str = ""
 
         # START ---------------------------------------------------------------------------
         print(f"STARTING probtrackx {out_dir_name} | {out_tractofile_name} on subject {self.subject.label}")
-        rrun(f"{cmd_str} -o {out_tractofile_name} --dir={out_dir} -s {os.path.join(bp_dir, 'merged')} -m {os.path.join(self.subject.roi_dti_dir, 'nodif_brain_mask')} {param_str} {wp_str} {seed_str} {stop_str} {avoid_str} {param_str} {default_pbt_params}")
+        rrun(f"{cmd_str} -o {out_tractofile_name} --dir={out_dir} -s {os.path.join(bp_dir, 'merged')} -m {os.path.join(self.subject.roi_dti_dir, 'nodif_brain_mask')} {wp_str} {seed_str} {stop_str} {avoid_str} {param_str} {default_pbt_params}")
 
         waytotal = read_value_from_file(os.path.join(out_dir, "waytotal"))
 
         rrun(f"fslmaths {os.path.join(out_dir, out_tractofile_name)} -div {waytotal} {os.path.join(out_dir, out_tractofile_name + 'Norm')}")
 
-        os.rename(os.path.join(out_dir, "waytotal"), os.path.join(out_dir, "waytotal_" + out_tractofile_name))
+        os.rename(os.path.join(out_dir, "waytotal"),        os.path.join(out_dir, f"waytotal_{out_tractofile_name}"))
+        os.rename(os.path.join(out_dir, "probtrackx.log"),  os.path.join(out_dir, f"probtrackx_{out_tractofile_name}.log"))
 
         print(f"FINISHED probtrackx {out_dir_name} on subject {self.subject.label}")
+        return True
+
+
+    def probtrackx_network(self, atlas_path="freesurfer", nroi=0):
+        pass
+
 
     def get_dtifit_metrics_from_masks(self, masks:List[str], meas: List[str] | None=None, must_exist:bool=True, thr:int=20) -> SubjectTracts:
+        """
+            Calculate DTI fit metrics from a list of mask images and return them as a SubjectTracts object.
 
+            Args:
+                masks (List[str]): A list of file paths to mask images.
+                meas (List[str] | None, optional): A list of DTI metrics to calculate. Defaults to ["FA", "MD", "L1", "L23"].
+                must_exist (bool, optional): Whether the mask images must exist. Defaults to True.
+                thr (int, optional): The threshold for the number of voxels in a mask to consider it valid. Defaults to 20.
+
+            Returns:
+                SubjectTracts: An object containing the calculated metrics for each mask.
+
+            Raises:
+                Exception: If there is an error processing any of the mask images.
+        """
         masks = Images(masks, must_exist=must_exist, msg="get_tbss_metric_from_masks: one or more Input masks images are not valid")
 
         if meas is None:
@@ -608,9 +688,6 @@ class SubjectDti:
         rwhitegii = "rwhite"
 
         rrun(f"xtract_blueprint -bpx {self.subject.dti_bedpostX_dir} -out {self.subject.dti_blueprint_dir} -xtract {self.subject.dti_xtract_dir} -seeds {lwhitegii} ,{rwhitegii} -warps {self.subject.std_img} {self.subject.transform.std2dti_warp} {self.subject.transform.dti2std_warp} -nsamples 50 -res {res} {gpu_str}")
-
-    def conn_matrix(self, atlas_path="freesurfer", nroi=0):
-        pass
 
     # region DSI-STUDIO
     def convert2dsi(self, type: str = "original", error_if_absent:bool=False) -> None:
