@@ -719,7 +719,7 @@ class Image(str):
         return udest
 
     # unzip file to a given path, preserving (by default) the original nii.gz
-    def unzip(self, dest: Optional['Image'] = None, replace: bool = False) -> 'Image':
+    def unzip(self, dest: 'Image'|None = None, replace: bool = False) -> 'Image':
         """
         Unzip the image to a given path, preserving (by default) the original nii.gz
 
@@ -734,6 +734,10 @@ class Image(str):
             udest = self.upath
         else:
             udest = Image(dest).upath
+
+        if udest.exist and replace is False:
+            return udest
+
         gunzip(self.cpath, udest, replace)
 
         return udest
@@ -874,4 +878,24 @@ class Image(str):
         os.system(f"fslmerge -t {out_img} {seq_string}")
 
         return Image(out_img)
+
+    def get_spm_volumes_list(self) -> str:
+        """
+        explode a 4d volumes in a list of images,vol:    { 'image,1'
+                                                           'image,n' }
+        ready for spm batch file
+
+        Returns:
+            str: list of images r
+        """
+        epi_nvols = self.upath.nvols
+        epi_all_volumes = ''
+        epi_all_volumes += '{\n'
+        for i in range(1, epi_nvols + 1):
+            epi_volume = "'" + self.upath + ',' + str(i) + "'"
+            epi_all_volumes += (epi_volume + '\n')
+        epi_all_volumes += '}\n'
+
+        return epi_all_volumes
+
 

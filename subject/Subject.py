@@ -313,6 +313,7 @@ class Subject:
         self.rs_pa_data2    = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA2"))
 
         self.sbfc_dir           = os.path.join(self.rs_dir,     "sbfc")
+        self.spdcm_dir          = os.path.join(self.rs_dir,     "dcm")
         self.rs_series_dir      = os.path.join(self.sbfc_dir,   "series")
         self.sbfc_feat_dir      = os.path.join(self.sbfc_dir,   "feat")
 

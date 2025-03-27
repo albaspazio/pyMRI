@@ -1,6 +1,7 @@
 import os
 import sys
 from shutil import copyfile, rmtree
+from typing import List
 
 from numpy import arange, concatenate, array
 
@@ -644,6 +645,64 @@ class SubjectEpi:
             sed_inplace(out_batch_job, '<SMOOTH_SCHEMA>', smooth_schema)
             sed_inplace(out_batch_job, '<SMOOTH_PREFIX>', smoothprefix)
             call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
+
+    def spm_spdcm_roi_extraction(self, outname:str, rois:List[dict], tr:float, input_image_prefixname:str="swau", spm_template_name:str="subj_spm_spdcm",
+                                 wm_coord:str="[0 -24 -33]", csf_coord:str="[0 -40 -5]", fmri_t:int=16, fmri_t0:int=8, logFile=None):
+
+        # rois = Images(rois, must_exist=True)
+
+        out_dir         = os.path.join(self.subject.spdcm_dir, outname)
+        out_prec_dir    = os.path.join(out_dir, "pre")
+
+        input_image = Image(os.path.join(self.subject.rs_dir, f"{input_image_prefixname}{self.subject.label}-rs"), must_exist=True)
+        input_image.check_if_uncompress()
+        mask_image = f"'{os.path.join(out_prec_dir, 'mask.nii,1')}'"
+
+        nuisance_files = "{\n'" + os.path.join(out_prec_dir, 'VOI_CSF_1.mat') + "'\n'" + os.path.join(out_prec_dir, 'VOI_WM_1.mat') + "'\n'" + os.path.join(self.subject.rs_dir, "rp_" + self.subject.label + "-rs.txt") + "'\n}"
+
+        rois_text = "\n"
+        id = 7
+
+        for roi in rois:
+
+            if Image(roi).exist:
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.spmmat(1) = cfg_dep('Model estimation: SPM.mat File', substruct('.','val', '{}',{6}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.adjust = NaN;\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.session = 1;\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.name = '" + roi["label"] + "';\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.mask.image = " + str(roi["coord"]) + ";\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.mask.threshold = '" + roi + "';\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.image = {" + mask_image + "};\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.threshold = 0.5;\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.expression = 'i1&i2';\n")
+            else:
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.spmmat(1) = cfg_dep('Model estimation: SPM.mat File', substruct('.','val', '{}',{6}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.adjust = NaN;\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.session = 1;\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.name = '" + roi["label"] + "';\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.sphere.centre = " + str(roi["coord"]) + ";\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.sphere.radius = 8;\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.sphere.move.fixed = 1;\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.image = {" + mask_image + "};\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.threshold = 0.5;\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.expression = 'i1&i2';\n")
+            id += 1
+
+        out_batch_job, out_batch_start = self.subject.project.adapt_batch_files(spm_template_name, "fmri", postfix=self.subject.label)
+
+        sed_inplace(out_batch_job, '<DCM_PREPROC_DIR>'  , f"'{out_prec_dir}'")
+        sed_inplace(out_batch_job, '<DCM_DIR>'          , f"'{out_dir}'")
+        sed_inplace(out_batch_job, '<CSF_COORD>'        , csf_coord)
+        sed_inplace(out_batch_job, '<FMRI_T>'           , str(fmri_t))
+        sed_inplace(out_batch_job, '<FMRI_T0>'          , str(fmri_t0))
+        sed_inplace(out_batch_job, '<WM_COORD>'         , wm_coord)
+        sed_inplace(out_batch_job, '<TR_VALUE>'         , str(tr))
+        sed_inplace(out_batch_job, '<MASK_IMAGE>'       , mask_image)
+        sed_inplace(out_batch_job, '<NUISANCE_FILES>'   , nuisance_files)
+        sed_inplace(out_batch_job, '<FMRI_IMAGES>'      , input_image.get_spm_volumes_list())
+        sed_inplace(out_batch_job, '<ROIS_IMAGES>'      , rois_text)
+
+        call_matlab_spmbatch(out_batch_start, [self._global.spm_functions_dir])
 
     #endregion
 
