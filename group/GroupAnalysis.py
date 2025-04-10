@@ -882,7 +882,7 @@ class GroupAnalysis:
 
 
     @staticmethod
-    def xtract_group_qc(self, subjects:List[Subject], out_dir:str, xtractdir_name:str|None=None, thr:float=0.001, n_std:int=2):
+    def xtract_group_qc(subjects:List[Subject], out_dir:str, xtractdir_name:str|None=None, thr:float=0.001, n_std:int=2):
 
         xtracts_file = os.path.join(out_dir, "xtracts_file.txt")
         os.makedirs(out_dir, exist_ok=True)
