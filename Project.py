@@ -651,7 +651,7 @@ class Project:
 
     #(subj_labels/group label | column(s) | sess_ids) -> Tuple[List[List[Any]], List[str], List[int]]  (also add sids.labels, sids.sess_ids)
     def get_subjects_values_by_cols(self, grlab_subjlabs_subjs: str | List[str] | List[Subject], columns_list: List[str], sess_ids:List[int] = None, select_conds: List[FilterValues] = None,
-                                    data:str|SubjectsData=None, demean_flags: List[bool] = None, ndecim:int=4) -> Tuple[List[List[Any]], List[str], List[int]]:
+                                    data:str|SubjectsData=None, demean_flags: List[bool]|bool|None = None, ndecim:int=4) -> Tuple[List[List[Any]], List[str], List[int]]:
         """
         Returns a matrix (values x subjects) containing values of the requested columns of given subjects.
 

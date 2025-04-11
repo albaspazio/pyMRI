@@ -13,7 +13,7 @@ import pandas
 from Global import Global
 from Project import Project
 from subject.Subject import Subject
-from models.FSLModels_ import FSLModels
+from models.FSLModels import FSLModels
 from group.SPMModels import SPMModels
 from myutility.exceptions import NotExistingImageException
 from myutility.fileutilities import get_dirname, write_text_file

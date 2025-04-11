@@ -38,7 +38,8 @@ class FSLModels:
     # ---------------------------------------------------
     def create_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], groups_instances:List[List[Subject]],
                                                ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True, group_mean_contrasts: int = 1,
-                                               cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "", subj_must_exist: bool = False):
+                                               cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "",
+                                               demean_flags: List[bool]|bool|None = None, ndecim:int=4, subj_must_exist: bool = False):
         """
         This function creates a FSL GLM file starting from a template. Manage multiple groups, with covariates and nuisance regressors.
         - N covariates
@@ -94,6 +95,10 @@ class FSLModels:
             Whether to compare covariates, by default False.
         ofn_postfix : str, optional
             A postfix for the output file name, by default "".
+        demean_flags : List[bool], bool, None, optional
+            array of boolean indicating whether removing the mean, by default (None) does not do it
+        ndecim : int
+            rounding after demeaning
         subj_must_exist : bool, optional
             Whether to check if subjects exist, by default False.
 
@@ -150,8 +155,8 @@ class FSLModels:
             if ngroups == 1 and ncovs == 0 and group_mean_contrasts == 0:
                 raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, when one group is investigated, either cov_mean_contrasts or group_mean_contrasts must be > 0....exiting")
 
-            covs_values = self.project.get_subjects_values_by_cols(subjs_instances, covs_label)[0]
-            nuis_values = self.project.get_subjects_values_by_cols(subjs_instances, nuis_label)[0]
+            covs_values = self.project.get_subjects_values_by_cols(subjs_instances, covs_label, demean_flags=demean_flags, ndecim=ndecim)[0]
+            nuis_values = self.project.get_subjects_values_by_cols(subjs_instances, nuis_label, demean_flags=demean_flags, ndecim=ndecim)[0]
 
             for id, val in enumerate(covs_values):
                 if len(val) != nsubjs:
@@ -235,16 +240,16 @@ class FSLModels:
             self.__addline2string("-------------------------------------------------------------------")
 
             # Number of subjects
-            self.__addline2string("set fmri(npts) {nsubjs}")
-            self.__addline2string("set fmri(multiple) {nsubjs}")
+            self.__addline2string(f"set fmri(npts) {nsubjs}")
+            self.__addline2string(f"set fmri(multiple) {nsubjs}")
 
             # Number of EVs
-            self.__addline2string("set fmri(evs_orig) {tot_EV}")
-            self.__addline2string("set fmri(evs_real) {tot_EV}")
+            self.__addline2string(f"set fmri(evs_orig) {tot_EV}")
+            self.__addline2string(f"set fmri(evs_real) {tot_EV}")
 
             # Number of contrasts
-            self.__addline2string("set fmri(ncon_orig) {tot_cont}")
-            self.__addline2string("set fmri(ncon_real) {tot_cont}")
+            self.__addline2string(f"set fmri(ncon_orig) {tot_cont}")
+            self.__addline2string(f"set fmri(ncon_real) {tot_cont}")
 
             self.__addline2string("#====================== init EV data")
             for ev in range(1, tot_EV+1):
@@ -351,7 +356,8 @@ class FSLModels:
 
     def create_subset_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], groups_instances: List[List[Subject]], whole_group_instances:List[Subject],
                                                       ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True,
-                                                      group_mean_contrasts: int = 1, cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "", subj_must_exist: bool = False):
+                                                      group_mean_contrasts: int = 1, cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "",
+                                                      demean_flags: List[bool]|bool|None = None, ndecim:int=4, subj_must_exist: bool = False):
         """
         This version is designed to work when the order of the subjects defined in the given groups differs from the one defined in the 4D files used.
         e.g. imagine the 4D file (e.g. a tbss skeletonized file) is divided in 1:10 (pat1), 11:20 (pat2)
@@ -395,7 +401,7 @@ class FSLModels:
             The path to the output directory.
         regressors : list
             A list of regressors, including covariates and nuisance regressors. indicating whether adding respectively a contrast or not
-        grlab_subjlabs_subjs : list
+        whole_group_instances : list
             A list of group labels or subject labels. eg: 3 groups  ["grp1","grp2","grp3"] or [["s11", "s12", ..., "s1n"], ["s21", ..."s2m"], ["s31", ..., "s3k"]]
         wholesubjects_groups_or_labels (list): The list of all subjects as defined in the 4d file processed by randomise. The subjects can be specified by their group labels or by their subject labels.
         ofn : str, optional
@@ -413,6 +419,10 @@ class FSLModels:
             Whether to compare covariates, by default False.
         ofn_postfix : str, optional
             A postfix for the output file name, by default "".
+        demean_flags : List[bool], bool, None, optional
+            array of boolean indicating whether removing the mean, by default (None) does not do it
+        ndecim : int
+            rounding after demeaning
         subj_must_exist : bool, optional
             Whether to check if subjects exist, by default False.
 
@@ -468,8 +478,8 @@ class FSLModels:
             if ngroups == 1 and ncovs == 0 and group_mean_contrasts == 0:
                 raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file, when one group is investigated, either cov_mean_contrasts or group_mean_contrasts must be > 0....exiting")
 
-            covs_values = self.project.get_subjects_values_by_cols(whole_group_instances, covs_label)[0]
-            nuis_values = self.project.get_subjects_values_by_cols(whole_group_instances, nuis_label)[0]
+            covs_values = self.project.get_subjects_values_by_cols(subjs_instances, covs_label, demean_flags=demean_flags, ndecim=ndecim)[0]
+            nuis_values = self.project.get_subjects_values_by_cols(subjs_instances, nuis_label, demean_flags=demean_flags, ndecim=ndecim)[0]
 
             for id, val in enumerate(covs_values):
                 if len(val) != nsubjs:
@@ -525,6 +535,7 @@ class FSLModels:
                     print("cannot compare more than three covariates, between-covariates comparisons is omitted")
 
             tot_cont += between_cov_contrasts
+
             # ------------------------------------------------------------------------------------
             # SUMMARY
             # ------------------------------------------------------------------------------------
@@ -905,10 +916,10 @@ class FSLModels:
                         self.__addline2string(f"set fmri(con_real{contrid}.{evid_plus1}) 1")
                         self.__addline2string(f"set fmri(con_real{contrid}.{evid_plus2}) -1")
                         contrid += 1
-                        self.__addline2string(f"fset fmri(conpic_real.{contrid}) 1")
-                        self.__addline2string(f"fset fmri(conname_real.{contrid}) \"{cov_name}: group3 > group2\"")
-                        self.__addline2string(f"fset fmri(con_real{contrid}.{evid_plus1}) -1")
-                        self.__addline2string(f"fset fmri(con_real{contrid}.{evid_plus2}) 1")
+                        self.__addline2string(f"set fmri(conpic_real.{contrid}) 1")
+                        self.__addline2string(f"set fmri(conname_real.{contrid}) \"{cov_name}: group3 > group2\"")
+                        self.__addline2string(f"set fmri(con_real{contrid}.{evid_plus1}) -1")
+                        self.__addline2string(f"set fmri(con_real{contrid}.{evid_plus2}) 1")
 
     def __addline2string(self, line: str) -> None:
         """
