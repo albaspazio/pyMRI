@@ -234,19 +234,21 @@ class MSHDB:
                 self.schema_sheets_names = xls.sheet_names
 
             for sheet_name in self.schema_sheets_names:
-                df = pd.read_excel(xls, sheet_name)
-                # Verify that the first column is valid
-                df = self.is_valid(df)
-                # Sort the data by the first column if requested
-                if sort:
-                    df = self.sort_values(df)
-                # Create a SubjectsData object from the DataFrame
-                sd = SubjectsData(df)
-                # Add the SubjectsData object to the sheets dictionary
-                # TODO: Check if this condition is necessary
-                # if not self.mustbeconsistent:
-                #     self.check_labels(sd.subjects, sheet)  # raise an exception
-                self.sheets[sheet_name] = sd
+
+                if sheet_name in xls.sheet_names:
+                    df = pd.read_excel(xls, sheet_name)
+                    # Verify that the first column is valid
+                    df = self.is_valid(df)
+                    # Sort the data by the first column if requested
+                    if sort:
+                        df = self.sort_values(df)
+                    # Create a SubjectsData object from the DataFrame
+                    sd = SubjectsData(df)
+                    # Add the SubjectsData object to the sheets dictionary
+                    # TODO: Check if this condition is necessary
+                    # if not self.mustbeconsistent:
+                    #     self.check_labels(sd.subjects, sheet)  # raise an exception
+                    self.sheets[sheet_name] = sd
         elif isinstance(data, Sheets):
             self.sheets = data
         elif isinstance(data, GDriveSheet):
@@ -733,6 +735,10 @@ class MSHDB:
             with pd.ExcelWriter(outdata, engine="xlsxwriter") as writer:
 
                 for sh in out_sheets:
+
+                    if sh not in self.sheets.keys():
+                        continue
+
                     self.get_sheet_sd(sh).df.to_excel(writer, sheet_name=sh, startrow=1, header=False, index=False)
 
                     # create a table
