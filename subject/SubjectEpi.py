@@ -711,30 +711,32 @@ class SubjectEpi:
         input_image = Image(os.path.join(self.subject.rs_dir, f"{input_image_prefixname}{self.subject.label}-rs"), must_exist=True)
         input_image.check_if_uncompress()
 
+        mask_image = os.path.join(out_dir, "mask.nii")
+        spm_file   = os.path.join(out_dir, "SPM.mat")
         rois_text = "\n"
         id = 3  # first roi batch number
 
         for roi in rois:
 
             if Image(roi).exist:
-                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.spmmat(1) = cfg_dep('Model estimation: SPM.mat File', substruct('.','val', '{}',{6}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.spmmat = {'" + spm_file + "'};\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.adjust = NaN;\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.session = 1;\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.name = '" + roi["label"] + "';\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.mask.image = " + str(roi["coord"]) + ";\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.mask.threshold = '" + roi + "';\n")
-                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.image(1) = cfg_dep('Model estimation: Analysis Mask', substruct('.', 'val', '{}', {2}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'mask'));\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.image = {'" + mask_image + ",1'};\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.threshold = 0.5;\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.expression = 'i1&i2';\n")
             else:
-                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.spmmat(1) = cfg_dep('Model estimation: SPM.mat File', substruct('.','val', '{}',{6}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.spmmat = {'" + spm_file + "'};\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.adjust = NaN;\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.session = 1;\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.name = '" + roi["label"] + "';\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.sphere.centre = " + str(roi["coord"]) + ";\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.sphere.radius = 8;\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.sphere.move.fixed = 1;\n")
-                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.image(1) = cfg_dep('Model estimation: Analysis Mask', substruct('.', 'val', '{}', {2}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'mask'));\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.image = {'" + mask_image + ",1'};\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.threshold = 0.5;\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.expression = 'i1&i2';\n")
             id += 1

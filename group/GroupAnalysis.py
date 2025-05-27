@@ -796,7 +796,7 @@ class GroupAnalysis:
                                         data:pandas.DataFrame=None, ofn="scatter_tracts_") -> tuple:
         """
         This function takes the output of a TBSS clustering and possibly a DataFrame and extract dti metrics values within these fraction of tracts
-        summarizes the results in a tab-separated file.
+        summarizes the results in a tab-separated file located in {tbss_folder}/results/{ofn}_{in_clust_res_dir...name}_{data_labels}
 
         Args:
             subj_labels (List[str]) : The list of subject labels.
@@ -875,6 +875,7 @@ class GroupAnalysis:
 
         res_file = os.path.join(out_folder, ofn + ifn + "_" + listToString(data_labels, separator='_') + ".dat")
 
+        os.makedirs(out_folder, exist_ok=True)
         with open(res_file, "w") as f:
             f.write(str_data)
 

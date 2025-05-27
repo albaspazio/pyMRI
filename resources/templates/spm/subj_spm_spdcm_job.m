@@ -34,7 +34,7 @@ matlabbatch{3}.spm.util.voi.name = 'CSF';
 matlabbatch{3}.spm.util.voi.roi{1}.sphere.centre = <CSF_COORD>;
 matlabbatch{3}.spm.util.voi.roi{1}.sphere.radius = 6;
 matlabbatch{3}.spm.util.voi.roi{1}.sphere.move.fixed = 1;
-matlabbatch{4}.spm.util.voi.roi{2}.mask.image(1) = cfg_dep('Model estimation: Analysis Mask', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','mask'));
+matlabbatch{3}.spm.util.voi.roi{2}.mask.image(1) = cfg_dep('Model estimation: Analysis Mask', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','mask'));
 matlabbatch{3}.spm.util.voi.roi{2}.mask.threshold = 0.5;
 matlabbatch{3}.spm.util.voi.expression = 'i1&i2';
 
