@@ -706,6 +706,9 @@ class MSHDB:
 
         return df
 
+    def getSIDList(self, subj_labels: List[str], sess_ids: List[int] = None) -> SIDList:
+        return self.main.filter_subjects(subj_labels, sess_ids)
+
     def save(self, outdata=None, out_sheets:List[str]=None, sort=None) -> None:
         """
         Save the database to an Excel file or a Google Sheet.
