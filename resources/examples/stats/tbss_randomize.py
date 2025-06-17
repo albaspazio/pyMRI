@@ -3,6 +3,7 @@ import traceback
 from Global import Global
 from Project import Project
 from group.GroupAnalysis import GroupAnalysis
+from myutility.utilities import Processes
 
 if __name__ == "__main__":
 
@@ -25,13 +26,12 @@ if __name__ == "__main__":
 
         population_label_psi= "psi_nk_28_FMRIB58"
 
+        run_it = True
         # ==================================================================================================================
-
 
         models_subdir_name = "dti"
 
         gating_joined = "CD56BR_CD16NEGDIM_CD56DIM_CD16BR_CD56DIM_CD16DIMNEG_CD56NEG_CD16BR_NKG2C_CD57pos"
-
 
         corr_string_psi = "age_disdur"
 
@@ -43,17 +43,16 @@ if __name__ == "__main__":
 
         # one-process randomise exit before completion returning the subprocess reference
         # thus user must explicitly wait for their completion
-        processes = []
+        processes:Processes = Processes()
 
         processes.append(analysis.start_tbss_randomize(population_label_psi, "MD", arr_populations_imm[0] + "_" + gating_joined, corr_string_psi, models_subdir_name, delay=5, perm=2, numcpu=1))
         processes.append(analysis.start_tbss_randomize(population_label_psi, "L1", arr_populations_imm[0] + "_" + gating_joined, corr_string_psi, models_subdir_name, delay=5, perm=2, numcpu=1))
-        for p in processes:
-            p.wait()
+
+        if run_it is True:
+            processes.wait()
+            processes.clear()
 
         a=1
-
-
-
 
 
     except Exception as e:

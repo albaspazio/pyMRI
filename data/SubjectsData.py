@@ -12,7 +12,7 @@ from data.SID import SID
 from data.SIDList import SIDList
 from data.utilities import demean_serie, FilterValues
 from myutility.exceptions import DataFileException
-from myutility.list import same_elements, reorder_list, _argsort
+from myutility.list import same_elements, reorder_list, _argsort, unique
 
 
 # =====================================================================================
@@ -342,19 +342,19 @@ class SubjectsData:
 
         """
         if subj_labels is None:
-            subj_labels = self.subjects.labels
+            subj_labels = unique(self.subjects.labels)
 
         sids:SIDList = SIDList()
 
         for slab in subj_labels:
             if sess_ids is None:
                 # for each subject, I get all its sessions
-                sess_ids = self.get_subject_available_sessions(slab)
+                curr_sess_ids = self.get_subject_available_sessions(slab)
             else:
                 # for each subject, I get only given sessions
-                sess_ids = sess_ids
+                curr_sess_ids = sess_ids
 
-            for sess in sess_ids:
+            for sess in curr_sess_ids:
                 sids.append(self.get_sid(slab, sess))
 
         if conditions is not None:
@@ -708,7 +708,7 @@ class SubjectsData:
         return values
 
     # returns a filtered matrix [colnames x sids] of values
-    def get_subjects_values_by_cols(self, sids: SIDList = None, colnames: List[str] = None, demean_flags: List[bool] = None, ndecim: int = 4) -> List[List[Any]]:
+    def get_subjects_values_by_cols(self, sids: SIDList = None, colnames: List[str] = None, demean_flags: List[bool]|bool|None = None, ndecim: int = 4) -> List[List[Any]]:
         """
         Returns a list of values from a subset of columns.
 
@@ -737,14 +737,19 @@ class SubjectsData:
         values = [self.get_subjects_column(sids=sids, colname=colname) for colname in colnames]
 
         if demean_flags is not None:
-            if len(colnames) != len(demean_flags):
-                msg = "Error in get_filtered_columns...lenght of colnames is different from demean_flags"
-                raise DataFileException(msg)
+
+            if isinstance(demean_flags, bool):
+                dmf = demean_flags
+                demean_flags = [ dmf for _ in colnames]
             else:
-                # Demean the requested columns.
-                for idcol, dem_col in enumerate(demean_flags):
-                    if dem_col:
-                        values[idcol] = demean_serie(values[idcol], ndecim)
+                if len(colnames) != len(demean_flags):
+                    msg = "Error in get_filtered_columns...lenght of colnames is different from demean_flags"
+                    raise DataFileException(msg)
+
+            # Demean the requested columns.
+            for idcol, dem_col in enumerate(demean_flags):
+                if dem_col:
+                    values[idcol] = demean_serie(values[idcol], ndecim)
 
         return values
 

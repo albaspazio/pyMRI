@@ -13,7 +13,7 @@ import pandas
 from Global import Global
 from Project import Project
 from subject.Subject import Subject
-from models.FSLModels_ import FSLModels
+from models.FSLModels import FSLModels
 from group.SPMModels import SPMModels
 from myutility.exceptions import NotExistingImageException
 from myutility.fileutilities import get_dirname, write_text_file
@@ -295,88 +295,6 @@ class GroupAnalysis:
 
 
     # endregion =================================================================================================================================================
-
-    # ---------------------------------------------------
-    #region MELODIC
-    @staticmethod
-    def group_melodic(out_dir_name:str, subjects_list:List[Subject], tr):
-        """
-        Runs group melodic on the given subjects list.
-
-        Args:
-            out_dir_name (str): The path to the output directory.
-            subjects_list (List[Subject]): The list of Subject objects to analyze.
-            tr (float): The repetition time.
-
-        Raises:
-            ValueError: If the output directory already exists.
-
-        Returns:
-            None
-        """
-        if os.path.exists(out_dir_name):
-            os.removedirs(out_dir_name)
-
-        os.makedirs(out_dir_name)
-
-        subjs           = ""
-        bgimages        = ""
-        masks           = ""
-        missing_data    = ""
-
-        for subj in subjects_list:
-
-            if subj.rs_final_regstd_image.exist and subj.rs_final_regstd_bgimage.exist and subj.rs_final_regstd_bgimage.exist:
-                subjs       = subjs + " " + subj.rs_final_regstd_image
-                bgimages    = subjs + " " + subj.rs_final_regstd_bgimage
-                masks       = masks + " " + subj.rs_final_regstd_mask
-            else:
-                missing_data = missing_data + subj.label + " "
-
-        if len(missing_data) > 0:
-            print("group melodic failed. the following subjects does not have all the needed images:")
-            print(missing_data)
-            return
-
-        print("creating merged background image")
-
-        rrun(f"fslmerge -t {os.path.join(out_dir_name, 'bg_image')} {bgimages}")
-
-        # echo "merging background image"
-        # $FSLDIR/bin/fslmerge -t $OUTPUT_DIR/bg_image $bglist
-        # $FSLDIR/bin/fslmaths $OUTPUT_DIR/bg_image -inm 1000 -Tmean $OUTPUT_DIR/bg_image -odt float
-        # echo "merging mask image"
-        # $FSLDIR/bin/fslmerge -t $OUTPUT_DIR/mask $masklist
-        #
-        # echo "start group melodic !!"
-        # $FSLDIR/bin/melodic -i $filelist -o $OUTPUT_DIR -v --nobet --bgthreshold=10 --tr=$TR_VALUE --report --guireport=$OUTPUT_DIR/report.html --bgimage=$OUTPUT_DIR/bg_image -d 0 --mmthresh=0.5 --Ostats -a concat
-        #
-        # echo "creating template description file"
-        # template_file=$GLOBAL_SCRIPT_DIR/melodic_templates/$template_name.sh
-        #
-        # echo "template_name=$template_name" > $template_file
-        # echo "TEMPLATE_MELODIC_IC=$OUTPUT_DIR/melodic_IC.nii.gz" >> $template_file
-        # echo "TEMPLATE_MASK_IMAGE=$OUTPUT_DIR/mask.nii.gz" >> $template_file
-        # echo "TEMPLATE_BG_IMAGE=$OUTPUT_DIR/bg_image.nii.gz" >> $template_file
-        # echo "TEMPLATE_STATS_FOLDER=$OUTPUT_DIR/stats" >> $template_file
-        # echo "TEMPLATE_MASK_FOLDER=$OUTPUT_DIR/stats" >> $template_file
-        # echo "str_pruning_ic_id=() # valid RSN: you must set their id values removing 1: if in the html is the 6th RSN, you must write 5!!!!!!" >> $template_file
-        # echo "str_arr_IC_labels=()" >> $template_file
-        # echo "declare -a arr_IC_labels=()" >> $template_file
-        # echo "declare -a arr_pruning_ic_id=()" >> $template_file
-        #
-        pass
-
-    #endregion
-
-    # ---------------------------------------------------
-    #region SBFC
-    @staticmethod
-    def group_sbfc(grlab_subjlabs_subjs, firstlvl_fn, regressors, input_fsf, odp, ofn:str="mult_cov", data_file=None,
-                   create_model:bool=True, group_mean_contrasts=1, cov_mean_contrasts=2, compare_covs:bool=False, ofn_postfix:str=""):
-        pass
-
-    #endregion
 
     # ---------------------------------------------------
     # region TBSS / xtrack / probtrack
@@ -796,7 +714,7 @@ class GroupAnalysis:
                                         data:pandas.DataFrame=None, ofn="scatter_tracts_") -> tuple:
         """
         This function takes the output of a TBSS clustering and possibly a DataFrame and extract dti metrics values within these fraction of tracts
-        summarizes the results in a tab-separated file.
+        summarizes the results in a tab-separated file located in {tbss_folder}/results/{ofn}_{in_clust_res_dir...name}_{data_labels}
 
         Args:
             subj_labels (List[str]) : The list of subject labels.
@@ -875,6 +793,7 @@ class GroupAnalysis:
 
         res_file = os.path.join(out_folder, ofn + ifn + "_" + listToString(data_labels, separator='_') + ".dat")
 
+        os.makedirs(out_folder, exist_ok=True)
         with open(res_file, "w") as f:
             f.write(str_data)
 
@@ -882,7 +801,7 @@ class GroupAnalysis:
 
 
     @staticmethod
-    def xtract_group_qc(self, subjects:List[Subject], out_dir:str, xtractdir_name:str|None=None, thr:float=0.001, n_std:int=2):
+    def xtract_group_qc(subjects:List[Subject], out_dir:str, xtractdir_name:str|None=None, thr:float=0.001, n_std:int=2):
 
         xtracts_file = os.path.join(out_dir, "xtracts_file.txt")
         os.makedirs(out_dir, exist_ok=True)

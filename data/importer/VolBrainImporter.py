@@ -1,5 +1,6 @@
 import os
 import json
+from typing import List
 
 from data.SubjectsData import SubjectsData
 
@@ -34,7 +35,7 @@ class VolBrainImporter:
         Parse the input folder and return a SubjectsData object containing the data.
     """
 
-    def __init__(self, schema_file:str, inputfolder:str, outfile=None, out_short:bool=True):
+    def __init__(self, schema_file:str, inputfolder:str, outfile=None, out_short:bool|List[str]=True):
         """
         Initialize the CeresImporter class.
 
@@ -53,12 +54,16 @@ class VolBrainImporter:
         with open(schema_file) as json_file:
             self.schema = json.load(json_file)
 
-        if out_short is True:
-            self.valid_columns          = self.schema["valid_columns_short"]
-            self.out_valid_columns      = self.schema["out_valid_columns_short"]
+        if isinstance(out_short, List):
+            self.valid_columns     = self.schema[out_short[0]]
+            self.out_valid_columns = self.schema[out_short[1]]
         else:
-            self.valid_columns          = self.schema["valid_columns"]
-            self.out_valid_columns      = self.schema["out_valid_columns"]
+            if out_short is True:
+                self.valid_columns          = self.schema["valid_columns_short"]
+                self.out_valid_columns      = self.schema["out_valid_columns_short"]
+            else:
+                self.valid_columns          = self.schema["valid_columns"]
+                self.out_valid_columns      = self.schema["out_valid_columns"]
 
         self.subs_data = self.parseFolder(self.valid_columns)
 
