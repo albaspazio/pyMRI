@@ -664,12 +664,12 @@ class SubjectEpi:
 
         for roi in rois:
 
-            if Image(roi).exist:
+            if Image(roi["img"]).exist:
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.spmmat(1) = cfg_dep('Model estimation: SPM.mat File', substruct('.','val', '{}',{6}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','spmmat'));\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.adjust = NaN;\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.session = 1;\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.name = '" + roi["label"] + "';\n")
-                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.mask.image = " + str(roi["coord"]) + ";\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.mask.image = " + str(roi["img"]) + ";\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.mask.threshold = '" + roi + "';\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.image(1) = cfg_dep('Model estimation: Analysis Mask', substruct('.', 'val', '{}', {2}, '.', 'val', '{}', {1}, '.', 'val', '{}', {1}), substruct('.', 'mask'));\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.threshold = 0.5;\n")
@@ -718,12 +718,12 @@ class SubjectEpi:
 
         for roi in rois:
 
-            if Image(roi).exist:
+            if Image(roi["img"]).exist:
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.spmmat = {'" + spm_file + "'};\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.adjust = NaN;\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.session = 1;\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.name = '" + roi["label"] + "';\n")
-                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.mask.image = " + str(roi["coord"]) + ";\n")
+                rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.mask.image = " + str(roi["img"]) + ";\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{1}.mask.threshold = '" + roi + "';\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.image = {'" + mask_image + ",1'};\n")
                 rois_text += ("matlabbatch{" + str(id) + "}.spm.util.voi.roi{2}.mask.threshold = 0.5;\n")

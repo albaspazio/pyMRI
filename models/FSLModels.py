@@ -143,11 +143,27 @@ class FSLModels:
             # divide regressors in covariates and nuisances
             covs_label = []
             nuis_label = []
-            for regr in regressors:
+            covs_demean = []
+            nuis_demean = []
+
+            for id, regr in enumerate(regressors):
                 if isinstance(regr, Covariate):
                     covs_label.append(regr.name)
+                    if demean_flags is None:
+                        covs_demean.append(True)
+                    elif isinstance(demean_flags, list):
+                        covs_demean.append(demean_flags[id])
+                    else:
+                        covs_demean.append(demean_flags)
                 elif isinstance(regr, Nuisance):
                     nuis_label.append(regr.name)
+                    if demean_flags is None:
+                        nuis_demean.append(True)
+                    elif isinstance(demean_flags, list):
+                        nuis_demean.append(demean_flags[id])
+                    else:
+                        nuis_demean.append(demean_flags)
+
             ncovs = len(covs_label)
             nnuis = len(nuis_label)
 
@@ -155,8 +171,8 @@ class FSLModels:
             if ngroups == 1 and ncovs == 0 and group_mean_contrasts == 0:
                 raise Exception("Error in FSLModels.create_Mgroups_Ncov_Xnuisance_glm_file, when one group is investigated, either cov_mean_contrasts or group_mean_contrasts must be > 0....exiting")
 
-            covs_values = self.project.get_subjects_values_by_cols(subjs_instances, covs_label, demean_flags=demean_flags, ndecim=ndecim)[0]
-            nuis_values = self.project.get_subjects_values_by_cols(subjs_instances, nuis_label, demean_flags=demean_flags, ndecim=ndecim)[0]
+            covs_values = self.project.get_subjects_values_by_cols(subjs_instances, covs_label, demean_flags=covs_demean, ndecim=ndecim)[0]
+            nuis_values = self.project.get_subjects_values_by_cols(subjs_instances, nuis_label, demean_flags=nuis_demean, ndecim=ndecim)[0]
 
             for id, val in enumerate(covs_values):
                 if len(val) != nsubjs:
@@ -234,10 +250,10 @@ class FSLModels:
             self.__addline2string("# ====== START OVERRIDE ============================================")
             self.__addline2string("# ==================================================================")
             self.__addline2string("")
-            self.__addline2string("subjects included")
+            self.__addline2string("# subjects included")
             for subj in subjs_instances:
-                self.__addline2string(subj.label)
-            self.__addline2string("-------------------------------------------------------------------")
+                self.__addline2string(f"# {subj.label}")
+            self.__addline2string("# -------------------------------------------------------------------")
 
             # Number of subjects
             self.__addline2string(f"set fmri(npts) {nsubjs}")
@@ -466,11 +482,27 @@ class FSLModels:
             # divide regressors in covariates and nuisances
             covs_label = []
             nuis_label = []
-            for regr in regressors:
+            covs_demean = []
+            nuis_demean = []
+
+            for id, regr in enumerate(regressors):
                 if isinstance(regr, Covariate):
                     covs_label.append(regr.name)
+                    if demean_flags is None:
+                        covs_demean.append(True)
+                    elif isinstance(demean_flags, list):
+                        covs_demean.append(demean_flags[id])
+                    else:
+                        covs_demean.append(demean_flags)
                 elif isinstance(regr, Nuisance):
                     nuis_label.append(regr.name)
+                    if demean_flags is None:
+                        nuis_demean.append(True)
+                    elif isinstance(demean_flags, list):
+                        nuis_demean.append(demean_flags[id])
+                    else:
+                        nuis_demean.append(demean_flags)
+
             ncovs = len(covs_label)
             nnuis = len(nuis_label)
 
@@ -478,8 +510,8 @@ class FSLModels:
             if ngroups == 1 and ncovs == 0 and group_mean_contrasts == 0:
                 raise Exception("Error in FSLModels.create_subset_Mgroups_Ncov_Xnuisance_glm_file, when one group is investigated, either cov_mean_contrasts or group_mean_contrasts must be > 0....exiting")
 
-            covs_values = self.project.get_subjects_values_by_cols(subjs_instances, covs_label, demean_flags=demean_flags, ndecim=ndecim)[0]
-            nuis_values = self.project.get_subjects_values_by_cols(subjs_instances, nuis_label, demean_flags=demean_flags, ndecim=ndecim)[0]
+            covs_values = self.project.get_subjects_values_by_cols(subjs_instances, covs_label, demean_flags=covs_demean, ndecim=ndecim)[0]
+            nuis_values = self.project.get_subjects_values_by_cols(subjs_instances, nuis_label, demean_flags=nuis_demean, ndecim=ndecim)[0]
 
             for id, val in enumerate(covs_values):
                 if len(val) != nsubjs:
@@ -562,10 +594,10 @@ class FSLModels:
             self.__addline2string("# ====== START OVERRIDE ============================================")
             self.__addline2string("# ==================================================================")
             self.__addline2string("")
-            self.__addline2string("subjects included")
+            self.__addline2string("# subjects included")
             for subj in subjs_instances:
-                self.__addline2string(subj.label)
-            self.__addline2string("-------------------------------------------------------------------")
+                self.__addline2string(f"# {subj.label}")
+            self.__addline2string("# -------------------------------------------------------------------")
 
             # Number of subjects
             self.__addline2string(f"set fmri(npts) {nsubjs}")
