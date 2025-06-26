@@ -17,7 +17,7 @@ from myutility.images.Images import Images
 from myutility.images.transform_images import flirt
 from myutility.images.utilities import mid_0based
 from myutility.list import is_list_of
-from myutility.matlab import call_matlab_spmbatch, call_matlab_function
+from myutility.mymatlab import call_matlab_spmbatch, call_matlab_function
 from myutility.myfsl.utils.run import rrun
 
 

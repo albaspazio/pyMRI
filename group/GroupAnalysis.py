@@ -19,11 +19,11 @@ from myutility.exceptions import NotExistingImageException
 from myutility.fileutilities import get_dirname, write_text_file
 from myutility.fileutilities import sed_inplace
 from myutility.images.Image import Image
-from myutility.matlab import call_matlab_spmbatch
+from myutility.mymatlab import call_matlab_spmbatch
 from myutility.myfsl.utils.run import rrun
 from myutility.utilities import fillnumber2threedigits
 from myutility.list import listToString, first_contained_in_second
-from myutility.matlab import call_matlab_function_noret
+from myutility.mymatlab import call_matlab_function_noret
 
 class GroupAnalysis:
     """

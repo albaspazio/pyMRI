@@ -59,6 +59,7 @@ class Global:
 
         self.cat_foldername         = self.cat_version.split('.')[0]
         self.cat_dir                = os.path.join(self.spm_dir, "toolbox", self.cat_foldername)
+        self.cat_template_surfaces_32k = os.path.join(self.spm_dir, "toolbox", self.cat_foldername, "templates_surfaces_32k")
 
         # mandatory check
         if len(self.project_scripts_dir) > 0:

@@ -6,7 +6,7 @@ from group.PostModel import PostModel
 from group.SPMConstants import SPMConstants
 from group.SPMContrasts import SPMContrasts
 from myutility.fileutilities import sed_inplace
-from myutility.matlab import call_matlab_spmbatch
+from myutility.mymatlab import call_matlab_spmbatch
 
 
 class SPMPostModel:

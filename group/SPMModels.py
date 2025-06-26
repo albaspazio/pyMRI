@@ -14,7 +14,7 @@ from group.SPMStatsUtils    import SPMStatsUtils
 from group.SPMConstants     import SPMConstants
 from group.spm_utilities    import GrpInImages, Regressor, Contrast
 
-from myutility.matlab         import call_matlab_spmbatch
+from myutility.mymatlab         import call_matlab_spmbatch
 from myutility.fileutilities  import sed_inplace
 from myutility.list import is_list_of
 

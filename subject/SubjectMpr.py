@@ -6,7 +6,7 @@ from Global import Global
 from myutility.images.Image import Image
 from myutility.images.Images import Images
 from myutility.images.utilities import mass_images_move
-from myutility.matlab import call_matlab_spmbatch, call_matlab_function_noret
+from myutility.mymatlab import call_matlab_spmbatch, call_matlab_function_noret
 from myutility.myfsl.fslfun import run
 from myutility.myfsl.fslfun import run_notexisting_img, runpipe, run_move_notexisting_img
 from myutility.myfsl.utils.run import rrun

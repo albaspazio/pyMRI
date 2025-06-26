@@ -7,7 +7,7 @@ from data.utilities import list2spm_text_column
 from group.spm_utilities import SubjCondition, GrpInImages
 from myutility.exceptions import DataFileException
 from myutility.images.Image import Image
-from myutility.matlab import call_matlab_function_noret, call_matlab_spmbatch
+from myutility.mymatlab import call_matlab_function_noret, call_matlab_spmbatch
 from myutility.list import is_list_of
 from myutility.fileutilities import sed_inplace
 
