@@ -688,6 +688,9 @@ class MSHDB:
         if subjs is None and sheets_cols is None:
             return None
 
+        if subjs is None:
+            subjs = self.subjects
+
         df = pandas.DataFrame()
         df = self.add_default_columns(subjs, df)
 
