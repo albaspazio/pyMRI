@@ -1,5 +1,5 @@
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
 
 if __name__ == "__main__":
 
@@ -17,8 +17,9 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # HEADER
     # ======================================================================================================================
-    proj_dir = "/data/MRI/projects/T15"
-    project = Project(proj_dir, globaldata)
+    # NOTE: Update this path to your actual project directory
+    proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "T15")
+    project = MRIProject(proj_dir, globaldata)
     SESS_ID = 1
     group_label = "controls_test"
 

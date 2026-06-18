@@ -2,12 +2,14 @@ import os
 import traceback
 
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
 from group.GroupAnalysis import GroupAnalysis
 from group.SPMConstants import SPMConstants
-from group.SPMModels import SPMModels
+from models.SPMModels import SPMModels
 from group.PostModel import PostModel
-from group.spm_utilities import Covariate, Nuisance, CatConvResultsParams, ResultsParams
+from group.spm_utilities import Nuisance, CatConvResultsParams, ResultsParams
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -21,8 +23,8 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir = "/data/MRI/projects/test"
-        project = Project(proj_dir, globaldata, "")     # automatically load PROJDIR/script/data.dat if present
+        proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "test")  # NOTE: relative path to project directory
+        project = MRIProject(proj_dir, globaldata, "")     # automatically load PROJDIR/script/data.dat if present
         datafile = os.path.join(project.script_dir, "data.xlsx")  # is a tab limited data matrix with a header in the first row
         project.load_data(datafile)
         SESS_ID = 1

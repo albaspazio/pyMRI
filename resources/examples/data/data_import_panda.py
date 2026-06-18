@@ -1,6 +1,6 @@
-from DataProject import DataProject
+import os
+from project.DataProject import DataProject
 from data.SubjectsData import SubjectsData
-
 from data.utilities import *
 from myutility.exceptions import SubjectListException
 

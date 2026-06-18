@@ -48,14 +48,14 @@ class SPMResults:
     # mult_corr = "FWE" | "FDR" | "none"
     # cluster_extend = "none" | "en_corr" | "en_nocorr"
     @staticmethod
-    def runbatch_cat_results_trasformation(project:'Project', _global:Global, statsdir:str, ncontrasts:int, analysis_name:str,
+    def runbatch_cat_results_trasformation(project:'MRIProject', _global:Global, statsdir:str, ncontrasts:int, analysis_name:str,
                                            cmd_id:int=1, cat_conv_stats_params:CatConvResultsParams=None, eng=None, runit:bool=True):
 
         """
         This function generates a MATLAB code snippet for performing CAT results transformation.
 
         Args:
-            project (spm.Project): The SPM project object.
+            project (spm.MRIProject): The SPM project object.
             _global (spm.Global): The SPM global object.
             statsdir (str): The directory containing SPM results.
             ncontrasts (int): The number of contrasts in the analysis.

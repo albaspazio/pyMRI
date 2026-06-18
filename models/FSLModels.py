@@ -5,14 +5,14 @@ from distutils.file_util import copy_file
 from typing import List
 
 from Global import Global
-from Project import Project
 from data.SubjectsData import SubjectsData
+from project.MRIProject import MRIProject
 from models.FSLConFile import FSLConFile
 from group.spm_utilities import Regressor, Covariate, Nuisance
 from myutility.exceptions import SubjectListException
 from subject.Subject import Subject
 from myutility.fileutilities import remove_ext, append_text_file, read_list_from_file
-from myutility.list import same_elements, is_list_of
+from myutility.list import is_list_of
 # create factorial designs, multiple regressions, t-test
 from myutility.myfsl.utils.run import rrun
 
@@ -22,15 +22,15 @@ class FSLModels:
     Initialize the FSLModels class.
 
     Args:
-        proj (object): A Project instance.
+        proj (object): A MRIProject instance.
     """
 
-    def __init__(self, proj:Project):
+    def __init__(self, proj:MRIProject):
 
         self.subjects_list  = None
         self.working_dir    = ""
 
-        self.project:Project    = proj
+        self.project:MRIProject    = proj
         self.globaldata:Global  = self.project.globaldata
 
         self.string             = ""    # used to compose models override

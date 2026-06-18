@@ -1,7 +1,6 @@
 import gspread
 from df2gspread import df2gspread as d2g
 
-from datetime import date, datetime
 from oauth2client.service_account import ServiceAccountCredentials
 
 

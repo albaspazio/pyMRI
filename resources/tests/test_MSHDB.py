@@ -2,7 +2,6 @@
 import pandas
 
 from data.MSHDB import MSHDB
-from data.Sheets import Sheets
 from data.SubjectsData import SubjectsData
 
 

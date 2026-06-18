@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import collections
+import collections.abc
 import ntpath
 import os
 import shutil
 import xml.etree.ElementTree as ET
 from shutil import move, copyfile
-from typing import Optional, List
+from typing import List
 
 # https://stackoverflow.com/questions/30045106/python-how-to-extend-str-and-overload-its-constructor
 from myutility.exceptions import NotExistingImageException
@@ -352,7 +352,7 @@ class Image(str):
 
         return Image(fileparts_dst[0] + dest_ext)
 
-    def cp_notexisting(self, dest:str|'Image', error_src_not_exist=False, logFile=None) -> 'Image':
+    def cp_notexisting(self, dest:'str | Image', error_src_not_exist=False, logFile=None) -> 'Image':
         """
         Copy the image to a destination.
 
@@ -480,7 +480,7 @@ class Image(str):
             str_mean = " -M"
         return float(rrun(f"fslstats {self} {str_mean}").strip())
 
-    def mask_image(self, mask:str|'Image', out:str|'Image') -> 'Image':
+    def mask_image(self, mask:'str | Image', out:'str | Image') -> 'Image':
         """
         Mask an image with a mask.
 
@@ -528,7 +528,7 @@ class Image(str):
         os.chdir(currdir)
         return outdir, label
 
-    def thr(self, thr:float, out_img:Image|None=None) -> 'Image':
+    def thr(self, thr:float, out_img:'Image | None'=None) -> 'Image':
 
         if out_img is None:
             out_img = self
@@ -539,7 +539,7 @@ class Image(str):
 
         return out_img
 
-    def bin(self, out_img:Image|None=None) -> 'Image':
+    def bin(self, out_img:'Image | None'=None) -> 'Image':
         if out_img is None:
             out_img = self
         else:
@@ -553,7 +553,7 @@ class Image(str):
         Perform a quick smoothing of the image using FSL.
 
         Args:
-            outimg (Image, optional): The output image. If None, the input image will be used. Defaults to None.
+            out_img (Image, optional): The output image. If None, the input image will be used. Defaults to None.
             logFile (object, optional): The log file object. Defaults to None.
 
         Returns:
@@ -719,7 +719,7 @@ class Image(str):
         return udest
 
     # unzip file to a given path, preserving (by default) the original nii.gz
-    def unzip(self, dest: 'Image'|None = None, replace: bool = False) -> 'Image':
+    def unzip(self, dest: 'Image|None' = None, replace: bool = False) -> 'Image':
         """
         Unzip the image to a given path, preserving (by default) the original nii.gz
 
@@ -869,7 +869,7 @@ class Image(str):
             seq_string = "./*"
         elif isinstance(premerge_labels, str):
             seq_string = premerge_labels + "*"
-        elif isinstance(premerge_labels, collections.Sequence):
+        elif isinstance(premerge_labels, collections.abc.Sequence):
             for seq in premerge_labels:
                 seq_string = seq_string + out_img + "_" + seq + " "
         else:

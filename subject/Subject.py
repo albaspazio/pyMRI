@@ -36,20 +36,20 @@ class Subject:
     TYPE_DTI_B0 = 5     # does not have bval/bvec
     TYPE_T2 = 6
 
-    def __init__(self, label:str, project:'Project', sessid:int=1, stdimg:str=""):
+    def __init__(self, label:str, project:'MRIProject', sessid:int=1, stdimg:str=""):
         """
         Initialize a new Subject object.
 
         Args:
             label (str): The subject label.
-            project (Project): The project object that this subject belongs to.
+            project (MRIProject): The project object that this subject belongs to.
             sessid (int, optional): The session ID. Defaults to 1.
             stdimg (str, optional): The path to the standard image. Defaults to "".
         """
         self.label  = label
         self.sessid = sessid
 
-        self.project:'Project' = project
+        self.project:'MRIProject' = project
         self._global:Global  = project.globaldata
 
         self.fsl_dir            = self._global.fsl_dir
@@ -1459,13 +1459,13 @@ class Subject:
         """
         extractall_zip(src_zip, dest_dir, replace)
 
-    def copy_final_data(self, dest_proj:'Project', t1:bool=True, t1_surf:bool=True, vbmspm:bool=True, rs:bool=True, fmri:List[str]=None, dti:bool=True, sess_id:int=1):
+    def copy_final_data(self, dest_proj:'MRIProject', t1:bool=True, t1_surf:bool=True, vbmspm:bool=True, rs:bool=True, fmri:List[str]=None, dti:bool=True, sess_id:int=1):
         """
         Copies the final data of a subject to another project.
 
         Parameters
         ----------
-        dest_proj : Project
+        dest_proj : MRIProject
             destination project.
         t1 : bool, optional
             Indicates whether to copy the T1 image, by default True.
@@ -1669,6 +1669,6 @@ class Subject:
                 # logs_files = [ os.path.join(self.fmri_logs_dir, ) for img in fmri_images]
 
 
-            return (Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("swar").exist or \
-                   Images(fmri_images).add_prefix2name("a").exist or Images(fmri_images).add_prefix2name("ar").exist or\
+            return (Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("swar").exist or
+                   Images(fmri_images).add_prefix2name("a").exist or Images(fmri_images).add_prefix2name("ar").exist or
                    Images(fmri_images).add_prefix2name("wa").exist or Images(fmri_images).add_prefix2name("war").exist)

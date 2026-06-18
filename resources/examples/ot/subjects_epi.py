@@ -1,5 +1,11 @@
+import os
+
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -17,8 +23,8 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # HEADER
     # ======================================================================================================================
-    proj_dir = "/media/campus/SeagateBackupPlusDrive/MRI/projects/bisection_pisa"
-    project = Project(proj_dir, globaldata)
+    proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "SeagateBackupPlusDrive", "MRI", "projects", "bisection_pisa")  # NOTE: relative path to project directory
+    project = MRIProject(proj_dir, globaldata)
     SESS_ID = 1
     num_cpu = 4
     group_label = "single"

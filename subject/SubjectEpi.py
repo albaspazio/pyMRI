@@ -1317,14 +1317,14 @@ class SubjectEpi:
 
         """
         raise Exception("ERROR in prepare for spm")
-        folder = os.path.dirname(in_img)
-        self.subject.epi_split(in_img, subdirmame)
-        outdir = os.path.join(folder, subdirmame)
-        os.chdir(outdir)
-        for f in os.scandir():
-            f = Image(f)
-            if f.is_image():
-                f.unzip(os.path.join(outdir, f.name), replace=True)
+        # folder = os.path.dirname(in_img)
+        # self.subject.epi_split(in_img, subdirmame)
+        # outdir = os.path.join(folder, subdirmame)
+        # os.chdir(outdir)
+        # for f in os.scandir():
+        #     f = Image(f)
+        #     if f.is_image():
+        #         f.unzip(os.path.join(outdir, f.name), replace=True)
 
     # ===============================================================================
     # FRAMEWORK (copy data across relevant folders, clean up)

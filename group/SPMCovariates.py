@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Union, List, Optional, Any
+from typing import List
 
-from Project import Project
+from project.MRIProject import MRIProject
 from data.SubjectsData import SubjectsData
 from data.utilities import list2spm_text_column
 from group.spm_utilities import Covariate, Regressor
@@ -17,7 +17,7 @@ class SPMCovariates:
     """
 
     @staticmethod
-    def spm_replace_stats_add_covariates(project: Project, out_batch_job: str, groups_instances:List[List[Subject]], covs:List[Regressor],
+    def spm_replace_stats_add_covariates(project: MRIProject, out_batch_job: str, groups_instances:List[List[Subject]], covs:List[Regressor],
                                         batch_id: int = 1, cov_interaction:List[int]=None, data:str|SubjectsData=None, centering: bool = False) -> None:
         """
         This function adds covariates to an SPM batch file.
@@ -64,7 +64,7 @@ class SPMCovariates:
         # -------------------------------------------------------------------------------------------------------------
         if ncov == 1:
             SPMCovariates.spm_replace_stats_add_1cov_manygroups(out_batch_job, groups_instances, project, covs[0],
-                                                                batch_id, cov_interaction, data)
+                                                                cov_interaction, batch_id, data)
         else:
             if centering:
                 icc = 1
@@ -88,14 +88,14 @@ class SPMCovariates:
             sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
 
     @staticmethod
-    def spm_replace_stats_add_1cov_manygroups(out_batch_job: str, groups_instances: List[List[Subject]], project: Project,
-                                              cov:str|Covariate, batch_id: int = 1, cov_interaction:List[int]=None, data:str|SubjectsData=None, centering:bool=False) -> None:
+    def spm_replace_stats_add_1cov_manygroups(out_batch_job: str, groups_instances: List[List[Subject]], project: MRIProject,
+                                              cov:Covariate, cov_interaction:List[int], batch_id: int = 1, data:str|SubjectsData=None, centering:bool=False) -> None:
         """
         This function adds a single covariate to an SPM batch file, where the covariate is defined across multiple groups.
 
         Args:
             out_batch_job: The path to the SPM batch file.
-            groups_labels: A list of lists of subjects, where each inner list represents a group.
+            groups_instances: List[List[Subject]]: A list of lists of subjects, where each inner list represents a group.
             project: The project object.
             cov: The covariate.
             batch_id: The ID of the batch job.

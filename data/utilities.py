@@ -338,6 +338,7 @@ class FilterValues:
                 return True
             else:
                 return False
+        return None
 
     def areValid(self, values:List[Any]):
         """

@@ -1,19 +1,17 @@
 from __future__ import annotations
 
 import os
-from distutils.file_util import copy_file
-from typing import List, Any
+from typing import List
 
 from Global import Global
-from Project import Project
 from data.SubjectsData import SubjectsData
+from project.MRIProject import MRIProject
 from group.spm_utilities import Regressor, Covariate, Nuisance
 from myutility.exceptions import SubjectListException
 from myutility.list import is_list_of
 
 # create factorial designs, multiple regressions, t-test
-from myutility.myfsl.utils.run import rrun
-from myutility.fileutilities import remove_ext, append_text_file, write_text_file
+from myutility.fileutilities import write_text_file
 from subject.Subject import Subject
 
 
@@ -22,20 +20,20 @@ class NBSModels:
     This class provides methods for creating and managing the connection models used in the NBS tool.
 
     Args:
-        proj (Project): The Project object that this class is associated with.
+        proj (MRIProject): The MRIProject object that this class is associated with.
 
     Attributes:
         subjects_list (list): A list of Subject objects that are part of the current project.
         working_dir (str): The directory where temporary files are stored.
-        project (Project): The ConnProject object that this class is associated with.
+        project (MRIProject): The ConnProject object that this class is associated with.
         globaldata (GlobalData): The GlobalData object that is associated with the current project.
         string (str): A string that is used to compose the connection models files.
     """
 
-    def __init__(self, proj:Project):
+    def __init__(self, proj:MRIProject):
         self.subjects_list      = None
         self.working_dir        = ""
-        self.project:Project    = proj
+        self.project:MRIProject    = proj
         self.globaldata:Global  = self.project.globaldata
         self.string             = ""  # used to compose models override
 

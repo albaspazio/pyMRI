@@ -39,7 +39,7 @@ class PostModel:
 
         templ_name = remove_ext(templ_name)
 
-        # check if template name is valid according to the specification applied in Project.adapt_batch_files
+        # check if template name is valid according to the specification applied in MRIProject.adapt_batch_files
         # it can be a full path (without extension) of an existing file, or a file name present in pymri/templates/spm (without "_job.m)
         if not os.path.exists(templ_name + ".m"):
             if not os.path.exists(os.path.join(Global.get_spm_template_dir(), templ_name + "_job.m")):

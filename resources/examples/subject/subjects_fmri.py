@@ -1,9 +1,11 @@
 import os
 
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
 from group.spm_utilities import FmriProcParams, Contrast, SubjCondition
 from numpy import sort
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -17,8 +19,8 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir = "/data/MRI/projects/roelof"
-        project  = Project(proj_dir, globaldata)
+        proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "roelof")  # NOTE: relative path to project directory
+        project  = MRIProject(proj_dir, globaldata)
         SESS_ID  = 1
         num_cpu  = 1
         group_label = "test"

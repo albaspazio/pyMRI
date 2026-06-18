@@ -1,9 +1,12 @@
+import os
 import traceback
 
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
 from group.GroupAnalysis import GroupAnalysis
 from myutility.utilities import Processes
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -17,10 +20,11 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir = "/data/MRI/projects/nk"
-        project = Project(proj_dir, globaldata, "")
+        proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "nk")  # NOTE: relative path to project directory
+        project = MRIProject(proj_dir, globaldata, "")
 
-        subjproject = Project("/data/MRI/projects/3T", globaldata, "")
+        subjproject = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "3T")  # NOTE: relative path to project directory
+        subjproject = MRIProject(subjproject, globaldata, "")
 
         analysis = GroupAnalysis(project)
 

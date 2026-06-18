@@ -1,7 +1,8 @@
 import os
 
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
+
 from group.PostModel import PostModel
 from group.SPMConstants import SPMConstants
 from group.SPMContrasts import SPMContrasts
@@ -15,12 +16,12 @@ class SPMPostModel:
     """
     # calculate contrasts and report their results on a given, already estimated, SPM.mat
     @staticmethod
-    def batchrun_spm_stats_postmodel(project:Project, _global:Global, statsdir:str, post_model:PostModel, analysis_name:str, analysis_seq:str="mpr", eng=None, runit:bool=True):
+    def batchrun_spm_stats_postmodel(project:MRIProject, _global:Global, statsdir:str, post_model:PostModel, analysis_name:str, analysis_seq:str="mpr", eng=None, runit:bool=True):
         """
         This function is used to calculate the contrasts and report their results on a given, already estimated, SPM.mat.
 
         Args:
-            project (Project): The project object.
+            project (MRIProject): The project object.
             _global (Global): The global object.
             statsdir (str): The directory where the SPM results are stored.
             post_model (PostModel): The post-model object.
@@ -74,12 +75,12 @@ class SPMPostModel:
     # apply an existing contrasts template (in a non-standard location) on an already estimated SPM.mat and report the results
     # only need to set the SPM.mat path
     @staticmethod
-    def batchrun_spm_stats_predefined_postmodel(project:Project, _global:Global, statsdir:str, template_name:str, analysis_seq:str="mpr", eng=None, runit:bool=True):
+    def batchrun_spm_stats_predefined_postmodel(project:MRIProject, _global:Global, statsdir:str, template_name:str, analysis_seq:str="mpr", eng=None, runit:bool=True):
         """
         This function is used to apply an existing contrasts template (in a non-standard location) on an already estimated SPM.mat and report the results.
 
         Args:
-            project (Project): The project object.
+            project (MRIProject): The project object.
             _global (Global): The global object.
             statsdir (str): The directory where the SPM results are stored.
             template_name (str): The name of the template.

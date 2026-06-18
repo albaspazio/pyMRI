@@ -1,7 +1,7 @@
 import os
 from Global import Global
 from group.GroupAnalysis import GroupAnalysis
-from Project import Project
+from project.MRIProject import MRIProject
 
 if __name__ == "__main__":
 
@@ -15,8 +15,9 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir = "/data/MRI/projects/test"
-        project = Project(proj_dir, globaldata)
+        # NOTE: Update this path to your actual project directory
+        proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "test")
+        project = MRIProject(proj_dir, globaldata)
         SESS_ID = 1
         num_cpu = 1
         analysis = GroupAnalysis(project)

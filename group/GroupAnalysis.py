@@ -2,43 +2,45 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 from math import ceil
 from random import randrange
 from shutil import move
-import subprocess
 from typing import List
+
 import numpy
 import pandas
 
 from Global import Global
-from Project import Project
-from subject.Subject import Subject
 from models.FSLModels import FSLModels
-from group.SPMModels import SPMModels
+from models.SPMModels import SPMModels
 from myutility.exceptions import NotExistingImageException
 from myutility.fileutilities import get_dirname, write_text_file
 from myutility.fileutilities import sed_inplace
 from myutility.images.Image import Image
-from myutility.mymatlab import call_matlab_spmbatch
-from myutility.myfsl.utils.run import rrun
-from myutility.utilities import fillnumber2threedigits
 from myutility.list import listToString, first_contained_in_second
+from myutility.myfsl.utils.run import rrun
 from myutility.mymatlab import call_matlab_function_noret
+from myutility.mymatlab import call_matlab_spmbatch
+from myutility.utilities import fillnumber2threedigits
+from project.MRIProject import MRIProject
+from subject.Subject import Subject
+
 
 class GroupAnalysis:
     """
     This class provides methods for group analysis of MRI data.
     """
-    def __init__(self, proj:Project):
+    def __init__(self, proj:MRIProject):
         """
         Initialize the GroupAnalysis class.
 
         Args:
-            proj (Project): The Project object that contains the data and analysis settings.
+            proj (MRIProject): The MRIProject object that contains the data and analysis settings.
         """
         self.subjects_list      = None
         self.working_dir        = ""
-        self.project:Project    = proj
+        self.project:MRIProject = proj
         self._global:Global     = self.project.globaldata
 
         self.spm:SPMModels      = SPMModels(proj)

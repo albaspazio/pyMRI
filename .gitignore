@@ -1,6 +1,5 @@
 .idea
 __pycache__
 local.settings
-.idea/
 venv/
 idea/

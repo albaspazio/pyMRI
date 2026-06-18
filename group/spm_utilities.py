@@ -1,11 +1,10 @@
 import os
-from typing import List
+
+import numpy as np
 
 from data.utilities import list2spm_text_column
 from group.SPMConstants import SPMConstants
 from myutility.images.utilities import mid_1based
-
-import numpy as np
 
 
 class ResultsParams:

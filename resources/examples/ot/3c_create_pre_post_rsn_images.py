@@ -4,9 +4,11 @@ import traceback
 from shutil import copyfile
 
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
 from data.SubjectsData import SubjectsData
 from myutility.myfsl.utils.run import rrun
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -24,8 +26,8 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # HEADER
     # ======================================================================================================================
-    proj_dir = "/media/alba/dados/MRI/projects/temperamento_murcia"
-    project = Project(proj_dir, globaldata)
+    proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "data", "MRI", "projects", "temperamento_murcia")  # NOTE: relative path to project directory
+    project = MRIProject(proj_dir, globaldata)
     SESS_ID = 1
     num_cpu = 4
     group_label = "single"
@@ -63,7 +65,7 @@ if __name__ == "__main__":
 
         # ======================================================================================================================
         # ======================================================================================================================
-        project = Project(proj_dir, globaldata)
+        project = MRIProject(proj_dir, globaldata)
 
         project.load_subjects(subjects_list_name)
         subjects = project.subjects

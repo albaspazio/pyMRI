@@ -1,11 +1,14 @@
+import os
 import traceback
 
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
 from group.GroupAnalysis import GroupAnalysis
-from group.SPMModels import SPMModels
+from models.SPMModels import SPMModels
 from group.PostModel import PostModel
 from group.spm_utilities import Nuisance
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -21,11 +24,11 @@ if __name__ == "__main__":
         # ======================================================================================================================
         SESS_ID = 1
 
-        ctrl_proj_dir   = "/data/MRI/projects/controls"
-        ctrl_project    = Project(ctrl_proj_dir, globaldata)
+        ctrl_proj_dir   = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "controls")  # NOTE: relative path to project directory
+        ctrl_project    = MRIProject(ctrl_proj_dir, globaldata)
 
-        pat_proj_dir    = "/data/MRI/projects/patients"
-        pat_project     = Project(pat_proj_dir, globaldata)
+        pat_proj_dir    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "patients")  # NOTE: relative path to project directory
+        pat_project     = MRIProject(pat_proj_dir, globaldata)
 
         group_analysis  = GroupAnalysis(pat_project)        # reference project for group-level analysis is the patients’ one
         spm_analysis    = SPMModels(pat_project)

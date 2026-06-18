@@ -1,7 +1,7 @@
 import os
 
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
 from group.GroupAnalysis import GroupAnalysis
 from group.group_analysis import convert_melodic_rois_to_individual
 
@@ -17,11 +17,12 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir_bd    = "/data/MRI/projects/past_bipolar"
-        proj_dir_td    = "/data/MRI/projects/past_controls"
+        # NOTE: Update these paths to your actual project directories
+        proj_dir_bd    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "past_bipolar")
+        proj_dir_td    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "past_controls")
 
-        project_bd     = Project(proj_dir_bd, globaldata)
-        project_td     = Project(proj_dir_td, globaldata)
+        project_bd     = MRIProject(proj_dir_bd, globaldata)
+        project_td     = MRIProject(proj_dir_td, globaldata)
 
         SESS_ID     = 1
         num_cpu     = 18

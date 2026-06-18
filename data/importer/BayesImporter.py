@@ -1,18 +1,17 @@
 import datetime
 import io
-from typing import List
 import json
+import os
 
 import msoffcrypto
 import numpy
 import pandas
 import pandas as pd
-import os
 
 from data.BayesDB import BayesDB
-from myutility.exceptions import DataFileException
-from data.SubjectsData import SubjectsData
 from data.Sheets import Sheets
+from data.SubjectsData import SubjectsData
+from myutility.exceptions import DataFileException
 
 
 class BayesImporter:
@@ -431,6 +430,7 @@ class BayesImporter:
                     raise Exception(msg)
         except Exception as e:
             a = 1
+            raise Exception(e)
 
         self.sheets[scale_name] = SubjectsData(pd.DataFrame.from_dict([sh]))
 

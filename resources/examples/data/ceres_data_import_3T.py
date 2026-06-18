@@ -1,6 +1,7 @@
 import traceback
+import os
 
-from DataProject import DataProject
+from project.DataProject import DataProject
 from Global import Global
 from data.importer.VolBrainImporter import VolBrainImporter
 from data.utilities import *

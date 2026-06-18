@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import os
-from typing import List, Any, Tuple
+from typing import List, Any
 
 import numpy as np
 import pandas
 import pandas as pd
-from pandas import DataFrame
 
 from data.SID import SID
 from data.SIDList import SIDList
@@ -32,6 +31,11 @@ from myutility.list import same_elements, reorder_list, _argsort, unique
 #  2) get_sid:          accept one subject label and one sessions and return the associated SID or raise a DataFileException
 
 # ALL other methods accessing/selecting subject(s) data receive either a SID or SIDList instance obtained using "filter_subjects"/get_sid
+
+# MUTATION CONTRACT:
+# - Mutation methods (add_sd, add_column, rename_subjects, remove_subjects, etc.): always mutate self, always return self for chaining
+# - To operate on a copy without mutating original: use obj.copy().method()
+# - Select methods (select_df, select_columns_df, select_rows_df): never mutate self, always return new DataFrame (caller-safe)
 
 # data can be selected/extracted in six ways, each returning a different type:
 # - SID | SIDList | SIDList         : get_sid (@), filter_subjects (*,@), subjects
@@ -148,11 +152,11 @@ class SubjectsData:
         # Check for unnamed columns and remove them
         for col in self.header:
             if "unnamed" in col.lower():
-                self.remove_columns([col], update=True)
+                self.remove_columns([col])
 
         # Filter the columns
         if validcols is not None:
-            self.select_columns_df(validcols, update=True)
+            self.df = self.select_columns_df(validcols)
 
         # Convert the data
         if cols2num is not None:
@@ -170,8 +174,12 @@ class SubjectsData:
 
         # Verify that the data contains the required columns and then sort
         if check_data:
-            if self.df.columns[0] != self.first_col_name or self.df.columns[1] != self.second_col_name:
+            if self.df.columns[0] != self.first_col_name:
                 raise Exception("Error in SubjectData.load: first column is not called subj")
+
+            # If the second column is missing or is not "session", inject it with value 1
+            if self.second_col_name not in self.df.columns:
+                self.df.insert(1, self.second_col_name, 1)
 
             # sort by first two columns
             self.df.sort_values([self.first_col_name, self.second_col_name], ascending=[True, True], inplace=True)
@@ -223,6 +231,18 @@ class SubjectsData:
             Whether the data frame contains the required columns.
         """
         return self.first_col_name in self.header and self.second_col_name in self.header
+    # endregion
+
+    def copy(self) -> 'SubjectsData':
+        """
+        Returns a deep copy of this SubjectsData object.
+
+        Returns
+        -------
+        SubjectsData
+            A new SubjectsData object with a copy of the DataFrame.
+        """
+        return SubjectsData(self.df.copy())
 
     @property
     def subjects(self) -> SIDList:
@@ -456,7 +476,7 @@ class SubjectsData:
     # ======================================================================================
     #region (SIDS|validcols) -> DataFrame
     # may further select only those rows that respect all the select_conds
-    def select_df(self, sids:SIDList=None, validcols:List[str]=None, df:pandas.DataFrame=None, update:bool=False) -> pandas.DataFrame:
+    def select_df(self, sids:SIDList=None, validcols:List[str]=None, df:pandas.DataFrame=None) -> pandas.DataFrame:
         """
         Selects a subset of the data frame based on the given subjects and columns.
 
@@ -468,8 +488,6 @@ class SubjectsData:
             A list of column names to include. If None, all columns will be included.
         df: pandas.DataFrame, optional
             A pandas data frame to select from. If None, the internal data frame will be used.
-        update: bool, optional
-            Whether to update the internal data frame with the selected data.
 
         Returns
         -------
@@ -477,21 +495,18 @@ class SubjectsData:
             The selected data frame.
         """
         if df is None:
-            df = self.df.copy()
+            df = self.df
 
         if sids is None and validcols is None:
-            return df
+            return df.copy()
 
-        df = self.select_rows_df(sids, df, False)
-        df = self.select_columns_df(validcols, df, False).copy()
-
-        if update:
-            self.df = df
+        df = self.select_rows_df(sids, df)
+        df = self.select_columns_df(validcols, df)
 
         return df
 
     # extract only columns contained in given validcols
-    def select_columns_df(self, validcols: List[str] = None, df: pandas.DataFrame = None, update:bool=False) -> pandas.DataFrame:
+    def select_columns_df(self, validcols: List[str] = None, df: pandas.DataFrame = None) -> pandas.DataFrame:
         """Selects a subset of the data frame based on the given columns.
 
         Parameters
@@ -500,8 +515,6 @@ class SubjectsData:
             A list of column names to include. If None, all columns will be included.
         df : pandas.DataFrame, optional
             A pandas data frame to select from. If None, the internal data frame will be used.
-        update : bool, optional
-            Whether to update the internal data frame with the selected data.
 
         Returns
         -------
@@ -509,25 +522,21 @@ class SubjectsData:
             The selected data frame.
         """
         if df is None:
-            df = self.df.copy()
+            df = self.df
 
         if validcols is None:
-            return df
+            return df.copy()
         else:
             vcs = validcols.copy()
             for vc in vcs:
                 if vc not in self.header:
                     raise Exception("Error in SubjectsData.filter_columns: given validcols list contains a column (" + vc + ") not present in the original df...exiting")
 
-            if update:
-                self.df = df[vcs]
-                return self.df
-            else:
-                return df[vcs].copy()
+            return df[vcs].copy()
 
     # extract only rows contained in given subjects
     # if(select_conds) -> apply AND filter = keep only those rows that fullfil all the specified conditions
-    def select_rows_df(self, sids: SIDList = None, df: pandas.DataFrame = None, update:bool=False) -> pandas.DataFrame:
+    def select_rows_df(self, sids: SIDList = None, df: pandas.DataFrame = None) -> pandas.DataFrame:
         """
         Selects a subset of the data frame based on the given subjects.
 
@@ -537,8 +546,6 @@ class SubjectsData:
             A list of subjects to include. If None, all subjects will be included.
         df: pandas.DataFrame, optional
             A pandas data frame to select from. If None, the internal data frame will be used.
-        update: bool, optional
-            Whether to update the internal data frame with the selected data.
 
         Returns
         -------
@@ -546,19 +553,13 @@ class SubjectsData:
             The selected data frame.
         """
         if df is None:
-            df = self.df.copy()
+            df = self.df
 
         if sids is None:
             sids = self.subjects
 
-        newdf = pd.DataFrame()
-        rows  = df.iloc[sids.ids]
-        newdf = newdf._append(rows, ignore_index=True)
-
-        if update is True:
-            self.df = newdf
-
-        return newdf
+        rows = df.iloc[sids.ids]
+        return rows.copy()
 
     #endregion
 
@@ -799,9 +800,9 @@ class SubjectsData:
         return self.__to_str(self.get_subjects_column(sids, colname), ndecimals)
 
     def get_subjects_values_by_cols_str(self, sids:SIDList=None, colnames:List[str]=None,
-                                        demean_flags:List[bool]=None, ndecim:int=4) -> str:
+                                        demean_flags:List[bool]=None, ndecim:int=4) -> List[str]:
         """
-        Returns a list of values from a subset of columns.
+        Returns a list of values from a subset of columns as SPM-formatted strings.
 
         Parameters
         ----------
@@ -816,19 +817,16 @@ class SubjectsData:
 
         Returns
         -------
-        list
-            A list of values from the selected columns.
+        List[str]
+            A list of strings, one per column, with values separated by newlines.
 
         Raises
         ------
         ValueError
             If the given column does not exist in the data frame.
         """
-        values  = self.get_subjects_values_by_cols(sids, colnames)
-        res_str = []
-        for colvalues in values:
-            res_str.append(self.__to_str(colvalues, ndecim))
-        return res_str
+        values = self.get_subjects_values_by_cols(sids, colnames, demean_flags, ndecim)
+        return [self.__to_str(col_vals, ndecim) for col_vals in values]
     #endregion
 
     # ======================================================================================
@@ -892,9 +890,9 @@ class SubjectsData:
     # ==================================================================================================
     # region ADD/UPDATE/REMOVE DATA
 
-    def set_subj_session_value(self, sid: SID, col_label:str, value:Any) -> None:
+    def set_subj_session_value(self, sid: SID, col_label:str, value:Any) -> 'SubjectsData':
         """
-        Sets the value of a column for a given subject.
+        Sets the value of a column for a given subject. Mutates this object and returns self for chaining.
 
         Parameters
         ----------
@@ -904,6 +902,11 @@ class SubjectsData:
             The name of the column to set.
         value : Any
             The value to set for the given subject and column.
+
+        Returns
+        -------
+        SubjectsData
+            Returns self for method chaining.
 
         Raises
         ------
@@ -918,13 +921,11 @@ class SubjectsData:
 
         col_id = self.col_id(col_label)
         self.df.iat[sid.id, col_id] = value
+        return self
 
-    # add new subjects: can be
-    # - List[SubjectsData] e.g. several object containing one subject only
-    # - List[SubjectsData] one item that contains in its df several subjects
-    def add_sd(self, newsubjs: List['SubjectsData'], can_overwrite:bool=False, can_add_incomplete:bool=False) -> None:
+    def add_sd(self, newsubjs: List['SubjectsData'], can_overwrite:bool=False, can_add_incomplete:bool=False) -> 'SubjectsData':
         """
-        Adds a list of SubjectsData objects to the current SubjectsData object.
+        Adds a list of SubjectsData objects to the current SubjectsData object. Mutates this object and returns self for chaining.
 
         Parameters
         ----------
@@ -934,6 +935,11 @@ class SubjectsData:
             Whether to allow overwriting of existing subjects.
         can_add_incomplete: bool, optional
             Whether to allow adding of incomplete subjects.
+
+        Returns
+        -------
+        SubjectsData
+            Returns self for method chaining.
 
         Raises
         ------
@@ -961,10 +967,11 @@ class SubjectsData:
             else:
                 raise Exception("Error in SubjectsData.add, an element of newsubjs is not a SubjectsData")
 
-    # add new columns / update existing columns to existing subjects (cannot add new subjects)
-    def add_columns_df(self, subjsdf: pandas.DataFrame, can_overwrite:bool=False, can_add_incomplete=False) -> None:
+        return self
+
+    def add_columns_df(self, subjsdf: pandas.DataFrame, can_overwrite:bool=False, can_add_incomplete=False) -> 'SubjectsData':
         """
-        Adds a subset of columns from a given pandas.DataFrame to the current SubjectsData object.
+        Adds a subset of columns from a given pandas.DataFrame to the current SubjectsData object. Mutates this object and returns self for chaining.
 
         Parameters
         ----------
@@ -974,6 +981,11 @@ class SubjectsData:
             Whether to allow overwriting of existing columns.
         can_add_incomplete : bool, optional
             Whether to allow adding of incomplete columns.
+
+        Returns
+        -------
+        SubjectsData
+            Returns self for method chaining.
 
         Raises
         ------
@@ -994,15 +1006,17 @@ class SubjectsData:
                         self.update_column(new_sd.subjects, col, subjsdf[col])
                     else:
                         print("Warning in SubjectsData.add_df...col (" + col + ") already exist and can_overwrite is False...skipping add this column")
-                        return
+                        return self
                 else:
                     self.add_column(col, subjsdf[col], new_sd.subjects)
         else:
             print("Warning in SubjectsData.add_columns_df...trying to add new columns, but new subjects are also present...skipping this operation")
 
-    def add_column(self, col_label: str, values: list, sids: SIDList = None, position: int = None, df: pandas.DataFrame = None) -> None:
+        return self
+
+    def add_column(self, col_label: str, values: list, sids: SIDList = None, position: int = None, df: pandas.DataFrame = None) -> 'SubjectsData':
         """
-        Adds a new column to the SubjectsData object.
+        Adds a new column to the SubjectsData object. Mutates this object and returns self for chaining.
 
         Parameters
         ----------
@@ -1016,6 +1030,11 @@ class SubjectsData:
             The position of the new column in the data frame. If None, the column will be added at the end.
         df : pandas.DataFrame, optional
             A pandas data frame to add the column to. If None, the internal data frame will be used.
+
+        Returns
+        -------
+        SubjectsData
+            Returns self for method chaining.
 
         Raises
         ------
@@ -1049,15 +1068,22 @@ class SubjectsData:
         if df is not None:
             self.save_data(df)
 
-    def update_column(self, sids:SIDList, col_label, values, df=None) -> None:
+        return self
+
+    def update_column(self, sids:SIDList, col_label, values, df=None) -> 'SubjectsData':
         """
-        Update the value of a column for a given list of subjects.
+        Update the value of a column for a given list of subjects. Mutates this object and returns self for chaining.
 
         Parameters:
         sids (SIDList): A list of subjects to update the value for.
         col_label (str): The name of the column to update.
         value: The value to set for the given subject and column.
         df: pandas.DataFrame, optional
+
+        Returns
+        -------
+        SubjectsData
+            Returns self for method chaining.
 
         Raises:
         ValueError: If the given subject or column does not exist in the data frame.
@@ -1077,6 +1103,8 @@ class SubjectsData:
 
         if df is not None:
             self.save_data(df)
+
+        return self
 
     # if row is None adds only a subj col
     def add_row(self, sid: SID, row=None) -> None:
@@ -1106,10 +1134,9 @@ class SubjectsData:
 
         self.df.loc[len(self.df)] = row
 
-    # assoc_dict is a dictionary where key is current name and value is the new one
-    def rename_subjects(self, assoc_dict) -> None:
+    def rename_subjects(self, assoc_dict) -> 'SubjectsData':
         """
-        Rename subjects in the data frame according to a given dictionary.
+        Rename subjects in the data frame according to a given dictionary. Mutates this object and returns self for chaining.
 
         Parameters
         ----------
@@ -1118,7 +1145,8 @@ class SubjectsData:
 
         Returns
         -------
-        None
+        SubjectsData
+            Returns self for method chaining.
 
         """
         for i, (k_oldlab, v_newlab) in enumerate(assoc_dict.items()):
@@ -1126,11 +1154,12 @@ class SubjectsData:
             for sess in sessions:
                 subj_id = self.get_subjid_by_session(k_oldlab, sess)
                 self.df.loc[subj_id, self.first_col_name] = v_newlab
+        
+        return self
 
-    # REMOVE SUBJ DATA
-    def remove_subjects(self, subjects2remove: SIDList, df: pandas.DataFrame = None, update=False) -> SubjectsData:
+    def remove_subjects(self, subjects2remove: SIDList, df: pandas.DataFrame = None) -> 'SubjectsData':
         """
-        Remove subjects from the data frame.
+        Remove subjects from the data frame. Mutates this object and returns self for method chaining.
 
         Parameters
         ----------
@@ -1138,17 +1167,15 @@ class SubjectsData:
             A list of subjects to remove.
         df: pandas.DataFrame, optional
             A pandas data frame to remove the subjects from. If None, the internal data frame will be used.
-        update: bool, optional
-            Whether to update the internal data frame with the filtered data.
 
         Returns
         -------
         SubjectsData
-            A SubjectsData object containing the filtered data.
+            Returns self for method chaining.
 
         """
         if df is None:
-            df = self.df.copy()
+            df = self.df
 
         labels = list(df[self.first_col_name])
 
@@ -1160,16 +1187,13 @@ class SubjectsData:
                 df.reset_index(drop=True, inplace=True)
         except Exception:
             a=1
-        sd = SubjectsData(df)
+        
+        self.df = df
+        return self
 
-        if update:
-            self.df = df
-
-        return sd
-
-    def remove_columns(self, cols2remove:List[str], df:pandas.DataFrame=None, update=False) -> DataFrame:
+    def remove_columns(self, cols2remove:List[str], df:pandas.DataFrame=None) -> 'SubjectsData':
         """
-        Remove columns from the data frame.
+        Remove columns from the data frame. Mutates this object and returns self for chaining.
 
         Parameters
         ----------
@@ -1177,29 +1201,25 @@ class SubjectsData:
             A list of column names to remove.
         df: pandas.DataFrame, optional
             A pandas data frame to remove the columns from. If None, the internal data frame will be used.
-        update: bool, optional
-            Whether to update the internal data frame with the filtered data.
 
         Returns
         -------
-        pandas.DataFrame
-            The filtered data frame.
+        SubjectsData
+            Returns self for method chaining.
 
         """
         if not isinstance(cols2remove, list):
             raise Exception("Error in SubjectsData.remove_columns: given cols param is not a list")
 
         if df is None:
-            df = self.df.copy()
+            df = self.df
 
         for col in cols2remove:
             if col in df.columns.to_list():
                 df = df.drop(col, axis=1)
 
-        if update:
-            self.df = df
-
-        return df
+        self.df = df
+        return self
 
     # endregion
 
@@ -1344,24 +1364,28 @@ class SubjectsData:
         Returns:
             bool: Whether the two SubjectsData objects are equal.
         """
+        res = True
         report = ""
         if not same_elements(self.header, sd.header):
             report = report + "different header"
-            return False
+            res = False
 
         if not same_elements(self.subjects.labels, sd.subjects.labels):
             report = report + "\ndifferent subjects"
-            return False
+            res = False
 
         for col in self.header:
             col_values = self.get_subjects_column(colname=col)
             if not same_elements(col_values, sd.get_subjects_column(colname=col)):
                 report = report + "\ndifferent values in col: " + col
+                res = False
 
         if report != "":
             print("SubjectsData.is_equal the two data are different")
             print("Report: " + report)
             return False
+        else:
+            return True
 
     def outlier(self, colname, _range=1.5, df: pandas.DataFrame = None) -> pandas.DataFrame:
         """

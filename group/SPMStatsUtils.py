@@ -1,4 +1,3 @@
-import os
 from typing import List
 
 from Global import Global
@@ -6,10 +5,11 @@ from data.SubjectsData import SubjectsData
 from data.utilities import list2spm_text_column
 from group.spm_utilities import SubjCondition, GrpInImages
 from myutility.exceptions import DataFileException
-from myutility.images.Image import Image
-from myutility.mymatlab import call_matlab_function_noret, call_matlab_spmbatch
-from myutility.list import is_list_of
 from myutility.fileutilities import sed_inplace
+from myutility.images.Image import Image
+from myutility.list import is_list_of
+from myutility.mymatlab import call_matlab_function_noret, call_matlab_spmbatch
+from subject.Subject import Subject
 
 
 class SPMStatsUtils:
@@ -280,12 +280,12 @@ class SPMStatsUtils:
     # when analysing subjects from different groups, we must avoid validating data.
     # Thus get_filtered_column must receive a Subject instances list, not a labels list  (16/1/2023)
     @staticmethod
-    def spm_replace_global_calculation(project:'Project', out_batch_job, method:str="", groups_instances:List[List['Subject']]=None, data:SubjectsData=None, idstep:int=1):
+    def spm_replace_global_calculation(project:'MRIProject', out_batch_job, method:str="", groups_instances:List[List['Subject']]=None, data:SubjectsData=None, idstep:int=1):
         """
         This function replaces the global calculation settings in the given MATLAB script.
 
         Args:
-            project (Project): The project object.
+            project (MRIProject): The project object.
             out_batch_job (str): The path to the MATLAB script file.
             method (str, optional): The method for global calculation. Can be "subj_icv", "subj_tiv", "", or a column name of the given data_file. Defaults to "".
             groups_instances (List[List[Subject]], optional): A list of subject groups. Required if method is not "". Defaults to None.
@@ -382,7 +382,7 @@ class SPMStatsUtils:
         call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths, "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
 
     @staticmethod
-    def batchrun_cat_surface_smooth(project:'Project', _global:Global, subj_instances, sfilt:int=12, spm_template_name:str="subjs_cat_surf_smooth", nproc:int=1, eng=None, runit:bool=True):
+    def batchrun_cat_surface_smooth(project:'MRIProject', _global:Global, subj_instances, sfilt:int=12, spm_template_name:str="subjs_cat_surf_smooth", nproc:int=1, eng=None, runit:bool=True):
 
         # create template files
         out_batch_job, out_batch_start = project.adapt_batch_files(spm_template_name, "mpr")

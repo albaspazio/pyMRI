@@ -4,9 +4,9 @@ import os
 from typing import List
 
 from Global import Global
-from Project import Project
 from subject.Subject import Subject
 from data.SubjectsData import SubjectsData
+from project.MRIProject import MRIProject
 
 from group.SPMCovariates    import SPMCovariates
 from group.SPMPostModel     import SPMPostModel, PostModel
@@ -23,16 +23,16 @@ class SPMModels:
     """
     This class contains methods for running group analyses using SPM.
     """
-    def __init__(self, proj:Project):
+    def __init__(self, proj:MRIProject):
         """
         Initialize the SPMModels class.
 
         Parameters
         ----------
-        proj : instance of Project
+        proj : instance of MRIProject
             The project object that contains information about the project.
         """
-        self.project:Project    = proj
+        self.project:MRIProject    = proj
         self.globaldata:Global  = self.project.globaldata
 
     def batchrun_group_stats(self,  root_outdir:str,        # group analysis root folder :  fmri_dir/ct_dir/vbm_template_dir

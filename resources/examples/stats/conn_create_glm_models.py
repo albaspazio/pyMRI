@@ -2,9 +2,11 @@ import os
 import traceback
 
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
 from models.ConnModels import ConnModels
 from group.spm_utilities import Covariate, Nuisance
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -18,8 +20,8 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir        = "/data/MRI/projects/nk"
-        project         = Project(proj_dir, globaldata)     # automatically load PROJDIR/script/data.dat if present
+        proj_dir        = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "nk")  # NOTE: relative path to project directory
+        project         = MRIProject(proj_dir, globaldata)     # automatically load PROJDIR/script/data.dat if present
         SESS_ID         = 1
 
         connmodels      = ConnModels(project)

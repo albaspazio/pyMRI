@@ -2,7 +2,7 @@ import os
 import traceback
 
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
 from group.spm_utilities import FmriProcParams
 
 # NECESSARY STEPS TO IMPORT AND PREPROCESS A NEW SUBJECT
@@ -35,13 +35,14 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir        = "/data/MRI/projects/test"
-        project         = Project(proj_dir, globaldata)
+        # NOTE: Update these paths to your actual directories
+        proj_dir        = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "test")
+        project         = MRIProject(proj_dir, globaldata)
         SESS_ID         = 1
         num_cpu         = 1
         group_label     = "test"
 
-        dicom_folder    = "/data/MRI/OT/dicom/3t/mix"
+        dicom_folder    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "OT", "dicom", "3t", "mix")
         # ======================================================================================================================
         # FMRI preprocessing parameters
         # ======================================================================================================================

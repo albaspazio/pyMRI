@@ -1,11 +1,13 @@
 import os
 
 from Global import Global
-from Project import Project
+from project.MRIProject import MRIProject
 from group.GroupAnalysis import GroupAnalysis
 from data.SubjectsData import SubjectsData
 from myutility.list import remove_items_from_list
 from data.plot_data import scatter_plot_dataserie
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 #                                                           project.tbss_dir
 # this script takes one or more TBSS stats results (projectx/group_analysis/tbss/, population, "stats", "FA/L23", analysis_name, ..._tfce_corrp_tstat1.nii.gz)
 # and - tbss_clusterize_results_by_atlas......divide res maps into the 43 xtract's tracts, calc overlap
@@ -20,8 +22,8 @@ if __name__ == "__main__":
         globaldata = Global(fsl_code)
 
         # ======================================================================================================================
-        proj_dir    = "/data/MRI/projects/past_controls"
-        project     = Project(proj_dir, globaldata)
+        proj_dir    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "past_controls")  # NOTE: relative path to project directory
+        project     = MRIProject(proj_dir, globaldata)
         num_cpu     = 1
         analysis    = GroupAnalysis(project)
 

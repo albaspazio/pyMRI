@@ -1,8 +1,8 @@
 import os
 from typing import List
 
-from Project import Project
 from subject.Subject import Subject
+from project.MRIProject import MRIProject
 from myutility.images.Image import Image
 from myutility.images.Images import Images
 from myutility.myfsl.utils.run import rrun
@@ -11,13 +11,13 @@ from myutility.myfsl.utils.run import rrun
 # this function assumes that user put the melodic rois of interest in the roi4_folder of a specific subfolder of the given project (where between-groups analyses are done, usually the patient folder)
 # subjects instances are given already divided by groups, in order to launch the corresponding project.run_subjects_methods
 # the script coregisters each roi into a 2mm rs individual space
-def convert_melodic_rois_to_individual(project:Project, templ_name:str, popul_name:str, rois_list:List[str], arr_subjs_insts:List[List[Subject]], thr:int=0.1, report_file:str="transform_report", num_cpu:int=1, mni_2mm_brain:Image=None):
+def convert_melodic_rois_to_individual(project:MRIProject, templ_name:str, popul_name:str, rois_list:List[str], arr_subjs_insts:List[List[Subject]], thr:int=0.1, report_file:str="transform_report", num_cpu:int=1, mni_2mm_brain:Image=None):
 
     """
     This function converts melodic ROIs from 4mm to 2mm in individual space.
 
     Args:
-        project (Project): The project object.
+        project (MRIProject): The project object.
         templ_name (str): The template name.
         popul_name (str): The population name.
         rois_list (List[str]): The list of ROIs.
@@ -73,13 +73,13 @@ def convert_melodic_rois_to_individual(project:Project, templ_name:str, popul_na
 # subjects: list of subjects instances
 # metric:   measures to analyze. values are: FA,MD,AD,RD
 
-def extract_meanvalue_from_tbssresults(project:Project, rois:Images, subjects:List[Subject], metric:str="FA"):
+def extract_meanvalue_from_tbssresults(project:MRIProject, rois:Images, subjects:List[Subject], metric:str="FA"):
 
     """
     This function takes
 
     Args:
-        project (Project): The project object.
+        project (MRIProject): The project object.
         rois (List[Image]): The list of normalized Image to investigate (extract mean individual metrics)
         subjects (List[Subject]): The list of subjects instances
         metric (str, optional): The measures to analyze. Defaults to "FA".
