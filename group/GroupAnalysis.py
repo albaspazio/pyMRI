@@ -11,7 +11,7 @@ from typing import List
 import numpy
 import pandas
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from models.FSLModels import FSLModels
 from models.SPMModels import SPMModels
 from myutility.exceptions import NotExistingImageException

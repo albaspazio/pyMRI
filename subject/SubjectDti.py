@@ -3,7 +3,7 @@ import os
 from shutil import copyfile
 from typing import List
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from myutility.SubjectTracts import SubjectTracts
 from myutility.exceptions import NotExistingImageException
 from myutility.fileutilities import write_text_file, read_value_from_file

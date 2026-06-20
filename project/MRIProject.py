@@ -12,7 +12,7 @@ from threading import Thread
 
 from typing import List, Tuple, Any
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from .Project import Project
 from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
@@ -22,13 +22,14 @@ from data.SIDList import SIDList
 from myutility.exceptions import SubjectListException, DataFileException, SubjectExistException
 from myutility.images.Image import Image
 from myutility.fileutilities import sed_inplace, remove_ext
+from subject.SubjectsList import SubjectsList
 
 
 class MRIProject(Project):
 
     subjects: List[Subject] = []
 
-    def __init__(self, folder: str, globaldata: Global, data: str | SubjectsData = "data.xlsx"):
+    def __init__(self, folder: str, globaldata: 'MRIGlobal', data: str | SubjectsData = "data.xlsx"):
         """
         Initialize an MRIProject instance.
 
@@ -36,8 +37,8 @@ class MRIProject(Project):
         ----------
         folder : str
             The path to the project folder.
-        globaldata : Global
-            The global data instance.
+        globaldata : MRIGlobal
+            The MRI global configuration instance (MUST be MRIGlobal, not generic Global).
         data : str | SubjectsData, optional
             The path to the data file or a SubjectsData instance.
         """
@@ -46,10 +47,13 @@ class MRIProject(Project):
 
         self.globaldata = globaldata
 
-        # MRI-specific filesystem layout
-        self.subjects_dir       = os.path.join(folder, "subjects")
-        self.group_analysis_dir = os.path.join(folder, "group_analysis")
-        self.script_dir         = os.path.join(globaldata.project_scripts_dir, os.path.basename(folder))
+        self.dir        = folder
+        self.label      = os.path.basename(self.dir)
+        self.name       = os.path.basename(self.dir)
+
+        self.subjects_dir       = os.path.join(self.dir, "subjects")
+        self.group_analysis_dir = os.path.join(self.dir, "group_analysis")
+        self.script_dir         = os.path.join(globaldata.project_scripts_dir, self.name)
 
         self.glm_template_dir   = os.path.join(self.script_dir, "glm", "templates")
         self.group_glm_dir      = os.path.join(self.group_analysis_dir, "glm_models")
@@ -144,7 +148,9 @@ class MRIProject(Project):
 
     def get_subject_session(self, subj_label: str, sess: int = 1, must_exist: bool = True) -> Subject:
         """
-        Get an independent Subject instance for the given label/session.
+        Get an independent SubjectMRI instance for the given label/session.
+        
+        Returns Subject type (which is SubjectMRI at runtime).
         """
         if must_exist:
             for subj in self.subjects:
@@ -152,10 +158,11 @@ class MRIProject(Project):
                     if subj.sessid == sess:
                         return deepcopy(subj)
                     else:
-                        return subj.set_properties(sess, rollback=True)
+                        return subj.get_properties(sess)
             raise SubjectExistException("Error in MRIProject.get_subject: given subject (" + subj_label + " does not exist")
         else:
-            return Subject(subj_label, self, sess)
+            from subject.SubjectMRI import SubjectMRI
+            return SubjectMRI(subj_label, self, sess)
 
     def get_subject_available_sessions(self, subj_lab: str, error_if_empty: bool = True) -> List[int]:
         """
@@ -172,37 +179,52 @@ class MRIProject(Project):
             else:
                 return []
 
-    def get_subjects(self, group_or_subjlabels: str | List[str] = None, sess_ids: List[int] = None, must_exist: bool = False) -> List[Subject]:
+    def get_subjects(self, group_or_subjlabels: str | List[str] = None, sess_ids: List[int] = None, must_exist: bool = False) -> SubjectsList:
         """
-        Returns subjects based on a group label or a list of subject labels.
+        MRI override: returns SubjectMRI instances instead of generic Subject.
+        
+        Uses MRI-specific session format ("s1", "s2", etc.) for directory paths.
+        Inherits from Project: converts group_or_subjlabels to label list, handles sessions.
+        
+        Parameters
+        ----------
+        group_or_subjlabels : str or List[str], optional
+            Group label or list of subject labels.
+        sess_ids : List[int], optional
+            Requested session IDs (None = all available).
+        must_exist : bool, optional
+            If True, raises if subjects don't exist.
+        
+        Returns
+        -------
+        SubjectsList
+            List of SubjectMRI instances (with MRI-specific infrastructure).
         """
+        # Get labels using parent method
         subj_labels = self.get_subjects_labels(group_or_subjlabels)
 
-        subjects = []
+        subjects = SubjectsList()
         for subj_lab in subj_labels:
+            # Determine sessions
             if sess_ids is None:
-                sessions = self.get_subject_available_sessions(subj_lab)
+                sessions = self.get_subject_available_sessions(subj_lab, error_if_empty=not must_exist)
             else:
                 sessions = sess_ids
 
+            # Create SubjectMRI for each label/session
             for sess_id in sessions:
-                subj = Subject(subj_lab, self, sess_id)
-                if not subj.exist and must_exist is True:
-                    raise SubjectExistException("Error in MRIProject.get_subjects: requested subject (" + subj_lab + " | " + str(sess_id) + " ) does not exist")
-                elif subj.exist or (subj.exist is False and must_exist is False):
+                from subject.SubjectMRI import SubjectMRI
+                subj = SubjectMRI(subj_lab, self, sess_id)
+                if not subj.exist and must_exist:
+                    raise SubjectExistException("Error in MRIProject.get_subjects: requested subject (" + subj_lab + " | " + str(sess_id) + ") does not exist")
+                elif subj.exist or not must_exist:
                     subjects.append(subj)
+        
         return subjects
 
     def get_subject(self, subjlabel: str, sess_id: int = 1, must_exist: bool = False) -> Subject:
         return self.get_subjects([subjlabel], [sess_id], must_exist)[0]
 
-    def get_subjects_labels(self, grlab_subjlabs_subjs: str | List[str] | List[Subject] = None) -> List[str]:
-        """
-        Extends base get_subjects_labels to also accept a List[Subject].
-        """
-        if isinstance(grlab_subjlabs_subjs, list) and len(grlab_subjlabs_subjs) > 0 and isinstance(grlab_subjlabs_subjs[0], Subject):
-            return [subj.label for subj in grlab_subjlabs_subjs]
-        return super().get_subjects_labels(grlab_subjlabs_subjs)
 
     # endregion
 
@@ -234,7 +256,7 @@ class MRIProject(Project):
                 return False
         return True
 
-    def validate_subjects(self, subjs: List[Subject] = None) -> List[Subject]:
+    def validate_subjects(self, subjs: List[Subject] | None = None) -> List[Subject]:
         if subjs is None:
             if self.nsubj > 0:
                 return self.subjects
@@ -251,35 +273,54 @@ class MRIProject(Project):
     # ==================================================================================================================
     # region DATA (override query methods to accept List[Subject])
 
-    def get_subjects_values_by_cols(self, grlab_subjlabs_subjs: str | List[str] | List[Subject], columns_list: List[str],
-                                    sess_ids: List[int] = None, select_conds: List[FilterValues] = None,
-                                    data: str | SubjectsData = None, demean_flags: List[bool] | bool | None = None,
+    def get_subjects_values_by_cols(self, subjects: SubjectsList, columns_list: List[str],
+                                    select_conds: List[FilterValues] | None = None,
+                                    data: str | SubjectsData | None = None, demean_flags: List[bool] | bool | None = None,
                                     ndecim: int = 4) -> Tuple[List[List[Any]], List[str], List[int]]:
+        """
+        Get column values for subjects (MRI override with SID filtering).
+        
+        Args:
+            subjects: SubjectsList of subjects to query.
+            columns_list: Column names to retrieve.
+            select_conds: optional filter conditions.
+            data: optional SubjectsData override.
+            demean_flags: optional demean flags.
+            ndecim: decimal places for demeaning.
+        
+        Returns:
+            Tuple: (values matrix, labels list, sessions list)
+        """
         valid_data = self.validate_data(data)
-
-        if not is_list_of(grlab_subjlabs_subjs, Subject):
-            subjects = self.get_subjects(grlab_subjlabs_subjs, sess_ids)
-        else:
-            subjects = self.validate_subjects(grlab_subjlabs_subjs)
-
         sids: SIDList = valid_data.filter_sids(select_conds, sids=self.subjects2sids(subjects))
+        return (valid_data.get_subjects_values_by_cols(sids, columns_list, demean_flags=demean_flags, ndecim=ndecim), 
+                sids.labels, 
+                sids.sessions)
 
-        return valid_data.get_subjects_values_by_cols(sids, columns_list, demean_flags=demean_flags, ndecim=ndecim), sids.labels, sids.sessions
-
-    def get_filtered_column(self, grlab_subjlabs_subjs: str | List[str] | List[Subject], column,
-                            sess_ids: List[int] = None, select_conds: List[FilterValues] = None,
-                            data: str | SubjectsData = None, sort: bool = False,
+    def get_filtered_column(self, subjects: SubjectsList, column,
+                            select_conds: List[FilterValues] | None = None,
+                            data: str | SubjectsData | None = None, sort: bool = False,
                             demean_flag: bool = False, ndecim: int = 4) -> Tuple[list, List[str], List[int]]:
+        """
+        Get single column values for subjects (MRI override with SID filtering).
+        
+        Args:
+            subjects: SubjectsList of subjects to query.
+            column: Column name to retrieve.
+            select_conds: optional filter conditions.
+            data: optional SubjectsData override.
+            sort: whether to sort results.
+            demean_flag: whether to demean the column.
+            ndecim: decimal places for demeaning.
+        
+        Returns:
+            Tuple: (values list, labels list, sessions list)
+        """
         valid_data = self.validate_data(data)
-
-        if not is_list_of(grlab_subjlabs_subjs, Subject):
-            subjects = self.get_subjects(grlab_subjlabs_subjs, sess_ids)
-        else:
-            subjects = self.validate_subjects(grlab_subjlabs_subjs)
-
         sids: SIDList = valid_data.filter_sids(select_conds, sids=self.subjects2sids(subjects))
-
-        return valid_data.get_subjects_column(sids, column, sort=sort, demean=demean_flag, ndecim=ndecim), sids.labels, sids.sessions
+        return (valid_data.get_subjects_column(sids, column, sort=sort, demean=demean_flag, ndecim=ndecim), 
+                sids.labels, 
+                sids.sessions)
 
     # endregion
 
@@ -507,12 +548,31 @@ class MRIProject(Project):
 
         return out_batch_job, out_batch_start
 
-    # endregion
+    #endregion
 
     # ==================================================================================================================
     # region MULTICORE PROCESSING
-
+    # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subjects) > 1 ...pass that same kwparams[0] to all subjects
+    # if subjects is not given...use the loaded subjects
     def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, subjects: List[Subject] = None, must_exist: bool = True):
+        """
+        Runs a method on a list of subjects.
+
+        Args:
+            method_type (str): The type of method to run. Can be an empty string, "mpr", "epi", "dti", or "transform".
+            method_name (str): The name of the method to run.
+            kwparams (List): A list of keyword arguments to pass to the method. If there is only one argument, it can be passed as a single element list.
+            ncore (int, optional): The number of cores to use for parallel processing. Defaults to 1.
+            subjects (List[Subject], optional): list of Subject instances to run the method on. If None, all subjects are used. Defaults to None.
+            sess_id (int, optional): The session ID. Defaults to 1.
+            must_exist (bool, optional): If True, raise an exception if a subject does not exist. Defaults to True.
+
+        Returns:
+            None.
+
+        Raises:
+            Exception: If the method type is not one of the allowed values, or if the number of keyword arguments does not match the number of subjects.
+        """
         subjects = self.validate_subjects(subjects)
 
         if method_type not in ("", "mpr", "epi", "dti", "transform"):
@@ -524,31 +584,34 @@ class MRIProject(Project):
             print("ERROR in run_subjects_methods: subject list is empty")
             return
 
+        # check number of NECESSARY (without a default value) method params
         subj = subjects[0]
         if method_type == "":
             method = eval("subj." + method_name)
         else:
             method = eval("subj." + method_type + "." + method_name)
         sig     = signature(method)
-        nparams = len(sig.parameters)
+        nparams = len(sig.parameters)  # parameters that need a value
         for p in sig.parameters:
             if sig.parameters[p].default is not None:
-                nparams = nparams - 1
+                nparams = nparams - 1  # this param has a default value
 
+        # if no params are given, create a nsubj list of None
         if len(kwparams) == 0:
             kwparams = [None] * nsubj
 
         nprocesses = len(kwparams)
 
         if nsubj > 1 and nprocesses == 1:
-            kwparams   = [kwparams[0]] * nsubj
+            kwparams   = [kwparams[0]] * nsubj # duplicate the first kwparams up to given subj number
             nprocesses = nsubj
         else:
             if nprocesses != nsubj:
                 print("ERROR in run_subject_method: given params list length differs from subjects list")
                 return
+        # here nparams is surely == nsubj
 
-        numblocks = math.ceil(nprocesses / ncore)
+        numblocks = math.ceil(nprocesses / ncore)  # num of processing blocks (threads)
 
         subjs: List[List[Subject]] = []
         processes = []
@@ -560,6 +623,7 @@ class MRIProject(Project):
         proc4block = 0
         curr_block = 0
 
+        # divide nprocesses across numblocks
         for proc in range(nprocesses):
             processes[curr_block].append(kwparams[proc])
             subjs[curr_block].append(subjects[proc])
@@ -592,4 +656,6 @@ class MRIProject(Project):
 
             print("completed block " + str(bl) + " with processes: " + str(subj_labels))
 
-    # endregion
+    #endregion
+
+    # ==================================================================================================================

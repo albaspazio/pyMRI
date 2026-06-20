@@ -4,7 +4,7 @@ import os
 from distutils.file_util import copy_file
 from typing import List
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from data.SubjectsData import SubjectsData
 from project.MRIProject import MRIProject
 from models.FSLConFile import FSLConFile

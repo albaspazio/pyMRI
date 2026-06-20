@@ -1,5 +1,5 @@
 import os
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from project.MRIProject import MRIProject
 from myutility.images.Image import Image
 
@@ -10,7 +10,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         # HEADER

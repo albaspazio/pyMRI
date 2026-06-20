@@ -1,7 +1,7 @@
 import os
 from typing import Optional
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 # from subject.Subject import Subject
 from myutility.images.Image import Image
 from myutility.myfsl.utils.run import rrun

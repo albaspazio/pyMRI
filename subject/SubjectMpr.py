@@ -2,7 +2,7 @@ import datetime
 import os
 import traceback
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from myutility.images.Image import Image
 from myutility.images.Images import Images
 from myutility.images.utilities import mass_images_move

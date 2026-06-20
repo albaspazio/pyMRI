@@ -5,7 +5,7 @@ from typing import List
 
 from numpy import arange, concatenate, array
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from data.utilities import list2spm_text_column
 from group.SPMContrasts import SPMContrasts
 from group.SPMResults import SPMResults

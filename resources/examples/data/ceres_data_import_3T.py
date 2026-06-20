@@ -1,8 +1,7 @@
 import traceback
-import os
 
 from project.DataProject import DataProject
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from data.importer.VolBrainImporter import VolBrainImporter
 from data.utilities import *
 from myutility.exceptions import SubjectListException
@@ -14,7 +13,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         # HEADER

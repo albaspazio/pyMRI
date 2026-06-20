@@ -2,7 +2,7 @@ import json
 import os
 import traceback
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from project.MRIProject import MRIProject
 from data.SubjectsData import SubjectsData
 from data.utilities import process_results
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "601"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         # HEADER

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import List
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from subject.Subject import Subject
 from data.SubjectsData import SubjectsData
 from project.MRIProject import MRIProject

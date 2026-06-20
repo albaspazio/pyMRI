@@ -735,7 +735,7 @@ class Image(str):
         else:
             udest = Image(dest).upath
 
-        if udest.exist and replace is False:
+        if udest.uexist and replace is False:
             return udest
 
         gunzip(self.cpath, udest, replace)

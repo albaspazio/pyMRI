@@ -1,6 +1,6 @@
 import os
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from project.MRIProject import MRIProject
 
 from group.PostModel import PostModel

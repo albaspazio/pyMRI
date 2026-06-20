@@ -1,7 +1,7 @@
 import os
 from typing import List
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from group.SPMConstants import SPMConstants
 from group.spm_utilities import ResultsParams, CatConvResultsParams, Regressor, Contrast
 from myutility.fileutilities import remove_ext

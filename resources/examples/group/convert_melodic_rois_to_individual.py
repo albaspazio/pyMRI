@@ -1,6 +1,6 @@
 import os
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from project.MRIProject import MRIProject
 from group.GroupAnalysis import GroupAnalysis
 from group.group_analysis import convert_melodic_rois_to_individual
@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         # HEADER

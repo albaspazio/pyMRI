@@ -1,7 +1,7 @@
 import csv
 import os
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from group.spm_utilities import CatConvResultsParams, Peak, Cluster, ResultsParams
 from myutility.mymatlab import call_matlab_spmbatch
 from myutility.utilities import fillnumber2fourdigits

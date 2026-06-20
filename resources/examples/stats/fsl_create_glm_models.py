@@ -1,7 +1,7 @@
 import os
 import traceback
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from project.MRIProject import MRIProject
 from models.FSLModels import FSLModels
 from group.spm_utilities import Covariate, Nuisance
@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         # HEADER

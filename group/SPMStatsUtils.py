@@ -1,6 +1,6 @@
 from typing import List
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from data.SubjectsData import SubjectsData
 from data.utilities import list2spm_text_column
 from group.spm_utilities import SubjCondition, GrpInImages

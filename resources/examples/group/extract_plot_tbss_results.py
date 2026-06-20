@@ -1,6 +1,6 @@
 import os
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from project.MRIProject import MRIProject
 from group.GroupAnalysis import GroupAnalysis
 from data.SubjectsData import SubjectsData
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         proj_dir    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "past_controls")  # NOTE: relative path to project directory

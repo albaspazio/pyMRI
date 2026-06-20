@@ -416,7 +416,7 @@ class SubjectsData:
 
     # ======================================================================================
     #region (SIDS|conditions) -> SIDS
-    def filter_sids(self, conditions: List[FilterValues], sids: SIDList = None) -> SIDList:
+    def filter_sids(self, conditions: List[FilterValues] | None, sids: SIDList = None) -> SIDList:
         """
         Filter SIDList based on conditions on other columns.
 

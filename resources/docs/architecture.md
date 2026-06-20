@@ -4,7 +4,7 @@
 
 pymri is a Python framework for MRI data analysis. It does not perform computations directly: it orchestrates external tools (FSL via shell commands, SPM via MATLAB batch files) and manages the surrounding infrastructure — file system layout, subject data, preprocessing pipelines, and group-level statistics.
 
-Consumer projects live outside this folder (in a separate `pymri_projects/` tree). They import pymri classes, instantiate an `MRIProject` + `Global`, load subjects, and call methods.
+Consumer projects live outside this folder (in a separate `pymri_projects/` tree). They import pymri classes, instantiate an `MRIProject` + `MRIGlobal`, load subjects, and call methods.
 
 ---
 
@@ -12,11 +12,12 @@ Consumer projects live outside this folder (in a separate `pymri_projects/` tree
 
 ```
 pymri/
-├── Global.py           # Environment configuration (FSL, SPM, paths)
 ├── project/
 │   ├── Project.py      # Base project class: data loading, subject lists, query helpers
 │   ├── MRIProject.py   # MRI project: extends Project, adds subjects, file system, orchestration
-│   └── DataProject.py  # Data-only project: extends Project, no MRI tools required
+│   ├── DataProject.py  # Data-only project: extends Project, no MRI tools required
+│   ├── MRIGlobal.py    # Environment configuration (FSL, SPM, paths)
+│   └── Global.py       # Environment configuration (generic)
 ├── subject/            # Per-subject MRI processing
 ├── group/              # Group-level analyses (SPM, FSL)
 ├── models/             # FSL/SPM model builders
@@ -28,45 +29,91 @@ pymri/
 
 ---
 
-## Core Entry Points
+## Configuration Layer (`Global` Hierarchy)
 
-### `Global`
-Reads `local.settings` and resolves all tool paths: FSL directory, SPM directory, CAT toolbox, ICA-AROMA script, standard MNI templates (2mm and 4mm), DTI xtract labels, etc. Every other class receives a `Global` instance at construction.
+### `Global` (Base Class)
+Environment configuration for framework. Implements safe property access without requiring MRI tools or `local.settings`. Provides:
+- `framework_dir` — path to pymri codebase
+- `project_scripts_dir` — path to consumer script projects
+- `ignore_warnings` — bool flag for warning suppression
+- `_safe_get_setting(data_dict, key, default=None)` — helper for safe config reading
 
-### `Project` (base class)
-Manages a `SubjectsData` dataframe and named subject lists. Does not require FSL or SPM. Provides:
+### `MRIGlobal(Global)` (Extends Global)
+MRI-specific configuration. Reads `local.settings` safely and resolves all tool paths:
+- FSL directory, FSL derivatives (BET, FLIRT, FNIRT, topup, etc.)
+- SPM directory and version
+- CAT (Computational Anatomy Toolbox) version and options
+- ICA-AROMA script path
+- Standard MNI templates (2mm, 4mm)
+- DTI xtract labels and coordinates
+- Matlab engine configuration
+
+Implements `check_paths(full_check=True)` to validate MRI tool directories exist (skipped if `full_check=False`). Every MRI-based class receives an `MRIGlobal` instance at construction.
+
+---
+
+## Project Layer (`Project` Hierarchy)
+
+### `Project` (Base Class)
+Generic project management. Handles `SubjectsData` dataframe and named subject lists (no MRI tools required). Provides:
 - `dir` — project root folder
+- `subjects_dir` — `project_dir/subjects`
 - `subjects_lists` — named lists from `subjects_lists.json`
 - `data` — a `SubjectsData` instance
-- `load_data()`, `validate_data()`
-- `get_subjects_labels()` — resolves group label → list of subject labels
-- `get_subjects_values_by_cols()`, `get_filtered_column()`, `get_subjects_datarows()`
+- `load_data()`, `validate_data()` — data file discovery with search path support (internal helper: `_resolve_data_path()`)
+- `_get_subjects_labels(group_label)` — private helper, resolves group label → list of subject labels
+- `get_subjects(group_or_subjlabels, sess_ids, must_exist)` → `SubjectsList` — **universal entry point**: converts str/List[str] → SubjectsList with Subject instances
+- `get_subjects_values_by_cols(subjects, columns, ...)`, `get_filtered_column(subjects, column, ...)`, `get_subjects_datarows(subjects, ...)` — subject queries accepting only `SubjectsList`
 
 `subjects_lists_file` defaults to `proj_dir/subjects_lists.json`. Subclasses may override it before calling `super().__init__()`.
 
-### `MRIProject(Project)`
-The main object for an MRI study. Extends `Project` with the full MRI infrastructure:
-- `globaldata` — reference to `Global`
-- `subjects_dir`, `group_analysis_dir`, `script_dir`, `vbm_dir`, `tbss_dir`, etc. — MRI filesystem layout
-- `subjects` — loaded list of `Subject` instances
-- `subjects_lists_file` — lives in `script_dir` (outside the project folder, in `project_scripts_dir/name/`)
-- `load_data()` searches for the data file in `script_dir`
-
-Key methods: `load_subjects()`, `get_subjects()`, `get_subject_session()`, `subjects2sids()`, `sids2subjects()`, `adapt_batch_files()`, `run_subjects_methods()`.
-
-### `DataProject(Project)`
-A lightweight variant for data-only analysis (no MRI tools). Extends `Project` with:
+### `DataProject(Project)` (Extends Project)
+Lightweight variant for data-only analysis (no MRI tools). Adds:
 - `input_data_dir` — `proj_dir/input_data/`
 - `output_data_dir` — `proj_dir/output_data/`
 - `subjects_lists_file` and data file both live in `proj_dir`
 
-Used by analysis scripts that only need demographic/clinical data (e.g. R-compatible exports, statistical covariates).
+Used by analysis scripts needing only demographic/clinical data (e.g. R-compatible exports, statistical covariates).
+
+### `MRIProject(Project)` (Extends Project)
+The main object for an MRI study. Overrides Project to add MRI infrastructure:
+- `globaldata` — reference to `MRIGlobal` (required, not optional)
+- `subjects_dir`, `group_analysis_dir`, `script_dir`, `vbm_dir`, `tbss_dir`, etc. — MRI filesystem layout
+- `subjects` — loaded list of `SubjectMRI` instances
+- `subjects_lists_file` — lives in `script_dir` (outside the project folder, in `project_scripts_dir/name/`)
+- `load_data()` searches for data file in `script_dir`
+- `get_subjects(group_or_subjlabels, sess_ids, must_exist)` → `SubjectsList` — **override**: calls parent, then casts each Subject → SubjectMRI
+- All query methods accept only `SubjectsList` (inherited from parent with MRI-specific filtering via `subjects2sids()`)
+
+Key methods: `load_subjects()`, `get_subjects()` (override), `get_subject_session()`, `subjects2sids()`, `sids2subjects()`, `adapt_batch_files()`, `run_subjects_methods()`.
 
 ---
 
 ## Subject Layer (`subject/`)
 
-Each `Subject` owns four sub-objects that group related processing:
+### `Subject` (Base Class)
+Generic subject representation. Atomic unit of research (label + session), independent of MRI. Provides:
+- `label` — subject identifier
+- `sessid` — session number (default: 1)
+- `project` — reference to parent Project
+- `@property dir` — returns `project.subjects_dir / label / sessid`
+- `@property exist` — bool checking if directory exists on filesystem
+- `is_equal(other: Subject) → bool` — compares label and sessid only
+- `is_in(subjects: List[Subject]) → bool` — checks membership
+- `get_properties(sessid: int) → Subject` — creates copy with different session
+
+No MRI dependencies. Works for any research domain.
+
+### `SubjectMRI(Subject)` (Extends Subject)
+MRI-specific subject implementation. Inherits all Subject functionality, adds:
+- `global_config` — reference to `MRIGlobal` for tool access
+- `@property dir` — overridden to use MRI session format ("s1", "s2", etc.)
+- MRI directory properties: `t1_dir`, `dti_dir`, `rs_dir`, `fmri_dir`, `t2_dir`, `roi_dir`, etc.
+- Image path properties: `t1_data`, `dti_data`, `rs_data`, `rs_pa_data`, `fmri_data`, `t2_data`, etc.
+- Sequence checking: `hasT1`, `hasRS`, `hasDTI`, `hasT2`, `hasFMRI()`, `hasSeq(type, images_labels)` → bool
+
+#### Sub-objects (MRI processing modules)
+Each `SubjectMRI` owns four sub-objects that group related processing:
 
 | Sub-object | Class | Responsibility |
 |---|---|---|
@@ -75,7 +122,12 @@ Each `Subject` owns four sub-objects that group related processing:
 | `subject.dti` | `SubjectDti` | DTI pipeline: eddy correction, dtifit, bedpostX, probtrackX, xtract |
 | `subject.transform` | `SubjectTransforms` | All cross-space registrations (linear + nonlinear): T1↔std, T1↔rs, T1↔DTI, etc. |
 
-`Subject.set_properties()` resolves every file path for a given session at construction. Calling `set_properties(sess, rollback=True)` returns a deep-copy of the subject with paths rewritten for a different session, leaving `self` unchanged.
+#### Processing methods
+- `wellcome()` — main preprocessing orchestration (calls mpr, epi, dti methods in sequence)
+- `check_images()` — validates required images exist
+- `create_file_system()` — initializes MRI directory structure
+- `rename()` — renames subject label (updates filesystem)
+- `set_properties(sess, rollback=True)` — returns deep-copy with paths rewritten for different session (leaves `self` unchanged if `rollback=True`)
 
 ### Filesystem convention
 ```
@@ -111,7 +163,8 @@ subjects/
 | `SPMStatsUtils` | Helpers: compose image list strings per design type, handle explicit masks, global calculation |
 | `SPMConstants` | Integer constants for stat types (MULTREGR, OSTT, TSTT, OWA, TWA) and analysis types (VBM_DARTEL, CAT, FMRI) |
 
-The pattern throughout is: copy an `.m` template from `resources/templates/spm/`, apply `sed_inplace()` to replace `<PLACEHOLDER>` tags with real paths/values, then call `call_matlab_spmbatch()`.
+For SPM analyses the pattern is: copy an `.m` template from `resources/templates/spm/`, apply `sed_inplace()` to replace `<PLACEHOLDER>` tags with real paths/values, then call `call_matlab_spmbatch()`.
+For FSL analyses the pattern is: create a command string with the fsl executable name and all the required parameters, and run it in console.
 
 ---
 
@@ -242,7 +295,7 @@ LimeAutoImporter, VolBrainImporter
 ## Data Flow — Typical MRI Project
 
 ```
-Global("6.0.4")
+MRIGlobal("6.0.4")
   └─ reads local.settings → resolves FSL, SPM, template paths
 
 MRIProject("/data/MRI/projects/MyStudy", globaldata)
@@ -250,7 +303,7 @@ MRIProject("/data/MRI/projects/MyStudy", globaldata)
   └─ loads data.xlsx → SubjectsData
 
 project.load_subjects("controls", sess_ids=[1])
-  └─ creates List[Subject], each with .mpr/.epi/.dti/.transform
+  └─ creates SubjectsList, each with .mpr/.epi/.dti/.transform
 
 # Preprocessing
 for subj in project.subjects:

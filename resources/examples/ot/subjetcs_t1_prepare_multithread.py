@@ -1,6 +1,6 @@
 import os
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from project.MRIProject import MRIProject
 
 # NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "601"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
     except Exception as e:
         print(e)

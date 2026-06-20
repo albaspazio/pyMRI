@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import os
+import traceback
 from typing import List
 
-from Global import Global
+from project.MRIGlobal import MRIGlobal
 from data.SubjectsData import SubjectsData
 from group.spm_utilities import Regressor, Covariate, Nuisance
 from myutility.exceptions import SubjectListException
@@ -13,6 +14,7 @@ from myutility.list import is_list_of
 from myutility.fileutilities import write_text_file
 from project.MRIProject import MRIProject
 from subject.Subject import Subject
+from subject.SubjectsList import SubjectsList
 
 
 class ConnModels:
@@ -153,7 +155,7 @@ class ConnModels:
 
         write_text_file(output_covsfile, self.string)
 
-    def create_regressors_file_ofsubset(self, odp:str, regressors:List[Regressor], whole_group_instances:List[Subject], groups_instances:List[List[Subject]], group_labels:List[str]=None,
+    def create_regressors_file_ofsubset(self, odp:str, regressors:List[Regressor], whole_group_instances:SubjectsList, groups_instances:List[SubjectsList], group_labels:List[str]=None,
                                         ofn:str="conn_covs", data_file=None, ofn_postfix:str="", subj_must_exist:bool=False, debug:bool=False):
         """
         This function creates a regressors file for the CONN tool, for a subset of the subjects in the current project.
@@ -223,6 +225,7 @@ class ConnModels:
         output_covsfile = os.path.join(odp, ofn + ofn_postfix)
         os.makedirs(odp, exist_ok=True)
 
+        self.string = ""
         # ------------------------------------------------------------------------------------
         # add file header with regressors labels
         for gr in group_labels:
@@ -232,7 +235,7 @@ class ConnModels:
         for covs in covs_label:
             str_covs = ""
             for i in range(ngroups):
-                str_covs = str_covs + covs + "_" + str(i+1) + " "
+                str_covs = str_covs + covs + "_" + str(group_labels[i]) + " "
             self.string = self.string + str_covs
 
         self.string = self.string[:-1]
@@ -254,36 +257,45 @@ class ConnModels:
 
         # subjs_data = data.filter_subjects(whole_subjest_labels)
 
-        # ------------------------------------------------------------------------------------
-        # write file: cycle through the subjects of the entire dataset
-        for subj in whole_group_instances:
+        covs_values = self.project.get_subjects_values_by_cols(whole_group_instances, covs_label)[0] #, demean_flags=covs_demean, ndecim=ndecim)[0]
+        nuis_values = self.project.get_subjects_values_by_cols(whole_group_instances, nuis_label)[0] #, demean_flags=nuis_demean, ndecim=ndecim)[0]
 
-            slab = subj.label
-            # determine to which group belong
-            group_id = -1       # does not belong
-            for gr_id, gr in enumerate(groups_instances):
-                if slab in gr:
-                    group_id = gr_id
+        try:
+            # ------------------------------------------------------------------------------------
+            # write file: cycle through the subjects of the entire dataset
+            for _idsubj, subj in enumerate(whole_group_instances):
 
-            if group_id == -1:
-                self.__addline2string(empty_row)
-            else:
-                string = groups_strings[group_id]
+                slab = subj.label
+                # determine to which group belong
+                group_id = -1       # does not belong
+                for gr_id, gr in enumerate(groups_instances):
+                    if slab in gr.labels:
+                        group_id = gr_id
 
-                for nuis in nuis_label:
-                    string = string + " " + str(data.get_subject_col_value(subj, nuis))
+                if group_id == -1:
+                    self.__addline2string(empty_row)
+                else:
+                    string = groups_strings[group_id]
 
-                for cov in covs_label:
-                    cov_value = str(data.get_subject_col_value(subj, cov))
-                    covsvalue = ["0" for _ in range(ngroups)]
-                    covsvalue[group_id] = cov_value
-                    value_string = " ".join(covsvalue)
-                    string = string + " " + value_string
+                    for _idnuis, nuis in enumerate(nuis_label):
+                        string = string + " " + str(nuis_values[_idnuis][_idsubj]) #data.get_subject_col_value(subj, nuis))
 
-                self.__addline2string(string)
+                    for _idcov, cov in enumerate(covs_label):
+                        cov_value = str(covs_values[_idcov][_idsubj]) #data.get_subject_col_value(subj, cov))
+                        covsvalue = ["0" for _ in range(ngroups)]
+                        covsvalue[group_id] = cov_value
+                        value_string = " ".join(covsvalue)
+                        string = string + " " + value_string
 
-        write_text_file(output_covsfile, self.string)
-        print("create model file " + output_covsfile)
+                    self.__addline2string(string)
+
+            write_text_file(output_covsfile, self.string)
+            print("create model file " + output_covsfile)
+
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
+            exit()
 
     def __addline2string(self, line:str=""):
         """
