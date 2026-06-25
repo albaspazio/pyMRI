@@ -82,7 +82,7 @@ class MRIGlobal(Global):
 
         # --------------------------------------------------------------------------------------------------------
         # READ local.settings and fill corresponding variables
-        local_settings = os.path.join(self.framework_dir, "../local.settings")
+        local_settings = os.path.join(self.framework_dir, "local.settings")
 
         # check its presence
         if not os.path.isfile(local_settings):
@@ -167,7 +167,7 @@ class MRIGlobal(Global):
         # FSL Standard Images (2mm resolution)
         # ========================================================
         self.fsl_bin                        = os.path.join(self.fsl_dir, "bin") if self.fsl_dir else ""
-        self.fsl_data_std_dir               = os.path.join(self.fsl_dir, "../data", "standard") if self.fsl_dir else ""
+        self.fsl_data_std_dir               = os.path.join(self.fsl_dir, "data", "standard") if self.fsl_dir else ""
         self.fsl_std_mni_2mm_head           = Image(os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm"), must_exist=True, msg="FSL's Standard Images not present")
         self.fsl_std_mni_2mm_brain          = Image(os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain"), must_exist=True, msg="FSL's Standard Images not present")
         self.fsl_std_mni_2mm_brain_mask     = Image(os.path.join(self.fsl_data_std_dir, "MNI152_T1_2mm_brain_mask"), must_exist=True, msg="FSL's Standard Images not present")

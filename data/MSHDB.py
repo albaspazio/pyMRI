@@ -462,7 +462,7 @@ class MSHDB:
 
         return hdr
 
-    def get_default_columns(self, subjs: SIDList) -> pandas.DataFrame:
+    def get_default_columns(self, subjs: SIDList = None) -> pandas.DataFrame:
         """
         Add default rows to the database.
 
@@ -477,6 +477,9 @@ class MSHDB:
             The dataframe with the default rows added.
 
         """
+        if subjs is None:
+            subjs = self.subjects
+            
         df = pandas.DataFrame()
         df[self.unique_columns[0]] = subjs.labels
 

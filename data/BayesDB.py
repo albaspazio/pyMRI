@@ -539,4 +539,4 @@ class BayesDB(MSHDB):
             diff_db.save(diff_out_db, sheets2save)
 
         except Exception as e:
-            raise Exception(f"Error in BayesDB.compare_db: sheet ${sh} | ${e}")
+            raise Exception(f"Error in BayesDB.compare_db: sheet {sh} | {e}") from e

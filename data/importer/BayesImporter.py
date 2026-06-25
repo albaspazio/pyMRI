@@ -429,8 +429,7 @@ class BayesImporter:
                     msg = "Error in __set_sheet limit exceeded in sheet: " + scale_name + ", df is [" + str(df.shape[0]) + "," + str(df.shape[1]) + "] and requested indices are: " + str(r) + "," + str(c)
                     raise Exception(msg)
         except Exception as e:
-            a = 1
-            raise Exception(e)
+            raise DataFileException(f"Error in __set_sheet at scale {scale_name}", str(e)) from e
 
         self.sheets[scale_name] = SubjectsData(pd.DataFrame.from_dict([sh]))
 

@@ -74,7 +74,7 @@ def convert_melodic_rois_to_individual(project:MRIProject, templ_name:str, popul
 # subjects: list of subjects instances
 # metric:   measures to analyze. values are: FA,MD,AD,RD
 
-def extract_meanvalue_from_tbssresults(project:MRIProject, rois:Images, subjects:SubjectsList, subjs_img_dir:str, metric:str="FA"):
+def extract_meanvalue_from_tbssresults(project: MRIProject, rois: Images, subjects: SubjectsList, subjs_img_dir: str, metric: str = "FA"):
 
     """
     This function takes
@@ -112,7 +112,7 @@ def extract_meanvalue_from_tbssresults(project:MRIProject, rois:Images, subjects
     results = []
     for roi in rois:
 
-        roi_mask_img = os.path.join(roi.imgdir, roi + "_mask")
+        roi_mask_img = Image(roi.split_ext()[0] + "_mask")
         roi_row = []
 
         for subj in subjects:

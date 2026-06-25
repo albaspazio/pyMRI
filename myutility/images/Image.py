@@ -378,7 +378,7 @@ class Image(str):
         if not dest.exist:
             return self.cp(dest, logFile)
         else:
-            return dest
+            return Image(dest)
 
     def mv(self, dest:'Image', error_src_not_exist: bool = False, logFile=None) -> 'Image':
         """
@@ -412,7 +412,7 @@ class Image(str):
             ext = ".gii"
 
         if ext == "":
-            return False
+            raise NotExistingImageException("Error in Image.mv, extension not recognized", self)
 
         dest = Image(dest)
         move(self.fpathnoext + ext, dest.fpathnoext + ext)
@@ -480,7 +480,7 @@ class Image(str):
             str_mean = " -M"
         return float(rrun(f"fslstats {self} {str_mean}").strip())
 
-    def mask_image(self, mask:'str | Image', out:'str | Image') -> 'Image':
+    def mask_image(self, mask: 'str | Image', out: 'str | Image') -> 'Image':
         """
         Mask an image with a mask.
 
@@ -488,10 +488,14 @@ class Image(str):
             mask (Image): The mask image.
             out (Image): The output image.
 
+        Returns:
+            Image: The output masked image.
         """
         mask = Image(mask, must_exist=True)
 
         rrun(f"fslmaths {self} -mas {mask} {out}")
+
+        return Image(out)
 
     def get_mask_mean(self, mask:str, includezeros:bool=False) -> float:
 
@@ -537,7 +541,7 @@ class Image(str):
 
         rrun(f"fslmaths {self} -thr {thr} {out_img}")
 
-        return out_img
+        return Image(out_img)
 
     def bin(self, out_img:'Image | None'=None) -> 'Image':
         if out_img is None:
@@ -546,7 +550,7 @@ class Image(str):
             out_img = Image(out_img)
         rrun(f"fslmaths {self} -bin {out_img}")
 
-        return out_img
+        return Image(out_img)
 
     def quick_smooth(self, out_img=None, logFile=None) -> 'Image':
         """
@@ -573,7 +577,7 @@ class Image(str):
         # possibly do a tiny extra smooth to $out here?
         vol16.rm()
 
-        return out_img
+        return Image(out_img)
 
     # TODO: patched to deal with X dots + .nii.gz...fix it definitively !!
     def is_image(self, img_formats=None) -> bool:
@@ -711,12 +715,12 @@ class Image(str):
 
         """
         if dest is None:
-            udest = self.cpath
+            cdest = self.cpath
         else:
-            udest = Image(dest).cpath
+            cdest = Image(dest).cpath
 
-        compress(self.upath, udest, replace)
-        return udest
+        compress(self.upath, cdest, replace)
+        return Image(cdest)
 
     # unzip file to a given path, preserving (by default) the original nii.gz
     def unzip(self, dest: 'Image|None' = None, replace: bool = False) -> 'Image':
@@ -736,14 +740,14 @@ class Image(str):
             udest = Image(dest).upath
 
         if udest.uexist and replace is False:
-            return udest
+            return Image(udest)
 
         gunzip(self.cpath, udest, replace)
 
-        return udest
+        return Image(udest)
 
     # check whether nii does not exist but nii.gz does => create the nii copy preserving (by default) the nii.gz one
-    def check_if_uncompress(self, replace=False):
+    def check_if_uncompress(self, replace=False) -> 'Image':
         """
         Check whether the uncompressed nii does not exist but the compressed nii.gz does, and if so, unzip the image to the original location, preserving (by default) the original nii.gz.
 
@@ -754,7 +758,9 @@ class Image(str):
             None
         """
         if not self.uexist and self.cexist:
-            self.unzip(dest=self, replace=replace)
+            return self.unzip(dest=self, replace=replace)
+        else:
+            return self.upath
 
     # preserve given volumes
     def filter_volumes(self, vols2keep:List[int], filtered_image:'Image') -> 'Image':
@@ -789,7 +795,7 @@ class Image(str):
         shutil.rmtree(outtempdir)
         os.chdir(currdir)
 
-        return filtered_image
+        return Image(filtered_image)
         # os.system("rm " + os.path.join(outdir, "temp_*"))
 
     def get_nth_volume(self, out_img:str|Image, out_mask_img=None, volnum=3, logFile=None) -> 'Image':

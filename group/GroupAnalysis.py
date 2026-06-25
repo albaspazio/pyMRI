@@ -170,7 +170,8 @@ class GroupAnalysis:
             print("ERROR in create_vbm_spm_stats. number of given subjects does not correspond to data number")
             return
 
-        b = numpy.hstack((input_data_file, icvs))
+        a = numpy.loadtxt(input_data_file)
+        b = numpy.hstack((a, icvs[:, numpy.newaxis]))
         numpy.savetxt(input_data_file, b, ['%1.0f', '%1.0f', '%5.0f', '%5.0f', '%5.0f', '%2.4f'], '\t')
 
     def xtract_export_group_data(self, subjects_list:SubjectsList, ofp:str, tracts:List[str]=None, values:List[str]=None, ifn:str="stats.csv"):

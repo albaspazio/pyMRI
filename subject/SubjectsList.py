@@ -1,8 +1,9 @@
 from typing import List
 
-from data import SubjectsData
+from data.SubjectsData import SubjectsData
 from data.SID import SID
 from data.SIDList import SIDList
+from data.utilities import FilterValues
 from myutility.exceptions import SubjectListException
 from subject.Subject import Subject
 
@@ -35,7 +36,7 @@ class SubjectsList(list):
 
     @property
     def sids(self) -> SIDList:
-        return SIDList([SID(s.label, s.session, s.id) for s in self])
+        return SIDList([s.sid for s in self])
 
     @property
     def labels(self) -> List[str]:
@@ -55,9 +56,9 @@ class SubjectsList(list):
         Returns:
             List[int]: A list of sessions.
         """
-        return [s.session for s in self]
+        return [s.sessid for s in self]
 
-    def filter(self, sd:'SubjectsData', select_conds:'list[FilterValues]'=None) -> 'SubjectsList':
+    def filter(self, sd: SubjectsData, select_conds: list[FilterValues] = None) -> 'SubjectsList':
         """
         Filters the list based on select conditions.
 
@@ -75,7 +76,7 @@ class SubjectsList(list):
             for s in self:
                 add = True
                 for selcond in select_conds:
-                    if not selcond.isValid(sd.get_subject_col_value(s.id, selcond.colname)):
+                    if not selcond.isValid(sd.get_subject_col_value(s.sid, selcond.colname)):
                         add = False
                 if add:
                     res.append(s)
@@ -98,7 +99,7 @@ class SubjectsList(list):
         for ss in self:
             doexist = False
             for sid in sids:
-                if sid.is_equal(ss):
+                if ss.is_equal(sid):
                     doexist = True
                     break
             if doexist:

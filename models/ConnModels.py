@@ -297,8 +297,7 @@ class ConnModels:
 
         except Exception as e:
             traceback.print_exc()
-            print(e)
-            exit()
+            raise SubjectListException(f"Error in ConnModels.create_regressors_file_ofsubset: {e}") from e
 
     def __addline2string(self, line:str=""):
         """

@@ -475,7 +475,7 @@ class SubjectsData:
     # ======================================================================================
     #region (SIDS|validcols) -> DataFrame
     # may further select only those rows that respect all the select_conds
-    def select_df(self, sids:SIDList=None, validcols:List[str]=None, df:pandas.DataFrame=None) -> pandas.DataFrame:
+    def select_df(self, sids: SIDList = None, validcols: List[str] = None, df: pandas.DataFrame = None) -> pandas.DataFrame:
         """
         Selects a subset of the data frame based on the given subjects and columns.
 
@@ -491,10 +491,10 @@ class SubjectsData:
         Returns
         -------
         pandas.DataFrame
-            The selected data frame.
+            The selected data frame (always a new copy, never mutates self).
         """
         if df is None:
-            df = self.df
+            df = self.df.copy()
 
         if sids is None and validcols is None:
             return df.copy()
