@@ -23,17 +23,15 @@ if __name__ == "__main__":
 
         # ======================================================================================================================
         proj_dir    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "past_controls")  # NOTE: relative path to project directory
-        project     = MRIProject(proj_dir, globaldata)
+        project     = MRIProject(str(proj_dir), globaldata, "data_sensoryprofile_bis_57.txt")
         num_cpu     = 1
         analysis    = GroupAnalysis(project)
 
         # ==================================================================================================================
         # GET SUBJECTS AND SP PARAM OF INTEREST
         group_label     = "test"  # 57
-        subjects        = project.load_subjects(group_label, must_exist=False)
+        subjects        = project.get_subjects(group_label, must_exist=False)
 
-        datafile        = os.path.join(project.script_dir, "data_sensoryprofile_bis_57.txt")  # is a tab limited data matrix with a header in the first row
-        data            = SubjectsData(datafile)
         # ==================================================================================================================
 
         population      = "controls57_FMRIB58"  # "controls57"
@@ -48,10 +46,11 @@ if __name__ == "__main__":
         tbssmaps            = ["tbss_FA_ctrl57_sp_sts_sp_lr_bis_t_x_age_gender_tfce_corrp_tstat1", "tbss_L23_ctrl57_sp_lr_sp_sts_sp_srs_sp_sa_bis_t_x_age_gender_tfce_corrp_tstat4"]
         tbssmaps            = ["tbss_FA_sp_lr_sp_sts_sp_srs_sp_sa_x_age_gender_tfce_corrp_tstat4", "tbss_L23_sp_lr_sp_sts_sp_srs_sp_sa_x_age_gender_tfce_corrp_tstat5"]
         tbssmaps            = ["tbss_FA_ctrl57_sp_sts_bis_t_x_age_gender_tfce_corrp_tstat1"]
-        # sp_sts              = data.get_filtered_column("sp_sts")                                # tuple[2] of  [values], subj_label
-        # age_spsts           = data.get_filtered_columns(["age", "sp_sts"])                      # tuple[2] of  [values], subj_label
-        # age_spsts_bist      = data.get_filtered_columns(["age", "sp_sts", "bis_t"])             # tuple[2] of  [values], subj_label
-        age_spsts_splr_bist = data.get_filtered_columns_by_subjects(data_labels)                              # tuple[2] of  [values], subj_label
+        # sp_sts              = MRIProject.get_subjects_values_by_col("sp_sts")                                # tuple[2] of  [values], subj_label
+        # age_spsts           = MRIProject.get_subjects_values_by_cols(["age", "sp_sts"])                      # tuple[2] of  [values], subj_label
+        # age_spsts_bist      = MRIProject.get_subjects_values_by_cols(["age", "sp_sts", "bis_t"])
+
+        age_spsts_splr_bist_df= project.get_subjects_dataframe(subjects, data_labels)
 
 
         # ==================================================================================================================
@@ -76,21 +75,23 @@ if __name__ == "__main__":
                 measure = "FA"
             elif "L1" in tbssmap:
                 measure = "L1"
-            elif "MD" in tbssmap:
+            else:
                 measure = "MD"
 
             resmaps_root_dir    = os.path.join(stats_folder, measure, analysis_name)
             res_img             = os.path.join(resmaps_root_dir, tbssmap)
             subjects_images     = os.path.join(tbss_folder, measure)
 
-            out_folder          = os.path.join(tbss_folder, "results", measure, tbssmap)
-            plot_folder         = os.path.join(out_folder, "plots")
+            out_xtracts_folder  = os.path.join(tbss_folder, "results", measure, tbssmap)
+            plot_folder         = os.path.join(out_xtracts_folder, "plots")
 
             # uses the union between template FA_skeleton and xtract's main tracts to clusterize a tbss output
-            analysis.tbss_cluster_results_by_xtract(res_img, out_folder, tracts_labels=globaldata.dti_xtract_labels, tracts_dir=globaldata.dti_xtract_dir)  #, log_file=measure+"_tbss_segm_on_xtract.txt")
+            # def tbss_cluster_results_by_xtract(self, tbss_result_image: str, out_folder: str,log_file: str = "overlap.txt", tracts_labels: List[str] = None, tracts_dir: str = None, thr: float = 0.95):
+            analysis.tbss_cluster_results_by_xtract(res_img, out_xtracts_folder, tracts_labels=globaldata.dti_xtract_labels, tracts_dir=globaldata.dti_xtract_dir)  #, log_file=measure+"_tbss_segm_on_xtract.txt")
 
             # extract values FROM CLUSTERIZED TBSS RESULTS (from a significant tbss image, get mean dti values calculated with given tracts)
-            res_file = analysis.tbss_summarize_clustered_folder(out_folder, age_spsts_splr_bist, ["age", "sp_sts", "sp_lr", "bis_t"], tbss_folder, subj_img_postfix="_FA_to_target_" + measure)    # for other modalities
+            # tbss_summarize_clustered_folder(subjs: SubjectsList, in_clust_res_dir, tbss_folder, modality: str = "FA", subj_img_postfix="_FA_FA_to_target",data: pandas.DataFrame = None, ofn="scatter_tracts_") -> tuple:
+            res_file = analysis.tbss_summarize_clustered_folder(subjects, out_xtracts_folder, tbss_folder, modality=measure, data=age_spsts_splr_bist_df, subj_img_postfix="_FA_to_target_" + measure)    # for other modalities
             # res_file = "/data/MRI/projects/past_controls/group_analysis/tbss/controls57_FMRIB58/results/scatter_tracts_tbss_FA_ctrl57_sp_sts_sp_lr_bis_t_x_age_gender_tfce_corrp_tstat1_age_sp_sts_sp_lr_bis_t.dat"
 
             data                = SubjectsData(res_file[0])

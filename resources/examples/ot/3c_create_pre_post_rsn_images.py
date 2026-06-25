@@ -67,8 +67,7 @@ if __name__ == "__main__":
         # ======================================================================================================================
         project = MRIProject(proj_dir, globaldata)
 
-        project.load_subjects(subjects_list_name)
-        subjects = project.subjects
+        subjects = project.get_subjects(subjects_list_name)
         NUM_SUBJ = len(subjects)
 
         # load rs template

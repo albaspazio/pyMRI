@@ -24,16 +24,16 @@ if __name__ == "__main__":
         # HEADER
         # ======================================================================================================================
         proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "test")  # NOTE: relative path to project directory
-        project = MRIProject(proj_dir, globaldata, "")     # automatically load PROJDIR/script/data.dat if present
-        datafile = os.path.join(project.script_dir, "data.xlsx")  # is a tab limited data matrix with a header in the first row
-        project.load_data(datafile)
+        project = MRIProject(str(proj_dir), globaldata,  "data.xlsx")     # automatically load PROJDIR/script/data.dat if present
+
         SESS_ID = 1
         num_cpu = 1
         group_label = "all"
+
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        subjects = project.load_subjects(group_label, [SESS_ID], must_exist=False)
+        subjects = project.get_subjects(group_label, sess_ids=[SESS_ID], must_exist=False)
 
         analysis            = GroupAnalysis(project)
         spm_analysis        = SPMModels(project)

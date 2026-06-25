@@ -1,11 +1,9 @@
 from typing import List
-import copy
-
-import numpy as np
 
 from data import SubjectsData
 from data.SID import SID
-from myutility.exceptions import DataFileException, SubjectListException
+from data.SIDList import SIDList
+from myutility.exceptions import SubjectListException
 from subject.Subject import Subject
 
 
@@ -24,16 +22,20 @@ class SubjectsList(list):
         contains: Checks if a SID object is present in the current list.
     """
 
-    def __init__(self, subjects: List[Subject]=None):
+    def __init__(self, subjects: 'SubjectsList' = None):
         """
         Initializes the SubjectsList.
 
         Args:
-            subjects (List[Subject]): A list of Subject instances.
+            subjects (SubjectsList): A list of Subject instances.
         """
         if subjects is None:
             subjects = []
         super().__init__(item for item in subjects)
+
+    @property
+    def sids(self) -> SIDList:
+        return SIDList([SID(s.label, s.session, s.id) for s in self])
 
     @property
     def labels(self) -> List[str]:
@@ -155,7 +157,6 @@ class SubjectsList(list):
                 return False
 
         return True
-
 
     def contains(self, subj: Subject) -> bool:
         """

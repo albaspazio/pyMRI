@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import json
 import os
+import pandas
+from copy import deepcopy
 from typing import List, Tuple, Any
 
+from data.SIDList import SIDList
 from data.SubjectsData import SubjectsData
 from data.SID import SID
 from data.utilities import FilterValues
-from myutility.exceptions import SubjectListException, DataFileException
+from myutility.exceptions import SubjectListException, DataFileException, SubjectExistException
 from myutility.list import is_list_of
 from subject.Subject import Subject
 from subject.SubjectsList import SubjectsList
@@ -44,6 +47,13 @@ class Project:
         self.data_file  = ""
         self.data       = SubjectsData()
         self.load_data(data)
+
+        # populate subjects from excel data
+        self._subjects = SubjectsList()
+        self._build_subjects()
+        
+        # validate subjects_lists.json against excel
+        self._validate_subjects_json()
 
     # ==================================================================================================================
     # region DATA
@@ -117,6 +127,85 @@ class Project:
     # ==================================================================================================================
     # region SUBJECTS MANAGEMENT
 
+    def _create_subject(self, sid:SID) -> Subject:
+        """
+        Factory method: create a Subject instance with sid immediately assigned.
+        
+        Creates a Subject and immediately assigns its sid from self.data.
+        Subclasses override this to create domain-specific types (e.g., SubjectMRI).
+        
+        Parameters
+        ----------
+        sid : SID
+            Subject SID got from SubjectsData
+
+        Returns
+        -------
+        Subject
+            A new Subject instance with sid assigned.
+        
+        Raises
+        ------
+        DataFileException
+            If (label, sess_id) not found in self.data.
+        """
+        subj = Subject(sid.label, self, sid.session)
+        subj.sid = sid  # Raises DataFileException if not found
+        return subj
+
+    def _build_subjects(self) -> None:
+        """
+        Build and populate self._subjects from self.data.
+        
+        Iterates through self.data.subjects (SIDList) and creates a Subject for each,
+        with sid already assigned via _create_subject(). Called only from __init__.
+        """
+        self._subjects = SubjectsList()
+        for sid in self.data.subjects:
+            subj = self._create_subject(sid)
+            self._subjects.append(subj)
+
+    @property
+    def subjects(self) -> SubjectsList:
+        """
+        Read-only property: the SubjectsList of all subjects in this project.
+        
+        Populated at __init__ from self.data (excel). Each Subject has its sid
+        already assigned to its project.data.
+        
+        Returns
+        -------
+        SubjectsList
+            The list of all subjects in the project.
+        """
+        return self._subjects
+
+    def _validate_subjects_json(self) -> None:
+        """
+        Validate subjects_lists.json against excel data.
+        
+        Emits UserWarning for labels in subjects_lists.json not present in excel.
+        Non-blocking: init completes even if warnings are emitted.
+        """
+        import warnings
+        
+        if not hasattr(self, 'subjects_lists_file') or not self.subjects_lists:
+            return
+        
+        all_excel_labels = set(self.data.subjects_labels) if self.data.num > 0 else set()
+        missing = set()
+        
+        for grp in self.subjects_lists:
+            for label in grp.get("list", []):
+                if label not in all_excel_labels:
+                    missing.add(label)
+        
+        if missing:
+            warnings.warn(
+                f"subjects_lists.json contiene {len(missing)} label non presenti nell'excel: {sorted(missing)}",
+                UserWarning, stacklevel=2
+            )
+
     def get_subjects(self, group_or_subjlabels: str | List[str], 
                      sess_ids: List[int] | None = None, 
                      must_exist: bool = False) -> SubjectsList:
@@ -166,8 +255,7 @@ class Project:
         elif is_list_of(group_or_subjlabels, str):
             subj_labels = group_or_subjlabels
         else:
-            raise SubjectListException("get_subjects", 
-                f"group_or_subjlabels must be str or List[str], got {type(group_or_subjlabels)}")
+            raise SubjectListException("get_subjects",f"group_or_subjlabels must be str or List[str], got {type(group_or_subjlabels)}")
         
         # Build SubjectsList from labels and sessions
         subjects = SubjectsList()
@@ -178,16 +266,43 @@ class Project:
             else:
                 sessions = sess_ids
             
-            # Create Subject for each label/session combination
+            # Create Subject for each label/session combination (uses factory method)
             for sess_id in sessions:
-                subj = Subject(label, self, sess_id)
-                if subj.exist or not must_exist:
+                try:
+                    sid = self.data.get_sid(label, sess_id)
+                    subj = self._create_subject(sid)
                     subjects.append(subj)
-                elif must_exist:
-                    raise SubjectListException("get_subjects", 
-                        f"Subject '{label}' with session {sess_id} does not exist")
-        
+                except DataFileException:
+                    if must_exist:
+                        raise SubjectListException("get_subjects", f"Subject '{label}' with session {sess_id} does not exist")
         return subjects
+
+    def get_subject(self, subjlabel: str, sess_id: int = 1, must_exist: bool = False) -> Subject:
+        return self.get_subjects([subjlabel], [sess_id], must_exist)[0]
+
+    def get_subject_session(self, subj_label: str, sess: int = 1, must_exist: bool = True) -> Subject:
+        """
+        Get an independent SubjectMRI instance for the given label/session.
+
+        Returns Subject type (which is SubjectMRI at runtime).
+        """
+        if must_exist:
+            for subj in self.subjects:
+                if subj.label == subj_label:
+                    if subj.sessid == sess:
+                        return deepcopy(subj)
+                    else:
+                        return subj.get_properties(sess)
+            raise SubjectExistException(
+                "Error in MRIProject.get_subject: given subject (" + subj_label + " does not exist")
+        else:
+            sid = self.data.get_sid(subj_label, sess)
+            return self._create_subject(sid)
+
+
+    @property
+    def nsubj(self) -> int:
+        return len(self.subjects)
 
     # endregion
 
@@ -196,10 +311,8 @@ class Project:
 
     @property
     def subjects_labels(self) -> List[str]:
-        if self.data is not None:
-            return self.data.subjects_labels
-        else:
-            return []
+        return self.subjects.labels
+
 
     def _get_subjects_labels(self, group_label: str | None = None) -> List[str]:
         """
@@ -255,13 +368,13 @@ class Project:
             List[dict]: The subject data rows.
         """
         valid_data = self.validate_data(data)
-        sids = valid_data.filter_subjects(subjects.labels, subjects.sessions)
-        return self.data.get_sids_dict(sids)
+        sids = valid_data.filter_sids(None, sids=self.subjects2sids(subjects))
+        return valid_data.get_sids_dict(sids)
 
     def get_subjects_values_by_cols(self, subjects: SubjectsList, columns_list: List[str],
                                     data: SubjectsData = None,
                                     select_conds: List[FilterValues] = None,
-                                    demean_flags: List[bool] = None) -> Tuple[List[List[Any]], List[str], List[int]]:
+                                    demean_flags: List[bool] = None, ndecim: int = 4) -> Tuple[List[List[Any]], List[str], List[int]]:
         """
         Get values for given columns and subjects.
 
@@ -271,21 +384,38 @@ class Project:
             data: optional SubjectsData override.
             select_conds: optional filter conditions.
             demean_flags: optional demean flags per column.
+            ndecim: decimal places for demeaning.
 
         Returns:
             Tuple: (values matrix, labels list, sessions list)
         """
         valid_data = self.validate_data(data)
-        sids = valid_data.filter_subjects(subjects.labels, subjects.sessions, conditions=select_conds)
+        sids = valid_data.filter_sids(select_conds, sids=self.subjects2sids(subjects))
 
-        return (valid_data.get_subjects_values_by_cols(sids, columns_list, demean_flags=demean_flags),
+        return (valid_data.get_subjects_values_by_cols(sids, columns_list, demean_flags=demean_flags, ndecim=ndecim),
                 sids.labels,
                 sids.sessions)
+    def get_subjects_dataframe(self, subjects: SubjectsList, columns: List[str],
+                                   data: SubjectsData = None) -> pandas.DataFrame:
+            """
+            Extract a DataFrame from SubjectsList with specified columns.
 
-    def get_filtered_column(self, subjects: SubjectsList, column: str,
-                            data: str | SubjectsData = None,
-                            select_conds: List[FilterValues] = None,
-                            sort: bool = False, demean_flag: bool = False, ndecim: int = 4) -> Tuple[List[Any], List[str], List[int]]:
+            Args:
+                subjects: SubjectsList of subjects to include.
+                columns: Column names to include in the result.
+                data: optional SubjectsData override. If None, uses self.data.
+
+            Returns:
+                pandas.DataFrame: Filtered DataFrame with subjects' rows and specified columns.
+            """
+            valid_data = self.validate_data(data)
+            sids = self.subjects2sids(subjects)
+            return valid_data.select_df(sids, columns)
+
+    def get_subjects_values_by_col(self, subjects: SubjectsList, column: str,
+                                   data: str | SubjectsData = None,
+                                   select_conds: List[FilterValues] = None,
+                                   sort: bool = False, demean_flag: bool = False, ndecim: int = 4) -> Tuple[List[Any], List[str], List[int]]:
         """
         Returns values and labels for a single column, filtered by given conditions.
 
@@ -302,10 +432,100 @@ class Project:
             Tuple: (values list, labels list, sessions list)
         """
         valid_data = self.validate_data(data)
-        sids = valid_data.filter_subjects(subjects.labels, subjects.sessions, conditions=select_conds)
+        sids = valid_data.filter_sids(select_conds, sids=self.subjects2sids(subjects))
 
         return (valid_data.get_subjects_column(sids, column, sort=sort, demean=demean_flag, ndecim=ndecim),
                 sids.labels,
                 sids.sessions)
+
+    def validate_subjects(self, subjs: SubjectsList | None = None) -> SubjectsList:
+        """
+        Validates and returns a SubjectsList.
+
+        If subjs is None, returns self.subjects_labels (all loaded subjects).
+        Otherwise, validates that input is a non-empty list of Subject instances.
+
+        Parameters
+        ----------
+        subjs : SubjectsList, optional
+            List of subjects to validate.
+
+        Returns
+        -------
+        SubjectsList
+            Validated list of subjects.
+
+        Raises
+        ------
+        SubjectExistException
+            If subjs is None and no subjects loaded, or if subjs is not a valid Subject list.
+        """
+        if subjs is None:
+            # Fallback: return all subjects loaded in data
+            all_subjects = SubjectsList()
+            for label in self.subjects_labels:
+                for sess_id in self.data.get_subject_available_sessions(label, error_if_empty=False):
+                    all_subjects.append(Subject(label, self, sess_id))
+            if len(all_subjects) == 0:
+                raise SubjectExistException("validate_subjects",
+                    "given subjs param is None and project has no loaded subjects")
+            return all_subjects
+        else:
+            if is_list_of(subjs, Subject) and len(subjs) > 0:
+                return subjs
+            else:
+                raise SubjectExistException("validate_subjects",
+                    f"given subjs param is not a valid Subject list or is empty: {type(subjs)}")
+
+    def are_subjects_valid(self, subjects: SubjectsList) -> bool:
+        for subj in subjects:
+            if not subj.exist:
+                return False
+        return True
+
+    # endregion
+
+    #region SIDS
+
+    def subjects2sids(self, subjects: SubjectsList = None) -> SIDList:
+        """
+        Converts a SubjectsList to a SIDList.
+        
+        Each Subject's sid is already assigned to its own project.data at init,
+        so this method uses subj.sid directly rather than calling self.data.get_sid().
+        This enables cross-project analysis: soggetti from different projects each
+        resolve in their own excel.
+
+        Parameters
+        ----------
+        subjects : SubjectsList, optional
+            List of subjects to convert. If None, uses validate_subjects().
+
+        Returns
+        -------
+        SIDList
+            Corresponding SIDList for data queries.
+        """
+        subjects = self.validate_subjects(subjects)
+        sids = [subj.sid for subj in subjects]
+        return SIDList(sids)
+
+    def sids2subjects(self, sids: SIDList = None) -> SubjectsList:
+        """
+        Converts a SIDList to a SubjectsList.
+
+        Parameters
+        ----------
+        sids : SIDList, optional
+            List of subject identifiers to convert.
+
+        Returns
+        -------
+        SubjectsList
+            List of Subject instances corresponding to the given SIDs.
+        """
+        if sids is None:
+            sids = self.data.subjects
+        return SubjectsList([Subject(sid.label, self, sid.session) for sid in sids])
 
     # endregion

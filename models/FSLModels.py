@@ -5,6 +5,7 @@ from distutils.file_util import copy_file
 from typing import List
 
 from project.MRIGlobal import MRIGlobal
+from subject.SubjectsList import SubjectsList
 from data.SubjectsData import SubjectsData
 from project.MRIProject import MRIProject
 from models.FSLConFile import FSLConFile
@@ -31,12 +32,12 @@ class FSLModels:
         self.working_dir    = ""
 
         self.project:MRIProject    = proj
-        self.globaldata:Global  = self.project.globaldata
+        self.globaldata:MRIGlobal  = self.project.globaldata
 
         self.string             = ""    # used to compose models override
 
     # ---------------------------------------------------
-    def create_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], groups_instances:List[List[Subject]],
+    def create_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], groups_instances:List[SubjectsList],
                                                ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True, group_mean_contrasts: int = 1,
                                                cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "",
                                                demean_flags: List[bool]|bool|None = None, ndecim:int=4, subj_must_exist: bool = False):
@@ -78,7 +79,7 @@ class FSLModels:
             The path to the output directory.
         regressors : list
             A list of regressors, including covariates and nuisance regressors. indicating whether adding respectively a contrast or not
-        groups_instances:List[List[Subject]]
+        groups_instances:List[List[SubjectMRI]]
             A list of Subject's list specifying the list of Subject of each group
         ofn : str, optional
             The output file name prefix, by default "mult_cov".
@@ -370,7 +371,7 @@ class FSLModels:
             return
 
 
-    def create_subset_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], groups_instances: List[List[Subject]], whole_group_instances:List[Subject],
+    def create_subset_Mgroups_Ncov_Xnuisance_glm_file(self, input_fsf: str, odp: str, regressors: List[Regressor], groups_instances: List[SubjectsList], whole_group_instances:SubjectsList,
                                                       ofn: str = "mult_cov", data: str | SubjectsData = None, create_model: bool = True,
                                                       group_mean_contrasts: int = 1, cov_mean_contrasts: int = 2, compare_covs: bool = False, ofn_postfix: str = "",
                                                       demean_flags: List[bool]|bool|None = None, ndecim:int=4, subj_must_exist: bool = False):
@@ -640,7 +641,7 @@ class FSLModels:
                 # determine to which group belong
                 group_id = -1  # does not belong
                 for gr_id, gr_instances in enumerate(groups_instances):
-                    if subj.is_in(gr_instances):    # gr_instances is a List[Subject]
+                    if subj.is_in(gr_instances):    # gr_instances is a SubjectsList
                         group_id = gr_id + 1
 
                 if group_id == -1:

@@ -1,11 +1,10 @@
 import traceback
-import os
 
-from project.DataProject import DataProject
 from data.BayesDB import BayesDB
 from data.importer.BayesImporter import BayesImporter
 from data.utilities import *
 from myutility.exceptions import SubjectListException
+from project.DataProject import DataProject
 
 if __name__ == "__main__":
 

@@ -42,7 +42,7 @@ class PostModel:
         # check if template name is valid according to the specification applied in MRIProject.adapt_batch_files
         # it can be a full path (without extension) of an existing file, or a file name present in pymri/templates/spm (without "_job.m)
         if not os.path.exists(templ_name + ".m"):
-            if not os.path.exists(os.path.join(Global.get_spm_template_dir(), templ_name + "_job.m")):
+            if not os.path.exists(os.path.join(MRIGlobal.get_spm_template_dir(), templ_name + "_job.m")):
                 raise Exception("given post_model template name (" + templ_name + ") is not valid")
 
         self.type           = _type

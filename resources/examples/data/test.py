@@ -1,11 +1,11 @@
 import traceback
-import os
+
 import pandas as pd
 
-from project.DataProject import DataProject
+from data.SubjectsData import SubjectsData
 from data.utilities import *
 from myutility.exceptions import SubjectListException
-from data.SubjectsData import SubjectsData
+from project.DataProject import DataProject
 
 if __name__ == "__main__":
 

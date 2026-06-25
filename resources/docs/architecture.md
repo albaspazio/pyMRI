@@ -292,6 +292,78 @@ LimeAutoImporter, VolBrainImporter
 
 ---
 
+## Subject Retrieval & Data Flow
+
+### Single-Project Analysis
+
+Modern entry point is always `project.get_subjects()` which returns a `SubjectsList`:
+
+```python
+from project.MRIProject import MRIProject
+from project.MRIGlobal import MRIGlobal
+
+globaldata = MRIGlobal("6.0.4")
+project = MRIProject("/data/MRI/projects/MyStudy", globaldata)
+
+# Get subjects from a named group
+subjects = project.get_subjects("group_label", sess_ids=[SESS_ID])
+
+# Get subjects from explicit labels
+subjects = project.get_subjects(["0001", "0002"], sess_ids=[SESS_ID])
+
+# Get all subjects in the project
+# Option 1: specify all sessions explicitly
+subjects = project.get_subjects(project.subjects_labels, sess_ids=[1])
+
+# Option 2: auto-detect all available sessions
+all_subjects = project.subjects  # read-only property, auto-populated
+```
+
+Each subject in the list is a `SubjectMRI` instance with auto-resolved SID based on its own `project.data`. This enables seamless cross-project analysis: each subject reads from its source project's data.
+
+### Cross-Project Analysis
+
+For analyses combining subjects from multiple projects, manually build a `SubjectsList`:
+
+```python
+from subject.SubjectsList import SubjectsList
+
+# Load data from multiple projects
+ctrl_project = MRIProject(ctrl_proj_dir, globaldata)
+pat_project = MRIProject(pat_proj_dir, globaldata)
+
+# Get subjects from each project
+ctrl_subjects = ctrl_project.get_subjects("controls", sess_ids=[SESS_ID])
+pat_subjects = pat_project.get_subjects("patients", sess_ids=[SESS_ID])
+
+# Combine into single list for group analysis
+all_subjects = SubjectsList()
+all_subjects.extend(ctrl_subjects)
+all_subjects.extend(pat_subjects)
+
+# Each subject reads data from its own project.data
+group_analysis.create_vbm_spm_template_normalize("population_name", all_subjects)
+```
+
+### Running Subject Methods
+
+All subject processing methods now require explicit `subjects` parameter for clarity:
+
+```python
+# Single-project pipeline
+subjects = project.get_subjects("group_label", sess_ids=[SESS_ID])
+
+# Preprocessing: apply methods to subject list
+project.run_subjects_methods("epi", "spm_fmri_preprocessing", kwparams, 
+                            ncore=num_cpu, subjects=subjects)
+
+# Or omit subjects to run on all subjects (if desired)
+project.run_subjects_methods("epi", "spm_fmri_preprocessing", kwparams, 
+                            ncore=num_cpu)
+```
+
+---
+
 ## Data Flow — Typical MRI Project
 
 ```
@@ -302,22 +374,31 @@ MRIProject("/data/MRI/projects/MyStudy", globaldata)
   └─ reads subjects_lists.json (from script_dir)
   └─ loads data.xlsx → SubjectsData
 
-project.load_subjects("controls", sess_ids=[1])
-  └─ creates SubjectsList, each with .mpr/.epi/.dti/.transform
+subjects = project.get_subjects("controls", sess_ids=[1])
+  └─ creates SubjectsList, each SubjectMRI with .sid auto-resolved from project.data
+  └─ each Subject owns .mpr/.epi/.dti/.transform
 
 # Preprocessing
-for subj in project.subjects:
-    subj.mpr.prebet(...)         # fslmaths, bet, fnirt (FSL)
-    subj.mpr.bet(...)
-    subj.mpr.spm_segment(...)    # writes+runs SPM batch .m (MATLAB)
-    subj.transform.transform_mpr(...)  # flirt, fnirt (FSL)
-    subj.epi.topup_corrections(...)    # topup, applytopup (FSL)
-    subj.dti.eddy(...)                 # eddy_openmp (FSL)
-    subj.dti.fit(...)                  # dtifit (FSL)
+project.run_subjects_methods("mpr", "wellcome", kwparams, 
+                           ncore=num_cpu, subjects=subjects)
+  └─ internally: for subj in subjects: subj.mpr.wellcome(...)
+  │  ├─ subj.mpr.prebet(...)          # fslmaths, bet, fnirt (FSL)
+  │  ├─ subj.mpr.bet(...)
+  │  ├─ subj.mpr.spm_segment(...)     # writes+runs SPM batch .m (MATLAB)
+  │  ├─ subj.transform.transform_mpr(...) # flirt, fnirt (FSL)
+  │  ├─ subj.epi.topup_corrections(...) # topup, applytopup (FSL)
+  │  ├─ subj.dti.eddy(...)             # eddy_openmp (FSL)
+  │  └─ subj.dti.fit(...)              # dtifit (FSL)
 
-# Group analysis
+# Group analysis (cross-project)
+ctrl_subjects = ctrl_project.get_subjects("controls", sess_ids=[1])
+pat_subjects = pat_project.get_subjects("patients", sess_ids=[1])
+all_subjects = SubjectsList()
+all_subjects.extend(ctrl_subjects)
+all_subjects.extend(pat_subjects)
+
 ga = GroupAnalysis(project)
-ga.tbss_run_fa(project.subjects, "population")
+ga.tbss_run_fa(all_subjects, "population")
 
 spm = SPMModels(project)
 spm.batchrun_group_stats(
@@ -325,7 +406,7 @@ spm.batchrun_group_stats(
     stat_type   = SPMConstants.TSTT,
     anal_type   = SPMConstants.VBM_DARTEL,
     anal_name   = "controls_vs_patients",
-    groups_instances = [controls, patients],
+    groups_instances = [ctrl_subjects, pat_subjects],
     covs = [Regressor("age"), Regressor("gender")]
 )
 ```

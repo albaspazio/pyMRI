@@ -14,6 +14,7 @@ from myutility.list import is_list_of
 from myutility.fileutilities import write_text_file
 from project.MRIProject import MRIProject
 from subject.Subject import Subject
+from subject.SubjectMRI import SubjectMRI
 from subject.SubjectsList import SubjectsList
 
 
@@ -36,10 +37,10 @@ class ConnModels:
         self.subjects_list      = None
         self.working_dir        = ""
         self.project:MRIProject    = proj
-        self.globaldata:Global  = self.project.globaldata
+        self.globaldata:MRIGlobal  = self.project.globaldata
         self.string             = ""  # used to compose models override
 
-    def create_regressors_file(self, odp:str, regressors:List[Regressor], groups_instances:List[List[Subject]], group_labels:List[str]=None, ofn:str="conn_covs",
+    def create_regressors_file(self, odp:str, regressors:List[Regressor], groups_instances:List[List[SubjectMRI]], group_labels:List[str]=None, ofn:str="conn_covs",
                                 data:str|SubjectsData=None, ofn_postfix:str="", subj_must_exist:bool=False):
         """
         This method creates a regressors file that can be used with the Conn tool. The regressors file contains
@@ -49,7 +50,7 @@ class ConnModels:
             odp (str): The output directory path where the regressors file will be created.
             regressors (list): A list of regressors that will be included in the analysis. The regressors can be
                 covariates or nuisances.
-            groups_instances (List[List[Subject]]): A list of group labels that will be used to create the factorial design. Each group
+            groups_instances (List[List[SubjectMRI]]): A list of group labels that will be used to create the factorial design. Each group
                 label will be used as an explanatory variable (EV).
             group_labels:List[str]: used to name output files
             ofn (str, optional): The name of the regressors file. The default value is "conn_covs".
@@ -168,7 +169,7 @@ class ConnModels:
                 covariates or nuisances.
             whole_group_instances (list): The list of all subjects that will be included in the regressors file.
             represents the subjects order in the conn project. The subjects can be specified by their group labels or by their subject labels.
-            groups_instances:List[List[Subject]]: The list of group instances that will be used to create the factorial design. Each group
+            groups_instances:List[List[SubjectMRI]]: The list of group instances that will be used to create the factorial design. Each group
                 label will be used as an explanatory variable (EV).
             group_labels:List[str]: used to name output files
             ofn (str, optional): The name of the regressors file. The default value is "conn_covs".
@@ -198,6 +199,8 @@ class ConnModels:
         if ngroups > 3:
             raise Exception("Error in ConnModels.create_regressors_file_ofsubset, no more than three groups are supported")
 
+        if group_labels is None:
+            group_labels = [ f"Group {i}" for i in range(ngroups) ]
         # ----------------------------------------------------------------------------------
         # create a list with all Subject instances
         subjs_instances = []

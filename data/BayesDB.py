@@ -36,8 +36,6 @@ class BayesDB(MSHDB):
     ----------
     sheets : list of Sheet
         The list of Sheet objects that make up the database.
-    subjects : SIDList
-        The list of SID objects that are in the database.
     schema_sheets_names : list
         The list of sheet names that define the schema of the database.
     date_format : str
@@ -159,7 +157,7 @@ class BayesDB(MSHDB):
 
         Parameters
         ----------
-        subjs : SIDList, optional
+        sids : SIDList, optional
             The list of SID objects, by default None.
 
         Returns
@@ -541,4 +539,4 @@ class BayesDB(MSHDB):
             diff_db.save(diff_out_db, sheets2save)
 
         except Exception as e:
-            raise Exception("Error in BayesDB.compare_db: sheet " + sh + " | " + e.msg)
+            raise Exception(f"Error in BayesDB.compare_db: sheet ${sh} | ${e}")

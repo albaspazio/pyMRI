@@ -59,7 +59,9 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        subjects = project.load_subjects(group_label, [SESS_ID], must_exist=False)
+        # Get subjects for the specified group and session
+        # Use must_exist=False to allow querying subjects that don't exist on filesystem yet
+        subjects = project.get_subjects(group_label, sess_ids=[SESS_ID], must_exist=False)
         # ---------------------------------------------------------------------------------------------------------------------
         # CREATE FILE SYSTEM
         # ---------------------------------------------------------------------------------------------------------------------
@@ -95,7 +97,7 @@ if __name__ == "__main__":
         # ---------------------------------------------------------------------------------------------------------------------
         # load subjects list (at this point, subjects must exist, I remove must_exist=False, default is True)
         # ---------------------------------------------------------------------------------------------------------------------
-        # subjects = project.load_subjects(group_label, [SESS_ID])
+        # subjects = project.get_subjects(group_label, [SESS_ID])
 
         # ---------------------------------------------------------------------------------------------------------------------
         # PRINT HEADER
@@ -239,22 +241,22 @@ if __name__ == "__main__":
         # rename all ctrl subjects
         # ===========================================================================================
         # group_label = "test"
-        # subjects = project.load_subjects(group_label, [SESS_ID])
+        # subjects = project.get_subjects(group_label, sess_ids=[SESS_ID])
         #
         # for subj in subjects:
         #     subj.rename("0" + subj.label)
 
-        # subjects    = project.load_subjects("ctrl", [SESS_ID])
-        # kwparams    = []
+        # subjects    = project.get_subjects("ctrl", sess_ids=[SESS_ID])
+        kwparams    = []
         # for s in subjects:
         #     kwparams.append({"new_label":"0" + s.label})
-        # project.run_subjects_methods("", "rename", kwparams, ncore=1)
+        project.run_subjects_methods("", "rename", kwparams, subjects=subjects, ncore=1)
 
         # ===========================================================================================
         # rename all SK subjects
         # ===========================================================================================
         # group_label = "sk"
-        # subjects = project.load_subjects(group_label, [SESS_ID])
+        # subjects = project.get_subjects(group_label, sess_ids=[SESS_ID])
         #
         # for subj in subjects:
         #     subj.rename("1" + subj.label)
@@ -264,7 +266,7 @@ if __name__ == "__main__":
         # ===========================================================================================
         # a = ["0029_TD_Ferrari_Allegra", "0030_TD_Campodonico_Alessandra", "0031_TD_Bovio_Anna", "0032_TD_Russo_Antonio", "0033_TD_Proietti_Luca", "1023_SK_Milanti_Leonardo", "1024_SK_Esposito_Natashia", "1025_SK_Tergolina_Camilla", "1026_SK_Bebeci_Iridjon", "1027_SK_Firenze_Stefano", "2008_BD_Minasi_Riccardo", "2009_BD_Pitone_Giuseppe", "2010_BD_DeLongis_Simona", "2011_BD_Bruni_Manuela", "2012_BD_Pepe_Michele", "2013_BD_Orecchia_MariaLuisa"]
         # b = ["0029_td_Ferrari_Allegra", "0030_td_Campodonico_Alessandra", "0031_td_Bovio_Anna", "0032_td_Russo_Antonio", "0033_td_Proietti_Luca", "1023_sk_Milanti_Leonardo", "1024_sk_Esposito_Natashia", "1025_sk_Tergolina_Camilla", "1026_sk_Bebeci_Iridjon", "1027_sk_Firenze_Stefano", "2008_bd_Minasi_Riccardo", "2009_bd_Pitone_Giuseppe", "2010_bd_DeLongis_Simona", "2011_bd_Bruni_Manuela", "2012_bd_Pepe_Michele", "2013_bd_Orecchia_MariaLuisa"]
-        # subjects = project.load_subjects(a, [SESS_ID])
+        # subjects = project.get_subjects(a, sess_ids=[SESS_ID])
         #
         # for id, subj in enumerate(subjects):
         #     subj.rename(b[id])

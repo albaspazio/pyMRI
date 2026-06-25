@@ -9,7 +9,7 @@ from myutility.fileutilities import sed_inplace
 from myutility.images.Image import Image
 from myutility.list import is_list_of
 from myutility.mymatlab import call_matlab_function_noret, call_matlab_spmbatch
-from subject.Subject import Subject
+from subject.SubjectMRI import SubjectMRI
 
 
 class SPMStatsUtils:
@@ -74,12 +74,12 @@ class SPMStatsUtils:
     # group_instances is a list of subjects' instances
     # image_description: {"type": ct | dartel | vbm, "folder": root path for dartel}
     @staticmethod
-    def compose_images_string_1GROUP_MULTREGR(group_instances:List['Subject'], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
+    def compose_images_string_1GROUP_MULTREGR(group_instances:List['SubjectMRI'], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
         """
         This function generates a MATLAB script for setting up the conditions for a single-session analysis.
 
         Args:
-            group_instances (List[Subject]): A list of subject instances.
+            group_instances (SubjectsList): A list of subject instances.
             out_batch_job (str): The path to the MATLAB script file.
             grp_input_imgs (GrpInImages): The input images for the group analysis.
             mustExist (bool, optional): Whether to raise an exception if the input images do not exist. Defaults to True.
@@ -97,12 +97,12 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<GROUP_IMAGES>", cells_images)
 
     @staticmethod
-    def compose_images_string_1sTT(group_instances:List['Subject'], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
+    def compose_images_string_1sTT(group_instances:List['SubjectMRI'], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
         """
         This function generates a MATLAB script for setting up the conditions for a single-session analysis.
 
         Args:
-            group_instances (List[Subject]): A list of subjects of a group.
+            group_instances (SubjectsList): A list of subjects of a group.
             out_batch_job (str): The path to the MATLAB script file.
             grp_input_imgs (InputImages): The input images for the group analysis.
             mustExist (bool, optional): Whether to raise an exception if the input images do not exist. Defaults to True.
@@ -123,12 +123,12 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<GROUP_IMAGES>", grp_images)
 
     @staticmethod
-    def compose_images_string_2sTT(groups_instances:List[List['Subject']], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
+    def compose_images_string_2sTT(groups_instances:List[List['SubjectMRI']], out_batch_job:str, grp_input_imgs:GrpInImages, mustExist:bool=True):
         """
         This function generates a MATLAB script for setting up the conditions for a single-session analysis.
 
         Args:
-            groups_instances (List[List[Subject]]): A list of subject groups.
+            groups_instances (List[List[SubjectMRI]]): A list of subject groups.
             out_batch_job (str): The path to the MATLAB script file.
             grp_input_imgs (InputImages): The input images for the group analysis.
             mustExist (bool, optional): Whether to raise an exception if the input images do not exist. Defaults to True.
@@ -158,12 +158,12 @@ class SPMStatsUtils:
         sed_inplace(out_batch_job, "<GROUP2_IMAGES>", grp2_images)
 
     @staticmethod
-    def compose_images_string_1W(group_instances:List['Subject'], out_batch_job:str, grp_input_imgs, mustExist:bool=True):
+    def compose_images_string_1W(group_instances:List['SubjectMRI'], out_batch_job:str, grp_input_imgs, mustExist:bool=True):
         """
         This function generates a MATLAB script for setting up the conditions for a single-session analysis.
 
         Parameters:
-            groups_instances (List[List[Subject]]): A list of subject groups.
+            groups_instances (List[List[SubjectMRI]]): A list of subject groups.
             out_batch_job (str): The path to the MATLAB script file.
             grp_input_imgs (InputImages): The input images for the group analysis.
             mustExist (bool, optional): Whether to raise an exception if the input images do not exist. Defaults to True.
@@ -240,7 +240,7 @@ class SPMStatsUtils:
     #region explicit masking
 
     @staticmethod
-    def spm_replace_explicit_mask(_global:Global, out_batch_job, expl_mask=None, athresh:float=0.2, idstep:int=1):
+    def spm_replace_explicit_mask(_global:MRIGlobal, out_batch_job, expl_mask=None, athresh:float=0.2, idstep:int=1):
         """
         This function replaces the explicit masking settings in the given MATLAB script.
 
@@ -280,7 +280,7 @@ class SPMStatsUtils:
     # when analysing subjects from different groups, we must avoid validating data.
     # Thus get_filtered_column must receive a Subject instances list, not a labels list  (16/1/2023)
     @staticmethod
-    def spm_replace_global_calculation(project:'MRIProject', out_batch_job, method:str="", groups_instances:List[List['Subject']]=None, data:SubjectsData=None, idstep:int=1):
+    def spm_replace_global_calculation(project:'MRIProject', out_batch_job, method:str="", groups_instances:List[List['SubjectMRI']]=None, data:SubjectsData=None, idstep:int=1):
         """
         This function replaces the global calculation settings in the given MATLAB script.
 
@@ -288,7 +288,7 @@ class SPMStatsUtils:
             project (MRIProject): The project object.
             out_batch_job (str): The path to the MATLAB script file.
             method (str, optional): The method for global calculation. Can be "subj_icv", "subj_tiv", "", or a column name of the given data_file. Defaults to "".
-            groups_instances (List[List[Subject]], optional): A list of subject groups. Required if method is not "". Defaults to None.
+            groups_instances (List[List[SubjectMRI]], optional): A list of subject groups. Required if method is not "". Defaults to None.
             data (SubjectsData, optional): A SubjectsData instance. Required if method is a column name of the given data_file. Defaults to None.
             idstep (int, optional): The ID of the current step. Defaults to 1.
 
@@ -382,7 +382,7 @@ class SPMStatsUtils:
         call_matlab_function_noret('create_surface_mask_from_volume_mask', matlab_paths, "'" + vmask + "','" + ref_surf + "','" + out_surf + "'")
 
     @staticmethod
-    def batchrun_cat_surface_smooth(project:'MRIProject', _global:Global, subj_instances, sfilt:int=12, spm_template_name:str="subjs_cat_surf_smooth", nproc:int=1, eng=None, runit:bool=True):
+    def batchrun_cat_surface_smooth(project:'MRIProject', _global:MRIGlobal, subj_instances, sfilt:int=12, spm_template_name:str="subjs_cat_surf_smooth", nproc:int=1, eng=None, runit:bool=True):
 
         # create template files
         out_batch_job, out_batch_start = project.adapt_batch_files(spm_template_name, "mpr")

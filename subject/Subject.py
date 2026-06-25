@@ -1,5 +1,8 @@
 import os
-from typing import List
+from typing import TYPE_CHECKING, Any, List
+
+if TYPE_CHECKING:
+    from data.SID import SID
 
 
 class Subject:
@@ -14,6 +17,7 @@ class Subject:
         label (str): The subject identifier/name (immutable after creation).
         sessid (int): The session number for this subject (immutable after creation).
         project: Reference to the parent Project instance.
+        sid: SID instance assigned by the parent Project after excel loading. Never None on a valid Subject.
         dir (str): The subject directory path (derived from project.subjects_dir, label, and sessid).
     """
 
@@ -26,9 +30,10 @@ class Subject:
             project (Project): The project object that this subject belongs to.
             sessid (int, optional): The session ID. Defaults to 1.
         """
-        self.label = label
-        self.sessid = sessid
+        self.label   = label
+        self.sessid  = sessid
         self.project = project
+        self.sid: 'SID' = None  # assigned by Project._create_subject() after excel loading
 
     @property
     def dir(self) -> str:
@@ -74,7 +79,7 @@ class Subject:
         Check if this subject exists in a list of subjects.
         
         Args:
-            subjects (List[Subject]): The list of subjects to search in.
+            subjects (SubjectsList): The list of subjects to search in.
         
         Returns:
             bool: True if a matching subject is found in the list, False otherwise.
@@ -85,6 +90,21 @@ class Subject:
             if self.is_equal(subj):
                 return True
         return False
+
+    def get_col_value(self, colname: str) -> Any:
+        """
+        Get the value of a column for this subject from its own project.data.
+        
+        Works correctly in cross-project analyses: each subject reads from its own
+        project excel via its own sid.
+        
+        Args:
+            colname (str): The column name to retrieve.
+        
+        Returns:
+            Any: The column value for this subject.
+        """
+        return self.project.data.get_subject_col_value(self.sid, colname)
 
     def get_properties(self, sess: int = 1) -> 'Subject':
         """

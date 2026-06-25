@@ -5,3 +5,7 @@ venv/
 idea/
 .kiro/
 OT/
+
+.hypothesis/
+.qodo/
+

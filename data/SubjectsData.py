@@ -390,7 +390,7 @@ class SubjectsData:
         else:
             return sids
 
-    def get_sid(self, subj_lab: str, sess_id: int = 1, must_exist:bool=True) -> SID | None:
+    def get_sid(self, subj_lab: str, sess_id: int = 1) -> SID:
         """
         Returns the subject with the given subject label and session, if it exists in the data frame.
         if not raise DataFileException if must_exist=True or simply return None if must_exist = False
@@ -398,7 +398,9 @@ class SubjectsData:
         Parameters:
             subj_lab (str): The subject label.
             sess_id (int): The session number.
-            must_exist (bool): set whether raising DataFileException or return None
+
+        Raises:
+            DataFileException: Se il soggetto/sessione non esiste o è invalido
 
         Returns:
             SID: The subject with the given subject label and session, if it exists in the data frame. Otherwise, returns None.
@@ -407,10 +409,7 @@ class SubjectsData:
             id_ = self.get_subjid_by_session(subj_lab, sess_id)
             return SID(subj_lab, sess_id, id_)
         else:
-            if must_exist is True:
-                raise DataFileException("Error in SubjectsData.get_sid: given subj (" + subj_lab + "|" + sess_id + ") does not exist")
-            else:
-                return None
+            raise DataFileException("Error in SubjectsData.get_sid: given subj (" + subj_lab + "|" + str(sess_id) + ") does not exist")
 
     #endregion
 
@@ -672,8 +671,6 @@ class SubjectsData:
             A list of subjects to include. If None, all subjects in the df will be included.
         colname: str, optional
             The name of the column to retrieve.
-        df: pandas.DataFrame, optional
-            A pandas data frame to select from. If None, the internal data frame will be used.
 
         Returns
         -------
@@ -744,7 +741,7 @@ class SubjectsData:
                 demean_flags = [ dmf for _ in colnames]
             else:
                 if len(colnames) != len(demean_flags):
-                    msg = "Error in get_filtered_columns...lenght of colnames is different from demean_flags"
+                    msg = "Error in get_subjects_values_by_cols...lenght of colnames is different from demean_flags"
                     raise DataFileException(msg)
 
             # Demean the requested columns.

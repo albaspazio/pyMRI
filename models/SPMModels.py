@@ -3,20 +3,19 @@ from __future__ import annotations
 import os
 from typing import List
 
-from project.MRIGlobal import MRIGlobal
-from subject.Subject import Subject
 from data.SubjectsData import SubjectsData
-from project.MRIProject import MRIProject
-
-from group.SPMCovariates    import SPMCovariates
-from group.SPMPostModel     import SPMPostModel, PostModel
-from group.SPMStatsUtils    import SPMStatsUtils
-from group.SPMConstants     import SPMConstants
-from group.spm_utilities    import GrpInImages, Regressor, Contrast
-
-from myutility.mymatlab         import call_matlab_spmbatch
-from myutility.fileutilities  import sed_inplace
+from group.SPMConstants import SPMConstants
+from group.SPMCovariates import SPMCovariates
+from group.SPMPostModel import SPMPostModel, PostModel
+from group.SPMStatsUtils import SPMStatsUtils
+from group.spm_utilities import GrpInImages, Regressor, Contrast
+from myutility.fileutilities import sed_inplace
 from myutility.list import is_list_of
+from myutility.mymatlab import call_matlab_spmbatch
+from project.MRIGlobal import MRIGlobal
+from project.MRIProject import MRIProject
+from subject.SubjectMRI import SubjectMRI
+
 
 # create factorial designs, multiple regressions, t-test
 class SPMModels:
@@ -33,13 +32,13 @@ class SPMModels:
             The project object that contains information about the project.
         """
         self.project:MRIProject    = proj
-        self.globaldata:Global  = self.project.globaldata
+        self.globaldata:MRIGlobal  = self.project.globaldata
 
     def batchrun_group_stats(self,  root_outdir:str,        # group analysis root folder :  fmri_dir/ct_dir/vbm_template_dir
                                     stat_type:int,          # MULTREGR, tstt, ostt, owa, twa
                                     anal_type:int,          # vbm, ct, fmri, dartel
                                     anal_name:str,          # output analysis name
-                                    groups_instances:List[List[Subject]], #
+                                    groups_instances:List[List[SubjectMRI]], #
                                     input_images:GrpInImages=None,  # instance of class GrpInImages, containing info to retrieve input images
                                     covs:List[Regressor]=None, cov_interactions:List[int]=None, cov_centering:bool=False, data:str|SubjectsData=None,
                                     glob_calc:str=None, expl_mask:str="icv", spm_template_name:str=None,
@@ -57,7 +56,7 @@ class SPMModels:
             The type of analysis to perform. Can be one of SPMConstants values: VBM_DARTEL, CAT, or FMRI.
         anal_name : str
             The name of the analysis. This will be used to create the output directory and other filenames.
-        groups_instances : List[List[Subject]]
+        groups_instances : List[List[SubjectMRI]]
             The list of group instances to analyze.
         input_images : instance of GrpInImages, optional
             The input images object, containing information about the input images. If not provided, it will be
@@ -104,7 +103,7 @@ class SPMModels:
         if anal_type not in SPMConstants.analysis_types:
             raise Exception("Error in batchrun_group_stats: unrecognized analysis type: " + str(anal_type))
 
-        if bool(post_model):
+        if post_model is not None:
             if not os.path.exists(post_model.template_name + ".m") and post_model.type != SPMConstants.MULTREGR and not is_list_of(post_model.contrasts, Contrast):
                 raise Exception("Error in SPMModels.batchrun_group_stats, a post model template is not given and contrasts list is not of type Contrast")
 

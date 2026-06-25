@@ -40,16 +40,20 @@ class MSHDB:
     sortonload : bool
         If True, the sheets will be sorted by the values in the first column when they are loaded.
 
-    Attributes
+    Properties
     ----------
-    sheets : Sheets
-        A dictionary containing the sheets in the database, where the keys are the sheet names and the values are SubjectsData objects.
     main : SubjectsData
         The SubjectsData object for the main sheet.
     subjects : SIDList
         A list of all the subjects in the database.
     sheet_labels : list
         A list of the sheet names in the database.
+
+    Attributes
+    ----------
+    sheets : Sheets
+        A dictionary containing the sheets in the database, where the keys are the sheet names and the values are SubjectsData objects.
+
     data_source : str or Sheets or GDriveSheet
         The data source for the database.
 
@@ -458,7 +462,7 @@ class MSHDB:
 
         return hdr
 
-    def get_default_columns(self, subjs: SIDList = None) -> pandas.DataFrame:
+    def get_default_columns(self, subjs: SIDList) -> pandas.DataFrame:
         """
         Add default rows to the database.
 
@@ -654,7 +658,7 @@ class MSHDB:
     #                       "SAPS": ["SAPS_TOT"],
     #                       "YMRS": ["YMRS_TOT"]}
     # SUBSET all excel by rows and sheets' cols
-    def select_df(self, subjs: SIDList = None, sheets_cols: dict = None, outfile: str = "") -> pandas.DataFrame | None:
+    def select_df(self, subjs: SIDList = None, sheets_cols: dict = None, outfile: str = "") -> pandas.DataFrame:
         """
         Selects data from the database and returns it as a Pandas DataFrame.
 
@@ -674,7 +678,10 @@ class MSHDB:
 
         """
         if subjs is None and sheets_cols is None:
-            return None
+            raise Exception("MSHDB.select_df must have either subjs or sheets_cols")
+
+        if sheets_cols is None:
+            sheets_cols = {}
 
         if subjs is None:
             subjs = self.subjects

@@ -1,17 +1,18 @@
 import os
 from typing import List
 
-from subject.Subject import Subject
-from project.MRIProject import MRIProject
 from myutility.images.Image import Image
 from myutility.images.Images import Images
 from myutility.myfsl.utils.run import rrun
+from project.MRIProject import MRIProject
+from subject.SubjectMRI import SubjectMRI
+from subject.SubjectsList import SubjectsList
 
 
 # this function assumes that user put the melodic rois of interest in the roi4_folder of a specific subfolder of the given project (where between-groups analyses are done, usually the patient folder)
 # subjects instances are given already divided by groups, in order to launch the corresponding project.run_subjects_methods
 # the script coregisters each roi into a 2mm rs individual space
-def convert_melodic_rois_to_individual(project:MRIProject, templ_name:str, popul_name:str, rois_list:List[str], arr_subjs_insts:List[List[Subject]], thr:int=0.1, report_file:str="transform_report", num_cpu:int=1, mni_2mm_brain:Image=None):
+def convert_melodic_rois_to_individual(project:MRIProject, templ_name:str, popul_name:str, rois_list:List[str], arr_subjs_insts:List[List[SubjectMRI]], thr:int=0.1, report_file:str="transform_report", num_cpu:int=1, mni_2mm_brain:Image=None):
 
     """
     This function converts melodic ROIs from 4mm to 2mm in individual space.
@@ -73,7 +74,7 @@ def convert_melodic_rois_to_individual(project:MRIProject, templ_name:str, popul
 # subjects: list of subjects instances
 # metric:   measures to analyze. values are: FA,MD,AD,RD
 
-def extract_meanvalue_from_tbssresults(project:MRIProject, rois:Images, subjects:List[Subject], metric:str="FA"):
+def extract_meanvalue_from_tbssresults(project:MRIProject, rois:Images, subjects:SubjectsList, subjs_img_dir:str, metric:str="FA"):
 
     """
     This function takes
@@ -81,7 +82,7 @@ def extract_meanvalue_from_tbssresults(project:MRIProject, rois:Images, subjects
     Args:
         project (MRIProject): The project object.
         rois (List[Image]): The list of normalized Image to investigate (extract mean individual metrics)
-        subjects (List[Subject]): The list of subjects instances
+        subjects (SubjectsList): The list of subjects instances
         metric (str, optional): The measures to analyze. Defaults to "FA".
 
     Returns:
@@ -109,17 +110,18 @@ def extract_meanvalue_from_tbssresults(project:MRIProject, rois:Images, subjects
     out_folder = os.path.join(project.tbss_dir, "results_sp_sts_htc_fmrib58")
 
     results = []
-    for roi in tbssmap:
-        roi_mask_img = os.path.join(roi_root_dir, roi + "_mask")
+    for roi in rois:
+
+        roi_mask_img = os.path.join(roi.imgdir, roi + "_mask")
         roi_row = []
 
         for subj in subjects:
-            subj_img = os.path.join(subjects_images, subj.dti_fit_label + subj_img_postfix)
-            subj_img_masked = os.path.join(subjects_images, subj.dti_fit_label + subj_img_postfix + "_masked")
+            subj_img = os.path.join(subjs_img_dir, subj.dti_fit_label + subj_img_postfix)
+            subj_img_masked = Image(os.path.join(subjs_img_dir, subj.dti_fit_label + subj_img_postfix + "_masked"))
 
             rrun(f"fslmaths {subj_img} -mas {roi_mask_img} {subj_img_masked}")
             val = float(rrun(f"fslstats  {subj_img_masked} -M").strip())
-            imrm([subj_img_masked])
+            subj_img_masked.rm()
             roi_row.append(val)
 
         results.append(roi_row)

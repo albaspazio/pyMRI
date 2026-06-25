@@ -5,31 +5,26 @@ import math
 import ntpath
 import os
 import shutil
-from copy import deepcopy
 from inspect import signature
 from shutil import copyfile
 from threading import Thread
+from typing import List
 
-from typing import List, Tuple, Any
-
-from project.MRIGlobal import MRIGlobal
-from .Project import Project
+from data.SID import SID
 from data.SubjectsData import SubjectsData
-from data.utilities import FilterValues
-from myutility.list import is_list_of
-from subject.Subject import Subject
-from data.SIDList import SIDList
-from myutility.exceptions import SubjectListException, DataFileException, SubjectExistException
-from myutility.images.Image import Image
+from myutility.exceptions import DataFileException, SubjectExistException
 from myutility.fileutilities import sed_inplace, remove_ext
+from myutility.images.Image import Image
+from project.MRIGlobal import MRIGlobal
+from subject.Subject import Subject
+from subject.SubjectMRI import SubjectMRI
 from subject.SubjectsList import SubjectsList
+from .Project import Project
 
 
 class MRIProject(Project):
 
-    subjects: List[Subject] = []
-
-    def __init__(self, folder: str, globaldata: 'MRIGlobal', data: str | SubjectsData = "data.xlsx"):
+    def __init__(self, folder: str, globaldata: 'MRIGlobal', data: str | SubjectsData = "data.xlsx", must_exist: bool = False):
         """
         Initialize an MRIProject instance.
 
@@ -41,6 +36,9 @@ class MRIProject(Project):
             The MRI global configuration instance (MUST be MRIGlobal, not generic Global).
         data : str | SubjectsData, optional
             The path to the data file or a SubjectsData instance.
+        must_exist : bool, optional
+            If True, emit UserWarning for subjects not present in filesystem.
+            Default: False.
         """
         if not os.path.exists(folder):
             raise Exception("PROJECT_DIR not defined.....exiting")
@@ -94,13 +92,18 @@ class MRIProject(Project):
         self._data_search_dir = self.script_dir
 
         super().__init__(folder, data)
+        
+        # validate filesystem if requested
+        if must_exist:
+            self._validate_mri_filesystem()
 
     # ==================================================================================================================
     # region PROPERTIES
 
     @property
-    def existing_subjects(self) -> List[Subject]:
-        subjects = []
+    def existing_subjects(self) -> SubjectsList:
+        
+        subjects = SubjectsList()
         subj_labels = [f for f in os.listdir(self.subjects_dir) if os.path.isdir(os.path.join(self.subjects_dir, f))]
         for slab in subj_labels:
             search_folder = os.path.join(self.subjects_dir, slab)
@@ -109,60 +112,45 @@ class MRIProject(Project):
                 subjects.append(Subject(slab, self, sess))
         return subjects
 
-    @property
-    def subjects_labels(self) -> List[str]:
-        if len(self.subjects) > 0:
-            return list(set([subj.label for subj in self.subjects]))
-        else:
-            return []
-
-    @property
-    def nsubj(self) -> int:
-        return len(self.subjects)
 
     # endregion
 
     # ==================================================================================================================
     # region LOAD / GET SUBJECTS
 
-    def load_subjects(self, group_or_subjlabels: str | List[str], sess_ids: List[int] = None, must_exist: bool = True) -> List[Subject]:
+    def load_subjects(self, group_or_subjlabels: str | List[str], sess_ids: List[int] = None, must_exist: bool = True) -> SubjectsList:
         """
-        Create and optionally store a list of Subject based on a group label or subject labels.
+        DEPRECATED: Use get_subjects() instead. This method will be removed in a future version.
+        
+        This method is deprecated because subjects are now auto-loaded at project init
+        via _build_subjects(). Use get_subjects() for the modern pattern.
+        
+        Modern patterns:
+        - Single-project analysis: project.run_subjects_methods(..., subjects=project.get_subjects("group"))
+        - Cross-project analysis: Manually build SubjectsList from multiple projects via .extend()
+        - All subjects: project.run_subjects_methods(...) without subjects param (uses project.subjects)
 
         Parameters
         ----------
         group_or_subjlabels : str or list
+            Group label or list of subject labels.
         sess_ids : List[int], optional
+            Session IDs to retrieve.
         must_exist : bool, optional
-            If True, stores result in self.subjects and raises on missing subjects.
-        """
-        try:
-            subjects = self.get_subjects(group_or_subjlabels, sess_ids, must_exist)
-        except SubjectListException as e:
-            raise SubjectListException("Error in MRIProject.load_subjects", e.param)
-
-        if must_exist:
-            self.subjects = subjects
-
-        return subjects
-
-    def get_subject_session(self, subj_label: str, sess: int = 1, must_exist: bool = True) -> Subject:
-        """
-        Get an independent SubjectMRI instance for the given label/session.
+            If True, raises on missing subjects. Default: True.
         
-        Returns Subject type (which is SubjectMRI at runtime).
+        Returns
+        -------
+        SubjectsList
+            List of subjects matching the criteria.
         """
-        if must_exist:
-            for subj in self.subjects:
-                if subj.label == subj_label:
-                    if subj.sessid == sess:
-                        return deepcopy(subj)
-                    else:
-                        return subj.get_properties(sess)
-            raise SubjectExistException("Error in MRIProject.get_subject: given subject (" + subj_label + " does not exist")
-        else:
-            from subject.SubjectMRI import SubjectMRI
-            return SubjectMRI(subj_label, self, sess)
+        import warnings
+        warnings.warn(
+            "load_subjects() is deprecated. Use get_subjects() instead.",
+            DeprecationWarning, stacklevel=2
+        )
+        
+        return self.get_subjects(group_or_subjlabels, sess_ids, must_exist)
 
     def get_subject_available_sessions(self, subj_lab: str, error_if_empty: bool = True) -> List[int]:
         """
@@ -179,148 +167,83 @@ class MRIProject(Project):
             else:
                 return []
 
-    def get_subjects(self, group_or_subjlabels: str | List[str] = None, sess_ids: List[int] = None, must_exist: bool = False) -> SubjectsList:
+    #override
+    def _create_subject(self, sid:SID) -> Subject:
         """
-        MRI override: returns SubjectMRI instances instead of generic Subject.
-        
-        Uses MRI-specific session format ("s1", "s2", etc.) for directory paths.
-        Inherits from Project: converts group_or_subjlabels to label list, handles sessions.
-        
+        Factory override: create SubjectMRI with sid immediately assigned.
+
+        Inherited by parent _build_subjects(), so all subject creation goes through here.
+        Follows the same contract as Project._create_subject(): sid is assigned immediately.
+
         Parameters
         ----------
-        group_or_subjlabels : str or List[str], optional
-            Group label or list of subject labels.
-        sess_ids : List[int], optional
-            Requested session IDs (None = all available).
-        must_exist : bool, optional
-            If True, raises if subjects don't exist.
-        
+        sid : SID
+            Subject SID got from SubjectsData
+
         Returns
         -------
-        SubjectsList
-            List of SubjectMRI instances (with MRI-specific infrastructure).
-        """
-        # Get labels using parent method
-        subj_labels = self.get_subjects_labels(group_or_subjlabels)
-
-        subjects = SubjectsList()
-        for subj_lab in subj_labels:
-            # Determine sessions
-            if sess_ids is None:
-                sessions = self.get_subject_available_sessions(subj_lab, error_if_empty=not must_exist)
-            else:
-                sessions = sess_ids
-
-            # Create SubjectMRI for each label/session
-            for sess_id in sessions:
-                from subject.SubjectMRI import SubjectMRI
-                subj = SubjectMRI(subj_lab, self, sess_id)
-                if not subj.exist and must_exist:
-                    raise SubjectExistException("Error in MRIProject.get_subjects: requested subject (" + subj_lab + " | " + str(sess_id) + ") does not exist")
-                elif subj.exist or not must_exist:
-                    subjects.append(subj)
+        Subject (actually SubjectMRI)
+            A new SubjectMRI instance with sid assigned.
         
-        return subjects
-
-    def get_subject(self, subjlabel: str, sess_id: int = 1, must_exist: bool = False) -> Subject:
-        return self.get_subjects([subjlabel], [sess_id], must_exist)[0]
-
-
-    # endregion
-
-    # ==================================================================================================================
-    # region SID <-> Subject bridges
-
-    def subjects2sids(self, subjects: List[Subject] = None) -> SIDList:
+        Raises
+        ------
+        DataFileException
+            If (label, sess_id) not found in self.data.
         """
-        Returns a SIDList corresponding to the given list of subjects.
+        subj = SubjectMRI(sid.label, self, sid.session)
+        subj.sid = sid  # Raises DataFileException if not found
+        return subj
+
+    def get_subject(self, subjlabel: str, sess_id: int = 1, must_exist: bool = False) -> SubjectMRI:
         """
-        subjects = self.validate_subjects(subjects)
-        sids = [self.data.get_sid(subj.label, subj.sessid) for subj in subjects]
-        return SIDList(sids)
+        Get a single subject as SubjectMRI (type-safe override of Project.get_subject).
 
-    def sids2subjects(self, sids: SIDList = None) -> List[Subject]:
+        Returns SubjectMRI instead of generic Subject for better IDE type checking.
+        At runtime, all subjects in MRIProject are SubjectMRI anyway; this just makes
+        the type explicit for the type checker.
+
+        Parameters
+        ----------
+        subjlabel : str
+            Subject label.
+        sess_id : int, optional
+            Session ID. Default: 1.
+        must_exist : bool, optional
+            If True, raises on missing subject. Default: False.
+
+        Returns
+        -------
+        SubjectMRI
+            A single SubjectMRI instance.
+
+        Examples
+        --------
+        >>> subj = project.get_subject("0001", sess_id=1)
+        >>> subj.dti.eddy(...)  # Type checker now knows subj is SubjectMRI
         """
-        Returns a list of Subject instances corresponding to the given SIDList.
+        return super().get_subject(subjlabel, sess_id, must_exist)  # type: ignore
+
+    def _validate_mri_filesystem(self) -> None:
         """
-        return [Subject(sid.label, self, sid.session) for sid in sids]
-
-    # endregion
-
-    # ==================================================================================================================
-    # region VALIDATION
-
-    def are_subjects_valid(self, subjects: List[Subject]) -> bool:
-        for subj in subjects:
+        Validate that all subjects in self.subjects have directory on filesystem.
+        
+        Emits UserWarning for subjects without directory. Non-blocking: init
+        completes even if warnings are emitted.
+        """
+        import warnings
+        
+        missing = []
+        for subj in self.subjects:
             if not subj.exist:
-                return False
-        return True
-
-    def validate_subjects(self, subjs: List[Subject] | None = None) -> List[Subject]:
-        if subjs is None:
-            if self.nsubj > 0:
-                return self.subjects
-            else:
-                raise SubjectExistException("ERROR in MRIProject.validate_subjects: given subjs param (" + str(subjs) + ") is None and project's subjects is empty")
-        else:
-            if is_list_of(subjs, Subject) and len(subjs) > 0:
-                return subjs
-            else:
-                raise SubjectExistException("ERROR in MRIProject.validate_subjects: given subjs param (" + str(subjs) + ") is not a Subject list or is empty")
-
-    # endregion
-
-    # ==================================================================================================================
-    # region DATA (override query methods to accept List[Subject])
-
-    def get_subjects_values_by_cols(self, subjects: SubjectsList, columns_list: List[str],
-                                    select_conds: List[FilterValues] | None = None,
-                                    data: str | SubjectsData | None = None, demean_flags: List[bool] | bool | None = None,
-                                    ndecim: int = 4) -> Tuple[List[List[Any]], List[str], List[int]]:
-        """
-        Get column values for subjects (MRI override with SID filtering).
+                missing.append(subj.label)
         
-        Args:
-            subjects: SubjectsList of subjects to query.
-            columns_list: Column names to retrieve.
-            select_conds: optional filter conditions.
-            data: optional SubjectsData override.
-            demean_flags: optional demean flags.
-            ndecim: decimal places for demeaning.
-        
-        Returns:
-            Tuple: (values matrix, labels list, sessions list)
-        """
-        valid_data = self.validate_data(data)
-        sids: SIDList = valid_data.filter_sids(select_conds, sids=self.subjects2sids(subjects))
-        return (valid_data.get_subjects_values_by_cols(sids, columns_list, demean_flags=demean_flags, ndecim=ndecim), 
-                sids.labels, 
-                sids.sessions)
+        if missing:
+            warnings.warn(
+                f"MRIProject: {len(missing)} soggetti mancano nel filesystem: {sorted(set(missing))}",
+                UserWarning, stacklevel=2
+            )
 
-    def get_filtered_column(self, subjects: SubjectsList, column,
-                            select_conds: List[FilterValues] | None = None,
-                            data: str | SubjectsData | None = None, sort: bool = False,
-                            demean_flag: bool = False, ndecim: int = 4) -> Tuple[list, List[str], List[int]]:
-        """
-        Get single column values for subjects (MRI override with SID filtering).
-        
-        Args:
-            subjects: SubjectsList of subjects to query.
-            column: Column name to retrieve.
-            select_conds: optional filter conditions.
-            data: optional SubjectsData override.
-            sort: whether to sort results.
-            demean_flag: whether to demean the column.
-            ndecim: decimal places for demeaning.
-        
-        Returns:
-            Tuple: (values list, labels list, sessions list)
-        """
-        valid_data = self.validate_data(data)
-        sids: SIDList = valid_data.filter_sids(select_conds, sids=self.subjects2sids(subjects))
-        return (valid_data.get_subjects_column(sids, column, sort=sort, demean=demean_flag, ndecim=ndecim), 
-                sids.labels, 
-                sids.sessions)
+
 
     # endregion
 
@@ -335,7 +258,7 @@ class MRIProject(Project):
                 incomplete_subjects.append({"label": subj.label, "images": missing})
         return incomplete_subjects
 
-    def hasSeq(self, seq_type, subjects: List[Subject] = None, images_labels: List[str] = None):
+    def hasSeq(self, seq_type, subjects: SubjectsList = None, images_labels: List[str] = None):
         subjects        = self.validate_subjects(subjects)
         invalid_subjs   = ""
         for subj in subjects:
@@ -349,7 +272,7 @@ class MRIProject(Project):
 
         return invalid_subjs
 
-    def can_run_analysis(self, analysis_type, analysis_params: str | List[str] = None, subjects: List[Subject] = None):
+    def can_run_analysis(self, analysis_type, analysis_params: str | List[str] = None, subjects: SubjectsList = None):
         subjects        = self.validate_subjects(subjects)
         invalid_subjs   = ""
         for subj in subjects:
@@ -389,7 +312,7 @@ class MRIProject(Project):
         finally:
             os.chdir(olddir)
 
-    def check_all_coregistration(self, outdir: str, subjects: List[Subject] = None, _from: List[str] = None, _to: List[str] = None, fmri_labels: List[str] = None, num_cpu: int = 1, overwrite: bool = False):
+    def check_all_coregistration(self, outdir: str, subjects: SubjectsList = None, _from: List[str] = None, _to: List[str] = None, fmri_labels: List[str] = None, num_cpu: int = 1, overwrite: bool = False):
         subjects = self.validate_subjects(subjects)
 
         if _from is None:
@@ -408,7 +331,7 @@ class MRIProject(Project):
             else:
                 self._process_slicesdir(outdir, img_type)
 
-    def compare_brain_extraction(self, outdir: str, subjects: List[Subject] = None, num_cpu=1):
+    def compare_brain_extraction(self, outdir: str, subjects: SubjectsList = None, num_cpu=1):
         subjects = self.validate_subjects(subjects)
         os.makedirs(outdir, exist_ok=True)
         self.run_subjects_methods("mpr", "compare_brain_extraction", [{"tempdir": outdir}], ncore=num_cpu, subjs=subjects)
@@ -417,7 +340,7 @@ class MRIProject(Project):
         os.system("slicesdir ./*.nii.gz")
         os.chdir(olddir)
 
-    def prepare_mpr_for_setorigin1(self, subjects: List[Subject] = None, replaceOrig: bool = False, overwrite: bool = False):
+    def prepare_mpr_for_setorigin1(self, subjects: SubjectsList = None, replaceOrig: bool = False, overwrite: bool = False):
         subjects = self.validate_subjects(subjects)
         for subj in subjects:
             if not replaceOrig:
@@ -432,7 +355,7 @@ class MRIProject(Project):
             subj.t1_data.cpath.unzip(niifile, replace=True)
             print("unzipped " + subj.label + " mri")
 
-    def prepare_mpr_for_setorigin2(self, subjects: List[Subject] = None):
+    def prepare_mpr_for_setorigin2(self, subjects: SubjectsList = None):
         subjects = self.validate_subjects(subjects)
         for subj in subjects:
             niifile = Image(str(os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")))
@@ -446,12 +369,12 @@ class MRIProject(Project):
     # ==================================================================================================================
     # region ACCESSORY
 
-    def add_icv_to_data(self, subjects: List[Subject] = None, updatefile: bool = False, df=None):
+    def add_icv_to_data(self, subjects: SubjectsList = None, updatefile: bool = False, df=None):
         subjects = self.validate_subjects(subjects)
         icvs = self.get_subjects_icv(subjects)
         self.data.add_column("icv", icvs, self.subjects2sids(subjects), df)
 
-    def get_subjects_icv(self, subjects: List[Subject]) -> List[float]:
+    def get_subjects_icv(self, subjects: SubjectsList) -> List[float]:
         subjects        = self.validate_subjects(subjects)
         icv_scores      = []
         missing_files   = []
@@ -554,7 +477,7 @@ class MRIProject(Project):
     # region MULTICORE PROCESSING
     # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subjects) > 1 ...pass that same kwparams[0] to all subjects
     # if subjects is not given...use the loaded subjects
-    def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, subjects: List[Subject] = None, must_exist: bool = True):
+    def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, subjects: SubjectsList = None, must_exist: bool = True):
         """
         Runs a method on a list of subjects.
 
@@ -563,7 +486,7 @@ class MRIProject(Project):
             method_name (str): The name of the method to run.
             kwparams (List): A list of keyword arguments to pass to the method. If there is only one argument, it can be passed as a single element list.
             ncore (int, optional): The number of cores to use for parallel processing. Defaults to 1.
-            subjects (List[Subject], optional): list of Subject instances to run the method on. If None, all subjects are used. Defaults to None.
+            subjects (SubjectsList, optional): list of Subject instances to run the method on. If None, all subjects are used. Defaults to None.
             sess_id (int, optional): The session ID. Defaults to 1.
             must_exist (bool, optional): If True, raise an exception if a subject does not exist. Defaults to True.
 
@@ -613,7 +536,7 @@ class MRIProject(Project):
 
         numblocks = math.ceil(nprocesses / ncore)  # num of processing blocks (threads)
 
-        subjs: List[List[Subject]] = []
+        subjs: List[List[SubjectMRI]] = []
         processes = []
 
         for p in range(numblocks):

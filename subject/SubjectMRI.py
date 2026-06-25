@@ -60,7 +60,7 @@ class SubjectMRI(Subject):
         """
         super().__init__(label, project, sessid)
         
-        self._global: Global = project.globaldata
+        self._global: MRIGlobal = project.globaldata
         self._mri_dir = None  # Override dir with MRI-specific format (s1, s2, etc.)
 
         self.fsl_dir            = self._global.fsl_dir
@@ -83,6 +83,29 @@ class SubjectMRI(Subject):
     def dir(self):
         """Override dir property to use MRI-specific session format (s1, s2, etc)."""
         return self._mri_dir if self._mri_dir is not None else super().dir
+
+    def _has_sequence(self, seq_name: str) -> bool:
+        """
+        Internal helper: check if a sequence exists for this subject.
+        
+        Special case: CT uses `gexist` instead of `exist`.
+
+        Parameters
+        ----------
+        seq_name : str
+            Sequence attribute name (without '_data' suffix), e.g., 't1', 'rs', 'dti', 't2', 'wb'.
+            Special case: 'ct' checks t1_cat_resampled_surface.gexist.
+
+        Returns
+        -------
+        bool
+            True if sequence exists, False otherwise.
+        """
+        if seq_name == "ct":
+            return self.t1_cat_resampled_surface.gexist
+        
+        data_attr = getattr(self, f"{seq_name}_data", None)
+        return data_attr.exist if data_attr is not None else False
 
     def hasSeq(self, _type:str, images_labels:List[str]=None):
         """
@@ -109,63 +132,33 @@ class SubjectMRI(Subject):
 
     @property
     def hasT1(self):
-        """
-        Check if a T1 image exists for this subject.
-
-        Returns:
-            bool: True if a T1 image exists, False otherwise.
-        """
-        return self.t1_data.exist
+        """Check if a T1 image exists for this subject."""
+        return self._has_sequence("t1")
 
     @property
     def hasRS(self):
-        """
-        Check if a resting state image exists for this subject.
-
-        Returns:
-            bool: True if a resting state image exists, False otherwise.
-        """
-        return self.rs_data.exist
+        """Check if a resting state image exists for this subject."""
+        return self._has_sequence("rs")
 
     @property
     def hasDTI(self):
-        """
-        Check if a DTI image exists for this subject.
-
-        Returns:
-            bool: True if a DTI image exists, False otherwise.
-        """
-        return self.dti_data.exist
+        """Check if a DTI image exists for this subject."""
+        return self._has_sequence("dti")
 
     @property
     def hasT2(self):
-        """
-        Check if a T2 image exists for this subject.
-
-        Returns:
-            bool: True if a T2 image exists, False otherwise.
-        """
-        return self.t2_data.exist
+        """Check if a T2 image exists for this subject."""
+        return self._has_sequence("t2")
 
     @property
     def hasWB(self):
-        """
-        Check if a white matter image exists for this subject.
-
-        Returns:
-            bool: True if a white matter image exists, False otherwise.
-        """
-        return self.wb_data.exist
+        """Check if a white matter image exists for this subject."""
+        return self._has_sequence("wb")
 
     @property
     def hasCT(self):
-        """
-        Check if a white matter image exists for this subject.
-
-        Returns:
-            bool: True if a white matter image exists, False otherwise.
-        """
-        return self.t1_cat_resampled_surface.gexist
+        """Check if a CT (CAT-processed) surface exists for this subject."""
+        return self._has_sequence("ct")
 
     def hasFMRI(self, images_labels:List[str]=None):
         """
@@ -663,7 +656,7 @@ class SubjectMRI(Subject):
                  do_spm_seg:bool=False, spm_seg_templ:str="", spm_seg_over_bet:bool=False,
                  do_cat_seg:bool=False, cat_use_dartel:bool=False, do_cat_surf:bool=True, cat_smooth_surf:int=None, do_cat_extra:bool=True,
                  do_cat_seg_long:bool=False, cat_long_sessions:List[int]=None,
-                 do_cleanup:int=Global.CLEANUP_LVL_MIN,
+                 do_cleanup:int=MRIGlobal.CLEANUP_LVL_MIN,
                  use_lesionmask:bool=False, lesionmask:str="lesionmask",
                  do_freesurfer:bool=False, do_complete_fs:bool=False, fs_seg_over_bet:bool=False,
                  do_first:bool=False, first_struct:str="", first_odn:str="",
@@ -738,7 +731,7 @@ class SubjectMRI(Subject):
                             perform CAT toolbox segmentation with long sessions.
         cat_long_sessions :List[int] = None
                             The longitudinal sessions to be included in the CAT toolbox segmentation.
-        do_cleanup: int = Global.CLEANUP_LVL_MIN
+        do_cleanup: int = MRIGlobal.CLEANUP_LVL_MIN
         use_lesionmask : bool = False
                             use lesionmask atlas in segmentation.
         lesionmask : str = "lesionmask"

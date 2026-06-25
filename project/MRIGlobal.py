@@ -1,6 +1,6 @@
 import os
 
-from Global import Global
+from project.Global import Global
 from data.utilities import read_varlist_file
 from myutility.images.Image import Image
 from myutility.myfsl import fsl_switcher

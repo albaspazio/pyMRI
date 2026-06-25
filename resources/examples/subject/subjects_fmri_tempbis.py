@@ -1,11 +1,12 @@
 import os
 import traceback
 
+from numpy import sort, asarray
+
+from group.spm_utilities import SubjResultsParam, TContrast, SubjCondition, FmriProcParams
 from project.MRIGlobal import MRIGlobal
 from project.MRIProject import MRIProject
-from subject.Subject import Subject
-from group.spm_utilities import SubjResultsParam, TContrast, SubjCondition, FmriProcParams
-from numpy import sort, asarray
+from subject.SubjectsList import SubjectsList
 
 # NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
@@ -54,7 +55,7 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        def run_1stlevel_analysis(eng, proj:MRIProject, subjects:list[Subject], cond_labels, hpf, block_dur, log_dirname, img_type, anal_name, fmri_par, contrasts, num_cpu):
+        def run_1stlevel_analysis(eng, proj:MRIProject, subjects:SubjectsList, cond_labels, hpf, block_dur, log_dirname, img_type, anal_name, fmri_par, contrasts, num_cpu):
 
             subjproj:MRIProject = subjects[0].project
             slabels = []
@@ -90,12 +91,11 @@ if __name__ == "__main__":
                 kwparams.append({"analysis_name": anal_name, "fmri_params": fmri_par, "contrasts": contrasts, "res_report": result_report,
                                  "input_images": input_images, "conditions_lists": sessions_cond, "rp_filenames": rp_filenames})
 
-            subjproj.load_subjects(slabels)
-            subjproj.run_subjects_methods("epi", "spm_fmri_1st_level_analysis", kwparams, ncore=num_cpu)
+            subjproj.run_subjects_methods("epi", "spm_fmri_1st_level_analysis", kwparams, ncore=num_cpu, subjects=subjects)
 
         # ======================================================================================================================
         group_label     = "tempbis_er_with_ctrl"
-        subjects        = subjproject.load_subjects(group_label, [SESS_ID])
+        subjects        = subjproject.get_subjects(group_label, sess_ids=[SESS_ID])
         log_dirname     = "temp_bis_er_with_ctrl"
         subjproject.can_run_analysis("fmri")
 

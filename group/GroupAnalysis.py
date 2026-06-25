@@ -11,7 +11,6 @@ from typing import List
 import numpy
 import pandas
 
-from project.MRIGlobal import MRIGlobal
 from models.FSLModels import FSLModels
 from models.SPMModels import SPMModels
 from myutility.exceptions import NotExistingImageException
@@ -23,8 +22,9 @@ from myutility.myfsl.utils.run import rrun
 from myutility.mymatlab import call_matlab_function_noret
 from myutility.mymatlab import call_matlab_spmbatch
 from myutility.utilities import fillnumber2threedigits
+from project.MRIGlobal import MRIGlobal
 from project.MRIProject import MRIProject
-from subject.Subject import Subject
+from subject.SubjectsList import SubjectsList
 
 
 class GroupAnalysis:
@@ -41,7 +41,7 @@ class GroupAnalysis:
         self.subjects_list      = None
         self.working_dir        = ""
         self.project:MRIProject = proj
-        self._global:Global     = self.project.globaldata
+        self._global:MRIGlobal     = self.project.globaldata
 
         self.spm:SPMModels      = SPMModels(proj)
 
@@ -53,7 +53,7 @@ class GroupAnalysis:
     # create a folder name and its subfolders : subjects (normalized images), flowfields, stats
     # RC1_IMAGES:    {  '/media/data/MRI/projects/ELA/subjects/0202/s1/mpr/rc20202-t1.nii,1'
     #                   '/media/data/MRI/projects/ELA/subjects/0503/s1/mpr/rc20503-t1.nii,1'}
-    def create_vbm_spm_template_normalize(self, name:str, subjects_list:List[Subject], spm_template_name:str="group_spm_dartel_createtemplate_normalize"):
+    def create_vbm_spm_template_normalize(self, name:str, subjects_list:SubjectsList, spm_template_name:str="group_spm_dartel_createtemplate_normalize"):
         """
         Create a VBM SPM template for normalization.
 
@@ -106,12 +106,12 @@ class GroupAnalysis:
         return self.working_dir
 
     # create a fslvbm folder using spm's vbm output
-    def create_fslvbm_from_spm(self, subjects_list:List[Subject], smw_folder:str, vbmfsl_folder:str):
+    def create_fslvbm_from_spm(self, subjects_list:SubjectsList, smw_folder:str, vbmfsl_folder:str):
         """
         Create an FSL VBM folder from an SPM VBM folder.
 
         Args:
-            subjects_list (List[Subject]): A list of Subject objects.
+            subjects_list (SubjectsList): A list of Subject objects.
             smw_folder (str): The path to the SPM VBM folder.
             vbmfsl_folder (str): The path to the FSL VBM folder.
 
@@ -147,12 +147,12 @@ class GroupAnalysis:
 
     # read a matrix file (not a classical subjects_data file) and add total ICV as last column
     # here it assumes [integer, integer, integer, integer, integer, float4]
-    def add_icv_2_data_matrix(self, subjects:List[Subject], input_data_file:str=None):
+    def add_icv_2_data_matrix(self, subjects:SubjectsList, input_data_file:str=None):
         """
         Add the intracranial volume (ICV) to a data matrix.
 
         Args:
-            subjects:List[Subject]: The group label or a list of subjects' label/instances.
+            subjects:SubjectsList: The group label or a list of subjects' label/instances.
             input_data_file (str, optional): The input data file. If not given, the project's default data file will be used.
 
         Returns:
@@ -173,12 +173,11 @@ class GroupAnalysis:
         b = numpy.hstack((input_data_file, icvs))
         numpy.savetxt(input_data_file, b, ['%1.0f', '%1.0f', '%5.0f', '%5.0f', '%5.0f', '%2.4f'], '\t')
 
-    # read xtract's stats.csv file of each subject in the given list and create a tabbed file (ofp) with given values/tract
-    # calls the subject routine
-    def xtract_export_group_data(self, subjects_list:List[Subject], ofp:str, tracts:List[str]=None, values:List[str]=None, ifn:str="stats.csv"):
+    def xtract_export_group_data(self, subjects_list:SubjectsList, ofp:str, tracts:List[str]=None, values:List[str]=None, ifn:str="stats.csv"):
         """
         Export Xtract results for a group of subjects to a tab-separated file.
-
+        read xtract's stats.csv file of each subject in the given list and create a tabbed file (ofp) with given values/tract
+        calls the subject routine
         Args:
             subjects_list (list): A list of Subject objects.
             ofp (str): The path to the output file.
@@ -212,11 +211,11 @@ class GroupAnalysis:
         with open(ofp, 'w', encoding='utf-8') as f:
             f.write(file_str)
 
-    def prepare_structconn_groupanalysis_dsi2nbs(self, subjects_list:List[Subject], ofp:str, nnodes:int, fisher2r:bool=False, input_postfix:str|None=None):
+    def prepare_structconn_groupanalysis_dsi2nbs(self, subjects_list:SubjectsList, ofp:str, nnodes:int, fisher2r:bool=False, input_postfix:str|None=None):
         """
         Prepare a group structural connectivity analysis for the given subjects list.
         Args:
-            subjects_list (List[Subject]): The list of Subject objects to analyze.
+            subjects_list (SubjectsList): The list of Subject objects to analyze.
             ofp (str): The path to the output file.
             input_postfix (str, optional): The postfix of the input files. Defaults to "-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.bn274.count.pass.connectivity.mat".
         Raises:
@@ -255,11 +254,11 @@ class GroupAnalysis:
             # eng = call_matlab_function_noret("remove_vars_from_mat", [self._global.spm_functions_dir], "'" + omat + "'", endengine=False, eng=eng)
         eng = call_matlab_function_noret("create_dsi_matrix_from_files", [self._global.spm_functions_dir], "'" + matrices_dir + "'" + ", " + str(nnodes) + ", 0", endengine=False, eng=eng)
 
-    def prepare_funcconn_groupanalysis_conn2nbs(self, subjects_list:List[Subject], infp:str, ofp:str, nnodes:int, fisher2r:bool=True, input_prefix:str= "resultsROI_Subject", input_postfix:str= "_Condition001"):
+    def prepare_funcconn_groupanalysis_conn2nbs(self, subjects_list:SubjectsList, infp:str, ofp:str, nnodes:int, fisher2r:bool=True, input_prefix:str= "resultsROI_Subject", input_postfix:str= "_Condition001"):
         """
         Prepare a group functional connectivity analysis for the given subjects list.
         Args:
-            subjects_list (List[Subject]): The list of Subject objects to analyze.
+            subjects_list (SubjectsList): The list of Subject objects to analyze.
             ofp (str): The path to the output file.
             input_postfix (str, optional): The postfix of the input files. Defaults to "-dti.src.gz.odf.gqi.1.25.fib.gz.tt.gz.Brainnectome.count.pass.connectivity.mat".
         Raises:
@@ -302,12 +301,12 @@ class GroupAnalysis:
     # region TBSS / xtrack / probtrack
     # ====================================================================================================================================================
     # run tbss for FA
-    def tbss_run_fa(self, subjects_list:List[Subject], odn:str, prepare:bool=True, proc:bool=True, postreg:str="S", prestat_thr:float=0.2, cleanup:bool=True):
+    def tbss_run_fa(self, subjects_list:SubjectsList, odn:str, prepare:bool=True, proc:bool=True, postreg:str="S", prestat_thr:float=0.2, cleanup:bool=True):
         """
         Run a TBSS analysis on the given subjects list for the given output directory name.
 
         Args:
-            subjects_list (List[Subject]): The list of Subject objects to analyze.
+            subjects_list (SubjectsList): The list of Subject objects to analyze.
             odn (str): The name of the output directory.
             prepare (bool, optional): Whether to prepare the analysis by copying the necessary files. Defaults to True.
             proc (bool, optional): Whether to process the analysis. Defaults to True.
@@ -362,12 +361,12 @@ class GroupAnalysis:
 
     # run tbss for other modalities = ["MD", "L1", ....]
     # you first must have done run_tbss_fa
-    def tbss_run_alternatives(self, subjects_list:List[Subject], input_folder:str, modalities:List[str], prepare:bool=True, proc:bool=True, cleanup:bool=True):
+    def tbss_run_alternatives(self, subjects_list:SubjectsList, input_folder:str, modalities:List[str], prepare:bool=True, proc:bool=True, cleanup:bool=True):
         """
         Runs a TBSS analysis on the given subjects list for the given output directory name for the given modalities.
 
         Args:
-            subjects_list (List[Subject]): The list of Subject objects to analyze.
+            subjects_list (SubjectsList): The list of Subject objects to analyze.
             input_folder (str): The path to the root analysis folder.
             modalities (List[str]): The list of modalities to analyze.
             prepare (bool, optional): Whether to prepare the analysis by copying the necessary files. Defaults to True.
@@ -707,37 +706,35 @@ class GroupAnalysis:
         except Exception as e:
             print(e)
 
-    # clust_res_dir: output folder of tbss's results clustering
-    # datas is a pandas.DataFrame with the same number of rows as the subjects contained in subj_labels and a varying number of columns
+    # datas is a pandas.DataFrame with
     # sessions are flattened. tbss output folder divide subjects by labels only, thus session is eventually appended to the subject labels
     # returns tracts_data
     @staticmethod
-    def tbss_summarize_clustered_folder(subj_labels:List[str], in_clust_res_dir, tbss_folder, modality:str= "FA", subj_img_postfix="_FA_FA_to_target",
+    def tbss_summarize_clustered_folder(subjs:SubjectsList, in_clust_res_dir, tbss_folder, modality:str= "FA", subj_img_postfix="_FA_FA_to_target",
                                         data:pandas.DataFrame=None, ofn="scatter_tracts_") -> tuple:
         """
         This function takes the output of a TBSS clustering and possibly a DataFrame and extract dti metrics values within these fraction of tracts
         summarizes the results in a tab-separated file located in {tbss_folder}/results/{ofn}_{in_clust_res_dir...name}_{data_labels}
 
         Args:
-            subj_labels (List[str]) : The list of subject labels.
-            in_clust_res_dir (str)  : The path to the TBSS clustering results folder.
+            subjs:SubjectsList      : The list of subject instances.
+            in_clust_res_dir (str)  : The path to the TBSS clustering results output folder.
             tbss_folder (str)       : The root path to the TBSS analysis folder.
             modality (str, optional): The metric to extract. Defaults to "FA".
             subj_img_postfix (str, optional): The postfix of the subject images. Defaults to "_FA_FA_to_target".
             data (pandas.DataFrame) : A dataframe containing a set of subject rows and data columns.
+                                      contains the same number of rows as the subjects contained in subjs and a varying number of columns
             ofn (str, optional)     : The name of the output file. Defaults to "scatter_tracts_".
-
         Returns:
             tuple: A tuple containing the path to the output file and the tracts data.
-
         Raises:
             Exception: If the input data is not valid.
-
         """
         # check that data contains values of all subects included in subj_labels
-        subjs_in_data = data["subj"].tolist()
-        if not first_contained_in_second(subj_labels, subjs_in_data):
-            raise Exception("ERROR in tbss_summarize_clusterized_folder: at least one of subj_labels is not included in data....exiting")
+        if data is not None:
+            subjs_in_data = data["subj"].tolist()
+            if not first_contained_in_second(subjs.labels, subjs_in_data):
+                raise Exception("ERROR in tbss_summarize_clusterized_folder: at least one of subj_labels is not included in data....exiting")
 
         out_folder      = os.path.join(tbss_folder, "results")
         ifn             = get_dirname(in_clust_res_dir)
@@ -771,15 +768,15 @@ class GroupAnalysis:
         [tracts_data.append([]) for _ in range(len(tracts_labels))]
 
 
-        nsubj = len(subj_labels)
-        for id,subj_label in enumerate(subj_labels):
+        nsubj = len(subjs.labels)
+        for id,subj_label in enumerate(subjs.labels):
             in_img          = os.path.join(subjects_images, subj_label + "-dti_fit" + subj_img_postfix)
             subj_img        = Image(in_img, must_exist=True, msg="Error in tbss_summarize_clusterized_folder, subj image (" + in_img + "_masked" + ") is missing...exiting")
             subj_img_masked = Image(subj_img + "_masked")
             n_tracts        = 0
             str_data        = str_data + subj_label
-            for id,lab in enumerate(data_labels):
-                str_data = str_data + "\t" + str(data.loc[data['subj'] == subj_label, lab].values[0])
+            for idd,lab in enumerate(data_labels):
+                str_data = str_data + "\t" + str(data.loc[data['subj'] == subj_label, lab].values[0])   # if data is None, data_labels = [] -> this is not an error
 
             for entry in os.scandir(in_clust_res_dir):
                 if not entry.name.startswith('.') and not entry.is_dir():
@@ -793,7 +790,10 @@ class GroupAnalysis:
                         n_tracts = n_tracts + 1
             str_data = str_data + "\n"
 
-        res_file = os.path.join(out_folder, ofn + ifn + "_" + listToString(data_labels, separator='_') + ".dat")
+        if len(data_labels) > 0:
+            res_file = os.path.join(out_folder, ofn + ifn + "_" + listToString(data_labels, separator='_') + ".dat")
+        else:
+            res_file = os.path.join(out_folder, ofn + ifn + ".dat")
 
         os.makedirs(out_folder, exist_ok=True)
         with open(res_file, "w") as f:
@@ -803,7 +803,7 @@ class GroupAnalysis:
 
 
     @staticmethod
-    def xtract_group_qc(subjects:List[Subject], out_dir:str, xtractdir_name:str|None=None, thr:float=0.001, n_std:int=2):
+    def xtract_group_qc(subjects:SubjectsList, out_dir:str, xtractdir_name:str|None=None, thr:float=0.001, n_std:int=2):
 
         xtracts_file = os.path.join(out_dir, "xtracts_file.txt")
         os.makedirs(out_dir, exist_ok=True)
@@ -821,7 +821,7 @@ class GroupAnalysis:
     #endregion
 
     # # takes N individual tracts for each subject in the list, create a merged tract (union) names as the subject, project to template and display in a single fsleyes
-    # def show_group_probtracks(self, subjects:List[Subject], tracts_names:List[str], tracts_dir_name:str):
+    # def show_group_probtracks(self, subjects:SubjectsList, tracts_names:List[str], tracts_dir_name:str):
     #     tracts_list = ""
     #
     #     ntracts = len(tracts_names)

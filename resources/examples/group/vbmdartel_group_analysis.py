@@ -31,7 +31,7 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        subjects = project.load_subjects(group_label, [SESS_ID])
+        subjects = project.get_subjects(group_label, sess_ids=[SESS_ID])
         project.add_icv_to_data(subjects) # add icv to all data
 
         analysis            = GroupAnalysis(project)

@@ -40,7 +40,7 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        subjects = subjproject.load_subjects(group_label, [SESS_ID], must_exist=False)
+        subjects = subjproject.get_subjects(group_label, sess_ids=[SESS_ID], must_exist=False)
 
         analysis            = GroupAnalysis(project)
         spm_analysis        = SPMModels(project)

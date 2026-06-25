@@ -16,7 +16,7 @@ class SPMPostModel:
     """
     # calculate contrasts and report their results on a given, already estimated, SPM.mat
     @staticmethod
-    def batchrun_spm_stats_postmodel(project:MRIProject, _global:Global, statsdir:str, post_model:PostModel, analysis_name:str, analysis_seq:str="mpr", eng=None, runit:bool=True):
+    def batchrun_spm_stats_postmodel(project:MRIProject, _global:MRIGlobal, statsdir:str, post_model:PostModel, analysis_name:str, analysis_seq:str="mpr", eng=None, runit:bool=True):
         """
         This function is used to calculate the contrasts and report their results on a given, already estimated, SPM.mat.
 
@@ -75,7 +75,7 @@ class SPMPostModel:
     # apply an existing contrasts template (in a non-standard location) on an already estimated SPM.mat and report the results
     # only need to set the SPM.mat path
     @staticmethod
-    def batchrun_spm_stats_predefined_postmodel(project:MRIProject, _global:Global, statsdir:str, template_name:str, analysis_seq:str="mpr", eng=None, runit:bool=True):
+    def batchrun_spm_stats_predefined_postmodel(project:MRIProject, _global:MRIGlobal, statsdir:str, template_name:str, analysis_seq:str="mpr", eng=None, runit:bool=True):
         """
         This function is used to apply an existing contrasts template (in a non-standard location) on an already estimated SPM.mat and report the results.
 
