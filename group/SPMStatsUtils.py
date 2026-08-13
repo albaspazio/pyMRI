@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from project.MRIGlobal import MRIGlobal
 from data.SubjectsData import SubjectsData
@@ -9,7 +9,9 @@ from myutility.fileutilities import sed_inplace
 from myutility.images.Image import Image
 from myutility.list import is_list_of
 from myutility.mymatlab import call_matlab_function_noret, call_matlab_spmbatch
-from subject.SubjectMRI import SubjectMRI
+
+if TYPE_CHECKING:
+    from subject.SubjectMRI import SubjectMRI
 
 
 class SPMStatsUtils:

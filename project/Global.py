@@ -39,7 +39,7 @@ class Global:
 
         # Determine framework folder
         filename = inspect.getframeinfo(inspect.currentframe()).filename
-        self.framework_dir = os.path.dirname(os.path.abspath(filename))
+        self.framework_dir = os.path.dirname(os.path.dirname(os.path.abspath(filename)))
 
         # Initialize project scripts directory (will be set by subclasses or configuration)
         self.project_scripts_dir = ""
