@@ -1343,7 +1343,8 @@ class SubjectMpr:
 
             log = open(logfile, "a")
 
-            rrun(f"mri_convert {self.subject.t1_data}.nii.gz {self.subject.t1_data}.mgz", logFile=log)
+            # mri_convert prints INFO messages to stdout, use stdout=False to ignore them
+            rrun(f"mri_convert {self.subject.t1_data}.nii.gz {self.subject.t1_data}.mgz", logFile=log, stdout=False)
 
             try:
                 os.environ['OLD_SUBJECTS_DIR'] = os.environ['SUBJECTS_DIR']
@@ -1352,7 +1353,8 @@ class SubjectMpr:
 
             os.environ['SUBJECTS_DIR'] = self.subject.t1_dir
 
-            rrun(f"recon-all -subject freesurfer -i {self.subject.t1_data}.mgz {step} -threads {numcpu}", logFile=log)
+            # recon-all may print INFO messages to stdout
+            rrun(f"recon-all -subject freesurfer -i {self.subject.t1_data}.mgz {step} -threads {numcpu}", logFile=log, stdout=False)
 
             t1_fs_data_orig = self.subject.t1_fs_data.add_postfix2name("_orig")
 

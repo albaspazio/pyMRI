@@ -1,4 +1,5 @@
 import traceback
+import os
 
 from data.BayesDB import BayesDB
 from data.importer.BayesImporter import BayesImporter
@@ -32,7 +33,8 @@ if __name__ == "__main__":
         # START !!!
         # ======================================================================================================================
         # read ALL bayes db
-        bayes_db        = BayesDB(bayes_db_file)
+        bayes_schema        = os.path.join("/data/MRI/pymri/resources/schemas/bayes_template.json")
+        bayes_db            = BayesDB(bayes_schema, bayes_db_file)
 
         # ============================================================================================================
         #region URAS thesis
@@ -96,7 +98,8 @@ if __name__ == "__main__":
         # ============================================================================================================
         # region add second session partial data
         new_bayes_db_file   = os.path.join(project.input_data_dir, "new_subjects_2nd_session.xlsx")
-        new_bayes_db        = BayesDB(new_bayes_db_file, calc_flags=False)
+        bayes_schema        = os.path.join("/data/MRI/pymri/resources/schemas/bayes_template.json")
+        new_bayes_db        = BayesDB(bayes_schema, new_bayes_db_file, calc_flags=False)
         final_db            = bayes_db.copy().add_new_subjects(new_bayes_db, copy_previous_sess=columns2copy)
         final_db.save(final_bayes_db_file)
         #endregion
