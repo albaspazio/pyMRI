@@ -2,8 +2,8 @@ import os
 import traceback
 
 from group.SPMConstants import SPMConstants
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 from group.GroupAnalysis import GroupAnalysis
 from models.SPMModels import SPMModels
 from group.PostModel import PostModel
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = MRIGlobal(fsl_code)
+        globaldata = GlobalMRI(fsl_code)
 
         # ======================================================================================================================
         # HEADER
@@ -27,10 +27,10 @@ if __name__ == "__main__":
         SESS_ID = 1
 
         ctrl_proj_dir   = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "controls")  # NOTE: relative path to project directory
-        ctrl_project    = MRIProject(ctrl_proj_dir, globaldata)
+        ctrl_project    = ProjectMRI(ctrl_proj_dir, globaldata)
 
         pat_proj_dir    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "patients")  # NOTE: relative path to project directory
-        pat_project     = MRIProject(pat_proj_dir, globaldata)
+        pat_project     = ProjectMRI(pat_proj_dir, globaldata)
 
         group_analysis  = GroupAnalysis(pat_project)        # reference project for group-level analysis is the patients’ one
         spm_analysis    = SPMModels(pat_project)

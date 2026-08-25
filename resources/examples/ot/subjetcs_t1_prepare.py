@@ -1,7 +1,7 @@
 import os
 
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 
 if __name__ == "__main__":
 
@@ -10,7 +10,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "601"
     try:
-        globaldata = MRIGlobal(fsl_code)
+        globaldata = GlobalMRI(fsl_code)
 
     except Exception as e:
         print(e)
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # NOTE: Update this path to your actual project directory
     proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "T15")
-    project = MRIProject(proj_dir, globaldata)
+    project = ProjectMRI(proj_dir, globaldata)
     SESS_ID = 1
     group_label = "controls_test"
 

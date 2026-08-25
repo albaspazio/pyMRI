@@ -4,7 +4,7 @@
 
 pymri is a Python framework for MRI data analysis. It does not perform computations directly: it orchestrates external tools (FSL via shell commands, SPM via MATLAB batch files) and manages the surrounding infrastructure — file system layout, subject data, preprocessing pipelines, and group-level statistics.
 
-Consumer projects live outside this folder (in a separate `pymri_projects/` tree). They import pymri classes, instantiate an `MRIProject` + `MRIGlobal`, load subjects, and call methods.
+Consumer projects live outside this folder (in a separate `pymri_projects/` tree). They import pymri classes, instantiate an `ProjectMRI` + `GlobalMRI`, load subjects, and call methods.
 
 ---
 
@@ -14,9 +14,9 @@ Consumer projects live outside this folder (in a separate `pymri_projects/` tree
 pymri/
 ├── project/
 │   ├── Project.py      # Base project class: data loading, subject lists, query helpers
-│   ├── MRIProject.py   # MRI project: extends Project, adds subjects, file system, orchestration
+│   ├── ProjectMRI.py   # MRI project: extends Project, adds subjects, file system, orchestration
 │   ├── DataProject.py  # Data-only project: extends Project, no MRI tools required
-│   ├── MRIGlobal.py    # Environment configuration (FSL, SPM, paths)
+│   ├── GlobalMRI.py    # Environment configuration (FSL, SPM, paths)
 │   └── Global.py       # Environment configuration (generic)
 ├── subject/            # Per-subject MRI processing
 ├── group/              # Group-level analyses (SPM, FSL)
@@ -38,7 +38,7 @@ Environment configuration for framework. Implements safe property access without
 - `ignore_warnings` — bool flag for warning suppression
 - `_safe_get_setting(data_dict, key, default=None)` — helper for safe config reading
 
-### `MRIGlobal(Global)` (Extends Global)
+### `GlobalMRI(Global)` (Extends Global)
 MRI-specific configuration. Reads `local.settings` safely and resolves all tool paths:
 - FSL directory, FSL derivatives (BET, FLIRT, FNIRT, topup, etc.)
 - SPM directory and version
@@ -48,7 +48,7 @@ MRI-specific configuration. Reads `local.settings` safely and resolves all tool 
 - DTI xtract labels and coordinates
 - Matlab engine configuration
 
-Implements `check_paths(full_check=True)` to validate MRI tool directories exist (skipped if `full_check=False`). Every MRI-based class receives an `MRIGlobal` instance at construction.
+Implements `check_paths(full_check=True)` to validate MRI tool directories exist (skipped if `full_check=False`). Every MRI-based class receives an `GlobalMRI` instance at construction.
 
 ---
 
@@ -75,9 +75,9 @@ Lightweight variant for data-only analysis (no MRI tools). Adds:
 
 Used by analysis scripts needing only demographic/clinical data (e.g. R-compatible exports, statistical covariates).
 
-### `MRIProject(Project)` (Extends Project)
+### `ProjectMRI(Project)` (Extends Project)
 The main object for an MRI study. Overrides Project to add MRI infrastructure:
-- `globaldata` — reference to `MRIGlobal` (required, not optional)
+- `globaldata` — reference to `GlobalMRI` (required, not optional)
 - `subjects_dir`, `group_analysis_dir`, `script_dir`, `vbm_dir`, `tbss_dir`, etc. — MRI filesystem layout
 - `subjects` — loaded list of `SubjectMRI` instances
 - `subjects_lists_file` — lives in `script_dir` (outside the project folder, in `project_scripts_dir/name/`)
@@ -106,7 +106,7 @@ No MRI dependencies. Works for any research domain.
 
 ### `SubjectMRI(Subject)` (Extends Subject)
 MRI-specific subject implementation. Inherits all Subject functionality, adds:
-- `global_config` — reference to `MRIGlobal` for tool access
+- `global_config` — reference to `GlobalMRI` for tool access
 - `@property dir` — overridden to use MRI session format ("s1", "s2", etc.)
 - MRI directory properties: `t1_dir`, `dti_dir`, `rs_dir`, `fmri_dir`, `t2_dir`, `roi_dir`, etc.
 - Image path properties: `t1_data`, `dti_data`, `rs_data`, `rs_pa_data`, `fmri_data`, `t2_data`, etc.
@@ -299,11 +299,11 @@ LimeAutoImporter, VolBrainImporter
 Modern entry point is always `project.get_subjects()` which returns a `SubjectsList`:
 
 ```python
-from project.MRIProject import MRIProject
-from project.MRIGlobal import MRIGlobal
+from project.ProjectMRI import ProjectMRI
+from project.GlobalMRI import GlobalMRI
 
-globaldata = MRIGlobal("6.0.4")
-project = MRIProject("/data/MRI/projects/MyStudy", globaldata)
+globaldata = GlobalMRI("6.0.4")
+project = ProjectMRI("/data/MRI/projects/MyStudy", globaldata)
 
 # Get subjects from a named group
 subjects = project.get_subjects("group_label", sess_ids=[SESS_ID])
@@ -329,8 +329,8 @@ For analyses combining subjects from multiple projects, manually build a `Subjec
 from subject.SubjectsList import SubjectsList
 
 # Load data from multiple projects
-ctrl_project = MRIProject(ctrl_proj_dir, globaldata)
-pat_project = MRIProject(pat_proj_dir, globaldata)
+ctrl_project = ProjectMRI(ctrl_proj_dir, globaldata)
+pat_project = ProjectMRI(pat_proj_dir, globaldata)
 
 # Get subjects from each project
 ctrl_subjects = ctrl_project.get_subjects("controls", sess_ids=[SESS_ID])
@@ -367,10 +367,10 @@ project.run_subjects_methods("epi", "spm_fmri_preprocessing", kwparams,
 ## Data Flow — Typical MRI Project
 
 ```
-MRIGlobal("6.0.4")
+GlobalMRI("6.0.4")
   └─ reads local.settings → resolves FSL, SPM, template paths
 
-MRIProject("/data/MRI/projects/MyStudy", globaldata)
+ProjectMRI("/data/MRI/projects/MyStudy", globaldata)
   └─ reads subjects_lists.json (from script_dir)
   └─ loads data.xlsx → SubjectsData
 

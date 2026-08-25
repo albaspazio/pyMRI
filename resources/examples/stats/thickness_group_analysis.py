@@ -1,8 +1,8 @@
 import os
 import traceback
 
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 from data.utilities import FilterValues
 from group.GroupAnalysis import GroupAnalysis
 from group.SPMConstants import SPMConstants
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = MRIGlobal(fsl_code)
+        globaldata = GlobalMRI(fsl_code)
 
         # ======================================================================================================================
         # HEADER
@@ -27,10 +27,10 @@ if __name__ == "__main__":
         data_file = "data.xlsx"
 
         project_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "test")  # NOTE: relative path to project directory
-        project = MRIProject(project_dir, globaldata, data_file)  # automatically load PROJDIR/script/data.dat if present
+        project = ProjectMRI(project_dir, globaldata, data_file)  # automatically load PROJDIR/script/data.dat if present
 
         subjproject_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "test")  # NOTE: relative path to project directory
-        subjproject = MRIProject(subjproject_dir, globaldata)
+        subjproject = ProjectMRI(subjproject_dir, globaldata)
 
         SESS_ID = 1
         num_cpu = 1
