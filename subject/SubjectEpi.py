@@ -5,7 +5,7 @@ from typing import List
 
 from numpy import arange, concatenate, array
 
-from project.MRIGlobal import MRIGlobal
+from project.GlobalMRI import GlobalMRI
 from data.utilities import list2spm_text_column
 from group.SPMContrasts import SPMContrasts
 from group.SPMResults import SPMResults
@@ -26,7 +26,7 @@ class SubjectEpi:
     This class provides methods for resting state and functional MRI preprocessing.
     """
 
-    def __init__(self, subject:'Subject', _global:MRIGlobal):
+    def __init__(self, subject:'Subject', _global:GlobalMRI):
         """
         Initialize the SubjectEpi class.
 
@@ -35,7 +35,7 @@ class SubjectEpi:
             _global (Global): The global object.
         """
         self.subject:'Subject' = subject
-        self._global:MRIGlobal  = _global
+        self._global:GlobalMRI  = _global
 
     def get_example_function(self, seq:str="rs", vol_num=None, fmri_labels=None, overwrite=False, logFile=None):
         """
@@ -1329,7 +1329,7 @@ class SubjectEpi:
     # ===============================================================================
     # FRAMEWORK (copy data across relevant folders, clean up)
     # ===============================================================================
-    def cleanup(self, lvl=MRIGlobal.CLEANUP_LVL_MIN):
+    def cleanup(self, lvl=GlobalMRI.CLEANUP_LVL_MIN):
         """
         Cleans up the resting state data for the given subject.
 
@@ -1347,7 +1347,7 @@ class SubjectEpi:
         os.removedirs(os.path.join(self.subject.rs_dir, "resting.feat"))
         os.removedirs(self.subject.rs_aroma_dir)
 
-        if lvl == MRIGlobal.CLEANUP_LVL_MED:
+        if lvl == GlobalMRI.CLEANUP_LVL_MED:
             # copy melodic report i
             os.makedirs(self.subject.rs_melic_dir)
             rrun(f"mv {os.path.join(self.subject.rs_default_mel_dir, 'filtered_func_data_ica.ica', 'report')} {self.subject.rs_melic_dir}")
@@ -1355,7 +1355,7 @@ class SubjectEpi:
             rrun(f"rm -rf {self.subject.rs_default_mel_dir}")
             os.remove(os.path.join(self.subject.rs_dir, self.subject.rs_post_nuisance_melodic_image_label))
 
-        elif lvl == MRIGlobal.CLEANUP_LVL_HI:
+        elif lvl == GlobalMRI.CLEANUP_LVL_HI:
 
             os.removedirs(self.subject.rs_melic_dir)
 

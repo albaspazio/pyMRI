@@ -1,7 +1,7 @@
 import os
 
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 
 # NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
@@ -14,7 +14,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "601"
     try:
-        globaldata = MRIGlobal(fsl_code)
+        globaldata = GlobalMRI(fsl_code)
 
     except Exception as e:
         print(e)
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # HEADER
     # ======================================================================================================================
     proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "SeagateBackupPlusDrive", "MRI", "projects", "bisection_pisa")  # NOTE: relative path to project directory
-    project = MRIProject(proj_dir, globaldata)
+    project = ProjectMRI(proj_dir, globaldata)
     SESS_ID = 1
     num_cpu = 4
     group_label = "single"

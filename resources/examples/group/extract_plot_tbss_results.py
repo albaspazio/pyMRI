@@ -1,7 +1,7 @@
 import os
 
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 from group.GroupAnalysis import GroupAnalysis
 from data.SubjectsData import SubjectsData
 from myutility.list import remove_items_from_list
@@ -19,11 +19,11 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = MRIGlobal(fsl_code)
+        globaldata = GlobalMRI(fsl_code)
 
         # ======================================================================================================================
         proj_dir    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "past_controls")  # NOTE: relative path to project directory
-        project     = MRIProject(str(proj_dir), globaldata, "data_sensoryprofile_bis_57.txt")
+        project     = ProjectMRI(str(proj_dir), globaldata, "data_sensoryprofile_bis_57.txt")
         num_cpu     = 1
         analysis    = GroupAnalysis(project)
 
@@ -46,9 +46,9 @@ if __name__ == "__main__":
         tbssmaps            = ["tbss_FA_ctrl57_sp_sts_sp_lr_bis_t_x_age_gender_tfce_corrp_tstat1", "tbss_L23_ctrl57_sp_lr_sp_sts_sp_srs_sp_sa_bis_t_x_age_gender_tfce_corrp_tstat4"]
         tbssmaps            = ["tbss_FA_sp_lr_sp_sts_sp_srs_sp_sa_x_age_gender_tfce_corrp_tstat4", "tbss_L23_sp_lr_sp_sts_sp_srs_sp_sa_x_age_gender_tfce_corrp_tstat5"]
         tbssmaps            = ["tbss_FA_ctrl57_sp_sts_bis_t_x_age_gender_tfce_corrp_tstat1"]
-        # sp_sts              = MRIProject.get_subjects_values_by_col("sp_sts")                                # tuple[2] of  [values], subj_label
-        # age_spsts           = MRIProject.get_subjects_values_by_cols(["age", "sp_sts"])                      # tuple[2] of  [values], subj_label
-        # age_spsts_bist      = MRIProject.get_subjects_values_by_cols(["age", "sp_sts", "bis_t"])
+        # sp_sts              = ProjectMRI.get_subjects_values_by_col("sp_sts")                                # tuple[2] of  [values], subj_label
+        # age_spsts           = ProjectMRI.get_subjects_values_by_cols(["age", "sp_sts"])                      # tuple[2] of  [values], subj_label
+        # age_spsts_bist      = ProjectMRI.get_subjects_values_by_cols(["age", "sp_sts", "bis_t"])
 
         age_spsts_splr_bist_df= project.get_subjects_dataframe(subjects, data_labels)
 

@@ -1,8 +1,8 @@
 import os
 import traceback
 
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 from group.GroupAnalysis import GroupAnalysis
 from models.SPMModels import SPMModels
 from group.PostModel import PostModel
@@ -17,13 +17,13 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = MRIGlobal(fsl_code)
+        globaldata = GlobalMRI(fsl_code)
 
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
         proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "test")  # NOTE: relative path to project directory
-        project = MRIProject(proj_dir, globaldata)     # automatically load PROJDIR/script/data.dat if present
+        project = ProjectMRI(proj_dir, globaldata)     # automatically load PROJDIR/script/data.dat if present
         SESS_ID = 1
         num_cpu = 1
         group_label = "all"

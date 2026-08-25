@@ -1,7 +1,7 @@
 import os
 
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 from group.GroupAnalysis import GroupAnalysis
 from group.group_analysis import convert_melodic_rois_to_individual
 
@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = MRIGlobal(fsl_code)
+        globaldata = GlobalMRI(fsl_code)
 
         # ======================================================================================================================
         # HEADER
@@ -21,8 +21,8 @@ if __name__ == "__main__":
         proj_dir_bd    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "past_bipolar")
         proj_dir_td    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "past_controls")
 
-        project_bd     = MRIProject(proj_dir_bd, globaldata)
-        project_td     = MRIProject(proj_dir_td, globaldata)
+        project_bd     = ProjectMRI(proj_dir_bd, globaldata)
+        project_td     = ProjectMRI(proj_dir_td, globaldata)
 
         SESS_ID     = 1
         num_cpu     = 18

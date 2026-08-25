@@ -19,7 +19,7 @@ from subject.SubjectsList import SubjectsList
 class Project:
     """
     Base project class. Manages a SubjectsData dataframe and subject lists.
-    Does not require MRI tools (FSL/SPM). Can be used standalone or extended by MRIProject.
+    Does not require MRI tools (FSL/SPM). Can be used standalone or extended by ProjectMRI.
     """
 
     data: SubjectsData = None
@@ -230,7 +230,7 @@ class Project:
         Returns
         -------
         SubjectsList
-            List of Subject instances (or SubjectMRI at MRIProject runtime) with the requested 
+            List of Subject instances (or SubjectMRI at ProjectMRI runtime) with the requested
             label/session combinations.
         
         Raises
@@ -294,7 +294,7 @@ class Project:
                     else:
                         return subj.get_properties(sess)
             raise SubjectExistException(
-                "Error in MRIProject.get_subject: given subject (" + subj_label + " does not exist")
+                "Error in ProjectMRI.get_subject: given subject (" + subj_label + " does not exist")
         else:
             sid = self.data.get_sid(subj_label, sess)
             return self._create_subject(sid)

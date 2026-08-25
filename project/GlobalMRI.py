@@ -6,7 +6,7 @@ from myutility.images.Image import Image
 from myutility.myfsl import fsl_switcher
 
 
-class MRIGlobal(Global):
+class GlobalMRI(Global):
     """
     MRI-specific global configuration class extending the base Global.
     

@@ -15,16 +15,16 @@ from data.SubjectsData import SubjectsData
 from myutility.exceptions import DataFileException, SubjectExistException
 from myutility.fileutilities import sed_inplace, remove_ext
 from myutility.images.Image import Image
-from project.MRIGlobal import MRIGlobal
+from project.GlobalMRI import GlobalMRI
 from subject.Subject import Subject
 from subject.SubjectMRI import SubjectMRI
 from subject.SubjectsList import SubjectsList
 from .Project import Project
 
 
-class MRIProject(Project):
+class ProjectMRI(Project):
 
-    def __init__(self, folder: str, globaldata: 'MRIGlobal', data: str | SubjectsData = "data.xlsx", must_exist: bool = False):
+    def __init__(self, folder: str, globaldata: 'GlobalMRI', data: str | SubjectsData = "data.xlsx", must_exist: bool = False, isBids: bool = False):
         """
         Initialize an MRIProject instance.
 
@@ -32,18 +32,23 @@ class MRIProject(Project):
         ----------
         folder : str
             The path to the project folder.
-        globaldata : MRIGlobal
-            The MRI global configuration instance (MUST be MRIGlobal, not generic Global).
+        globaldata : GlobalMRI
+            The MRI global configuration instance (MUST be GlobalMRI, not generic Global).
         data : str | SubjectsData, optional
             The path to the data file or a SubjectsData instance.
         must_exist : bool, optional
             If True, emit UserWarning for subjects not present in filesystem.
             Default: False.
+        isBids : bool, optional
+            If True, filesystem follows BIDS standard (sub-XX/ses-YY/anat/, etc.).
+            If False, uses legacy format (subjects/XX/sYY/mpr/, etc.).
+            Default: False (legacy format for backward compatibility).
         """
         if not os.path.exists(folder):
             raise Exception("PROJECT_DIR not defined.....exiting")
 
         self.globaldata = globaldata
+        self.isBids = isBids
 
         self.dir        = folder
         self.label      = os.path.basename(self.dir)
@@ -190,7 +195,7 @@ class MRIProject(Project):
         DataFileException
             If (label, sess_id) not found in self.data.
         """
-        subj = SubjectMRI(sid.label, self, sid.session)
+        subj = SubjectMRI(sid.label, self, sid.session, isBids=self.isBids)
         subj.sid = sid  # Raises DataFileException if not found
         return subj
 

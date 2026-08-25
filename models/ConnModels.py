@@ -4,7 +4,7 @@ import os
 import traceback
 from typing import List
 
-from project.MRIGlobal import MRIGlobal
+from project.GlobalMRI import GlobalMRI
 from data.SubjectsData import SubjectsData
 from group.spm_utilities import Regressor, Covariate, Nuisance
 from myutility.exceptions import SubjectListException
@@ -12,7 +12,7 @@ from myutility.list import is_list_of
 
 # create factorial designs, multiple regressions, t-test
 from myutility.fileutilities import write_text_file
-from project.MRIProject import MRIProject
+from project.ProjectMRI import ProjectMRI
 from subject.Subject import Subject
 from subject.SubjectMRI import SubjectMRI
 from subject.SubjectsList import SubjectsList
@@ -23,21 +23,21 @@ class ConnModels:
     This class provides methods for creating and managing the connection models used in the CONN tool.
 
     Args:
-        proj (MRIProject): The MRIProject object that this class is associated with.
+        proj (ProjectMRI): The ProjectMRI object that this class is associated with.
 
     Attributes:
         subjects_list (list): A list of Subject objects that are part of the current project.
         working_dir (str): The directory where temporary files are stored.
-        project (MRIProject): The ConnProject object that this class is associated with.
+        project (ProjectMRI): The ConnProject object that this class is associated with.
         globaldata (GlobalData): The GlobalData object that is associated with the current project.
         string (str): A string that is used to compose the connection model files.
     """
 
-    def __init__(self, proj:MRIProject):
+    def __init__(self, proj:ProjectMRI):
         self.subjects_list      = None
         self.working_dir        = ""
-        self.project:MRIProject    = proj
-        self.globaldata:MRIGlobal  = self.project.globaldata
+        self.project:ProjectMRI    = proj
+        self.globaldata:GlobalMRI  = self.project.globaldata
         self.string             = ""  # used to compose models override
 
     def create_regressors_file(self, odp:str, regressors:List[Regressor], groups_instances:List[List[SubjectMRI]], group_labels:List[str]=None, ofn:str="conn_covs",

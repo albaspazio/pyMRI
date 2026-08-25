@@ -6,7 +6,7 @@ from data.SubjectsData import SubjectsData
 from data.utilities import list2spm_text_column
 from group.spm_utilities import Covariate, Regressor
 from myutility.fileutilities import sed_inplace
-from project.MRIProject import MRIProject
+from project.ProjectMRI import ProjectMRI
 from subject.SubjectMRI import SubjectMRI
 
 
@@ -17,8 +17,8 @@ class SPMCovariates:
     """
 
     @staticmethod
-    def spm_replace_stats_add_covariates(project: MRIProject, out_batch_job: str, groups_instances:List[List[SubjectMRI]], covs:List[Regressor],
-                                        batch_id: int = 1, cov_interaction:List[int]=None, data:str|SubjectsData=None, centering: bool = False) -> None:
+    def spm_replace_stats_add_covariates(project: ProjectMRI, out_batch_job: str, groups_instances:List[List[SubjectMRI]], covs:List[Regressor],
+                                         batch_id: int = 1, cov_interaction:List[int]=None, data:str|SubjectsData=None, centering: bool = False) -> None:
         """
         This function adds covariates to an SPM batch file.
 
@@ -89,7 +89,7 @@ class SPMCovariates:
             sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
 
     @staticmethod
-    def spm_replace_stats_add_1cov_manygroups(out_batch_job: str, groups_instances: List[List[SubjectMRI]], project: MRIProject,
+    def spm_replace_stats_add_1cov_manygroups(out_batch_job: str, groups_instances: List[List[SubjectMRI]], project: ProjectMRI,
                                               cov:Covariate, cov_interaction:List[int], batch_id: int = 1, data:str|SubjectsData=None, centering:bool=False) -> None:
         """
         This function adds a single covariate to an SPM batch file, where the covariate is defined across multiple groups.

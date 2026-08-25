@@ -1,7 +1,7 @@
 import os
 
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 from group.spm_utilities import FmriProcParams, Contrast, SubjCondition
 from numpy import sort
 
@@ -14,13 +14,13 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = MRIGlobal(fsl_code)
+        globaldata = GlobalMRI(fsl_code)
 
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
         proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "roelof")  # NOTE: relative path to project directory
-        project  = MRIProject(proj_dir, globaldata)
+        project  = ProjectMRI(proj_dir, globaldata)
         SESS_ID  = 1
         num_cpu  = 1
         group_label = "test"

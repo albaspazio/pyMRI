@@ -1,8 +1,8 @@
 import os
 import traceback
 
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 from group.GroupAnalysis import GroupAnalysis
 from myutility.utilities import Processes
 
@@ -15,16 +15,16 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = MRIGlobal(fsl_code)
+        globaldata = GlobalMRI(fsl_code)
 
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
         proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "nk")  # NOTE: relative path to project directory
-        project = MRIProject(proj_dir, globaldata, "")
+        project = ProjectMRI(proj_dir, globaldata, "")
 
         subjproject = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "3T")  # NOTE: relative path to project directory
-        subjproject = MRIProject(subjproject, globaldata, "")
+        subjproject = ProjectMRI(subjproject, globaldata, "")
 
         analysis = GroupAnalysis(project)
 
