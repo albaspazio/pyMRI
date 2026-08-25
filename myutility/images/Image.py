@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import collections
+import collections.abc
 import ntpath
 import os
 import shutil
 import xml.etree.ElementTree as ET
 from shutil import move, copyfile
-from typing import Optional, List
+from typing import List
 
 # https://stackoverflow.com/questions/30045106/python-how-to-extend-str-and-overload-its-constructor
 from myutility.exceptions import NotExistingImageException
@@ -62,193 +62,10 @@ class Image(str):
         raise NotExistingImageException(msg, self)
 
     @property
-    def exist(self):
+    def exist(self) -> bool:
         """
         Check if the image exists.
-
-        Returns:
-            bool: Whether the image exists.
-
-        """
-        return self.imtest()
-
-    @property
-    def uexist(self):
-        """
-        Check if the uncompressed image exists.
-
-        Returns:
-            bool: Whether the uncompressed image exists.
-
-        """
-        return self.uimtest()
-
-    @property
-    def cexist(self):
-        """
-        Check if the compressed image exists.
-
-        Returns:
-            bool: Whether the compressed image exists.
-
-        """
-        return self.cimtest()
-
-    @property
-    def gexist(self):
-        """
-        Check if the compressed image exists.
-
-        Returns:
-            bool: Whether the compressed image exists.
-
-        """
-        return self.gimtest()
-
-    @property
-    def upath(self):
-        """
-        Get the path to the uncompressed image.
-
-        Returns:
-            Image: The uncompressed image.
-
-        """
-        return Image(str(self.fpathnoext + ".nii"))
-
-    @property
-    def cpath(self):
-        """
-        Get the path to the compressed image.
-
-        Returns:
-            Image: The compressed image.
-
-        """
-        return Image(self.fpathnoext + ".nii.gz")
-
-    @property
-    def gpath(self):
-        """
-        Get the path to the surface image.
-
-        Returns:
-            Image: The surface image.
-
-        """
-        return Image(self.fpathnoext + ".gii")
-
-    @property
-    def spath(self):
-        """
-        Get the path to DSI-studio dti image.
-
-        Returns:
-            Image: The dti image.
-
-        """
-        return Image(self.fpathnoext + ".src.gz")
-
-    @property
-    def nslices(self):
-        """
-        Get the number of slices in the image.
-
-        Returns:
-            int: The number of slices.
-
-        """
-        return int(rrun(f"fslval {self} dim3"))
-
-    @property
-    def nvols(self):
-        """
-        Get the number of volumes in the image.
-
-        Returns:
-            int: The number of volumes.
-
-        """
-        return int(rrun(f"fslnvols {self}").split('\n')[0])
-
-    @property
-    def nvoxels(self):
-        """
-        Get the number of voxels in the image.
-        Returns:
-            int: The number of voxels.
-        """
-        return int(rrun(f"fslstats {self} -V").strip().split(" ")[0])
-
-    @property
-    def TR(self):
-        """
-        Get the repetition time of the image.
-
-        Returns:
-            float: The repetition time.
-
-        """
-        return float(rrun(f"fslval {self} pixdim4"))
-
-    # ===============================================================================================================================
-    # FOLDERS, NAME, EXTENSIONS,
-    # ===============================================================================================================================
-    # get the whole extension  (e.g. abc.nii.gz => nii.gz )
-    # return [path/filename_noext, ext]
-    def split_ext(self, img_formats=None):
-        """
-        Split the extension from the filename.
-
-        Args:
-            img_formats (list, optional): The allowed image formats. Defaults to None, which uses the class attribute IMAGE_FORMATS.
-
-        Returns:
-            list: A list containing the filename and extension.
-
-        """
-        if img_formats is None:
-            img_formats = self.IMAGE_FORMATS
-        fullext = ""
-        for imgext in img_formats:
-            if self.endswith(imgext):
-                fullext = imgext  # [1:]
-                break
-        filename = self.replace(fullext, '')
-        return [filename, fullext]
-
-    # suitable for images (with double extension e.g.: /a/b/c/name.nii.gz)
-    # return [folder, filename, ext]
-    def imgparts(self):
-        """
-        Split the path to the image into its components: directory, filename, and extension.
-
-        Returns:
-            list: A list containing the directory, filename, and extension.
-
-        """
-        if os.path.isdir(self):
-            return [self, "", ""]
-
-        parts = self.split_ext()
-        return [ntpath.dirname(parts[0]), ntpath.basename(parts[0]), parts[1]]
-
-    def imgdir(self):
-        namepath = self.split_ext()[0]
-        return ntpath.dirname(namepath)
-
-    # return basename of given image (useful to return "image" from "image.nii.gz")
-    def remove_image_ext(self):
-        return self.split_ext()[0]
-
-    # ===========================================================================================================
-    # EXIST, COPY, REMOVE, MOVE, MASS MOVE
-    # ===========================================================================================================
-
-    # return False if neither compressed nor uncompressed images exist or True if either compressed or uncompressed image exists
-    def imtest(self):
-        """
-        Check if the image exists.
+        return False if neither compressed nor uncompressed images exist or True if either compressed or uncompressed image exists
 
         Returns:
             bool: Whether the image exists.
@@ -276,39 +93,8 @@ class Image(str):
         # only gets to here if there was a hdr and an img file
         return True
 
-    # return False if compressed image does not exist or True if compressed image exists
-    def cimtest(self):
-        """
-        Check if the compressed image exists.
-
-        Returns:
-            bool: Whether the compressed image exists.
-        """
-        # if self == "":
-        #     return False
-
-        if os.path.isfile(self.cpath):
-            return True
-
-        if os.path.isfile(self.fpathnoext + ".mnc.gz"):
-            return True
-
-        if os.path.isfile(self.fpathnoext + ".gii"):
-            return True
-
-        if not os.path.isfile(self.fpathnoext + ".hdr.gz"):
-            # return 0 here as no header exists and no single image means no image!
-            return False
-
-        if not os.path.isfile(self.fpathnoext + ".img.gz"):
-            # return 0 here as no img file exists and no single image means no image!
-            return False
-
-        # only gets to here if there was a hdr and an img file
-        return True
-
-    # return False if uncompressed image does not exist or True if uncompressed image exists
-    def uimtest(self):
+    @property
+    def uexist(self) -> bool:
         """
         Check if the uncompressed image exists.
 
@@ -338,12 +124,185 @@ class Image(str):
         # only gets to here if there was a hdr and an img file
         return True
 
-    # return False if surface image does not exist or True if surface image exists
-    def gimtest(self):
+    @property
+    def cexist(self) -> bool:
+        """
+        Check if the compressed image exists.
+
+        Returns:
+            bool: Whether the compressed image exists.
+        """
+        if os.path.isfile(self.cpath):
+            return True
+
+        if os.path.isfile(self.fpathnoext + ".mnc.gz"):
+            return True
+
         if os.path.isfile(self.fpathnoext + ".gii"):
             return True
 
-    def cp(self, dest:str, error_src_not_exist:bool=True, logFile=None) -> str:
+        if not os.path.isfile(self.fpathnoext + ".hdr.gz"):
+            # return 0 here as no header exists and no single image means no image!
+            return False
+
+        if not os.path.isfile(self.fpathnoext + ".img.gz"):
+            # return 0 here as no img file exists and no single image means no image!
+            return False
+
+        # only gets to here if there was a hdr and an img file
+        return True
+
+    @property
+    def gexist(self) -> bool:
+        """
+        Check if the compressed image exists.
+
+        Returns:
+            bool: Whether the compressed image exists.
+
+        """
+        return os.path.isfile(self.fpathnoext + ".gii")
+
+    @property
+    def upath(self) -> 'Image':
+        """
+        Get the path to the uncompressed image.
+
+        Returns:
+            Image: The uncompressed image.
+
+        """
+        return Image(str(self.fpathnoext + ".nii"))
+
+    @property
+    def cpath(self) -> 'Image':
+        """
+        Get the path to the compressed image.
+
+        Returns:
+            Image: The compressed image.
+
+        """
+        return Image(self.fpathnoext + ".nii.gz")
+
+    @property
+    def gpath(self) -> 'Image':
+        """
+        Get the path to the surface image.
+
+        Returns:
+            Image: The surface image.
+
+        """
+        return Image(self.fpathnoext + ".gii")
+
+    @property
+    def spath(self) -> 'Image':
+        """
+        Get the path to DSI-studio dti image.
+
+        Returns:
+            Image: The dti image.
+
+        """
+        return Image(self.fpathnoext + ".src.gz")
+
+    @property
+    def nslices(self) -> int:
+        """
+        Get the number of slices in the image.
+
+        Returns:
+            int: The number of slices.
+
+        """
+        return int(rrun(f"fslval {self} dim3"))
+
+    @property
+    def nvols(self) -> int:
+        """
+        Get the number of volumes in the image.
+
+        Returns:
+            int: The number of volumes.
+
+        """
+        return int(rrun(f"fslnvols {self}").split('\n')[0])
+
+    @property
+    def nvoxels(self) -> int:
+        """
+        Get the number of voxels in the image.
+        Returns:
+            int: The number of voxels.
+        """
+        return int(rrun(f"fslstats {self} -V").strip().split(" ")[0])
+
+    @property
+    def TR(self) -> float:
+        """
+        Get the repetition time of the image.
+
+        Returns:
+            float: The repetition time.
+
+        """
+        return float(rrun(f"fslval {self} pixdim4"))
+
+    # ===============================================================================================================================
+    # FOLDERS, NAME, EXTENSIONS,
+    # ===============================================================================================================================
+    # get the whole extension  (e.g. abc.nii.gz => nii.gz )
+    # return [path/filename_noext, ext]
+    def split_ext(self, img_formats=None) -> List[str]:
+        """
+        Split the extension from the filename.
+
+        Args:
+            img_formats (list, optional): The allowed image formats. Defaults to None, which uses the class attribute IMAGE_FORMATS.
+
+        Returns:
+            list: A list containing the filename and extension.
+
+        """
+        if img_formats is None:
+            img_formats = self.IMAGE_FORMATS
+        fullext = ""
+        for imgext in img_formats:
+            if self.endswith(imgext):
+                fullext = imgext  # [1:]
+                break
+        filename = self.replace(fullext, '')
+        return [filename, fullext]
+
+    # suitable for images (with double extension e.g.: /a/b/c/name.nii.gz)
+    # return [folder, filename, ext]
+    def imgparts(self) -> List[str]:
+        """
+        Split the path to the image into its components: directory, filename, and extension.
+
+        Returns:
+            list: A list containing the directory, filename, and extension.
+
+        """
+        if os.path.isdir(self):
+            return [self, "", ""]
+
+        parts = self.split_ext()
+        return [ntpath.dirname(parts[0]), ntpath.basename(parts[0]), parts[1]]
+
+    def imgdir(self) -> str:
+        namepath = self.split_ext()[0]
+        return ntpath.dirname(namepath)
+
+    # return basename of given image (useful to return "image" from "image.nii.gz")
+    def remove_image_ext(self) -> str:
+        return self.split_ext()[0]
+
+    # ===========================================================================================================
+    # COPY, REMOVE, MOVE, MASS MOVE
+    # ===========================================================================================================
+    def cp(self, dest:str, error_src_not_exist:bool=True, logFile=None) -> 'Image':
         """
         Copy the image to a destination.
 
@@ -391,9 +350,9 @@ class Image(str):
         if logFile is not None:
             print("cp " + self.fpathnoext + ext + " " + fileparts_dst[0] + dest_ext, file=logFile)
 
-        return fileparts_dst[0] + dest_ext
+        return Image(fileparts_dst[0] + dest_ext)
 
-    def cp_notexisting(self, dest, error_src_not_exist=False, logFile=None) -> str:
+    def cp_notexisting(self, dest:'str | Image', error_src_not_exist=False, logFile=None) -> 'Image':
         """
         Copy the image to a destination.
 
@@ -419,9 +378,9 @@ class Image(str):
         if not dest.exist:
             return self.cp(dest, logFile)
         else:
-            return ""
+            return Image(dest)
 
-    def mv(self, dest:'Image', error_src_not_exist: bool = False, logFile=None) -> bool:
+    def mv(self, dest:'Image', error_src_not_exist: bool = False, logFile=None) -> 'Image':
         """
         Move the image to a destination.
 
@@ -453,7 +412,7 @@ class Image(str):
             ext = ".gii"
 
         if ext == "":
-            return False
+            raise NotExistingImageException("Error in Image.mv, extension not recognized", self)
 
         dest = Image(dest)
         move(self.fpathnoext + ext, dest.fpathnoext + ext)
@@ -461,7 +420,7 @@ class Image(str):
         if logFile is not None:
             print("mv " + self.fpathnoext + ext + " " + dest.fpathnoext + ext, file=logFile)
 
-        return True
+        return Image(dest.fpathnoext + ext)
 
     def rm(self, logFile=None):
         """
@@ -497,7 +456,7 @@ class Image(str):
     # ===============================================================================================================================
     # utilities
     # ===============================================================================================================================
-    def get_image_volume(self):
+    def get_image_volume(self) -> int:
         """
         Get the volume of the image.
 
@@ -507,7 +466,7 @@ class Image(str):
         """
         return int(rrun(f"fslstats {self} -V").strip().split(" ")[1])
 
-    def get_image_mean(self, includezeros:bool=False):
+    def get_image_mean(self, includezeros:bool=False) -> float:
         """
         Get the mean of the image.
 
@@ -521,7 +480,7 @@ class Image(str):
             str_mean = " -M"
         return float(rrun(f"fslstats {self} {str_mean}").strip())
 
-    def mask_image(self, mask, out):
+    def mask_image(self, mask: 'str | Image', out: 'str | Image') -> 'Image':
         """
         Mask an image with a mask.
 
@@ -529,8 +488,14 @@ class Image(str):
             mask (Image): The mask image.
             out (Image): The output image.
 
+        Returns:
+            Image: The output masked image.
         """
+        mask = Image(mask, must_exist=True)
+
         rrun(f"fslmaths {self} -mas {mask} {out}")
+
+        return Image(out)
 
     def get_mask_mean(self, mask:str, includezeros:bool=False) -> float:
 
@@ -567,31 +532,55 @@ class Image(str):
         os.chdir(currdir)
         return outdir, label
 
-    def quick_smooth(self, outimg=None, logFile=None):
+    def thr(self, thr:float, out_img:'Image | None'=None) -> 'Image':
+
+        if out_img is None:
+            out_img = self
+        else:
+            out_img = Image(out_img)
+
+        rrun(f"fslmaths {self} -thr {thr} {out_img}")
+
+        return Image(out_img)
+
+    def bin(self, out_img:'Image | None'=None) -> 'Image':
+        if out_img is None:
+            out_img = self
+        else:
+            out_img = Image(out_img)
+        rrun(f"fslmaths {self} -bin {out_img}")
+
+        return Image(out_img)
+
+    def quick_smooth(self, out_img=None, logFile=None) -> 'Image':
         """
         Perform a quick smoothing of the image using FSL.
 
         Args:
-            outimg (Image, optional): The output image. If None, the input image will be used. Defaults to None.
+            out_img (Image, optional): The output image. If None, the input image will be used. Defaults to None.
             logFile (object, optional): The log file object. Defaults to None.
 
         Returns:
             Image: The smoothed image.
 
         """
-        if outimg is None:
-            outimg = self
+        if out_img is None:
+            out_img = self
+        else:
+            out_img = Image(out_img)
 
         currpath    = os.path.dirname(self)
         vol16       = Image(os.path.join(currpath, "vol16"))
 
         rrun(f"fslmaths {self} -subsamp2 -subsamp2 -subsamp2 -subsamp2 {vol16}", logFile=logFile)
-        rrun(f"flirt -in {vol16} -ref {self} -out {outimg} -noresampblur -applyxfm -paddingsize 16", logFile=logFile)
+        rrun(f"flirt -in {vol16} -ref {self} -out {out_img} -noresampblur -applyxfm -paddingsize 16", logFile=logFile)
         # possibly do a tiny extra smooth to $out here?
         vol16.rm()
 
+        return Image(out_img)
+
     # TODO: patched to deal with X dots + .nii.gz...fix it definitively !!
-    def is_image(self, img_formats=None):
+    def is_image(self, img_formats=None) -> bool:
         """
         Check if the image is an image.
 
@@ -617,7 +606,7 @@ class Image(str):
         else:
             return False
 
-    def get_head_from_brain(self, checkexist:bool=True):
+    def get_head_from_brain(self, checkexist:bool=True) -> 'Image':
         """
         Get the head image from the brain image.
 
@@ -647,7 +636,7 @@ class Image(str):
             return headimg
 
     # read header and calculate a dimension number hdr["nx"] * hdr["ny"] * hdr["nz"] * hdr["dx"] * hdr["dy"] * hdr["dz"]
-    def get_image_dimension(self):
+    def get_image_dimension(self) -> int:
         """
         Get the dimension of the image.
 
@@ -659,7 +648,7 @@ class Image(str):
         return int(hdr["nx"]) * int(hdr["ny"]) * int(hdr["nz"]) * float(hdr["dx"]) * float(hdr["dy"]) * float(hdr["dz"])
 
     # extract header in xml format and returns it as a (possibly filtered by list_field) dictionary
-    def read_header(self, list_field=None):
+    def read_header(self, list_field=None) -> dict:
         """
         Extract the header from an image and return it as a dictionary.
 
@@ -683,7 +672,7 @@ class Image(str):
             return attribs_dict
 
     # remove numslice2remove up and down (fslroi wants, for each dimension, first slice to keep and number of slices to keep)
-    def remove_slices(self, numslice2remove=1, whichslices2remove:str="updown", remove_dimension="axial"):
+    def remove_slices(self, numslice2remove=1, whichslices2remove:str="updown", remove_dimension="axial") -> 'Image':
         """
         Remove slices from an image.
 
@@ -711,7 +700,9 @@ class Image(str):
         self.cp(self.fpathnoext + "_full")
         rrun(f"fslroi {self} {self} {dim_str}")
 
-    def compress(self, dest=None, replace:bool=True):
+        return self
+
+    def compress(self, dest=None, replace:bool=True) -> 'Image':
         """
         Compress the image to a compressed format.
 
@@ -724,14 +715,15 @@ class Image(str):
 
         """
         if dest is None:
-            udest = self.cpath
+            cdest = self.cpath
         else:
-            udest = Image(dest).cpath
+            cdest = Image(dest).cpath
 
-        compress(self.upath, udest, replace)
+        compress(self.upath, cdest, replace)
+        return Image(cdest)
 
     # unzip file to a given path, preserving (by default) the original nii.gz
-    def unzip(self, dest: Optional['Image'] = None, replace: bool = False) -> None:
+    def unzip(self, dest: 'Image|None' = None, replace: bool = False) -> 'Image':
         """
         Unzip the image to a given path, preserving (by default) the original nii.gz
 
@@ -746,10 +738,16 @@ class Image(str):
             udest = self.upath
         else:
             udest = Image(dest).upath
+
+        if udest.uexist and replace is False:
+            return Image(udest)
+
         gunzip(self.cpath, udest, replace)
 
+        return Image(udest)
+
     # check whether nii does not exist but nii.gz does => create the nii copy preserving (by default) the nii.gz one
-    def check_if_uncompress(self, replace=False):
+    def check_if_uncompress(self, replace=False) -> 'Image':
         """
         Check whether the uncompressed nii does not exist but the compressed nii.gz does, and if so, unzip the image to the original location, preserving (by default) the original nii.gz.
 
@@ -760,10 +758,12 @@ class Image(str):
             None
         """
         if not self.uexist and self.cexist:
-            self.unzip(dest=self, replace=replace)
+            return self.unzip(dest=self, replace=replace)
+        else:
+            return self.upath
 
     # preserve given volumes
-    def filter_volumes(self, vols2keep:List[int], filtered_image:'Image'):
+    def filter_volumes(self, vols2keep:List[int], filtered_image:'Image') -> 'Image':
         """
         create a new 4D image (filtered_image) preserving the volumes of self specified in vols2keep.
 
@@ -794,9 +794,11 @@ class Image(str):
         shutil.rmtree(tempdir)
         shutil.rmtree(outtempdir)
         os.chdir(currdir)
+
+        return Image(filtered_image)
         # os.system("rm " + os.path.join(outdir, "temp_*"))
 
-    def get_nth_volume(self, out_img=None, out_mask_img=None, volnum=3, logFile=None):
+    def get_nth_volume(self, out_img:str|Image, out_mask_img=None, volnum=3, logFile=None) -> 'Image':
         """
         Get the nth volume of the image.
 
@@ -810,18 +812,22 @@ class Image(str):
             Image: The nth volume.
 
         """
+        if out_img == "":
+            raise Exception("Error in Image.get_nth_volume: output image is empty")
+        # TODO: check whether out_img folder exists
+
         if out_mask_img is None:
             out_mask_img = self.add_postfix2name("_mask")
 
         prefilt_func_data = Image(self.add_postfix2name("_prefiltered_func_data"))
 
         rrun(f"fslmaths {self.fpathnoext} {prefilt_func_data} -odt float", logFile=logFile)
-        rrun(f"fslroi {prefilt_func_data} {out_img} {volnum}  1", logFile=logFile)
+        rrun(f"fslroi {prefilt_func_data} {out_img} {volnum} 1", logFile=logFile)
         rrun(f"bet2 {out_img} {out_img} -f 0.3", logFile=logFile)
         rrun(f"fslmaths {out_img} -bin {out_mask_img}",  logFile=logFile)  # create example_function mask (a -thr 0.01/0.1 could have been used to further reduce it)
         prefilt_func_data.rm(logFile=logFile)
 
-        return out_img
+        return Image(out_img)
 
     def add_postfix2name(self, postfix: str) -> 'Image':
         """
@@ -848,7 +854,7 @@ class Image(str):
         return Image(os.path.join(self.dir, prefix + self.name + self.ext))
 
     @staticmethod
-    def immerge(out_img: str, premerge_labels=None):
+    def immerge(out_img: str, premerge_labels=None) -> 'Image':
         """
         Merge a set of images into a single image.
 
@@ -869,11 +875,33 @@ class Image(str):
             seq_string = "./*"
         elif isinstance(premerge_labels, str):
             seq_string = premerge_labels + "*"
-        elif isinstance(premerge_labels, collections.Sequence):
+        elif isinstance(premerge_labels, collections.abc.Sequence):
             for seq in premerge_labels:
                 seq_string = seq_string + out_img + "_" + seq + " "
         else:
             raise ValueError("Error in immerge, given premerge_labels is not in a correct format")
 
         os.system(f"fslmerge -t {out_img} {seq_string}")
+
+        return Image(out_img)
+
+    def get_spm_volumes_list(self) -> str:
+        """
+        explode a 4d volumes in a list of images,vol:    { 'image,1'
+                                                           'image,n' }
+        ready for spm batch file
+
+        Returns:
+            str: list of images r
+        """
+        epi_nvols = self.upath.nvols
+        epi_all_volumes = ''
+        epi_all_volumes += '{\n'
+        for i in range(1, epi_nvols + 1):
+            epi_volume = "'" + self.upath + ',' + str(i) + "'"
+            epi_all_volumes += (epi_volume + '\n')
+        epi_all_volumes += '}\n'
+
+        return epi_all_volumes
+
 

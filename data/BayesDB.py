@@ -6,12 +6,12 @@ import pandas
 
 from data.GDriveSheet import GDriveSheet
 from data.MSHDB import MSHDB
-from data.Sheets import Sheets
 from data.SID import SID
 from data.SIDList import SIDList
+from data.Sheets import Sheets
 from data.SubjectsData import SubjectsData
 from data.utilities import FilterValues
-from myutility.exceptions import DataFileException, SubjectExistException
+from myutility.exceptions import DataFileException
 from myutility.list import is_list_of, same_elements
 
 
@@ -36,8 +36,6 @@ class BayesDB(MSHDB):
     ----------
     sheets : list of Sheet
         The list of Sheet objects that make up the database.
-    subjects : SIDList
-        The list of SID objects that are in the database.
     schema_sheets_names : list
         The list of sheet names that define the schema of the database.
     date_format : str
@@ -64,11 +62,11 @@ class BayesDB(MSHDB):
         Add the default row for the given subject.
     add_new_columns(shname, subjdf)
         Add the new columns in the given sheet.
-    remove_subjects(subjects2remove, update=False)
+    remove_subjects(subjects2remove)
         Remove the given subjects from the database.
-    rename_subjects(assoc_dict, update=False)
+    rename_subjects(assoc_dict)
         Rename the subjects in the database.
-    add_new_subjects(newdb, copy_previous_sess=None, update=False)
+    add_new_subjects(newdb, copy_previous_sess=None)
         Add the subjects from the given database.
     get_groups(subjs=None)
         Get the groups for the given subjects.
@@ -159,7 +157,7 @@ class BayesDB(MSHDB):
 
         Parameters
         ----------
-        subjs : SIDList, optional
+        sids : SIDList, optional
             The list of SID objects, by default None.
 
         Returns
@@ -200,52 +198,52 @@ class BayesDB(MSHDB):
         """
         return {self.unique_columns[0]: subj.label, self.unique_columns[1]:subj.session, "group":self.get_groups(SIDList([subj]))[0]}
 
-    def remove_subjects(self, subjects2remove:SIDList, update=False) -> 'BayesDB':
-        """
-        Remove the given subjects from the database.
+    def filter_subjects(self, sids: SIDList) -> BayesDB:
 
-        Parameters
-        ----------
-        subjects2remove : SIDList
-            The list of SID objects to be removed.
-        update : bool, optional
-            If True, the changes will be reflected in the current object, by default False.
-
-        Returns
-        -------
-        BayesDB
-            The BayesDB object with the given subjects removed.
-        """
-        db = super().remove_subjects(subjects2remove, update)
+        db = super().filter_subjects(sids)
 
         if isinstance(db, BayesDB):
             return db
         else:
             return BayesDB(self.schema_file, db.sheets)
 
-    def rename_subjects(self, assoc_dict, update=False) -> 'BayesDB':
+    def remove_subjects(self, subjects2remove:SIDList) -> 'BayesDB':
         """
-        Rename the subjects in the database.
+        Remove the given subjects from the database. Mutates this object and returns self for chaining.
+
+        Parameters
+        ----------
+        subjects2remove : SIDList
+            The list of SID objects to be removed.
+
+        Returns
+        -------
+        BayesDB
+            Returns self for method chaining.
+        """
+        super().remove_subjects(subjects2remove)
+        return self
+
+    def rename_subjects(self, assoc_dict) -> 'BayesDB':
+        """
+        Rename the subjects in the database. Mutates this object and returns self for chaining.
 
         Parameters
         ----------
         assoc_dict : dict
             The dictionary that maps the old subject labels to the new labels.
-        update : bool, optional
-            If True, the changes will be reflected in the current object, by default False.
 
         Returns
         -------
         BayesDB
-            The BayesDB object with the renamed subjects.
+            Returns self for method chaining.
         """
-        mshdb = super().rename_subjects(assoc_dict, update)
-        return BayesDB(self.schema, mshdb.sheets)
+        super().rename_subjects(assoc_dict)
+        return self
 
-    def add_new_subjects(self, newdb: 'MSHDB', can_update:bool=False, must_exist:bool=False, copy_previous_sess:list | None =None,
-                         update=False) -> 'BayesDB':
+    def add_new_subjects(self, newdb: 'MSHDB', can_update:bool=False, must_exist:bool=False, copy_previous_sess:list | None =None) -> 'BayesDB':
         """
-        Add the subjects from the given database to the current database.
+        Add the subjects from the given database to the current database. Mutates this object and returns self for chaining.
 
         Parameters
         ----------
@@ -254,28 +252,19 @@ class BayesDB(MSHDB):
         can_update : bool, optional
             define whether already existing subjects shall be upgraded or ignored
         must_exist : bool, optional
-            define whether subjects in newdb must exist (e.g. when adding only auot) or not
+            define whether subjects in newdb must exist (e.g. when adding only auto) or not
         copy_previous_sess : list | None, optional
             If True, the previous sessions will be copied to the new sheets, by default None.
-        update : bool, optional
-            If True, the changes will be reflected in the current object, by default False.
 
         Returns
         -------
         BayesDB
-            The BayesDB object with the added subjects.
-            :param must_exist:
-            :param can_update:
+            Returns self for method chaining.
         """
-        bayesdb   = super().add_new_subjects(newdb, can_update=can_update, must_exist=must_exist, copy_previous_sess=copy_previous_sess, update=update)
-        # bayesdb = BayesDB(mshdb.sheets)
-
-        bayesdb = bayesdb.sort()
-        bayesdb.calc_flags()
-        if update:
-            self = bayesdb
-
-        return bayesdb
+        super().add_new_subjects(newdb, can_update=can_update, must_exist=must_exist, copy_previous_sess=copy_previous_sess)
+        self.sort()
+        self.calc_flags()
+        return self
 
     def copy(self) -> 'BayesDB':
         '''
@@ -305,7 +294,7 @@ class BayesDB(MSHDB):
 
         return self.main.get_subjects_column(subjs, "group")
 
-    def mri_sd(self, subj_labels:List[str]=None) -> list[SIDList]:
+    def mri_sd(self, subj_labels:List[str]=None, sess_ids: List[int] = None) -> list[SIDList]:
         """
         Get the SIDList for the given subjects.
 
@@ -319,15 +308,15 @@ class BayesDB(MSHDB):
         list
             The list of MRI labels.
         """
-        total = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, conditions=[FilterValues("mri", "==", 1)])
-        td    = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, conditions=[FilterValues("group", "==", "TD"), FilterValues("mri", "==", 1)])
-        bd    = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, conditions=[FilterValues("group", "==", "BD"), FilterValues("mri", "==", 1)])
-        sk    = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, conditions=[FilterValues("group", "==", "SZ"), FilterValues("mri", "==", 1)])
+        total = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, sess_ids=sess_ids, conditions=[FilterValues("mri", "==", 1)])
+        td    = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, sess_ids=sess_ids, conditions=[FilterValues("group", "==", "TD"), FilterValues("mri", "==", 1)])
+        bd    = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, sess_ids=sess_ids, conditions=[FilterValues("group", "==", "BD"), FilterValues("mri", "==", 1)])
+        sk    = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, sess_ids=sess_ids, conditions=[FilterValues("group", "==", "SZ"), FilterValues("mri", "==", 1)])
 
         return [total, td, bd, sk]
 
     # region GET LISTS OF INTERESTS
-    def mri_labels(self, subj_labels:List[str]=None) -> list[list[str]]:
+    def mri_labels(self, subj_labels:List[str]=None, sess_ids: List[int] = None) -> list[list[str]]:
         """
         Get the MRI labels for the given subjects.
 
@@ -342,11 +331,11 @@ class BayesDB(MSHDB):
             The list of MRI labels.
         """
 
-        lists = self.mri_sd(subj_labels)
+        lists = self.mri_sd(subj_labels, sess_ids)
 
         return [lists[0].labels, lists[1].labels, lists[2].labels, lists[3].labels]
 
-    def blood_sd(self, subj_labels: List[str] = None) -> List[SIDList]:
+    def blood_sd(self, subj_labels: List[str] = None, sess_ids: List[int] = None) -> List[SIDList]:
         """
         Get the blood SIDList for the given subjects.
 
@@ -360,16 +349,16 @@ class BayesDB(MSHDB):
         List[int]
             The list of blood labels.
         """
-        total   = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, conditions=[FilterValues("immfen_code", "exist", 0)])
+        total   = self.get_sheet_sd(self.main_name).filter_subjects(subj_labels, sess_ids=sess_ids, conditions=[FilterValues("immfen_code", "exist", 0)])
 
-        th      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, conditions=[FilterValues("T_HELP", "==", 1)])
-        tr      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, conditions=[FilterValues("T_REG", "==", 1)])
-        nk      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, conditions=[FilterValues("NK", "==", 1)])
-        mono    = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, conditions=[FilterValues("MONO", "==", 1)])
-        bi      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, conditions=[FilterValues("B", "==", 1)])
+        th      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, sess_ids=sess_ids, conditions=[FilterValues("T_HELP", "==", 1)])
+        tr      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, sess_ids=sess_ids, conditions=[FilterValues("T_REG", "==", 1)])
+        nk      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, sess_ids=sess_ids, conditions=[FilterValues("NK", "==", 1)])
+        mono    = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, sess_ids=sess_ids, conditions=[FilterValues("MONO", "==", 1)])
+        bi      = self.get_sheet_sd("BLOOD").filter_subjects(subj_labels, sess_ids=sess_ids, conditions=[FilterValues("B", "==", 1)])
 
         return [total, th, tr, nk, mono, bi]
-    def blood_labels(self, subj_labels: List[str] = None) -> List[List[str]]:
+    def blood_labels(self, subj_labels: List[str] = None, sess_ids: List[int] = None) -> List[List[str]]:
         """
         Get the blood labels for the given subjects.
 
@@ -384,10 +373,10 @@ class BayesDB(MSHDB):
             The list of blood labels.
         """
 
-        lists = self.blood_sd(subj_labels)
+        lists = self.blood_sd(subj_labels, sess_ids)
         return [lists[0].labels, lists[1].labels, lists[2].labels, lists[3].labels, lists[4].labels, lists[5].labels]
 
-    def bisection_sd(self, subj_labels: List[str] = None) -> SIDList:
+    def bisection_sd(self, subj_labels: List[str] = None, sess_ids: List[int] = None) -> SIDList:
         """
         Get the bisection SIDList for the given subjects.
 
@@ -401,10 +390,11 @@ class BayesDB(MSHDB):
         List[str]
             The list of bisection labels.
         """
-        total = self.sheets.main.filter_subjects(subj_labels, conditions=[FilterValues("oa", "==", 1)])
+        total = self.sheets.main.filter_subjects(subj_labels, sess_ids=sess_ids, conditions=[FilterValues("oa", "==", 1)])
 
         return [total]    # endregion
-    def bisection_labels(self, subj_labels: List[str] = None) -> List[str]:
+
+    def bisection_labels(self, subj_labels: List[str] = None, sess_ids: List[int] = None) -> List[str]:
         """
         Get the bisection labels for the given subjects.
 
@@ -418,7 +408,7 @@ class BayesDB(MSHDB):
         List[str]
             The list of bisection labels.
         """
-        return [self.bisection_sd(subj_labels).labels]    # endregion
+        return [self.bisection_sd(subj_labels, sess_ids).labels]    # endregion
 
     def calc_flags(self, outfile:Optional[str]=None):
         """
@@ -527,6 +517,7 @@ class BayesDB(MSHDB):
             default_df      = self.get_default_columns(self.subjects, [])   # don't add groups info
             sheets2save     = []
             for sh in sheets2compare:
+
                 are_equal = True
                 # create a copy of self with only the first two columns filled and the other nan
                 cols                = self.get_sheet_sd(sh).header[2:]
@@ -548,4 +539,4 @@ class BayesDB(MSHDB):
             diff_db.save(diff_out_db, sheets2save)
 
         except Exception as e:
-            raise Exception("Error in BayesDB.compare_db: sheet " + sh + " | " + e.msg)
+            raise Exception(f"Error in BayesDB.compare_db: sheet {sh} | {e}") from e

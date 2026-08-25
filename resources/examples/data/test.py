@@ -1,11 +1,11 @@
 import traceback
+
 import pandas as pd
 
-from DataProject import DataProject
-from Global import Global
+from data.SubjectsData import SubjectsData
 from data.utilities import *
 from myutility.exceptions import SubjectListException
-from data.SubjectsData import SubjectsData
+from project.DataProject import DataProject
 
 if __name__ == "__main__":
 
@@ -20,7 +20,8 @@ if __name__ == "__main__":
         # HEADER
         # ======================================================================================================================
         script_dir          = os.path.dirname(__file__)
-        bayes_db_file       = os.path.join("/data/MRI/pymri_projects_scripts", "BAYES-PSIC.xlsx")        # input
+        # NOTE: Update this path to your actual data location
+        bayes_db_file       = os.path.join(script_dir, "input_data", "BAYES-PSIC.xlsx")        # input
 
         project             = DataProject(script_dir, data=bayes_db_file)
 

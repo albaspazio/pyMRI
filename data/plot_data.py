@@ -4,7 +4,6 @@ from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 
-
 # on the X-axis goes the order with the list (like an histogram, to separate two groups
 def histogram_plot_2groups(
     string_list: List[str],

@@ -1,5 +1,4 @@
 from typing import List
-import copy
 
 import numpy as np
 
@@ -11,9 +10,6 @@ class SIDList(list):
     """
     A list of SID objects.
 
-    Attributes:
-        list: A list of SID objects.
-
     Methods:
         filter: Filters the list based on select conditions.
         is_in: Checks if a list of SID objects is present in the current list.
@@ -22,7 +18,7 @@ class SIDList(list):
         contains: Checks if a SID object is present in the current list.
     """
 
-    def __init__(self, subjects: List[SID]=None):
+    def __init__(self, subjects: List[SID]|None = None):
         """
         Initializes the SIDList.
 
@@ -88,13 +84,13 @@ class SIDList(list):
                     res.append(s)
             return SIDList(res)
 
-    def is_in(self, sids: 'SIDList', context_self:bool=False) -> 'SIDList':
+    def is_in(self, sids:'SIDList', context_self:bool=False) -> 'SIDList':
         """
         Checks if a list of SID objects is present in the current list.
         ID of the returned SID may be in the context of self or sids according to context_self value.
 
         Args:
-            subj_list (SIDList): The list of SID objects.
+            sids (SIDList): The list of SID objects.
             context_self (bool): define whether ids of the returned SID elements are in the context of self or sids
         Returns:
             SIDList: The list of SID objects that are present in the current list. in the context of either self or sids.
@@ -111,7 +107,7 @@ class SIDList(list):
                     doexist = True
                     break
             if doexist:
-                if context_self is True:
+                if context_self:
                     res.append(ss)
                 else:
                     res.append(sid)

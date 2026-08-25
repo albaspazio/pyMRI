@@ -1,8 +1,8 @@
 import os
 import traceback
 
-from Global import Global
-from Project import Project
+from project.MRIGlobal import MRIGlobal
+from project.MRIProject import MRIProject
 from models.FSLModels import FSLModels
 from group.spm_utilities import Covariate, Nuisance
 
@@ -13,13 +13,14 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir        = "/data/MRI/projects/test"
-        project         = Project(proj_dir, globaldata)     # automatically load PROJDIR/script/data.dat if present
+        # NOTE: Update this path to your actual project directory
+        proj_dir        = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "test")
+        project         = MRIProject(proj_dir, globaldata)     # automatically load PROJDIR/script/data.dat if present
         SESS_ID         = 1
 
         fslmodels       = FSLModels(project)

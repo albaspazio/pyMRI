@@ -1,5 +1,7 @@
-from Global import Global
-from Project import Project
+import os
+
+from project.MRIGlobal import MRIGlobal
+from project.MRIProject import MRIProject
 
 if __name__ == "__main__":
 
@@ -8,7 +10,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "601"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
     except Exception as e:
         print(e)
@@ -17,8 +19,9 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # HEADER
     # ======================================================================================================================
-    proj_dir = "/data/MRI/projects/T15"
-    project = Project(proj_dir, globaldata)
+    # NOTE: Update this path to your actual project directory
+    proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "T15")
+    project = MRIProject(proj_dir, globaldata)
     SESS_ID = 1
     group_label = "controls_test"
 
@@ -30,7 +33,7 @@ if __name__ == "__main__":
     # subject.create_file_system()
     # subject.mpr2nifti(subject.t1_dir, 1)
 
-    subjects = project.load_subjects(group_label, [SESS_ID])
+    subjects = project.get_subjects(group_label, sess_ids=[SESS_ID])
 
     subject = subjects[0]
     # hdr = fslfun.read_header(subject.t1_data)

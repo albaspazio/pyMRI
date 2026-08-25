@@ -1,5 +1,11 @@
-from Global import Global
-from Project import Project
+import os
+
+from project.MRIGlobal import MRIGlobal
+from project.MRIProject import MRIProject
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -8,7 +14,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "601"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
     except Exception as e:
         print(e)
@@ -17,8 +23,8 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # HEADER
     # ======================================================================================================================
-    proj_dir = "/media/campus/SeagateBackupPlusDrive/MRI/projects/bisection_pisa"
-    project = Project(proj_dir, globaldata)
+    proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "SeagateBackupPlusDrive", "MRI", "projects", "bisection_pisa")  # NOTE: relative path to project directory
+    project = MRIProject(proj_dir, globaldata)
     SESS_ID = 1
     num_cpu = 4
     group_label = "single"
@@ -35,13 +41,13 @@ if __name__ == "__main__":
     # CREATE FILE SYSTEM
     # ---------------------------------------------------------------------------------------------------------------------
     # load whole list & create its file system
-    # subjects    = project.load_subjects(group_label, [SESS_ID])
-    # project.run_subjects_methods("create_file_system", [], ncore=num_cpu)
+    subjects    = project.get_subjects(group_label, sess_ids=[SESS_ID])
+    # project.run_subjects_methods("", "create_file_system", [], ncore=num_cpu, subjects=subjects)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # CONVERT 2 NIFTI
     # ---------------------------------------------------------------------------------------------------------------------
-    # subjects    = project.load_subjects(group_label, [SESS_ID])
+    # subjects    = project.get_subjects(group_label, sess_ids=[SESS_ID])
     # for p in range(len(subjects)):
     #     for e in range(len(epi_names)):
     #         kwparams.append({"extpath":"/media/Data/Projects/fMRI_Pisa/epidata/" + subjects[p].label + "/" + epi_names[e], "cleanup":0, "session_label":epi_names[e]})
@@ -57,11 +63,11 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------------------------------
     # MERGE NIFTI
     # ---------------------------------------------------------------------------------------------------------------------
-    # subjects    = project.load_subjects(group_label, [SESS_ID])
-    # project.run_subjects_methods("epi_merge", [{"premerge_labels":epi_names}], ncore=num_cpu)
+    # subjects    = project.get_subjects(group_label, sess_ids=[SESS_ID])
+    # project.run_subjects_methods("", "epi_merge", [{"premerge_labels":epi_names}], ncore=num_cpu, subjects=subjects)
 
     # ---------------------------------------------------------------------------------------------------------------------
     # FIND THE EPI VOLUME CLOSEST TO PEPOLAR VOLUME AND USE IT TO CORRECT EPI DISTORSION
     # ---------------------------------------------------------------------------------------------------------------------
-    subjects = project.load_subjects(group_label, [SESS_ID])
-    # project.run_subjects_methods("epi_pepolar_correction", [], ncore=num_cpu, group_or_subjlabels=project.subjects_labels)
+    subjects = project.get_subjects(group_label, sess_ids=[SESS_ID])
+    # project.run_subjects_methods("epi", "epi_pepolar_correction", [], ncore=num_cpu, subjects=subjects)

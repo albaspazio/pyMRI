@@ -24,9 +24,9 @@ class SubjectTracts(Images):
 
         hdr_out = "subj"
 
-        for tract in self:
+        for id, tract in enumerate(self):
             for measure in metrics:
-                hdr_out += f"\t{self[0].name}_{measure}"
+                hdr_out += f"\t{self[id].name}_{measure}"
 
         return hdr_out
 

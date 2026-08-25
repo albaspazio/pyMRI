@@ -1,6 +1,10 @@
-from Global import Global
-from Project import Project
+import os
+
+from project.MRIGlobal import MRIGlobal
+from project.MRIProject import MRIProject
 from myutility.myfsl.utils.run import rrun
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -9,7 +13,7 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "601"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
     except Exception as e:
         print(e)
@@ -18,15 +22,15 @@ if __name__ == "__main__":
     # ======================================================================================================================
     # HEADER
     # ======================================================================================================================
-    proj_dir = "/data/MRI/projects/T15"
-    project = Project(proj_dir, globaldata)
+    proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "T15")  # NOTE: relative path to project directory
+    project = MRIProject(proj_dir, globaldata)
     SESS_ID = 1
     group_label = "all"
 
     # ======================================================================================================================
     # PROCESSING
     # ======================================================================================================================
-    subjects = project.load_subjects("full", [SESS_ID])
+    subjects = project.get_subjects("full", [SESS_ID])
     for subject in subjects:
         # subject.mpr2nifti(subject.t1_dir, 1)
         hdr = subject.t1_data.read_header()

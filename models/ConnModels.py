@@ -1,20 +1,21 @@
 from __future__ import annotations
 
 import os
-from distutils.file_util import copy_file
-from typing import List, Any
+import traceback
+from typing import List
 
-from Global import Global
-from Project import Project
+from project.MRIGlobal import MRIGlobal
 from data.SubjectsData import SubjectsData
 from group.spm_utilities import Regressor, Covariate, Nuisance
 from myutility.exceptions import SubjectListException
 from myutility.list import is_list_of
 
 # create factorial designs, multiple regressions, t-test
-from myutility.myfsl.utils.run import rrun
-from myutility.fileutilities import remove_ext, append_text_file, write_text_file
+from myutility.fileutilities import write_text_file
+from project.MRIProject import MRIProject
 from subject.Subject import Subject
+from subject.SubjectMRI import SubjectMRI
+from subject.SubjectsList import SubjectsList
 
 
 class ConnModels:
@@ -22,24 +23,24 @@ class ConnModels:
     This class provides methods for creating and managing the connection models used in the CONN tool.
 
     Args:
-        proj (Project): The Project object that this class is associated with.
+        proj (MRIProject): The MRIProject object that this class is associated with.
 
     Attributes:
         subjects_list (list): A list of Subject objects that are part of the current project.
         working_dir (str): The directory where temporary files are stored.
-        project (Project): The ConnProject object that this class is associated with.
+        project (MRIProject): The ConnProject object that this class is associated with.
         globaldata (GlobalData): The GlobalData object that is associated with the current project.
         string (str): A string that is used to compose the connection model files.
     """
 
-    def __init__(self, proj:Project):
+    def __init__(self, proj:MRIProject):
         self.subjects_list      = None
         self.working_dir        = ""
-        self.project:Project    = proj
-        self.globaldata:Global  = self.project.globaldata
+        self.project:MRIProject    = proj
+        self.globaldata:MRIGlobal  = self.project.globaldata
         self.string             = ""  # used to compose models override
 
-    def create_regressors_file(self, odp:str, regressors:List[Regressor], groups_instances:List[List[Subject]], group_labels:List[str]=None, ofn:str="conn_covs",
+    def create_regressors_file(self, odp:str, regressors:List[Regressor], groups_instances:List[List[SubjectMRI]], group_labels:List[str]=None, ofn:str="conn_covs",
                                 data:str|SubjectsData=None, ofn_postfix:str="", subj_must_exist:bool=False):
         """
         This method creates a regressors file that can be used with the Conn tool. The regressors file contains
@@ -49,7 +50,7 @@ class ConnModels:
             odp (str): The output directory path where the regressors file will be created.
             regressors (list): A list of regressors that will be included in the analysis. The regressors can be
                 covariates or nuisances.
-            groups_instances (List[List[Subject]]): A list of group labels that will be used to create the factorial design. Each group
+            groups_instances (List[List[SubjectMRI]]): A list of group labels that will be used to create the factorial design. Each group
                 label will be used as an explanatory variable (EV).
             group_labels:List[str]: used to name output files
             ofn (str, optional): The name of the regressors file. The default value is "conn_covs".
@@ -155,7 +156,7 @@ class ConnModels:
 
         write_text_file(output_covsfile, self.string)
 
-    def create_regressors_file_ofsubset(self, odp:str, regressors:List[Regressor], whole_group_instances:List[Subject], groups_instances:List[List[Subject]], group_labels:List[str]=None,
+    def create_regressors_file_ofsubset(self, odp:str, regressors:List[Regressor], whole_group_instances:SubjectsList, groups_instances:List[SubjectsList], group_labels:List[str]=None,
                                         ofn:str="conn_covs", data_file=None, ofn_postfix:str="", subj_must_exist:bool=False, debug:bool=False):
         """
         This function creates a regressors file for the CONN tool, for a subset of the subjects in the current project.
@@ -168,7 +169,7 @@ class ConnModels:
                 covariates or nuisances.
             whole_group_instances (list): The list of all subjects that will be included in the regressors file.
             represents the subjects order in the conn project. The subjects can be specified by their group labels or by their subject labels.
-            groups_instances:List[List[Subject]]: The list of group instances that will be used to create the factorial design. Each group
+            groups_instances:List[List[SubjectMRI]]: The list of group instances that will be used to create the factorial design. Each group
                 label will be used as an explanatory variable (EV).
             group_labels:List[str]: used to name output files
             ofn (str, optional): The name of the regressors file. The default value is "conn_covs".
@@ -198,6 +199,8 @@ class ConnModels:
         if ngroups > 3:
             raise Exception("Error in ConnModels.create_regressors_file_ofsubset, no more than three groups are supported")
 
+        if group_labels is None:
+            group_labels = [ f"Group {i}" for i in range(ngroups) ]
         # ----------------------------------------------------------------------------------
         # create a list with all Subject instances
         subjs_instances = []
@@ -225,6 +228,7 @@ class ConnModels:
         output_covsfile = os.path.join(odp, ofn + ofn_postfix)
         os.makedirs(odp, exist_ok=True)
 
+        self.string = ""
         # ------------------------------------------------------------------------------------
         # add file header with regressors labels
         for gr in group_labels:
@@ -234,7 +238,7 @@ class ConnModels:
         for covs in covs_label:
             str_covs = ""
             for i in range(ngroups):
-                str_covs = str_covs + covs + "_" + str(i+1) + " "
+                str_covs = str_covs + covs + "_" + str(group_labels[i]) + " "
             self.string = self.string + str_covs
 
         self.string = self.string[:-1]
@@ -256,36 +260,44 @@ class ConnModels:
 
         # subjs_data = data.filter_subjects(whole_subjest_labels)
 
-        # ------------------------------------------------------------------------------------
-        # write file: cycle through the subjects of the entire dataset
-        for subj in whole_group_instances:
+        covs_values = self.project.get_subjects_values_by_cols(whole_group_instances, covs_label)[0] #, demean_flags=covs_demean, ndecim=ndecim)[0]
+        nuis_values = self.project.get_subjects_values_by_cols(whole_group_instances, nuis_label)[0] #, demean_flags=nuis_demean, ndecim=ndecim)[0]
 
-            slab = subj.label
-            # determine to which group belong
-            group_id = -1       # does not belong
-            for gr_id, gr in enumerate(groups_instances):
-                if slab in gr:
-                    group_id = gr_id
+        try:
+            # ------------------------------------------------------------------------------------
+            # write file: cycle through the subjects of the entire dataset
+            for _idsubj, subj in enumerate(whole_group_instances):
 
-            if group_id == -1:
-                self.__addline2string(empty_row)
-            else:
-                string = groups_strings[group_id]
+                slab = subj.label
+                # determine to which group belong
+                group_id = -1       # does not belong
+                for gr_id, gr in enumerate(groups_instances):
+                    if slab in gr.labels:
+                        group_id = gr_id
 
-                for nuis in nuis_label:
-                    string = string + " " + str(data.get_subject_col_value(subj, nuis))
+                if group_id == -1:
+                    self.__addline2string(empty_row)
+                else:
+                    string = groups_strings[group_id]
 
-                for cov in covs_label:
-                    cov_value = str(data.get_subject_col_value(subj, cov))
-                    covsvalue = ["0" for _ in range(ngroups)]
-                    covsvalue[group_id] = cov_value
-                    value_string = " ".join(covsvalue)
-                    string = string + " " + value_string
+                    for _idnuis, nuis in enumerate(nuis_label):
+                        string = string + " " + str(nuis_values[_idnuis][_idsubj]) #data.get_subject_col_value(subj, nuis))
 
-                self.__addline2string(string)
+                    for _idcov, cov in enumerate(covs_label):
+                        cov_value = str(covs_values[_idcov][_idsubj]) #data.get_subject_col_value(subj, cov))
+                        covsvalue = ["0" for _ in range(ngroups)]
+                        covsvalue[group_id] = cov_value
+                        value_string = " ".join(covsvalue)
+                        string = string + " " + value_string
 
-        write_text_file(output_covsfile, self.string)
-        print("create model file " + output_covsfile)
+                    self.__addline2string(string)
+
+            write_text_file(output_covsfile, self.string)
+            print("create model file " + output_covsfile)
+
+        except Exception as e:
+            traceback.print_exc()
+            raise SubjectListException(f"Error in ConnModels.create_regressors_file_ofsubset: {e}") from e
 
     def __addline2string(self, line:str=""):
         """

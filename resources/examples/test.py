@@ -1,6 +1,6 @@
-from Global import Global
-from Project import Project
-
+import os
+from project.MRIGlobal import MRIGlobal
+from project.MRIProject import MRIProject
 from myutility.images.Image import Image
 
 if __name__ == "__main__":
@@ -10,19 +10,22 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir = "/data/MRI/projects/test"
-        project = Project(proj_dir, globaldata)
+        # NOTE: Update this path to your actual project directory
+        proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "projects", "test")
+        project = MRIProject(proj_dir, globaldata)
         SESS_ID = 1
         num_cpu = 1
 
-        image = Image("/data/MRI/projects/test/subjects/S001/s1/mpr/S001-t11", True)
+        # Example image path - adjust based on your actual data structure
+        image_path = os.path.join(proj_dir, "subjects", "S001", "s1", "mpr", "S001-t11")
+        image = Image(image_path, True)
 
-        print(image.name)
+        print(f"Image name: {image.name}")
 
 
     except Exception as e:

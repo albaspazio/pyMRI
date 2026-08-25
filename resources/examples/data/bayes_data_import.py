@@ -1,10 +1,11 @@
 import traceback
+import os
 
-from DataProject import DataProject
 from data.BayesDB import BayesDB
 from data.importer.BayesImporter import BayesImporter
 from data.utilities import *
 from myutility.exceptions import SubjectListException
+from project.DataProject import DataProject
 
 if __name__ == "__main__":
 
@@ -17,7 +18,8 @@ if __name__ == "__main__":
         # HEADER
         # ======================================================================================================================
         script_dir          = os.path.dirname(__file__)
-        final_bayes_db_file = os.path.join("/data/MRI/pymri_projects_scripts", "BAYES-PSIC.xlsx")        # input
+        # NOTE: Update this path to your actual data location
+        final_bayes_db_file = os.path.join(script_dir, "output_data", "BAYES-PSIC_final.xlsx")        # input
 
         project             = DataProject(script_dir, final_bayes_db_file)
         bayes_db_file       = os.path.join(project.input_data_dir, "BAYES-PSIC_sessions.xlsx")        # input
@@ -31,7 +33,8 @@ if __name__ == "__main__":
         # START !!!
         # ======================================================================================================================
         # read ALL bayes db
-        bayes_db        = BayesDB(bayes_db_file)
+        bayes_schema        = os.path.join("/data/MRI/pymri/resources/schemas/bayes_template.json")
+        bayes_db            = BayesDB(bayes_schema, bayes_db_file)
 
         # ============================================================================================================
         #region URAS thesis
@@ -86,15 +89,18 @@ if __name__ == "__main__":
         # ============================================================================================================
         # region add a columns to each sheet
         new_bayes_db_file   = os.path.join(project.input_data_dir, "BAYES-PSIC_test.xlsx")
-        new_db              = bayes_db.add_column("test", [1], None, 1)
+        # add_column signature: col_label, values, subjs=None, position=None, df=None
+        # Adding a test column with value 1 for all subjects
+        new_db              = bayes_db.add_column("test", [1])
         new_db.save(new_bayes_db_file)
         #endregion
 
         # ============================================================================================================
         # region add second session partial data
         new_bayes_db_file   = os.path.join(project.input_data_dir, "new_subjects_2nd_session.xlsx")
-        new_bayes_db        = BayesDB(new_bayes_db_file, calc_flags=False)
-        final_db            = bayes_db.add_new_subjects(new_bayes_db, copy_previous_sess=columns2copy)
+        bayes_schema        = os.path.join("/data/MRI/pymri/resources/schemas/bayes_template.json")
+        new_bayes_db        = BayesDB(bayes_schema, new_bayes_db_file, calc_flags=False)
+        final_db            = bayes_db.copy().add_new_subjects(new_bayes_db, copy_previous_sess=columns2copy)
         final_db.save(final_bayes_db_file)
         #endregion
 

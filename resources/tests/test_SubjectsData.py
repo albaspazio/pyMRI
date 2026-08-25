@@ -2,8 +2,7 @@
 import pandas as pd
 
 from data.SubjectsData import SubjectsData
-from data.SIDList import SIDList
-from data.SID import SID
+
 
 def test_retrieve_column_all_subjects():
     # Assuming SubjectsData is the class containing get_filtered_column

@@ -1,14 +1,16 @@
 import os
 import traceback
 
-from Global import Global
-from Project import Project
+from project.MRIGlobal import MRIGlobal
+from project.MRIProject import MRIProject
 from data.utilities import FilterValues
 from group.GroupAnalysis import GroupAnalysis
 from group.SPMConstants import SPMConstants
-from group.SPMModels import SPMModels
+from models.SPMModels import SPMModels
 from group.spm_utilities import Nuisance, Covariate, CatConvResultsParams, ResultsParams, TContrast, FContrast
 from group.PostModel import PostModel
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -17,18 +19,18 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
         data_file = "data.xlsx"
 
-        project_dir = "/data/MRI/projects/test"
-        project = Project(project_dir, globaldata, data_file)  # automatically load PROJDIR/script/data.dat if present
+        project_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "test")  # NOTE: relative path to project directory
+        project = MRIProject(project_dir, globaldata, data_file)  # automatically load PROJDIR/script/data.dat if present
 
-        subjproject_dir = "/data/MRI/projects/test"
-        subjproject = Project(subjproject_dir, globaldata)
+        subjproject_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "test")  # NOTE: relative path to project directory
+        subjproject = MRIProject(subjproject_dir, globaldata)
 
         SESS_ID = 1
         num_cpu = 1
@@ -38,7 +40,7 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        subjects = subjproject.load_subjects(group_label, [SESS_ID], must_exist=False)
+        subjects = subjproject.get_subjects(group_label, sess_ids=[SESS_ID], must_exist=False)
 
         analysis            = GroupAnalysis(project)
         spm_analysis        = SPMModels(project)

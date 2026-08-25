@@ -1,18 +1,17 @@
 import datetime
 import io
-from typing import List
 import json
+import os
 
 import msoffcrypto
 import numpy
 import pandas
 import pandas as pd
-import os
 
 from data.BayesDB import BayesDB
-from myutility.exceptions import DataFileException
-from data.SubjectsData import SubjectsData
 from data.Sheets import Sheets
+from data.SubjectsData import SubjectsData
+from myutility.exceptions import DataFileException
 
 
 class BayesImporter:
@@ -430,7 +429,7 @@ class BayesImporter:
                     msg = "Error in __set_sheet limit exceeded in sheet: " + scale_name + ", df is [" + str(df.shape[0]) + "," + str(df.shape[1]) + "] and requested indices are: " + str(r) + "," + str(c)
                     raise Exception(msg)
         except Exception as e:
-            a = 1
+            raise DataFileException(f"Error in __set_sheet at scale {scale_name}", str(e)) from e
 
         self.sheets[scale_name] = SubjectsData(pd.DataFrame.from_dict([sh]))
 

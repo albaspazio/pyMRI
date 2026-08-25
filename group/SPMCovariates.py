@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Union, List, Optional, Any
+from typing import List
 
-from Project import Project
 from data.SubjectsData import SubjectsData
 from data.utilities import list2spm_text_column
 from group.spm_utilities import Covariate, Regressor
-from subject.Subject import Subject
 from myutility.fileutilities import sed_inplace
+from project.MRIProject import MRIProject
+from subject.SubjectMRI import SubjectMRI
 
 
 # class used to replace covariates strings in SPM batch
@@ -17,7 +17,7 @@ class SPMCovariates:
     """
 
     @staticmethod
-    def spm_replace_stats_add_covariates(project: Project, out_batch_job: str, groups_instances:List[List[Subject]], covs:List[Regressor],
+    def spm_replace_stats_add_covariates(project: MRIProject, out_batch_job: str, groups_instances:List[List[SubjectMRI]], covs:List[Regressor],
                                         batch_id: int = 1, cov_interaction:List[int]=None, data:str|SubjectsData=None, centering: bool = False) -> None:
         """
         This function adds covariates to an SPM batch file.
@@ -25,7 +25,7 @@ class SPMCovariates:
         Args:
             project: The project object.
             out_batch_job: The path to the SPM batch file.
-            groups_instances: List[List[Subject]], where each inner list represents a group.
+            groups_instances: List[List[SubjectMRI]], where each inner list represents a group.
             covs: A list of covariates.
             batch_id: The ID of the batch job.
             cov_interaction: A list of interactions between covariates and factors.
@@ -64,7 +64,7 @@ class SPMCovariates:
         # -------------------------------------------------------------------------------------------------------------
         if ncov == 1:
             SPMCovariates.spm_replace_stats_add_1cov_manygroups(out_batch_job, groups_instances, project, covs[0],
-                                                                batch_id, cov_interaction, data)
+                                                                cov_interaction, batch_id, data)
         else:
             if centering:
                 icc = 1
@@ -76,7 +76,8 @@ class SPMCovariates:
                 cov = []
                 cov_name    = covs[cov_id].name
                 for subjs in groups_instances:
-                    cov = cov + project.get_filtered_column(subjs, cov_name, data=data)[0]
+                    for subj in subjs:
+                        cov.append(subj.get_col_value(cov_name))
                 str_cov = "\n" + list2spm_text_column(cov)  # ends with a "\n"
 
                 cov_string = cov_string + "matlabbatch{" + str(batch_id) + "}.spm.stats.factorial_design.cov(" + str(cov_id + 1) + ").c = "
@@ -88,14 +89,14 @@ class SPMCovariates:
             sed_inplace(out_batch_job,"<COV_STRING>", cov_string)
 
     @staticmethod
-    def spm_replace_stats_add_1cov_manygroups(out_batch_job: str, groups_instances: List[List[Subject]], project: Project,
-                                              cov:str|Covariate, batch_id: int = 1, cov_interaction:List[int]=None, data:str|SubjectsData=None, centering:bool=False) -> None:
+    def spm_replace_stats_add_1cov_manygroups(out_batch_job: str, groups_instances: List[List[SubjectMRI]], project: MRIProject,
+                                              cov:Covariate, cov_interaction:List[int], batch_id: int = 1, data:str|SubjectsData=None, centering:bool=False) -> None:
         """
         This function adds a single covariate to an SPM batch file, where the covariate is defined across multiple groups.
 
         Args:
             out_batch_job: The path to the SPM batch file.
-            groups_labels: A list of lists of subjects, where each inner list represents a group.
+            groups_instances: List[List[SubjectMRI]]: A list of lists of subjects, where each inner list represents a group.
             project: The project object.
             cov: The covariate.
             batch_id: The ID of the batch job.
@@ -110,7 +111,8 @@ class SPMCovariates:
 
         cov_values = []
         for grp in groups_instances:
-            cov_values = cov_values + project.get_filtered_column(grp, cov.name, data=data)[0]
+            for subj in grp:
+                cov_values.append(subj.get_col_value(cov.name))
         str_cov = "\n" + list2spm_text_column(cov_values)  # ends with a "\n"
 
         cov_string =              "matlabbatch{" + str(batch_id) + "}.spm.stats.factorial_design.cov.c = "

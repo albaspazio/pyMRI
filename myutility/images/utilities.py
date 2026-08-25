@@ -160,6 +160,7 @@ def remove_volumes_from_4D(inimg: str, vols2rem0based: list, outname: str) -> No
         Image(os.path.join(temp_dir, "TEMP" + fillnumber2fourdigits(v))).rm()
 
     # join remaining volumes
-    rrun(f"fslmerge -t {outname} TEMP*")
+    # TODO: NOT WORKING
+    rrun("fslmerge -t " + outname + " TEMP*")
 
     os.chdir(curr_dir)

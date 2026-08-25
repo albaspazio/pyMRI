@@ -1,8 +1,12 @@
+import os
 import traceback
 
-from Global import Global
-from Project import Project
+from project.MRIGlobal import MRIGlobal
+from project.MRIProject import MRIProject
 from group.GroupAnalysis import GroupAnalysis
+from myutility.utilities import Processes
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -11,27 +15,27 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir = "/data/MRI/projects/nk"
-        project = Project(proj_dir, globaldata, "")
+        proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "nk")  # NOTE: relative path to project directory
+        project = MRIProject(proj_dir, globaldata, "")
 
-        subjproject = Project("/data/MRI/projects/3T", globaldata, "")
+        subjproject = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "3T")  # NOTE: relative path to project directory
+        subjproject = MRIProject(subjproject, globaldata, "")
 
         analysis = GroupAnalysis(project)
 
         population_label_psi= "psi_nk_28_FMRIB58"
 
+        run_it = True
         # ==================================================================================================================
-
 
         models_subdir_name = "dti"
 
         gating_joined = "CD56BR_CD16NEGDIM_CD56DIM_CD16BR_CD56DIM_CD16DIMNEG_CD56NEG_CD16BR_NKG2C_CD57pos"
-
 
         corr_string_psi = "age_disdur"
 
@@ -43,17 +47,16 @@ if __name__ == "__main__":
 
         # one-process randomise exit before completion returning the subprocess reference
         # thus user must explicitly wait for their completion
-        processes = []
+        processes:Processes = Processes()
 
         processes.append(analysis.start_tbss_randomize(population_label_psi, "MD", arr_populations_imm[0] + "_" + gating_joined, corr_string_psi, models_subdir_name, delay=5, perm=2, numcpu=1))
         processes.append(analysis.start_tbss_randomize(population_label_psi, "L1", arr_populations_imm[0] + "_" + gating_joined, corr_string_psi, models_subdir_name, delay=5, perm=2, numcpu=1))
-        for p in processes:
-            p.wait()
+
+        if run_it is True:
+            processes.wait()
+            processes.clear()
 
         a=1
-
-
-
 
 
     except Exception as e:

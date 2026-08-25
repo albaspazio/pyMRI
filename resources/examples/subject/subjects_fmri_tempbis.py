@@ -1,12 +1,14 @@
 import os
 import traceback
 
-from Global import Global
-from Project import Project
-from subject.Subject import Subject
-from myutility.images.Image import Image
-from group.spm_utilities import SubjResultsParam, TContrast, FContrast, SubjCondition, FmriProcParams
 from numpy import sort, asarray
+
+from group.spm_utilities import SubjResultsParam, TContrast, SubjCondition, FmriProcParams
+from project.MRIGlobal import MRIGlobal
+from project.MRIProject import MRIProject
+from subject.SubjectsList import SubjectsList
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -15,16 +17,16 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        subjproj_dir    = "/data/MRI/projects/3T"
-        subjproject     = Project(subjproj_dir, globaldata)
+        subjproj_dir    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "3T")  # NOTE: relative path to project directory
+        subjproject     = MRIProject(subjproj_dir, globaldata)
 
-        proj_dir        = "/data/MRI/projects/temporal_bisection"
-        project         = Project(proj_dir, globaldata)
+        proj_dir        = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "temporal_bisection")  # NOTE: relative path to project directory
+        project         = MRIProject(proj_dir, globaldata)
 
         SESS_ID         = 1
         num_cpu         = 2
@@ -53,9 +55,9 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        def run_1stlevel_analysis(eng, proj:Project, subjects:list[Subject], cond_labels, hpf, block_dur, log_dirname, img_type, anal_name, fmri_par, contrasts, num_cpu):
+        def run_1stlevel_analysis(eng, proj:MRIProject, subjects:SubjectsList, cond_labels, hpf, block_dur, log_dirname, img_type, anal_name, fmri_par, contrasts, num_cpu):
 
-            subjproj:Project = subjects[0].project
+            subjproj:MRIProject = subjects[0].project
             slabels = []
             fmri_par.hpf    = hpf
             images_type     = img_type
@@ -89,12 +91,11 @@ if __name__ == "__main__":
                 kwparams.append({"analysis_name": anal_name, "fmri_params": fmri_par, "contrasts": contrasts, "res_report": result_report,
                                  "input_images": input_images, "conditions_lists": sessions_cond, "rp_filenames": rp_filenames})
 
-            subjproj.load_subjects(slabels)
-            subjproj.run_subjects_methods("epi", "spm_fmri_1st_level_analysis", kwparams, ncore=num_cpu)
+            subjproj.run_subjects_methods("epi", "spm_fmri_1st_level_analysis", kwparams, ncore=num_cpu, subjects=subjects)
 
         # ======================================================================================================================
         group_label     = "tempbis_er_with_ctrl"
-        subjects        = subjproject.load_subjects(group_label, [SESS_ID])
+        subjects        = subjproject.get_subjects(group_label, sess_ids=[SESS_ID])
         log_dirname     = "temp_bis_er_with_ctrl"
         subjproject.can_run_analysis("fmri")
 

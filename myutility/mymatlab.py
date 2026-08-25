@@ -33,8 +33,7 @@ Note that the actual function names and arguments may vary slightly depending on
 # from matlab.engine import
 import os
 
-import matlab.engine
-import matlab.engine.engineerror
+import matlab
 
 
 # start a new matlab session (if no session are active) or connect to the first one available or return None.

@@ -1,12 +1,14 @@
 import os
 import traceback
 
-from Global import Global
-from Project import Project
+from project.MRIGlobal import MRIGlobal
+from project.MRIProject import MRIProject
 from group.GroupAnalysis import GroupAnalysis
-from group.SPMModels import SPMModels
+from models.SPMModels import SPMModels
 from group.PostModel import PostModel
 from group.spm_utilities import ResultsParams, Covariate, Nuisance
+
+# NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
 
 if __name__ == "__main__":
 
@@ -15,13 +17,13 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = Global(fsl_code)
+        globaldata = MRIGlobal(fsl_code)
 
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
-        proj_dir = "/data/MRI/projects/test"
-        project = Project(proj_dir, globaldata)     # automatically load PROJDIR/script/data.dat if present
+        proj_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "test")  # NOTE: relative path to project directory
+        project = MRIProject(proj_dir, globaldata)     # automatically load PROJDIR/script/data.dat if present
         SESS_ID = 1
         num_cpu = 1
         group_label = "all"
@@ -29,7 +31,7 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        subjects = project.load_subjects(group_label, [SESS_ID])
+        subjects = project.get_subjects(group_label, sess_ids=[SESS_ID])
         project.add_icv_to_data(subjects) # add icv to all data
 
         analysis            = GroupAnalysis(project)
