@@ -2,7 +2,7 @@ import datetime
 import os
 import traceback
 
-from project.MRIGlobal import MRIGlobal
+from project.GlobalMRI import GlobalMRI
 from myutility.images.Image import Image
 from myutility.images.Images import Images
 from myutility.images.utilities import mass_images_move
@@ -25,16 +25,16 @@ class SubjectMpr:
     BIAS_TYPE_WEAK = 1
     BIAS_TYPE_STRONG = 2
 
-    def __init__(self, subject:'Subject', _global:MRIGlobal):
+    def __init__(self, subject:'Subject', _global:GlobalMRI):
         """
         Initialize the SubjectMpr class.
 
         Args:
             subject (Subject): The subject object.
-            _global (MRIGlobal): The global object.
+            _global (GlobalMRI): The global object.
         """
         self.subject:'Subject' = subject
-        self._global:MRIGlobal  = _global
+        self._global:GlobalMRI  = _global
 
     # pre-processing:
     #   FIXING NEGATIVE RANGE
@@ -613,7 +613,7 @@ class SubjectMpr:
                     smooth_surf:int=None,
                     extract_extra:bool=True,
                     atlases=None,
-                    do_cleanup=MRIGlobal.CLEANUP_LVL_MED,
+                    do_cleanup=GlobalMRI.CLEANUP_LVL_MED,
                     spm_template_name="cat27_segment_customizedtemplate_tiv_smooth"):
 
         #y_T1 = Image(os.path.join(self.subject.t1_cat_dir, "mri", "y_T1_" + self.subject.label))
@@ -729,7 +729,7 @@ class SubjectMpr:
             if not use_existing_nii:
                 inputimage.upath.rm()
 
-            if do_cleanup == MRIGlobal.CLEANUP_LVL_MED:
+            if do_cleanup == GlobalMRI.CLEANUP_LVL_MED:
                 os.system("rm -rf " + os.path.join(self.subject.t1_cat_dir, "mri"))
 
             log.close()
@@ -782,7 +782,7 @@ class SubjectMpr:
                                  use_dartel:bool=False,
                                  smooth_surf=None,
                                  use_existing_nii:bool=True,
-                                 do_cleanup=MRIGlobal.CLEANUP_LVL_MED,
+                                 do_cleanup=GlobalMRI.CLEANUP_LVL_MED,
                                  spm_template_name="cat_segment_longitudinal_customizedtemplate_tiv_smooth"):
 
         current_session = self.subject.sessid
@@ -1201,7 +1201,7 @@ class SubjectMpr:
             traceback.print_exc()
             print(e)
 
-    def finalize(self, odn="anat", imgtype=1, do_cleanup=MRIGlobal.CLEANUP_LVL_MED):
+    def finalize(self, odn="anat", imgtype=1, do_cleanup=GlobalMRI.CLEANUP_LVL_MED):
 
         logfile = os.path.join(self.subject.t1_dir, "mpr_log.txt")
 
@@ -1258,17 +1258,17 @@ class SubjectMpr:
             # run mv first_results $FIRST_DIR
             # run $FSLDIR/bin/immv ${T1}_subcort_seg $FIRST_DIR
 
-            if do_cleanup == MRIGlobal.CLEANUP_LVL_MIN:         #### CLEANUP
+            if do_cleanup == GlobalMRI.CLEANUP_LVL_MIN:         #### CLEANUP
                 #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning up intermediate files"
                 rrun(f"imrm {T1}_biascorr_bet_mask {T1}_biascorr_bet {T1}_biascorr_brain_mask2 {T1}_biascorr_init {T1}_biascorr_maskedbrain {T1}_biascorr_to_std_sub {T1}_fast_bias_idxmask {T1}_fast_bias_init {T1}_fast_bias_vol2 {T1}_fast_bias_vol32 {T1}_fast_totbias {T1}_hpf* {T1}_initfast* {T1}_s20 {T1}_initmask_s20", logFile=log)
 
-            if do_cleanup == MRIGlobal.CLEANUP_LVL_MED:    #### STRONG CLEANUP
+            if do_cleanup == GlobalMRI.CLEANUP_LVL_MED:    #### STRONG CLEANUP
                 #  print("Current date and time : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) print( "$SUBJ_NAME :Cleaning all unnecessary files "
                 Images([T1, f"{T1}_orig", f"{T1}_fullfov"]).rm(log)
                 if os.path.exists(self.subject.t1_cat_mri_dir):
                     os.system(f"rm -rf {self.subject.t1_cat_mri_dir}")
 
-            if do_cleanup == MRIGlobal.CLEANUP_LVL_HI:       #### TOTAL CLEANUP
+            if do_cleanup == GlobalMRI.CLEANUP_LVL_HI:       #### TOTAL CLEANUP
                 os.system(f"rm -rf {self.subject.t1_anat_dir}")
 
         except Exception as e:
@@ -1512,11 +1512,11 @@ class SubjectMpr:
         else:
             print("subject " + self.subject.label + " freesurfer's brainmask is not present")
 
-    def cleanup(self, lvl=MRIGlobal.CLEANUP_LVL_MIN):
+    def cleanup(self, lvl=GlobalMRI.CLEANUP_LVL_MIN):
 
         os.removedirs(self.subject.t1_anat_dir)
 
-        if lvl == MRIGlobal.CLEANUP_LVL_HI:
+        if lvl == GlobalMRI.CLEANUP_LVL_HI:
 
             os.removedirs(self.subject.first_dir)
             os.removedirs(self.subject.fast_dir)

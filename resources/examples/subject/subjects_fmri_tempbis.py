@@ -4,8 +4,8 @@ import traceback
 from numpy import sort, asarray
 
 from group.spm_utilities import SubjResultsParam, TContrast, SubjCondition, FmriProcParams
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 from subject.SubjectsList import SubjectsList
 
 # NOTE: Using relative paths with os.path.dirname(__file__) for project discovery
@@ -17,16 +17,16 @@ if __name__ == "__main__":
     # ======================================================================================================================
     fsl_code = "604"
     try:
-        globaldata = MRIGlobal(fsl_code)
+        globaldata = GlobalMRI(fsl_code)
 
         # ======================================================================================================================
         # HEADER
         # ======================================================================================================================
         subjproj_dir    = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "3T")  # NOTE: relative path to project directory
-        subjproject     = MRIProject(subjproj_dir, globaldata)
+        subjproject     = ProjectMRI(subjproj_dir, globaldata)
 
         proj_dir        = os.path.join(os.path.dirname(__file__), "..", "..", "..", "projects", "temporal_bisection")  # NOTE: relative path to project directory
-        project         = MRIProject(proj_dir, globaldata)
+        project         = ProjectMRI(proj_dir, globaldata)
 
         SESS_ID         = 1
         num_cpu         = 2
@@ -55,9 +55,9 @@ if __name__ == "__main__":
         # ======================================================================================================================
         # PROCESSING
         # ======================================================================================================================
-        def run_1stlevel_analysis(eng, proj:MRIProject, subjects:SubjectsList, cond_labels, hpf, block_dur, log_dirname, img_type, anal_name, fmri_par, contrasts, num_cpu):
+        def run_1stlevel_analysis(eng, proj:ProjectMRI, subjects:SubjectsList, cond_labels, hpf, block_dur, log_dirname, img_type, anal_name, fmri_par, contrasts, num_cpu):
 
-            subjproj:MRIProject = subjects[0].project
+            subjproj:ProjectMRI = subjects[0].project
             slabels = []
             fmri_par.hpf    = hpf
             images_type     = img_type

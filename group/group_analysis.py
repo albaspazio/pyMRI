@@ -4,7 +4,7 @@ from typing import List
 from myutility.images.Image import Image
 from myutility.images.Images import Images
 from myutility.myfsl.utils.run import rrun
-from project.MRIProject import MRIProject
+from project import ProjectMRI
 from subject.SubjectMRI import SubjectMRI
 from subject.SubjectsList import SubjectsList
 
@@ -12,13 +12,13 @@ from subject.SubjectsList import SubjectsList
 # this function assumes that user put the melodic rois of interest in the roi4_folder of a specific subfolder of the given project (where between-groups analyses are done, usually the patient folder)
 # subjects instances are given already divided by groups, in order to launch the corresponding project.run_subjects_methods
 # the script coregisters each roi into a 2mm rs individual space
-def convert_melodic_rois_to_individual(project:MRIProject, templ_name:str, popul_name:str, rois_list:List[str], arr_subjs_insts:List[List[SubjectMRI]], thr:int=0.1, report_file:str="transform_report", num_cpu:int=1, mni_2mm_brain:Image=None):
+def convert_melodic_rois_to_individual(project:'ProjectMRI', templ_name:str, popul_name:str, rois_list:List[str], arr_subjs_insts:List[List[SubjectMRI]], thr:int=0.1, report_file:str= "transform_report", num_cpu:int=1, mni_2mm_brain:Image=None):
 
     """
     This function converts melodic ROIs from 4mm to 2mm in individual space.
 
     Args:
-        project (MRIProject): The project object.
+        project (ProjectMRI): The project object.
         templ_name (str): The template name.
         popul_name (str): The population name.
         rois_list (List[str]): The list of ROIs.
@@ -74,13 +74,13 @@ def convert_melodic_rois_to_individual(project:MRIProject, templ_name:str, popul
 # subjects: list of subjects instances
 # metric:   measures to analyze. values are: FA,MD,AD,RD
 
-def extract_meanvalue_from_tbssresults(project: MRIProject, rois: Images, subjects: SubjectsList, subjs_img_dir: str, metric: str = "FA"):
+def extract_meanvalue_from_tbssresults(project: ProjectMRI, rois: Images, subjects: SubjectsList, subjs_img_dir: str, metric: str = "FA"):
 
     """
     This function takes
 
     Args:
-        project (MRIProject): The project object.
+        project (ProjectMRI): The project object.
         rois (List[Image]): The list of normalized Image to investigate (extract mean individual metrics)
         subjects (SubjectsList): The list of subjects instances
         metric (str, optional): The measures to analyze. Defaults to "FA".

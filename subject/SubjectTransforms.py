@@ -1,7 +1,7 @@
 import os
 from typing import Optional
 
-from project.MRIGlobal import MRIGlobal
+from project.GlobalMRI import GlobalMRI
 # from subject.Subject import Subject
 from myutility.images.Image import Image
 from myutility.myfsl.utils.run import rrun
@@ -36,7 +36,7 @@ from myutility.images.transform_images import check_concat_mat, check_invert_mat
 
 class SubjectTransforms:
 
-    def __init__(self, subject:'Subject', _global:MRIGlobal):
+    def __init__(self, subject:'Subject', _global:GlobalMRI):
         """
         Initialize the transformation class for a given subject.
 
@@ -45,7 +45,7 @@ class SubjectTransforms:
             _global (Global): The global object containing the relevant parameters and settings.
         """
         self.subject:'Subject' = subject
-        self._global:MRIGlobal  = _global
+        self._global:GlobalMRI  = _global
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # TO HR (from std, std4, rs, fmri, dti, t2)

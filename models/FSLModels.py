@@ -4,10 +4,10 @@ import os
 from distutils.file_util import copy_file
 from typing import List
 
-from project.MRIGlobal import MRIGlobal
+from project.GlobalMRI import GlobalMRI
 from subject.SubjectsList import SubjectsList
 from data.SubjectsData import SubjectsData
-from project.MRIProject import MRIProject
+from project.ProjectMRI import ProjectMRI
 from models.FSLConFile import FSLConFile
 from group.spm_utilities import Regressor, Covariate, Nuisance
 from myutility.exceptions import SubjectListException
@@ -23,16 +23,16 @@ class FSLModels:
     Initialize the FSLModels class.
 
     Args:
-        proj (object): A MRIProject instance.
+        proj (object): A ProjectMRI instance.
     """
 
-    def __init__(self, proj:MRIProject):
+    def __init__(self, proj:ProjectMRI):
 
         self.subjects_list  = None
         self.working_dir    = ""
 
-        self.project:MRIProject    = proj
-        self.globaldata:MRIGlobal  = self.project.globaldata
+        self.project:ProjectMRI    = proj
+        self.globaldata:GlobalMRI  = self.project.globaldata
 
         self.string             = ""    # used to compose models override
 

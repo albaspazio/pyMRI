@@ -22,8 +22,8 @@ from myutility.myfsl.utils.run import rrun
 from myutility.mymatlab import call_matlab_function_noret
 from myutility.mymatlab import call_matlab_spmbatch
 from myutility.utilities import fillnumber2threedigits
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 from subject.SubjectsList import SubjectsList
 
 
@@ -31,17 +31,17 @@ class GroupAnalysis:
     """
     This class provides methods for group analysis of MRI data.
     """
-    def __init__(self, proj:MRIProject):
+    def __init__(self, proj:ProjectMRI):
         """
         Initialize the GroupAnalysis class.
 
         Args:
-            proj (MRIProject): The MRIProject object that contains the data and analysis settings.
+            proj (ProjectMRI): The ProjectMRI object that contains the data and analysis settings.
         """
         self.subjects_list      = None
         self.working_dir        = ""
-        self.project:MRIProject = proj
-        self._global:MRIGlobal     = self.project.globaldata
+        self.project:ProjectMRI = proj
+        self._global:GlobalMRI     = self.project.globaldata
 
         self.spm:SPMModels      = SPMModels(proj)
 

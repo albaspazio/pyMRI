@@ -3,7 +3,7 @@ import os
 from shutil import copyfile
 from typing import List
 
-from project.MRIGlobal import MRIGlobal
+from project.GlobalMRI import GlobalMRI
 from project.Global import Global
 from myutility.SubjectTracts import SubjectTracts
 from myutility.exceptions import NotExistingImageException
@@ -22,9 +22,9 @@ class SubjectDti:
         _global (Global): The global object.
 
     """
-    def __init__(self, subject:'Subject', _global:MRIGlobal):
+    def __init__(self, subject:'Subject', _global:GlobalMRI):
         self.subject:'Subject'    = subject
-        self._global:MRIGlobal     = _global
+        self._global:GlobalMRI     = _global
 
     # ==================================================================================================================================================
     # DIFFUSION

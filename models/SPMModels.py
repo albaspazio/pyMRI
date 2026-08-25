@@ -12,8 +12,8 @@ from group.spm_utilities import GrpInImages, Regressor, Contrast
 from myutility.fileutilities import sed_inplace
 from myutility.list import is_list_of
 from myutility.mymatlab import call_matlab_spmbatch
-from project.MRIGlobal import MRIGlobal
-from project.MRIProject import MRIProject
+from project.GlobalMRI import GlobalMRI
+from project.ProjectMRI import ProjectMRI
 from subject.SubjectMRI import SubjectMRI
 
 
@@ -22,17 +22,17 @@ class SPMModels:
     """
     This class contains methods for running group analyses using SPM.
     """
-    def __init__(self, proj:MRIProject):
+    def __init__(self, proj:ProjectMRI):
         """
         Initialize the SPMModels class.
 
         Parameters
         ----------
-        proj : instance of MRIProject
+        proj : instance of ProjectMRI
             The project object that contains information about the project.
         """
-        self.project:MRIProject    = proj
-        self.globaldata:MRIGlobal  = self.project.globaldata
+        self.project:ProjectMRI    = proj
+        self.globaldata:GlobalMRI  = self.project.globaldata
 
     def batchrun_group_stats(self,  root_outdir:str,        # group analysis root folder :  fmri_dir/ct_dir/vbm_template_dir
                                     stat_type:int,          # MULTREGR, tstt, ostt, owa, twa
