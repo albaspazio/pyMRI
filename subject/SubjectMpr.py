@@ -1351,10 +1351,11 @@ class SubjectMpr:
             except Exception:
                 pass
 
-            os.environ['SUBJECTS_DIR'] = self.subject.t1_dir
+            # os.environ['SUBJECTS_DIR'] = "/data2/MRI/projects/3T_bids/derivatives/freesurfer/sub-0002" #self.subject.t1_dir
+            out_dir = "/data2/MRI/projects/3T_bids/derivatives/freesurfer"
 
-            # recon-all may print INFO messages to stdout
-            rrun(f"recon-all -subject freesurfer -i {self.subject.t1_data}.mgz {step} -threads {numcpu}", logFile=log, stdout=False)
+            # rrun(f"recon-all -subject freesurfer -i {self.subject.t1_data}.mgz {step} -threads {numcpu}", logFile=log)
+            rrun(f"recon-all -subject sub-{self.subject.label} -i {self.subject.t1_data}.mgz {step} -sd {out_dir} -threads {numcpu}", logFile=log)
 
             t1_fs_data_orig = self.subject.t1_fs_data.add_postfix2name("_orig")
 

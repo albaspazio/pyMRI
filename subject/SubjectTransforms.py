@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, Any
 
 from project.GlobalMRI import GlobalMRI
 # from subject.Subject import Subject
@@ -36,7 +36,7 @@ from myutility.images.transform_images import check_concat_mat, check_invert_mat
 
 class SubjectTransforms:
 
-    def __init__(self, subject:'Subject', _global:GlobalMRI):
+    def __init__(self, subject:'SubjectMRI', _global:GlobalMRI):
         """
         Initialize the transformation class for a given subject.
 
@@ -44,7 +44,7 @@ class SubjectTransforms:
             subject (Subject): The subject object containing the relevant data and parameters.
             _global (Global): The global object containing the relevant parameters and settings.
         """
-        self.subject:'Subject' = subject
+        self.subject:'SubjectMRI' = subject
         self._global:GlobalMRI  = _global
 
         # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -555,7 +555,7 @@ class SubjectTransforms:
     # Calculate all the transforms involved in EPI processing.
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # (17/7/21) bbr co-registration fails!!!
-    def transform_rs(self, inimg:Optional[str]=None, do_bbr=False, wmseg:str="", overwrite=False, logFile=None):
+    def transform_rs(self, inimg:Optional[str]=None, do_bbr=False, wmseg:str="", overwrite=False, logFile:Any|None=None):
         """
         Calculates the high-resolution to reference space transformation matrix.
         it creates (10) : example_func, rs2hr_mat , hr2rs_mat , rs2std_mat , std2rs_mat , rs2std4_mat , std42rs_mat
@@ -1010,7 +1010,7 @@ class SubjectTransforms:
     #                                 in linear transf, it must be betted (must contain the "_brain" text)
     #                                 in non-linear is must be a full head image.
     #
-    def transform_roi(self, regtype, pathtype="standard", outdir:str="", outname:str="", mask:str="", orf:str="", thresh=0, islin:bool=True, rois=None):
+    def transform_roi(self, regtype, pathtype="standard", outdir:str="", outname:str="", mask:str="", orf:str="", thresh=0, islin:bool=True, rois=None) -> list[Any]:
         """
         This function applies the linear and nonlinear registration between the resting state fMRI data and the high-resolution structural images.
 
@@ -1055,7 +1055,7 @@ class SubjectTransforms:
         if outdir != "":
             if not os.path.isdir(outdir):
                 print("ERROR in transform_roi: given outdir (" + outdir + ") is not a folder.....exiting")
-                return
+                return []
 
         if mask != "":
             mask = Image(mask, must_exist=True, msg="SubjectTransforms.transform_roi mask image")

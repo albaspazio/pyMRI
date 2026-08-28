@@ -24,9 +24,9 @@ from .Project import Project
 
 class ProjectMRI(Project):
 
-    def __init__(self, folder: str, globaldata: 'GlobalMRI', data: str | SubjectsData = "data.xlsx", must_exist: bool = False, isBids: bool = False):
+    def __init__(self, folder: str, globaldata: 'GlobalMRI', data: str | SubjectsData = "data.xlsx", must_exist: bool = False, isBids: bool = False, bidsDerivatives: str | None = None):
         """
-        Initialize an MRIProject instance.
+        Initialize an ProjectMRI instance.
 
         Parameters
         ----------
@@ -43,12 +43,29 @@ class ProjectMRI(Project):
             If True, filesystem follows BIDS standard (sub-XX/ses-YY/anat/, etc.).
             If False, uses legacy format (subjects/XX/sYY/mpr/, etc.).
             Default: False (legacy format for backward compatibility).
+        bidsDerivatives : str | None, optional
+            Path to derivatives directory. Only used if isBids=True.
+            If None, assumes derivatives are at {folder}/../derivatives (sibling of raw).
+            If a path is provided, uses that path as root for derivatives.
+            Example: folder="/projects/myproject/raw", bidsDerivatives=None
+                     → derivatives will be at "/projects/myproject/derivatives"
+                     OR: bidsDerivatives="/data/derivs" → derivatives will be at "/data/derivs"
+            Default: None.
         """
         if not os.path.exists(folder):
             raise Exception("PROJECT_DIR not defined.....exiting")
 
         self.globaldata = globaldata
         self.isBids = isBids
+        
+        # Resolve bidsDerivatives path
+        if self.isBids and bidsDerivatives is None:
+            # Default: derivatives at same level as raw (sibling folder)
+            # If folder = "/projects/myproject/raw" → derivatives = "/projects/myproject/derivatives"
+            parent_dir = os.path.dirname(folder)
+            self.bidsDerivatives = os.path.join(parent_dir, "derivatives")
+        else:
+            self.bidsDerivatives = bidsDerivatives
 
         self.dir        = folder
         self.label      = os.path.basename(self.dir)
@@ -123,7 +140,7 @@ class ProjectMRI(Project):
     # ==================================================================================================================
     # region LOAD / GET SUBJECTS
 
-    def load_subjects(self, group_or_subjlabels: str | List[str], sess_ids: List[int] = None, must_exist: bool = True) -> SubjectsList:
+    def load_subjects(self, group_or_subjlabels: str | List[str], sess_ids: List[int]|None = None, must_exist: bool = True) -> SubjectsList:
         """
         DEPRECATED: Use get_subjects() instead. This method will be removed in a future version.
         
@@ -168,7 +185,7 @@ class ProjectMRI(Project):
             return sessions
         else:
             if error_if_empty:
-                raise SubjectExistException("MRIProject.get_subject_available_sessions: given subj " + subj_lab + " does not have any session")
+                raise SubjectExistException("ProjectMRI.get_subject_available_sessions: given subj " + subj_lab + " does not have any session")
             else:
                 return []
 
@@ -195,7 +212,7 @@ class ProjectMRI(Project):
         DataFileException
             If (label, sess_id) not found in self.data.
         """
-        subj = SubjectMRI(sid.label, self, sid.session, isBids=self.isBids)
+        subj = SubjectMRI(sid.label, self, sid.session, isBids=self.isBids, bidsDerivatives=self.bidsDerivatives)
         subj.sid = sid  # Raises DataFileException if not found
         return subj
 
@@ -204,7 +221,7 @@ class ProjectMRI(Project):
         Get a single subject as SubjectMRI (type-safe override of Project.get_subject).
 
         Returns SubjectMRI instead of generic Subject for better IDE type checking.
-        At runtime, all subjects in MRIProject are SubjectMRI anyway; this just makes
+        At runtime, all subjects in ProjectMRI are SubjectMRI anyway; this just makes
         the type explicit for the type checker.
 
         Parameters
@@ -232,10 +249,13 @@ class ProjectMRI(Project):
         """
         Validate that all subjects in self.subjects have directory on filesystem.
         
+        For BIDS projects, also validates the presence of dataset_description.json in the raw root.
+        
         Emits UserWarning for subjects without directory. Non-blocking: init
         completes even if warnings are emitted.
         """
         import warnings
+        import os
         
         missing = []
         for subj in self.subjects:
@@ -244,9 +264,19 @@ class ProjectMRI(Project):
         
         if missing:
             warnings.warn(
-                f"MRIProject: {len(missing)} soggetti mancano nel filesystem: {sorted(set(missing))}",
+                f"ProjectMRI: {len(missing)} soggetti mancano nel filesystem: {sorted(set(missing))}",
                 UserWarning, stacklevel=2
             )
+        
+        # For BIDS projects, validate dataset_description.json exists
+        if self.isBids:
+            dataset_desc_path = os.path.join(self.dir, "dataset_description.json")
+            if not os.path.exists(dataset_desc_path):
+                warnings.warn(
+                    f"ProjectMRI BIDS: dataset_description.json non trovato in {self.dir}. "
+                    "Il progetto potrebbe non essere BIDS-compliant.",
+                    UserWarning, stacklevel=2
+                )
 
 
 
@@ -263,7 +293,7 @@ class ProjectMRI(Project):
                 incomplete_subjects.append({"label": subj.label, "images": missing})
         return incomplete_subjects
 
-    def hasSeq(self, seq_type, subjects: SubjectsList = None, images_labels: List[str] = None):
+    def hasSeq(self, seq_type, subjects: SubjectsList|None = None, images_labels: List[str]|None = None):
         subjects        = self.validate_subjects(subjects)
         invalid_subjs   = ""
         for subj in subjects:
@@ -277,7 +307,7 @@ class ProjectMRI(Project):
 
         return invalid_subjs
 
-    def can_run_analysis(self, analysis_type, analysis_params: str | List[str] = None, subjects: SubjectsList = None):
+    def can_run_analysis(self, analysis_type, analysis_params: str | List[str]|None = None, subjects: SubjectsList|None = None):
         subjects        = self.validate_subjects(subjects)
         invalid_subjs   = ""
         for subj in subjects:
@@ -317,7 +347,7 @@ class ProjectMRI(Project):
         finally:
             os.chdir(olddir)
 
-    def check_all_coregistration(self, outdir: str, subjects: SubjectsList = None, _from: List[str] = None, _to: List[str] = None, fmri_labels: List[str] = None, num_cpu: int = 1, overwrite: bool = False):
+    def check_all_coregistration(self, outdir: str, subjects: SubjectsList|None = None, _from: List[str]|None = None, _to: List[str]|None = None, fmri_labels: List[str]|None = None, num_cpu: int = 1, overwrite: bool = False):
         subjects = self.validate_subjects(subjects)
 
         if _from is None:
@@ -336,16 +366,16 @@ class ProjectMRI(Project):
             else:
                 self._process_slicesdir(outdir, img_type)
 
-    def compare_brain_extraction(self, outdir: str, subjects: SubjectsList = None, num_cpu=1):
+    def compare_brain_extraction(self, outdir: str, subjects: SubjectsList|None = None, num_cpu=1):
         subjects = self.validate_subjects(subjects)
         os.makedirs(outdir, exist_ok=True)
-        self.run_subjects_methods("mpr", "compare_brain_extraction", [{"tempdir": outdir}], ncore=num_cpu, subjs=subjects)
+        self.run_subjects_methods("mpr", "compare_brain_extraction", [{"tempdir": outdir}], ncore=num_cpu, subjects=subjects)
         olddir = os.getcwd()
         os.chdir(outdir)
         os.system("slicesdir ./*.nii.gz")
         os.chdir(olddir)
 
-    def prepare_mpr_for_setorigin1(self, subjects: SubjectsList = None, replaceOrig: bool = False, overwrite: bool = False):
+    def prepare_mpr_for_setorigin1(self, subjects: SubjectsList|None = None, replaceOrig: bool = False, overwrite: bool = False):
         subjects = self.validate_subjects(subjects)
         for subj in subjects:
             if not replaceOrig:
@@ -360,7 +390,7 @@ class ProjectMRI(Project):
             subj.t1_data.cpath.unzip(niifile, replace=True)
             print("unzipped " + subj.label + " mri")
 
-    def prepare_mpr_for_setorigin2(self, subjects: SubjectsList = None):
+    def prepare_mpr_for_setorigin2(self, subjects: SubjectsList|None = None):
         subjects = self.validate_subjects(subjects)
         for subj in subjects:
             niifile = Image(str(os.path.join(subj.t1_dir, subj.t1_image_label + "_temp.nii")))
@@ -374,7 +404,7 @@ class ProjectMRI(Project):
     # ==================================================================================================================
     # region ACCESSORY
 
-    def add_icv_to_data(self, subjects: SubjectsList = None, updatefile: bool = False, df=None):
+    def add_icv_to_data(self, subjects: SubjectsList|None = None, updatefile: bool = False, df=None):
         subjects = self.validate_subjects(subjects)
         icvs = self.get_subjects_icv(subjects)
         self.data.add_column("icv", icvs, self.subjects2sids(subjects), df)
@@ -394,14 +424,14 @@ class ProjectMRI(Project):
                 missing_files.append(subj.t1_spm_icv_file)
 
         if len(missing_files) > 0:
-            raise DataFileException("Error in MRIProject.get_subjects_icv: icv files of some subject/session are missing", str(missing_files))
+            raise DataFileException("Error in ProjectMRI.get_subjects_icv: icv files of some subject/session are missing", str(missing_files))
         return icv_scores
 
     def create_subjects_lists(self, group_label=None):
         if group_label is None:
             subjs = self.subjects
         else:
-            subjs = self.load_subjects(group_label)
+            subjs = self.get_subjects(group_label)
 
         lists = [{"label": "auto_t1", "list": []}, {"label": "auto_ct", "list": []}, {"label": "auto_dti", "list": []}, {"label": "auto_rs", "list": []}]
 
@@ -482,7 +512,7 @@ class ProjectMRI(Project):
     # region MULTICORE PROCESSING
     # *kwparams is a list of kwparams. if len(kwparams)=1 & len(subjects) > 1 ...pass that same kwparams[0] to all subjects
     # if subjects is not given...use the loaded subjects
-    def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, subjects: SubjectsList = None, must_exist: bool = True):
+    def run_subjects_methods(self, method_type, method_name, kwparams, ncore=1, subjects: SubjectsList|None = None, must_exist: bool = True):
         """
         Runs a method on a list of subjects.
 
@@ -492,7 +522,6 @@ class ProjectMRI(Project):
             kwparams (List): A list of keyword arguments to pass to the method. If there is only one argument, it can be passed as a single element list.
             ncore (int, optional): The number of cores to use for parallel processing. Defaults to 1.
             subjects (SubjectsList, optional): list of Subject instances to run the method on. If None, all subjects are used. Defaults to None.
-            sess_id (int, optional): The session ID. Defaults to 1.
             must_exist (bool, optional): If True, raise an exception if a subject does not exist. Defaults to True.
 
         Returns:

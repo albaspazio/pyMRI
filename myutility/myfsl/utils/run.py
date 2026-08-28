@@ -380,8 +380,15 @@ def _realrun(tee, logStdout, logStderr, logCmd, *args):
     stdout = stdout.decode('utf-8')
     stderr = stderr.decode('utf-8')
 
+    stderr = filter_log_lines(stderr)
+
     return stdout, stderr, exitcode
 
+def filter_log_lines(text, prefixes=("INFO:", "WARNING:", "DEBUG:")):
+    """Remove log message lines from output"""
+    lines = text.split('\n')
+    filtered = [line for line in lines if not any(line.strip().startswith(p) for p in prefixes)]
+    return '\n'.join(filtered)
 
 def runfsl(*args, **kwargs):
     """Call a FSL command and return its output. This function simply prepends

@@ -8,7 +8,8 @@ from copy import deepcopy
 from shutil import move, rmtree
 from typing import List, Tuple
 
-from project.MRIGlobal import MRIGlobal
+from myutility.exceptions import NotExistingImageException
+from project.GlobalMRI import GlobalMRI
 from group.SPMConstants import SPMConstants
 from group.spm_utilities import FmriProcParams, GrpInImages
 from myutility.images.Image import Image
@@ -48,20 +49,35 @@ class SubjectMRI(Subject):
     TYPE_DTI_B0 = 5     # does not have bval/bvec
     TYPE_T2 = 6
 
-    def __init__(self, label: str, project: 'MRIProject', sessid: int = 1, stdimg: str = ""):
+    def __init__(self, label: str, project: 'ProjectMRI', sessid: int = 1, stdimg: str = "", isBids: bool = False, bidsDerivatives: str | None = None):
         """
         Initialize a new SubjectMRI object.
 
         Args:
             label (str): The subject label.
-            project (MRIProject): The project object that this subject belongs to.
+            project (ProjectMRI): The project object that this subject belongs to.
             sessid (int, optional): The session ID. Defaults to 1.
             stdimg (str, optional): The path to the standard image. Defaults to "".
+            isBids (bool, optional): If True, filesystem follows BIDS standard. Defaults to False (legacy format).
+            bidsDerivatives (str | None, optional): Path to derivatives directory for BIDS mode.
+                If None, assumes derivatives at {project.dir}/../derivatives.
+                Defaults to None.
         """
         super().__init__(label, project, sessid)
         
-        self._global: MRIGlobal = project.globaldata
-        self._mri_dir = None  # Override dir with MRI-specific format (s1, s2, etc.)
+        self.isBids: bool  = isBids
+
+        if self.isBids:
+            if bidsDerivatives is None:
+                self.bidsDerivRoot = os.path.join(project.dir, "derivatives")
+            else:
+                self.bidsDerivRoot = bidsDerivatives
+        else:
+            self.bidsDerivRoot = None
+
+        # self.bidsDerivRoot = os.path.join(project.dir, "derivatives") if self.isBids and bidsDerivatives is None else bidsDerivatives
+        
+        self._global: GlobalMRI = project.globaldata
 
         self.fsl_dir            = self._global.fsl_dir
         self.fsl_bin            = self._global.fsl_bin
@@ -70,6 +86,10 @@ class SubjectMRI(Subject):
         self.project_subjects_dir = project.subjects_dir
 
         self.DCM2NII_IMAGE_FORMATS = [".nii", ".nii.gz", ".hdr", ".hdr.gz", ".img", ".img.gz"]
+
+        # Initialize CAT smoothing parameters (needed before set_properties())
+        self.t1_cat_surface_resamplefilt = self._global.cat_smooth_surf
+        self.t1_cat_gyrif_resamplefilt = self._global.cat_smooth_gyrif
 
         self.set_templates(stdimg)
         self.set_properties(self.sessid)
@@ -80,9 +100,17 @@ class SubjectMRI(Subject):
         self.epi: SubjectEpi = SubjectEpi(self, self._global)
 
     @property
-    def dir(self):
-        """Override dir property to use MRI-specific session format (s1, s2, etc)."""
-        return self._mri_dir if self._mri_dir is not None else super().dir
+    def dir(self) -> str:
+        """
+        Get the subject-session directory path.
+
+        Derived from project.subjects_dir, label, and sessid. This represents the
+        filesystem location for this specific subject-session combination.
+
+        Returns:
+            str: The absolute path to the subject directory.
+        """
+        return os.path.join(self.project.dir, "raw", f"sub-{self.label}", f"s{self.sessid}") if self.isBids else os.path.join(self.project.subjects_dir, self.label, f"s{self.sessid}")
 
     def _has_sequence(self, seq_name: str) -> bool:
         """
@@ -107,7 +135,7 @@ class SubjectMRI(Subject):
         data_attr = getattr(self, f"{seq_name}_data", None)
         return data_attr.exist if data_attr is not None else False
 
-    def hasSeq(self, _type:str, images_labels:List[str]=None):
+    def hasSeq(self, _type:str, images_labels:List[str]|None=None) -> bool:
         """
         Check if a specific sequence type exists for this subject.
 
@@ -129,6 +157,8 @@ class SubjectMRI(Subject):
             return self.hasT2
         elif _type == "fMRI":
             return self.hasFMRI(images_labels)
+        else:
+            raise NotExistingImageException("SubjectMRI.hasSeq: unknown sequence type.", None)
 
     @property
     def hasT1(self):
@@ -160,7 +190,7 @@ class SubjectMRI(Subject):
         """Check if a CT (CAT-processed) surface exists for this subject."""
         return self._has_sequence("ct")
 
-    def hasFMRI(self, images_labels:List[str]=None):
+    def hasFMRI(self, images_labels:List[str]|None=None):
         """
         Check if a specific fMRI image exists for this subject.
 
@@ -179,8 +209,10 @@ class SubjectMRI(Subject):
     def set_properties(self, sess:int=1, rollback:bool=False):
         """
         Set the properties for a specific session.
-        it has two usages:
-        1) rollback=False (DEFAULT) : to create filesystem names at startup         => returns : self  (TODO: doubt, alternatively may always return a deepcopy)
+        Dispatcher that calls _set_properties_legacy() or _set_properties_bids() based on isBids flag.
+        
+        Two usages:
+        1) rollback=False (DEFAULT) : to create filesystem names at startup         => returns : self
         2) rollback=True            : to get a copy with names of another session   => returns : deepcopy(self)
 
         Args:
@@ -189,26 +221,68 @@ class SubjectMRI(Subject):
                 Defaults to False.
 
         Returns:
-            Subject: A copy of the subject object with the properties set for the specified session.
+            Subject: Reference to self (rollback=False) or deepcopy(self) (rollback=True).
         """
-        self._mri_dir            = os.path.join(self.project.subjects_dir, self.label, "s" + str(sess))
+        if self.isBids:
+            self._set_properties_bids(sess)
+        else:
+            self._set_properties_legacy(sess)
+        
+        if rollback:
+            self_copy = deepcopy(self)                      # get a deep copy of self with given sessid
+            self.set_properties(self.sessid, False) # restore previous self.sessid
+            return self_copy                                # returns deepcopy of instance with given sessid
+        else:
+            self.sessid = sess                              # returns reference of new instance
+            return self
 
+    def _set_properties_legacy(self, sess: int) -> None:
+        """Set all filesystem properties for legacy (non-BIDS) format - direct assignments."""
+
+        # RAW
+        self.t1_image_label = self.label + "-t1"
+        self.t1_dir         = os.path.join(self.dir, "mpr")
+        self.t1_data        = Image(os.path.join(self.t1_dir, self.t1_image_label))
+
+        self.dti_image_label    = self.label + "-dti"
+        self.dti_dir            = os.path.join(self.dir, "dti")
+        self.dti_bval           = os.path.join(self.dti_dir, self.label + "-dti.bval")
+        self.dti_bvec           = os.path.join(self.dti_dir, self.label + "-dti.bvec")
+
+        self.rs_image_label = self.label + "-rs"
+        self.rs_dir         = os.path.join(self.dir, "resting")
+        self.rs_data        = Image(os.path.join(self.rs_dir, self.rs_image_label))
+        self.rs_data_dist   = Image(os.path.join(self.rs_dir, self.rs_image_label + "_distorted"))
+        self.rs_pa_data     = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA"))
+        self.rs_pa_data2    = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA2"))
+
+        self.fmri_image_label = self.label + "-fmri"
+        self.fmri_dir       = os.path.join(self.dir, "fmri")
+        self.fmri_data      = Image(os.path.join(self.fmri_dir, self.fmri_image_label))
+        self.fmri_pa_data   = Image(os.path.join(self.fmri_dir, self.fmri_image_label + "_PA"))
+        self.fmri_pa_data2  = Image(os.path.join(self.fmri_dir, self.fmri_image_label + "_PA2"))
+
+        self.wb_image_label = self.label + "-wb_epi"
+        self.wb_dir         = os.path.join(self.dir, "wb")
+        self.wb_data        = Image(os.path.join(self.wb_dir, self.wb_image_label))
+
+        self.de_image_label = self.label + "-de"
+        self.de_dir         = os.path.join(self.dir, "de")
+        self.de_data        = Image(os.path.join(self.de_dir, self.de_image_label))
+
+        # DERIVATIVES
+
+        # ROI/REG
         self.roi_dir        = os.path.join(self.dir, "roi")
         self.roi_t1_dir     = os.path.join(self.roi_dir, "reg_t1")
         self.roi_rs_dir     = os.path.join(self.roi_dir, "reg_rs")
         self.roi_fmri_dir   = os.path.join(self.roi_dir, "reg_fmri")
         self.roi_dti_dir    = os.path.join(self.roi_dir, "reg_dti")
         self.roi_t2_dir     = os.path.join(self.roi_dir, "reg_t2")
-
         self.roi_std_dir    = os.path.join(self.roi_dir, "reg_" + self.std_img_label)
         self.roi_std4_dir   = os.path.join(self.roi_dir, "reg_" + self.std_img_label + "4")
 
-        # ------------------------------------------------------------------------------------------------------------------------
         # T1/MPR
-        # ------------------------------------------------------------------------------------------------------------------------
-        self.t1_image_label = self.label + "-t1"
-
-        self.t1_dir         = os.path.join(self.dir, "mpr")
         self.t1_anat_dir    = os.path.join(self.t1_dir, "anat")
         self.fast_dir       = os.path.join(self.t1_dir, "fast")
         self.first_dir      = os.path.join(self.t1_dir, "first")
@@ -218,12 +292,11 @@ class SubjectMRI(Subject):
         self.t1_spm_dir     = os.path.join(self.t1_dir, "spm")
         self.t1_cat_dir     = os.path.join(self.t1_dir, "cat")
 
-        self.t1_data                = Image(os.path.join(self.t1_dir, self.t1_image_label))
         self.t1_brain_data          = Image(os.path.join(self.t1_dir, self.t1_image_label + "_brain"))
         self.t1_brain_data_mask     = Image(os.path.join(self.t1_dir, self.t1_image_label + "_brain_mask"))
         self.t1_fs_brainmask_data   = Image(os.path.join(self.t1_fs_dir, "mri", "brainmask"))
-        self.t1_fs_data             = Image(os.path.join(self.t1_fs_dir, "mri", "T1"))  # T1 coronal [1x1x1] after conform
-        self.t1_fs_aparc_aseg       = Image(os.path.join(self.t1_fs_dir, "mri", "aparc+aseg.mgz"))  # output of freesurfer
+        self.t1_fs_data             = Image(os.path.join(self.t1_fs_dir, "mri", "T1"))
+        self.t1_fs_aparc_aseg       = Image(os.path.join(self.t1_fs_dir, "mri", "aparc+aseg.mgz"))
 
         self.first_all_none_origsegs = Image(os.path.join(self.first_dir, self.t1_image_label + "_all_none_origsegs"))
         self.first_all_fast_origsegs = Image(os.path.join(self.first_dir, self.t1_image_label + "_all_fast_origsegs"))
@@ -237,30 +310,22 @@ class SubjectMRI(Subject):
 
         self.t1_cat_mri_dir             = os.path.join(self.t1_cat_dir, "mri")
         self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
-        self.t1_cat_surface_resamplefilt= self._global.cat_smooth_surf
-        self.t1_cat_gyrif_resamplefilt  = self._global.cat_smooth_gyrif
         self.t1_cat_lh_surface          = Image(os.path.join(self.t1_cat_surface_dir, "lh.thickness.T1_" + self.label))
         self.t1_cat_resampled_surface   = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.T1_" + self.label + ".gii"))
         self.t1_cat_resampled_surface_longitudinal = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.thickness.resampled_32k.rT1_" + self.label + ".gii"))
         self.t1_cat_lhcentral_image     = Image(os.path.join(self.t1_cat_surface_dir, "lh.central.T1_" + self.label + ".gii"))
-
         self.t1_cat_resampled_gyrific   = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_gyrif_resamplefilt) + ".mesh.gyrification.resampled_32k.T1_" + self.label + ".gii"))
         self.t1_cat_resampled_suldepth  = Image(os.path.join(self.t1_cat_surface_dir, "s" + str(self.t1_cat_surface_resamplefilt) + ".mesh.depth.resampled_32k.T1_" + self.label + ".gii"))
 
         self.t1_dartel_c1               = Image(os.path.join(self.t1_spm_dir, "c1T1_" + self.label))
         self.t1_dartel_rc1              = Image(os.path.join(self.t1_spm_dir, "rc1T1_" + self.label))
         self.t1_dartel_rc2              = Image(os.path.join(self.t1_spm_dir, "rc2T1_" + self.label))
-
         self.t1_spm_icv_file = os.path.join(self.t1_spm_dir, "icv_" + self.label + ".dat")
 
-        # ------------------------------------------------------------------------------------------------------------------------
         # DTI
-        # ------------------------------------------------------------------------------------------------------------------------
-        self.dti_image_label    = self.label + "-dti"
         self.dti_ec_image_label = self.dti_image_label + "_ec"
         self.dti_fit_label      = self.dti_image_label + "_fit"
 
-        self.dti_dir            = os.path.join(self.dir, "dti")
         self.dti_bedpostX_dir   = os.path.join(self.dti_dir, "bedpostx")
         self.dti_probtrackx_dir = os.path.join(self.dti_dir, "probtrackx")
         self.trackvis_dir       = os.path.join(self.dti_dir, "trackvis")
@@ -268,8 +333,7 @@ class SubjectMRI(Subject):
         self.dti_xtract_dir     = os.path.join(self.dti_dir, "xtract")
         self.dti_blueprint_dir  = os.path.join(self.dti_dir, "blueprint")
 
-        self.dti_bval           = os.path.join(self.dti_dir, self.label + "-dti.bval")
-        self.dti_bvec           = os.path.join(self.dti_dir, self.label + "-dti.bvec")
+
         self.dti_rotated_bvec   = os.path.join(self.dti_dir, self.label + "-dti_rotated.bvec")
         self.dti_eddyrotated_bvec = os.path.join(self.dti_dir, self.label + "-dti_ec.eddy_rotated_bvecs")
 
@@ -289,41 +353,27 @@ class SubjectMRI(Subject):
         self.dti_fit_MD                 = Image(os.path.join(self.dti_dir, self.dti_fit_label + "_MD"))
         self.dti_fit_L1                 = Image(os.path.join(self.dti_dir, self.dti_fit_label + "_L1"))
         self.dti_fit_L23                = Image(os.path.join(self.dti_dir, self.dti_fit_label + "_L23"))
-
         self.dti_bedpostx_mean_S0_label = "mean_S0samples"
-
         self.trackvis_transposed_bvecs = "bvec_vert.txt"
 
-        # ------------------------------------------------------------------------------------------------------------------------
         # RS
-        # ------------------------------------------------------------------------------------------------------------------------
-        self.rs_image_label = self.label + "-rs"
-
-        self.rs_dir         = os.path.join(self.dir, "resting")
-        self.rs_data        = Image(os.path.join(self.rs_dir, self.rs_image_label))
-        self.rs_data_dist   = Image(os.path.join(self.rs_dir, self.rs_image_label + "_distorted"))
-        self.rs_pa_data     = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA"))
-        self.rs_pa_data2    = Image(os.path.join(self.rs_dir, self.rs_image_label + "_PA2"))
 
         self.sbfc_dir           = os.path.join(self.rs_dir,     "sbfc")
         self.spdcm_dir          = os.path.join(self.rs_dir,     "dcm")
         self.rs_series_dir      = os.path.join(self.sbfc_dir,   "series")
         self.sbfc_feat_dir      = os.path.join(self.sbfc_dir,   "feat")
-
         self.rs_melic_dir       = os.path.join(self.rs_dir, "melic")
         self.rs_default_mel_dir = os.path.join(self.rs_dir, "postmel.ica")
 
         self.rs_examplefunc         = Image(os.path.join(self.roi_rs_dir, "example_func"))
         self.rs_examplefunc_mask    = Image(os.path.join(self.roi_rs_dir, "mask_example_func"))
-
         self.rs_series_csf          = os.path.join(self.rs_series_dir, "csf_ts")
         self.rs_series_wm           = os.path.join(self.rs_series_dir, "wm_ts")
 
         self.rs_final_regstd_dir    = os.path.join(self.rs_dir, "reg_" + self.std_img_label)
-
-        self.rs_final_regstd_image      = Image(os.path.join(self.rs_final_regstd_dir, "filtered_func_data"))  # image after first preprocessing, aroma and nuisance regression.
-        self.rs_final_regstd_mask       = Image(os.path.join(self.rs_final_regstd_dir, "mask"))  # image after first preprocessing, aroma and nuisance regression.
-        self.rs_final_regstd_bgimage    = Image(os.path.join(self.rs_final_regstd_dir, "bg_image"))  # image after first preprocessing, aroma and nuisance regression.
+        self.rs_final_regstd_image      = Image(os.path.join(self.rs_final_regstd_dir, "filtered_func_data"))
+        self.rs_final_regstd_mask       = Image(os.path.join(self.rs_final_regstd_dir, "mask"))
+        self.rs_final_regstd_bgimage    = Image(os.path.join(self.rs_final_regstd_dir, "bg_image"))
 
         self.rs_post_preprocess_image_label         = self.rs_image_label + "_preproc"
         self.rs_post_aroma_image_label              = self.rs_image_label + "_preproc_aroma"
@@ -335,78 +385,217 @@ class SubjectMRI(Subject):
         self.rs_aroma_image         = Image(os.path.join(self.rs_aroma_dir, "denoised_func_data_nonaggr"))
         self.rs_regstd_aroma_dir    = os.path.join(self.rs_aroma_dir, "reg_standard")
         self.rs_regstd_aroma_image  = Image(os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data"))
-
         self.rs_mask_t1_wmseg4nuis  = Image(os.path.join(self.roi_dir, "reg_rs", "mask_t1_wmseg4Nuisance_rs"))
         self.rs_mask_t1_csfseg4nuis = Image(os.path.join(self.roi_dir, "reg_rs", "mask_t1_csfseg4Nuisance_rs"))
 
-        # self.rs_post_nuisance_std4_image_label          = self.rs_image_label + "_preproc_aroma_nuisance_std4"
-        # self.rs_post_nuisance_melodic_std4_image_label  = self.rs_image_label + "_preproc_aroma_nuisance_melodic_std4"
-        # self.rs_regstd_dir              = os.path.join(self.rs_dir, "resting.ica", "reg_std")
-        # self.rs_regstd_image            = os.path.join(self.rs_regstd_dir, "filtered_func_data")
-        # self.rs_regstd_denoise_dir      = os.path.join(self.rs_dir, "resting.ica", "reg_std_denoised")
-        # self.rs_regstd_denoise_image    = os.path.join(self.rs_regstd_denoise_dir, "filtered_func_data")
-
-        # self.mc_params_dir  = os.path.join(self.rs_dir, self.rs_image_label + ".ica", "mc")
-        # self.mc_abs_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_abs_mean.rms")
-        # self.mc_rel_displ   = os.path.join(self.mc_params_dir, "prefiltered_func_data_mcf_rel_mean.rms")
-
-        # ------------------------------------------------------------------------------------------------------------------------
         # fMRI
-        # ------------------------------------------------------------------------------------------------------------------------
-        self.fmri_image_label = self.label + "-fmri"
-
-        self.fmri_dir       = os.path.join(self.dir, "fmri")
-        self.fmri_data      = Image(os.path.join(self.fmri_dir, self.fmri_image_label))
-        self.fmri_pa_data   = Image(os.path.join(self.fmri_dir, self.fmri_image_label + "_PA"))
-        self.fmri_pa_data2  = Image(os.path.join(self.fmri_dir, self.fmri_image_label + "_PA2"))
-
-        self.fmri_data_mc           = Image(os.path.join(self.fmri_dir, "ra" + self.fmri_image_label))   # assumes motion correction after slice timings
+        self.fmri_data_mc           = Image(os.path.join(self.fmri_dir, "ra" + self.fmri_image_label))
 
         self.fmri_examplefunc       = Image(os.path.join(self.roi_fmri_dir, "example_func"))
         self.fmri_examplefunc_mask  = Image(os.path.join(self.roi_fmri_dir, "mask_example_func"))
-
         self.fmri_aroma_dir             = os.path.join(self.fmri_dir, "ica_aroma")
         self.fmri_icafix_dir            = os.path.join(self.fmri_dir, "ica_fix")
         self.fmri_aroma_image           = Image(os.path.join(self.fmri_aroma_dir, "denoised_func_data_nonaggr"))
         self.fmri_regstd_aroma_dir      = os.path.join(self.fmri_aroma_dir, "reg_standard")
         self.fmri_regstd_aroma_image    = Image(os.path.join(self.fmri_regstd_aroma_dir, "filtered_func_data"))
         self.fmri_stats_dir             = os.path.join(self.fmri_dir, "stats")
-
         self.fmri_logs_dir              = os.path.join(self.project.script_dir, "fmri", "logs")
-        # ------------------------------------------------------------------------------------------------------------------------
-        # WB
-        # ------------------------------------------------------------------------------------------------------------------------
-        self.wb_image_label = self.label + "-wb_epi"
 
-        self.wb_dir         = os.path.join(self.dir, "wb")
-        self.wb_data        = Image(os.path.join(self.wb_dir, self.wb_image_label))
+        # WB
+
         self.wb_brain_data  = Image(os.path.join(self.wb_dir, self.wb_image_label + "_brain"))
 
-        # ------------------------------------------------------------------------------------------------------------------------
         # T2
-        # ------------------------------------------------------------------------------------------------------------------------
         self.t2_image_label = self.label + "-t2"
-
         self.t2_dir         = os.path.join(self.dir, "t2")
         self.t2_data        = Image(os.path.join(self.t2_dir, self.t2_image_label))
         self.t2_brain_data  = Image(os.path.join(self.t2_dir, self.t2_image_label + "_brain"))
 
-        # ------------------------------------------------------------------------------------------------------------------------
         # DE
-        # ------------------------------------------------------------------------------------------------------------------------
-        self.de_image_label = self.label + "-de"
-        self.de_dir         = os.path.join(self.dir, "de")
-        self.de_data        = Image(os.path.join(self.de_dir, self.de_image_label))
+
         self.de_brain_data  = Image(os.path.join(self.de_dir, self.de_image_label + "_brain"))
 
-        # ------------------------------------------------------------------------------------------------------------------------
-        if rollback:
-            self_copy = deepcopy(self)                      # get a deep copy of self with given sessid
-            self.set_properties(self.sessid, False) # restore previous self.sessid
-            return self_copy                                # returns deepcopy of instance with given sessid
-        else:
-            self.sessid = sess                              # returns reference of new instance
-            return self
+    def _set_properties_bids(self, sess: int) -> None:
+        """Set all filesystem properties for BIDS format - direct assignments."""
+
+        deriv_pymri         = os.path.join(self.bidsDerivRoot, "pymri", f"sub-{self.label}", f"ses-{sess}")
+        deriv_freesurfer    = os.path.join(self.bidsDerivRoot, "freesurfer", f"sub-{self.label}", f"ses-{sess}")
+        deriv_tbss          = os.path.join(self.bidsDerivRoot, "tbss", f"sub-{self.label}", f"ses-{sess}")
+        deriv_cat           = os.path.join(self.bidsDerivRoot, "cat", f"sub-{self.label}", f"ses-{sess}")
+        deriv_spm           = os.path.join(self.bidsDerivRoot, "spm", f"sub-{self.label}", f"ses-{sess}")
+
+        # RAW
+        self.t1_image_label = f"sub-{self.label}_ses-{sess}_T1w"
+        self.t1_dir         = os.path.join(self.dir, "anat")
+        self.t1_data        = Image(os.path.join(self.t1_dir, f"sub-{self.label}_ses-{sess}_T1w"))
+
+        self.dti_image_label    = self.label + "-dti"
+        self.dti_dir            = os.path.join(self.dir, "dwi")
+        self.dti_bval           = os.path.join(self.dti_dir, f"sub-{self.label}_ses-{sess}_dwi.bval")
+        self.dti_bvec           = os.path.join(self.dti_dir, f"sub-{self.label}_ses-{sess}_dwi.bvec")
+
+        self.rs_image_label = self.label + "-rs"
+        self.rs_dir         = os.path.join(self.dir, "func")
+        self.rs_data        = Image(os.path.join(self.rs_dir, f"sub-{self.label}_ses-{sess}_bold"))
+        self.rs_data_dist   = Image(os.path.join(self.rs_dir, f"sub-{self.label}_ses-{sess}_bold_distorted"))
+        self.rs_pa_data     = Image(os.path.join(self.rs_dir, f"sub-{self.label}_ses-{sess}_bold_PA"))
+        self.rs_pa_data2    = Image(os.path.join(self.rs_dir, f"sub-{self.label}_ses-{sess}_bold_PA2"))
+
+        self.fmri_image_label = self.label + "-fmri"
+        self.fmri_dir       = os.path.join(self.dir, "func")
+        self.fmri_data      = Image(os.path.join(self.fmri_dir, f"sub-{self.label}_ses-{sess}_bold"))
+        self.fmri_pa_data   = Image(os.path.join(self.fmri_dir, f"sub-{self.label}_ses-{sess}_bold_PA"))
+        self.fmri_pa_data2  = Image(os.path.join(self.fmri_dir, f"sub-{self.label}_ses-{sess}_bold_PA2"))
+
+        self.wb_image_label = self.label + "-wb_epi"
+        self.wb_dir = os.path.join(self.dir, "func")
+        self.wb_data = Image(os.path.join(self.wb_dir, f"sub-{self.label}_ses-{sess}_bold_wb"))
+
+        self.de_image_label = self.label + "-de"
+        self.de_dir         = os.path.join(self.dir, "anat")
+        self.de_data        = Image(os.path.join(self.de_dir, f"sub-{self.label}_ses-{sess}_DE"))
+
+        # DERIVATIVES
+
+        # ROI/REG
+        self.roi_dir        = os.path.join(deriv_pymri, "roi")
+        self.roi_t1_dir     = os.path.join(self.roi_dir, "anat")
+        self.roi_rs_dir     = os.path.join(self.roi_dir, "func")
+        self.roi_fmri_dir   = os.path.join(self.roi_dir, "func")
+        self.roi_dti_dir    = os.path.join(self.roi_dir, "dwi")
+        self.roi_t2_dir     = os.path.join(self.roi_dir, "anat")
+        self.roi_std_dir    = os.path.join(self.roi_dir, "anat")
+        self.roi_std4_dir   = os.path.join(self.roi_dir, "anat")
+        
+        # T1/MPR
+        self.t1_anat_dir    = os.path.join(deriv_pymri, "anat")
+        self.fast_dir       = os.path.join(deriv_pymri, "anat", "fast")
+        self.first_dir      = os.path.join(deriv_pymri, "anat", "first")
+        self.sienax_dir     = os.path.join(deriv_pymri, "anat", "sienax")
+        self.t1_fs_dir      = deriv_freesurfer
+        self.t1_fs_mri_dir  = os.path.join(self.t1_fs_dir, "mri")
+        self.t1_spm_dir     = os.path.join(deriv_pymri, "anat", "spm")
+        self.t1_cat_dir     = os.path.join(deriv_pymri, "anat", "cat")
+        
+        self.t1_brain_data          = Image(os.path.join(self.t1_anat_dir, f"sub-{self.label}_ses-{sess}_T1w_brain"))
+        self.t1_brain_data_mask     = Image(os.path.join(self.t1_anat_dir, f"sub-{self.label}_ses-{sess}_T1w_brain_mask"))
+        self.t1_fs_brainmask_data   = Image(os.path.join(self.t1_fs_dir, "mri", "brainmask"))
+        self.t1_fs_data             = Image(os.path.join(self.t1_fs_dir, "mri", "T1"))
+        self.t1_fs_aparc_aseg       = Image(os.path.join(self.t1_fs_dir, "mri", "aparc+aseg.mgz"))
+        
+        self.first_all_none_origsegs = Image(os.path.join(self.first_dir, f"sub-{self.label}_ses-{sess}_T1w_all_none_origsegs"))
+        self.first_all_fast_origsegs = Image(os.path.join(self.first_dir, f"sub-{self.label}_ses-{sess}_T1w_all_fast_origsegs"))
+        
+        self.t1_segment_gm_path         = Image(os.path.join(self.roi_t1_dir, f"sub-{self.label}_ses-{sess}_T1w_gm"))
+        self.t1_segment_wm_path         = Image(os.path.join(self.roi_t1_dir, f"sub-{self.label}_ses-{sess}_T1w_wm"))
+        self.t1_segment_csf_path        = Image(os.path.join(self.roi_t1_dir, f"sub-{self.label}_ses-{sess}_T1w_csf"))
+        self.t1_segment_wm_bbr_path     = Image(os.path.join(self.roi_t1_dir, f"sub-{self.label}_ses-{sess}_T1w_wmseg4bbr"))
+        self.t1_segment_wm_ero_path     = Image(os.path.join(self.roi_t1_dir, f"sub-{self.label}_ses-{sess}_T1w_wmseg4Nuisance"))
+        self.t1_segment_csf_ero_path    = Image(os.path.join(self.roi_t1_dir, f"sub-{self.label}_ses-{sess}_T1w_csfseg4Nuisance"))
+        
+        self.t1_cat_mri_dir             = os.path.join(self.t1_cat_dir, "mri")
+        self.t1_cat_surface_dir         = os.path.join(self.t1_cat_dir, "surf")
+        self.t1_cat_lh_surface          = Image(os.path.join(self.t1_cat_surface_dir, f"lh.thickness.T1_sub-{self.label}_ses-{sess}"))
+        self.t1_cat_resampled_surface   = Image(os.path.join(self.t1_cat_surface_dir, f"s{self.t1_cat_surface_resamplefilt}.mesh.thickness.resampled_32k.T1_sub-{self.label}_ses-{sess}.gii"))
+        self.t1_cat_resampled_surface_longitudinal = Image(os.path.join(self.t1_cat_surface_dir, f"s{self.t1_cat_surface_resamplefilt}.mesh.thickness.resampled_32k.rT1_sub-{self.label}_ses-{sess}.gii"))
+        self.t1_cat_lhcentral_image     = Image(os.path.join(self.t1_cat_surface_dir, f"lh.central.T1_sub-{self.label}_ses-{sess}.gii"))
+        self.t1_cat_resampled_gyrific   = Image(os.path.join(self.t1_cat_surface_dir, f"s{self.t1_cat_gyrif_resamplefilt}.mesh.gyrification.resampled_32k.T1_sub-{self.label}_ses-{sess}.gii"))
+        self.t1_cat_resampled_suldepth  = Image(os.path.join(self.t1_cat_surface_dir, f"s{self.t1_cat_surface_resamplefilt}.mesh.depth.resampled_32k.T1_sub-{self.label}_ses-{sess}.gii"))
+        
+        self.t1_dartel_c1               = Image(os.path.join(self.t1_spm_dir, f"c1T1_sub-{self.label}_ses-{sess}"))
+        self.t1_dartel_rc1              = Image(os.path.join(self.t1_spm_dir, f"rc1T1_sub-{self.label}_ses-{sess}"))
+        self.t1_dartel_rc2              = Image(os.path.join(self.t1_spm_dir, f"rc2T1_sub-{self.label}_ses-{sess}"))
+        self.t1_spm_icv_file = os.path.join(self.t1_spm_dir, f"icv_sub-{self.label}_ses-{sess}.dat")
+        
+        # DTI
+        self.dti_ec_image_label = self.dti_image_label + "_ec"
+        self.dti_fit_label      = self.dti_image_label + "_fit"
+        
+        self.dti_bedpostX_dir   = os.path.join(deriv_pymri, "dwi", "bedpostx")
+        self.dti_probtrackx_dir = os.path.join(deriv_pymri, "dwi", "probtrackx")
+        self.trackvis_dir       = os.path.join(deriv_pymri, "dwi", "trackvis")
+        self.tv_matrices_dir    = os.path.join(deriv_pymri, "dwi", "tv_matrices")
+        self.dti_xtract_dir     = os.path.join(deriv_pymri, "dwi", "xtract")
+        self.dti_blueprint_dir  = os.path.join(deriv_pymri, "dwi", "blueprint")
+        
+        self.dti_rotated_bvec   = os.path.join(self.dti_dir, f"sub-{self.label}_ses-{sess}_dwi_rotated.bvec")
+        self.dti_eddyrotated_bvec = os.path.join(self.dti_dir, f"sub-{self.label}_ses-{sess}_dwi_ec.eddy_rotated_bvecs")
+        
+        self.dti_data           = Image(os.path.join(self.dti_dir, f"sub-{self.label}_ses-{sess}_dwi"))
+        self.dti_pa_data        = Image(os.path.join(self.dti_dir, f"sub-{self.label}_ses-{sess}_dwi_PA"))
+        self.dti_ec_data        = Image(os.path.join(self.dti_dir, f"sub-{self.label}_ses-{sess}_dwi_ec"))
+        self.dti_fit_data       = Image(os.path.join(deriv_pymri, "dwi", f"sub-{self.label}_ses-{sess}_dwi_fit"))
+        
+        self.dti_dsi_dir        = os.path.join(deriv_pymri, "dwi", "dsi")
+        self.dti_dsi_data       = Image(os.path.join(self.dti_dsi_dir, f"sub-{self.label}_ses-{sess}_dwi.src.gz"))
+        
+        self.dti_nodiff_data            = Image(os.path.join(self.roi_dti_dir, "nodif"))
+        self.dti_nodiff_brain_data      = Image(os.path.join(self.roi_dti_dir, "nodif_brain"))
+        self.dti_nodiff_brainmask_data  = Image(os.path.join(self.roi_dti_dir, "nodif_brain_mask"))
+        
+        self.dti_fit_FA                 = Image(os.path.join(deriv_pymri, "dwi", f"sub-{self.label}_ses-{sess}_dwi_fit_FA"))
+        self.dti_fit_MD                 = Image(os.path.join(deriv_pymri, "dwi", f"sub-{self.label}_ses-{sess}_dwi_fit_MD"))
+        self.dti_fit_L1                 = Image(os.path.join(deriv_pymri, "dwi", f"sub-{self.label}_ses-{sess}_dwi_fit_L1"))
+        self.dti_fit_L23                = Image(os.path.join(deriv_pymri, "dwi", f"sub-{self.label}_ses-{sess}_dwi_fit_L23"))
+        self.dti_bedpostx_mean_S0_label = "mean_S0samples"
+        self.trackvis_transposed_bvecs = "bvec_vert.txt"
+        
+        # RS
+
+        self.sbfc_dir           = os.path.join(deriv_pymri, "func", "sbfc")
+        self.spdcm_dir          = os.path.join(deriv_pymri, "func", "dcm")
+        self.rs_series_dir      = os.path.join(self.sbfc_dir, "series")
+        self.sbfc_feat_dir      = os.path.join(self.sbfc_dir, "feat")
+        self.rs_melic_dir       = os.path.join(deriv_pymri, "func", "melic")
+        self.rs_default_mel_dir = os.path.join(deriv_pymri, "func", "postmel.ica")
+        
+        self.rs_examplefunc         = Image(os.path.join(self.roi_rs_dir, "example_func"))
+        self.rs_examplefunc_mask    = Image(os.path.join(self.roi_rs_dir, "mask_example_func"))
+        self.rs_series_csf          = os.path.join(self.rs_series_dir, "csf_ts")
+        self.rs_series_wm           = os.path.join(self.rs_series_dir, "wm_ts")
+        
+        self.rs_final_regstd_dir    = os.path.join(deriv_pymri, "func", "reg_standard")
+        self.rs_final_regstd_image      = Image(os.path.join(self.rs_final_regstd_dir, "filtered_func_data"))
+        self.rs_final_regstd_mask       = Image(os.path.join(self.rs_final_regstd_dir, "mask"))
+        self.rs_final_regstd_bgimage    = Image(os.path.join(self.rs_final_regstd_dir, "bg_image"))
+        
+        self.rs_post_preprocess_image_label         = self.rs_image_label + "_preproc"
+        self.rs_post_aroma_image_label              = self.rs_image_label + "_preproc_aroma"
+        self.rs_post_nuisance_image_label           = self.rs_image_label + "_preproc_aroma_nuisance"
+        self.rs_post_nuisance_melodic_image_label   = self.rs_image_label + "_preproc_aroma_nuisance_melodic"
+        
+        self.rs_aroma_dir           = os.path.join(deriv_pymri, "func", "ica_aroma")
+        self.rs_fix_dir             = os.path.join(deriv_pymri, "func", "fix")
+        self.rs_aroma_image         = Image(os.path.join(self.rs_aroma_dir, "denoised_func_data_nonaggr"))
+        self.rs_regstd_aroma_dir    = os.path.join(self.rs_aroma_dir, "reg_standard")
+        self.rs_regstd_aroma_image  = Image(os.path.join(self.rs_regstd_aroma_dir, "filtered_func_data"))
+        self.rs_mask_t1_wmseg4nuis  = Image(os.path.join(self.roi_dir, "func", f"mask_t1_wmseg4Nuisance_sub-{self.label}_ses-{sess}"))
+        self.rs_mask_t1_csfseg4nuis = Image(os.path.join(self.roi_dir, "func", f"mask_t1_csfseg4Nuisance_sub-{self.label}_ses-{sess}"))
+        
+        # fMRI
+        self.fmri_data_mc           = Image(os.path.join(deriv_pymri, "func", f"ra_sub-{self.label}_ses-{sess}_bold"))
+        
+        self.fmri_examplefunc       = Image(os.path.join(self.roi_fmri_dir, "example_func"))
+        self.fmri_examplefunc_mask  = Image(os.path.join(self.roi_fmri_dir, "mask_example_func"))
+        self.fmri_aroma_dir             = os.path.join(deriv_pymri, "func", "ica_aroma")
+        self.fmri_icafix_dir            = os.path.join(deriv_pymri, "func", "ica_fix")
+        self.fmri_aroma_image           = Image(os.path.join(self.fmri_aroma_dir, "denoised_func_data_nonaggr"))
+        self.fmri_regstd_aroma_dir      = os.path.join(self.fmri_aroma_dir, "reg_standard")
+        self.fmri_regstd_aroma_image    = Image(os.path.join(self.fmri_regstd_aroma_dir, "filtered_func_data"))
+        self.fmri_stats_dir             = os.path.join(deriv_pymri, "func", "stats")
+        self.fmri_logs_dir              = os.path.join(self.project.script_dir, "fmri", "logs")
+        
+        # WB
+        self.wb_brain_data  = Image(os.path.join(self.wb_dir, f"sub-{self.label}_ses-{sess}_bold_wb_brain"))
+        
+        # T2
+        self.t2_image_label = self.label + "-t2"
+        self.t2_dir         = os.path.join(self.dir, "anat")
+        self.t2_data        = Image(os.path.join(self.t2_dir, f"sub-{self.label}_ses-{sess}_T2w"))
+        self.t2_brain_data  = Image(os.path.join(self.t2_dir, f"sub-{self.label}_ses-{sess}_T2w_brain"))
+        
+        # DE
+        self.de_brain_data  = Image(os.path.join(self.de_dir, f"sub-{self.label}_ses-{sess}_DE_brain"))
 
     def set_templates(self, stdimg:str=""):
         """
@@ -529,7 +718,7 @@ class SubjectMRI(Subject):
         os.rename(self.dir, os.path.join(self.project.dir, "subjects", new_label, "s" + str(session_id)))
         rmtree(os.path.join(self.project.dir, "subjects", self.label))
 
-    def check_images(self, t1:bool=False, rs:bool=False, dti:bool=False, t2:bool=False, fmri_labels:List[str]=None) -> List[str]:
+    def check_images(self, t1:bool=False, rs:bool=False, dti:bool=False, t2:bool=False, fmri_labels:List[str]|None=None) -> List[str]:
 
         missing_images = []
 
@@ -650,22 +839,22 @@ class SubjectMRI(Subject):
                  do_fslanat:bool=True, odn:str="anat", imgtype:int=1, smooth:int=10,
                  biascorr_type:int=SubjectMpr.BIAS_TYPE_STRONG,
                  do_reorient:bool=True, do_crop:bool=True,
-                 do_bet:bool=True, betfparam:list=None,
+                 do_bet:bool=True, betfparam:list|None=None,
                  do_sienax:bool=False, bet_sienax_param_string:str="-SNB -f 0.2",
                  do_reg:bool=True, do_nonlinreg:bool=True, do_seg:bool=True,
                  do_spm_seg:bool=False, spm_seg_templ:str="", spm_seg_over_bet:bool=False,
-                 do_cat_seg:bool=False, cat_use_dartel:bool=False, do_cat_surf:bool=True, cat_smooth_surf:int=None, do_cat_extra:bool=True,
-                 do_cat_seg_long:bool=False, cat_long_sessions:List[int]=None,
-                 do_cleanup:int=MRIGlobal.CLEANUP_LVL_MIN,
+                 do_cat_seg:bool=False, cat_use_dartel:bool=False, do_cat_surf:bool=True, cat_smooth_surf:int|None=None, do_cat_extra:bool=True,
+                 do_cat_seg_long:bool=False, cat_long_sessions:List[int]|None=None,
+                 do_cleanup:int=GlobalMRI.CLEANUP_LVL_MIN,
                  use_lesionmask:bool=False, lesionmask:str="lesionmask",
                  do_freesurfer:bool=False, do_complete_fs:bool=False, fs_seg_over_bet:bool=False,
                  do_first:bool=False, first_struct:str="", first_odn:str="",
                  # EPI
                  do_susc_corr:bool=False,
-                 do_rs:bool=True, do_epirm2vol:int=0, rs_pa_data:str|Image=None,
+                 do_rs:bool=True, do_epirm2vol:int=0, rs_pa_data:str|Image|None=None,
                  do_aroma:bool=True, do_nuisance:bool=True, hpfsec:int=100, feat_preproc_odn:str="resting", feat_preproc_model:str="singlesubj_feat_preproc_noreg_melodic",
                  do_featinitreg:bool=False, do_melodic:bool=True, mel_odn:str="postmel", mel_preproc_model:str="singlesubj_melodic_noreg", do_melinitreg:bool=False, replace_std_filtfun:bool=True,
-                 do_fmri:bool=True, fmri_params:FmriProcParams=None, fmri_labels:List[str]=None, fmri_pa_data:str|Image=None,
+                 do_fmri:bool=True, fmri_params:FmriProcParams|None=None, fmri_labels:List[str]|None=None, fmri_pa_data:str|Image|None=None,
                  # DTI
                  do_dtifit:bool=True, do_pa_eddy:bool=False, do_eddy_gpu:bool=False, do_bedx:bool=False, do_bedx_gpu:bool=False, bedpost_odn:str="bedpostx",
                  do_xtract:bool=False, xtract_odn:str="xtract", xtract_refspace:str="native", xtract_gpu:bool=False, xtract_meas:str="vol,prob,length,FA,MD,L1,L23",
@@ -1446,7 +1635,7 @@ class SubjectMRI(Subject):
         """
         extractall_zip(src_zip, dest_dir, replace)
 
-    def copy_final_data(self, dest_proj:'MRIProject', t1:bool=True, t1_surf:bool=True, vbmspm:bool=True, rs:bool=True, fmri:List[str]=None, dti:bool=True, sess_id:int=1):
+    def copy_final_data(self, dest_proj:'MRIProject', t1:bool=True, t1_surf:bool=True, vbmspm:bool=True, rs:bool=True, fmri:List[str]|None=None, dti:bool=True, sess_id:int=1):
         """
         Copies the final data of a subject to another project.
 
@@ -1560,7 +1749,7 @@ class SubjectMRI(Subject):
             pass
 
     # ==================================================================================================================================================
-    def can_run_analysis(self, analysis_type:str, analysis_params:str|List[str]=None):
+    def can_run_analysis(self, analysis_type:str, analysis_params:str|List[str]|None=None):
         """
         Check if the data of a subject is ready for a specific analysis.
 
@@ -1654,7 +1843,6 @@ class SubjectMRI(Subject):
                 fmri_images = Images(imgs)
 
                 # logs_files = [ os.path.join(self.fmri_logs_dir, ) for img in fmri_images]
-
 
             return (Images(fmri_images).add_prefix2name("swa").exist or Images(fmri_images).add_prefix2name("swar").exist or
                    Images(fmri_images).add_prefix2name("a").exist or Images(fmri_images).add_prefix2name("ar").exist or

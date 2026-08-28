@@ -46,7 +46,7 @@ class Subject:
         Returns:
             str: The absolute path to the subject directory.
         """
-        return os.path.join(self.project.subjects_dir, self.label, str(self.sessid))
+        return os.path.join(self.project.subjects_dir, self.label, f"s{self.sessid}")
 
     @property
     def exist(self) -> bool:

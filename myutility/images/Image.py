@@ -302,7 +302,7 @@ class Image(str):
     # ===========================================================================================================
     # COPY, REMOVE, MOVE, MASS MOVE
     # ===========================================================================================================
-    def cp(self, dest:str, error_src_not_exist:bool=True, logFile=None) -> 'Image':
+    def cp(self, dest:str, error_src_not_exist:bool=True, logFile=None) -> 'Image|None':
         """
         Copy the image to a destination.
 
@@ -321,7 +321,7 @@ class Image(str):
         if not self.exist:
             if error_src_not_exist:
                 print("ERROR in cp. src image (" + self + ") does not exist")
-                return ""
+                return None
             else:
                 print("WARNING in cp. src image (" + self + ") does not exist, skip copy and continue")
 
@@ -352,7 +352,7 @@ class Image(str):
 
         return Image(fileparts_dst[0] + dest_ext)
 
-    def cp_notexisting(self, dest:'str | Image', error_src_not_exist=False, logFile=None) -> 'Image':
+    def cp_notexisting(self, dest:'str | Image', error_src_not_exist=False, logFile=None) -> 'Image|None':
         """
         Copy the image to a destination.
 
@@ -372,6 +372,7 @@ class Image(str):
                 raise NotExistingImageException("Image.cp_notexisting", self)
             else:
                 print(f"WARNING in cp_notexisting. src image ({self}) does not exist, skip copy and continue")
+                return None
 
         dest = Image(dest)
 
@@ -380,7 +381,7 @@ class Image(str):
         else:
             return Image(dest)
 
-    def mv(self, dest:'Image', error_src_not_exist: bool = False, logFile=None) -> 'Image':
+    def mv(self, dest:'Image', error_src_not_exist: bool = False, logFile=None) -> 'Image|None':
         """
         Move the image to a destination.
 
@@ -398,10 +399,10 @@ class Image(str):
         """
         if not self.exist:
             if error_src_not_exist:
-                print("ERROR in mv. src image (" + self + ") does not exist")
-                return
+                raise NotExistingImageException("Image.mv", self)
             else:
                 print("WARNING in mv. src image (" + self + ") does not exist, skip rename and continue")
+                return None
 
         ext = ""
         if os.path.isfile(self.upath):
@@ -645,10 +646,10 @@ class Image(str):
 
         """
         hdr = self.read_header()
-        return int(hdr["nx"]) * int(hdr["ny"]) * int(hdr["nz"]) * float(hdr["dx"]) * float(hdr["dy"]) * float(hdr["dz"])
+        return int(int(hdr["nx"]) * int(hdr["ny"]) * int(hdr["nz"]) * float(hdr["dx"]) * float(hdr["dy"]) * float(hdr["dz"]))
 
     # extract header in xml format and returns it as a (possibly filtered by list_field) dictionary
-    def read_header(self, list_field=None) -> dict:
+    def read_header(self, list_field:list|None=None) -> dict:
         """
         Extract the header from an image and return it as a dictionary.
 
